@@ -1,0 +1,34 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+.venv/
+.env/
+
+# IDE configuration files
+.idea/
+.vscode/
+
+# Secrets / Sensitive configuration
+config.ini
+
+# Temporary audio files (if saving intermediately)
+*.wav
+
+# Ignore log files
+*.log
+**/*.log
+
+# Ignore build files
+build/
+dist/
+*.spec
+*.dist-info
+*.egg-info
+*.egg
+*.dmg
+*.eggs/*

@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Inten Browser Integration",
+  "version": "1.0",
+  "description": "Communicates with Inten Python application",
+  "permissions": [
+    "nativeMessaging",
+    "activeTab"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "public/Inten-logo-16.png",
+    "48": "public/Inten-logo-48.png",
+    "128": "public/Inten-logo-128.png"
+  }
+}

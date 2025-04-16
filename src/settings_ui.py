@@ -25,7 +25,7 @@ class SettingsWindow(QMainWindow):
         
         # ASR Settings
         self.asr_provider = QComboBox()
-        self.asr_provider.addItems(["openai_api", "whisper_local"])
+        self.asr_provider.addItems(["openai_api", "faster_whisper"])
         form_layout.addRow("ASR Provider:", self.asr_provider)
         
         self.asr_model = QLineEdit()

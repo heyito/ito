@@ -8,7 +8,7 @@ import numpy as np
 import platform # Import platform
 import socket
 import json
-from settings_ui import SettingsWindow
+# from settings_ui import SettingsWindow
 from PyQt6.QtWidgets import QApplication
 import sys
 
@@ -469,18 +469,18 @@ def _initiate_recording_process():
     )
     monitor_thread_handle.start()
 
-def show_settings():
-    app = QApplication(sys.argv)
-    window = SettingsWindow()
-    window.show()
-    app.exec()
+# def show_settings():
+#     app = QApplication(sys.argv)
+#     window = SettingsWindow()
+#     window.show()
+#     app.exec()
 
 # --- Main Execution Block ---
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "--settings":
-        show_settings()
-    else:
-        print("\n--- Inten Tool (Document Command Mode) ---")
+    # if len(sys.argv) > 1 and sys.argv[1] == "--settings":
+    #     show_settings()
+    # else:
+    #     print("\n--- Inten Tool (Document Command Mode) ---")
     print("\n--- Inten Tool (Document Command Mode) ---")
     print(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}") # Add timestamp
     if not platform_utils.is_macos():

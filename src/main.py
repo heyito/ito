@@ -9,8 +9,10 @@ import platform # Import platform
 import socket
 import json
 # from settings_ui import SettingsWindow
-from PyQt6.QtWidgets import QApplication
+# from PyQt6.QtWidgets import QApplication
 import sys
+import os
+import logging
 
 # Import platform utils conditionally
 if platform.system() == "Darwin":
@@ -51,10 +53,23 @@ current_context = {"app_name": None, "doc_text": None} # Store context for curre
 
 # --- Load Configuration ---
 config = configparser.ConfigParser()
+
+SOCKET_PATH = os.path.expanduser('~/Library/Application Support/Inten/inten_native_host.sock')
+
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
 try:
-    config.read('config.ini')
+    config.read(get_resource_path('config.ini'))
     if not config.sections():
-        raise FileNotFoundError("config.ini not found or empty.")
+        raise FileNotFoundError(f"config.ini not found or empty at {get_resource_path('config.ini')}")
 
     # OpenAI Config
     openai_api_key = config['OpenAI']['api_key']
@@ -104,10 +119,10 @@ try:
 except (KeyError, FileNotFoundError, ValueError) as e:
     print(f"Error loading configuration from config.ini: {e}")
     print("Please ensure config.ini exists, is correctly formatted, and contains all required keys.")
-    exit()
+    sys.exit(1)  # Use sys.exit instead of exit
 except Exception as e:
     print(f"An unexpected error occurred during configuration loading: {e}")
-    exit()
+    sys.exit(1)  # Use sys.exit instead of exit
 
 
 # --- Core Logic ---
@@ -210,7 +225,7 @@ def processing_thread_func(original_doc_text: str, user_command: str, sr: int, c
             try:
                 # Connect to the native messaging host socket
                 client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                client.connect('/tmp/inten_native_host.sock')
+                client.connect(SOCKET_PATH)
                 
                 # Send the message to update text
                 message = {
@@ -384,7 +399,7 @@ def _initiate_recording_process():
                 signal.alarm(5)  # 5 seconds
 
                 try:
-                    chrome_context = platform_utils.get_chrome_context()
+                    chrome_context = platform_utils.get_chrome_context(SOCKET_PATH)
                     print(f"Received Chrome context: {chrome_context}")
                     signal.alarm(0)  # Disable the alarm
                     
@@ -475,90 +490,143 @@ def _initiate_recording_process():
 #     window.show()
 #     app.exec()
 
+def run_native_messaging_host():
+    """Run the native messaging host functionality"""
+    from native_messaging_host import main as native_messaging_main
+    native_messaging_main()
+
+def ensure_native_messaging_host_registered():
+    """Ensure the native messaging host manifest is registered with Chrome and required directories exist"""
+    try:
+        # Define all required directories
+        app_support_dir = os.path.expanduser("~/Library/Application Support/Inten")
+        manifest_dir = os.path.expanduser("~/Library/Application Support/Google/Chrome/NativeMessagingHosts")
+        log_file = os.path.join(app_support_dir, "native_messaging.log")
+        
+        # Create all necessary directories
+        os.makedirs(app_support_dir, exist_ok=True)
+        os.makedirs(manifest_dir, exist_ok=True)
+        
+        # Set proper permissions for directory
+        os.chmod(app_support_dir, 0o755)
+        
+        # Create log file if it doesn't exist and set permissions
+        if not os.path.exists(log_file):
+            with open(log_file, 'a'):  # Create file if it doesn't exist
+                pass
+        os.chmod(log_file, 0o666)  # Allow read/write for all users
+        
+        # Create and write manifest file
+        manifest = {
+            "name": "ai.inten.app",
+            "description": "Inten native messaging host",
+            "path": "/Applications/Inten.app/Contents/MacOS/Inten",
+            "args": ["--native-messaging-host"],
+            "type": "stdio",
+            "allowed_origins": [
+                "chrome-extension://jgfjmabgdpbccfecnilbjnjoglnholem/"
+            ]
+        }
+
+        manifest_path = os.path.join(manifest_dir, "ai.inten.app.json")
+        with open(manifest_path, 'w') as f:
+            json.dump(manifest, f, indent=2)
+            
+        # Set manifest permissions
+        os.chmod(manifest_path, 0o644)
+            
+        logging.info("Native messaging host manifest registered and directories created successfully")
+        
+    except Exception as e:
+        logging.error(f"Failed to register native messaging host manifest or create directories: {e}")
+
 # --- Main Execution Block ---
 if __name__ == "__main__":
-    # if len(sys.argv) > 1 and sys.argv[1] == "--settings":
-    #     show_settings()
-    # else:
-    #     print("\n--- Inten Tool (Document Command Mode) ---")
-    print("\n--- Inten Tool (Document Command Mode) ---")
-    print(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}") # Add timestamp
-    if not platform_utils.is_macos():
-         print("WARNING: Running on non-macOS. TextEdit interaction will be disabled.")
+    if len(sys.argv) > 1 and sys.argv[1] == "--native-messaging-host":
+        print("Starting native messaging host...")
+        run_native_messaging_host()
+    else:
+        # Register native messaging host first
+        ensure_native_messaging_host_registered()
+        
+        print("\n--- Inten Tool (Document Command Mode) ---")
+        print(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}") # Add timestamp
+        if not platform_utils.is_macos():
+             print("WARNING: Running on non-macOS. TextEdit interaction will be disabled.")
 
-    # Print key config details
-    print(f"ASR Provider: {asr_provider} ({asr_model if asr_provider == 'openai_api' else config['ASR'].get('local_model_size','N/A')})")
-    print(f"LLM Provider: {llm_provider} ({llm_model})")
-    print(f"VAD Enabled: {vad_config['enabled']}")
-    if vad_config['enabled']:
-        print(f"Stops after {vad_config['silence_duration_ms']}ms of silence (Aggressiveness: {vad_config['aggressiveness']}).")
+        # Print key config details
+        print(f"ASR Provider: {asr_provider} ({asr_model if asr_provider == 'openai_api' else config['ASR'].get('local_model_size','N/A')})")
+        print(f"LLM Provider: {llm_provider} ({llm_model})")
+        print(f"VAD Enabled: {vad_config['enabled']}")
+        if vad_config['enabled']:
+            print(f"Stops after {vad_config['silence_duration_ms']}ms of silence (Aggressiveness: {vad_config['aggressiveness']}).")
 
-    print(f"\nTarget Application (Initial): TextEdit on macOS")
-    print(f"Press '{start_hotkey}' when TextEdit is active to issue a command.")
-    print("Ensure required Accessibility/Automation permissions are granted (macOS).")
-    print("Press Ctrl+C in the console to quit.")
+        print(f"\nTarget Application (Initial): TextEdit on macOS")
+        print(f"Press '{start_hotkey}' when TextEdit is active to issue a command.")
+        print("Ensure required Accessibility/Automation permissions are granted (macOS).")
+        print("Press Ctrl+C in the console to quit.")
 
-    # --- Setup Hotkey Listener ---
-    # Use the simple trigger function as the callback
-    try:
-        # Attempt to remove previous hook in case of reload (helps sometimes)
-        try: keyboard.remove_hotkey(start_hotkey)
-        except KeyError: pass
-        # Register the new hotkey
-        keyboard.add_hotkey(start_hotkey, trigger_start_recording)
-        print(f"Hotkey '{start_hotkey}' registered successfully.")
-    except Exception as e:
-        print(f"\nERROR setting hotkey '{start_hotkey}': {e}")
-        print("This might be due to permissions issues (especially on macOS or Wayland).")
-        print("Try checking System Settings > Privacy & Security > Accessibility / Input Monitoring.")
-        print("Alternatively, try running the script with sudo (Linux/macOS) or as Administrator (Windows) - use with caution.")
-        exit()
-
-    # --- Main Loop (Processing Action Queue) ---
-    try:
-        while True:
-            try:
-                # Check the action queue for commands from the hotkey callback
-                action = action_queue.get(block=True, timeout=0.1) # Wait briefly for action
-
-                if action == "START_RECORDING":
-                    # Call the function that contains the context check & recording logic
-                    _initiate_recording_process()
-                else:
-                    print(f"Warning: Unknown action received in queue: {action}")
-
-            except queue.Empty:
-                # No action requested in this interval, loop continues
-                pass
-
-            # Optional: A very small sleep prevents the loop from spinning uselessly
-            # when the queue is empty, reducing CPU usage slightly.
-            # time.sleep(0.01) # Disabled for now, timeout on queue.get serves similar role
-
-    except KeyboardInterrupt:
-        print("\nCtrl+C detected. Initiating shutdown...")
-    except Exception as e:
-        print(f"\nAn unexpected error occurred in the main loop: {e}")
-        import traceback
-        traceback.print_exc()
-    finally:
-        # --- Cleanup ---
-        print("Cleaning up resources...")
-        if is_recording:
-            print("Signaling active recording thread to stop...")
-            stop_recording_event.set() # Ensure recording/monitor threads exit if active
-
-        # Unregister hotkey
+        # --- Setup Hotkey Listener ---
+        # Use the simple trigger function as the callback
         try:
-            print(f"Removing hotkey '{start_hotkey}'...")
-            keyboard.remove_hotkey(start_hotkey)
-        except (KeyError, NameError): # NameError if start_hotkey failed loading
-             print("Hotkey was not registered or already removed.")
+            # Attempt to remove previous hook in case of reload (helps sometimes)
+            try: keyboard.remove_hotkey(start_hotkey)
+            except KeyError: pass
+            # Register the new hotkey
+            keyboard.add_hotkey(start_hotkey, trigger_start_recording)
+            print(f"Hotkey '{start_hotkey}' registered successfully.")
         except Exception as e:
-             print(f"Error removing hotkey: {e}")
+            print(f"\nERROR setting hotkey '{start_hotkey}': {e}")
+            print("This might be due to permissions issues (especially on macOS or Wayland).")
+            print("Try checking System Settings > Privacy & Security > Accessibility / Input Monitoring.")
+            print("Alternatively, try running the script with sudo (Linux/macOS) or as Administrator (Windows) - use with caution.")
+            exit()
+
+        # --- Main Loop (Processing Action Queue) ---
+        try:
+            while True:
+                try:
+                    # Check the action queue for commands from the hotkey callback
+                    action = action_queue.get(block=True, timeout=0.1) # Wait briefly for action
+
+                    if action == "START_RECORDING":
+                        # Call the function that contains the context check & recording logic
+                        _initiate_recording_process()
+                    else:
+                        print(f"Warning: Unknown action received in queue: {action}")
+
+                except queue.Empty:
+                    # No action requested in this interval, loop continues
+                    pass
+
+                # Optional: A very small sleep prevents the loop from spinning uselessly
+                # when the queue is empty, reducing CPU usage slightly.
+                # time.sleep(0.01) # Disabled for now, timeout on queue.get serves similar role
+
+        except KeyboardInterrupt:
+            print("\nCtrl+C detected. Initiating shutdown...")
+        except Exception as e:
+            print(f"\nAn unexpected error occurred in the main loop: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            # --- Cleanup ---
+            print("Cleaning up resources...")
+            if is_recording:
+                print("Signaling active recording thread to stop...")
+                stop_recording_event.set() # Ensure recording/monitor threads exit if active
+
+            # Unregister hotkey
+            try:
+                print(f"Removing hotkey '{start_hotkey}'...")
+                keyboard.remove_hotkey(start_hotkey)
+            except (KeyError, NameError): # NameError if start_hotkey failed loading
+                 print("Hotkey was not registered or already removed.")
+            except Exception as e:
+                 print(f"Error removing hotkey: {e}")
 
 
-        # Optional: Wait briefly for threads to potentially finish cleanup, though daemon=True helps
-        # time.sleep(0.5)
+            # Optional: Wait briefly for threads to potentially finish cleanup, though daemon=True helps
+            # time.sleep(0.5)
 
-        print("Exited.")
+            print("Exited.")

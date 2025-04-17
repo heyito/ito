@@ -69,11 +69,11 @@ def set_textedit_content(text_content):
         print(f"Could not set TextEdit content: {e}")
         return False
 
-def get_chrome_context():
+def get_chrome_context(socket_path):
     print("Getting content from Chrome...")
     try:
         sock = socket.socket(socket.AF_UNIX)
-        sock.connect("/tmp/inten_native_host.sock")
+        sock.connect(socket_path)
         
         # Send request for context
         sock.send(json.dumps({"type": "request_context"}).encode())

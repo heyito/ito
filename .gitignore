@@ -4,8 +4,8 @@ __pycache__/
 *$py.class
 
 # Virtual environment
-venv/
-env/
+venv
+env
 .venv/
 .env/
 
@@ -27,7 +27,6 @@ config.ini
 # Ignore build files
 build/
 dist/
-*.spec
 *.dist-info
 *.egg-info
 *.egg

@@ -1,0 +1,9 @@
+{
+  "name": "ai.inten.app",
+  "description": "Inten native messaging host",
+  "path": "/Users/evanmarshall/Dev/ai/openwater/src/launch_native_host.sh",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://jgfjmabgdpbccfecnilbjnjoglnholem/"
+  ]
+}

@@ -73,7 +73,7 @@ def get_chrome_context():
     print("Getting content from Chrome...")
     try:
         sock = socket.socket(socket.AF_UNIX)
-        sock.connect("/tmp/Inten_native_host.sock")
+        sock.connect("/tmp/inten_native_host.sock")
         
         # Send request for context
         sock.send(json.dumps({"type": "request_context"}).encode())

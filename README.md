@@ -92,9 +92,9 @@ This tool listens for voice input via a hotkey, transcribes the speech, processe
 
 ### Prerequisites for Building
 
-1. Install py2app:
+1. Install PyInstaller:
 ```bash
-pip install py2app
+pip install pyinstaller
 ```
 
 2. Install system dependencies:
@@ -112,7 +112,13 @@ cd src
 
 2. Build the app bundle:
 ```bash
-python setup.py py2app
+pyinstaller src/main.py \
+    --name Inten \
+    --windowed \
+    --add-data "config.ini:." \
+    --add-binary "/opt/homebrew/opt/portaudio/lib/libportaudio.dylib:." \
+    --osx-bundle-identifier ai.inten.inten \
+    --noconfirm
 ```
 
 This will create a `dist` directory containing your `.app` bundle.
@@ -142,28 +148,38 @@ cd dist
 - Check `~/Library/Logs/DiagnosticReports/` for crash reports
 
 3. Common issues and solutions:
-- Missing modules: Add them to the `includes` list in `setup.py`
+- Missing modules: Use `--hidden-import` with PyInstaller to include additional modules
 - Permission issues: Ensure the app is executable:
   ```bash
   chmod +x dist/Inten.app/Contents/MacOS/Inten
   ```
 - Build with verbose output to catch missing modules:
   ```bash
-  python setup.py py2app -v
+  pyinstaller src/main.py \
+    --name Inten \
+    --windowed \
+    --add-data "config.ini:." \
+    --add-binary "/opt/homebrew/opt/portaudio/lib/libportaudio.dylib:." \
+    --osx-bundle-identifier ai.inten.inten \
+    --hidden-import audio_handler \
+    --hidden-import asr_handler \
+    --hidden-import llm_handler \
+    --hidden-import prompt_templates \
+    --hidden-import platform_utils_macos \
+    --noconfirm
   ```
 
 ### Customizing the App Bundle
 
-Edit `setup.py` to customize:
-- App name
-- Bundle identifier
-- Icon
-- Version
-- Other app metadata
+Customize the build command with:
+- App name: `--name`
+- Bundle identifier: `--osx-bundle-identifier`
+- Icon: `--icon`
+- Version: `--version-file`
 
 Example bundle identifier format:
-```python
-'CFBundleIdentifier': "com.yourdomain.inten"
+```
+ai.inten.inten
 ```
 
-Replace "yourdomain" with your actual domain or organization name.
+Replace with your desired bundle identifier.

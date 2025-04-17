@@ -22,7 +22,7 @@ logging.basicConfig(
     ]
 )
 
-SOCKET_PATH = '/tmp/Inten_native_host.sock'
+SOCKET_PATH = '/tmp/inten_native_host.sock'
 
 class NativeHost:
     def __init__(self):

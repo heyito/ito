@@ -1,9 +1,0 @@
-{
-  "name": "com.Inten.app",
-  "description": "Inten native messaging host",
-  "path": "/Users/evanmarshall/Dev/ai/Inten/src/launch_native_host.sh",
-  "type": "stdio",
-  "allowed_origins": [
-    "chrome-extension://aijlooclpcmnbgpaihkkjipncehjealp/"
-  ]
-} 

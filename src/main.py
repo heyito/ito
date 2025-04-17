@@ -210,7 +210,7 @@ def processing_thread_func(original_doc_text: str, user_command: str, sr: int, c
             try:
                 # Connect to the native messaging host socket
                 client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                client.connect('/tmp/Inten_native_host.sock')
+                client.connect('/tmp/inten_native_host.sock')
                 
                 # Send the message to update text
                 message = {

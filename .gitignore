@@ -15,6 +15,7 @@ env/
 
 # Secrets / Sensitive configuration
 config.ini
+*.pem
 
 # Temporary audio files (if saving intermediately)
 *.wav
@@ -32,3 +33,4 @@ dist/
 *.egg
 *.dmg
 *.eggs/*
+.DS_Store

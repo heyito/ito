@@ -32,6 +32,12 @@ echo "📁 Creating installer structure..."
 mkdir -p dist/dmg-contents
 cp -r "dist/Inten.app" dist/dmg-contents/
 
+# Add native messaging host script to Resources
+echo "📝 Adding native messaging host script..."
+mkdir -p "dist/dmg-contents/Inten.app/Contents/Resources"
+cp src/native_messaging_host.sh "dist/dmg-contents/Inten.app/Contents/Resources/"
+chmod +x "dist/dmg-contents/Inten.app/Contents/Resources/native_messaging_host.sh"
+
 # Create DMG with basic settings
 echo "💿 Creating DMG installer..."
 create-dmg \

@@ -54,7 +54,7 @@ current_context = {"app_name": None, "doc_text": None} # Store context for curre
 # --- Load Configuration ---
 config = configparser.ConfigParser()
 
-SOCKET_PATH = os.path.expanduser('~/Library/Application Support/Inten/inten_native_host.sock')
+SOCKET_PATH = "/tmp/inten_native_host.sock"
 
 def get_resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller"""
@@ -496,32 +496,19 @@ def run_native_messaging_host():
     native_messaging_main()
 
 def ensure_native_messaging_host_registered():
-    """Ensure the native messaging host manifest is registered with Chrome and required directories exist"""
+    """Ensure the native messaging host manifest is registered with Chrome"""
     try:
-        # Define all required directories
-        app_support_dir = os.path.expanduser("~/Library/Application Support/Inten")
+        # Only need manifest directory now
         manifest_dir = os.path.expanduser("~/Library/Application Support/Google/Chrome/NativeMessagingHosts")
-        log_file = os.path.join(app_support_dir, "native_messaging.log")
         
-        # Create all necessary directories
-        os.makedirs(app_support_dir, exist_ok=True)
+        # Create manifest directory
         os.makedirs(manifest_dir, exist_ok=True)
-        
-        # Set proper permissions for directory
-        os.chmod(app_support_dir, 0o755)
-        
-        # Create log file if it doesn't exist and set permissions
-        if not os.path.exists(log_file):
-            with open(log_file, 'a'):  # Create file if it doesn't exist
-                pass
-        os.chmod(log_file, 0o666)  # Allow read/write for all users
         
         # Create and write manifest file
         manifest = {
             "name": "ai.inten.app",
             "description": "Inten native messaging host",
-            "path": "/Applications/Inten.app/Contents/MacOS/Inten",
-            "args": ["--native-messaging-host"],
+            "path": "/Applications/Inten.app/Contents/Resources/native_messaging_host.sh",
             "type": "stdio",
             "allowed_origins": [
                 "chrome-extension://jgfjmabgdpbccfecnilbjnjoglnholem/"
@@ -535,10 +522,10 @@ def ensure_native_messaging_host_registered():
         # Set manifest permissions
         os.chmod(manifest_path, 0o644)
             
-        logging.info("Native messaging host manifest registered and directories created successfully")
+        logging.info("Native messaging host manifest registered successfully")
         
     except Exception as e:
-        logging.error(f"Failed to register native messaging host manifest or create directories: {e}")
+        logging.error(f"Failed to register native messaging host manifest: {e}")
 
 # --- Main Execution Block ---
 if __name__ == "__main__":

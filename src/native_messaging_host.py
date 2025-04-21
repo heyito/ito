@@ -13,29 +13,29 @@ import socket
 import threading
 
 def setup_logging():
-    log_dir = os.path.expanduser("~/Library/Application Support/Inten")
-    log_file = os.path.join(log_dir, "native_messaging.log")
-    
-    # Create directory if it doesn't exist
-    os.makedirs(log_dir, exist_ok=True)
-    
-    # Set directory permissions first (more restrictive)
-    os.chmod(log_dir, 0o755)  # rwxr-xr-x
-    
-    # Create log file if it doesn't exist
-    if not os.path.exists(log_file):
-        open(log_file, 'a').close()
-        # Set file permissions to be equal or more restrictive than directory
-        os.chmod(log_file, 0o644)  # rw-r--r--
-    
-    # Configure logging
-    logging.basicConfig(
-        filename=log_file,
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s'
-    )
+    try:
+        # Use /tmp directory which should be writable by Chrome's native messaging host
+        log_file = "/tmp/inten_native_messaging.log"
+        
+        # Configure logging
+        logging.basicConfig(
+            filename=log_file,
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s'
+        )
+        
+        logging.info("Logging initialized")
+        
+    except Exception as e:
+        # Fall back to stderr if file logging fails
+        logging.basicConfig(
+            stream=sys.stderr,
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s'
+        )
+        logging.error(f"Failed to setup file logging: {e}")
 
-SOCKET_PATH = os.path.expanduser('~/Library/Application Support/Inten/inten_native_host.sock')
+SOCKET_PATH = "/tmp/inten_native_host.sock"
 
 class NativeHost:
     def __init__(self):

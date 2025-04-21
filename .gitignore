@@ -33,3 +33,5 @@ dist/
 *.dmg
 *.eggs/*
 .DS_Store
+*.zip
+dmg-layout.applescript

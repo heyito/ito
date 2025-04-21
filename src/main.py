@@ -115,7 +115,14 @@ try:
 
     # Hotkey Config
     start_hotkey_str = config['Hotkeys']['start_recording_hotkey'] # Hotkey now starts context check + command recording
-
+    dev_mode = os.getenv('DEV')
+    if dev_mode:
+        print("Dev mode enabled")
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        manifest_path = os.path.join(current_dir, "native_messaging_host.sh")
+    else:
+        manifest_path = "/Applications/Inten.app/Contents/Resources/native_messaging_host.sh"
+    
 except (KeyError, FileNotFoundError, ValueError) as e:
     print(f"Error loading configuration from config.ini: {e}")
     print("Please ensure config.ini exists, is correctly formatted, and contains all required keys.")

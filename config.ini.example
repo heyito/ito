@@ -2,30 +2,30 @@
 api_key = YOUR_OPENAI_API_KEY_HERE
 
 [ASR]
-# provider = openai_api or faster_whisper
 provider = faster_whisper
 model = whisper-1
 
 # -- Settings for faster_whisper --
 # Options: tiny, tiny.en, base, base.en, small, small.en, medium, medium.en, large-v1, large-v2, large-v3
-# Using large-v3 for best accuracy
-local_model_size = large-v3
+# Start with a smaller English-only model for testing
+local_model_size = base.en
 # Device: cpu, cuda, auto (Let faster-whisper decide)
 device = auto
 # Compute type: float16 (GPU default), int8 (CPU/GPU, faster, quantized), float32 (CPU)
-# Using float16 for best accuracy on GPU, or int8 for CPU
-compute_type = float16
+# Let faster-whisper choose based on device, or set explicitly e.g., int8
+compute_type = default
+
 
 [LLM]
 # Provider options: 'openai_api' or 'local_llm'
-provider = local_llm
+provider = openai_api
 
 # OpenAI API settings (only used if provider = openai_api)
 api_key = YOUR_OPENAI_API_KEY_HERE
 model = gpt-4.1
 
 # Local model settings (only used if provider = local_llm)
-local_model = google/gemma-3-2b-it
+local_model = deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
 quantization = 8
 max_tokens = 2000
 temperature = 0.7

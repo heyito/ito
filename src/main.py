@@ -1,18 +1,18 @@
-# main.py
+import sys
+import os
 import configparser
-import keyboard
 import threading
 import queue
 import time
 import numpy as np
-import platform # Import platform
+import platform
 import socket
 import json
+import logging
+from pynput import keyboard
+import traceback    
 # from settings_ui import SettingsWindow
 # from PyQt6.QtWidgets import QApplication
-import sys
-import os
-import logging
 
 # Import platform utils conditionally
 if platform.system() == "Darwin":
@@ -114,7 +114,7 @@ try:
     output_method = config['Output']['method']
 
     # Hotkey Config
-    start_hotkey = config['Hotkeys']['start_recording_hotkey'] # Hotkey now starts context check + command recording
+    start_hotkey_str = config['Hotkeys']['start_recording_hotkey'] # Hotkey now starts context check + command recording
 
 except (KeyError, FileNotFoundError, ValueError) as e:
     print(f"Error loading configuration from config.ini: {e}")
@@ -322,8 +322,18 @@ def vad_monitor_and_process_thread_func(stop_event, audio_q, original_doc_text, 
         processing_thread.start()
 
 
+def on_keyboard_press(key):
+    start_hotkey = keyboard.Key.f9
+    try:
+        start_hotkey = getattr(keyboard.Key, start_hotkey_str)
+    except AttributeError:
+        start_hotkey = keyboard.KeyCode.from_char(start_hotkey_str)
+    
+    if key == start_hotkey:
+        trigger_start_recording(key)
+
 # --- Hotkey Callback (Simple trigger putting command in queue) ---
-def trigger_start_recording():
+def trigger_start_recording(key):
     """
     Called by the keyboard library upon hotkey press.
     Puts a command ('START_RECORDING') into the action_queue
@@ -333,15 +343,15 @@ def trigger_start_recording():
     """
     # Check status flags BEFORE queueing to avoid flooding queue if busy
     if is_processing:
-         print(f"[{time.strftime('%H:%M:%S')}] Hotkey '{start_hotkey}' detected, but PROCESSING is busy.")
+         print(f"[{time.strftime('%H:%M:%S')}] Hotkey '{start_hotkey_str}' detected, but PROCESSING is busy.")
          # Consider adding user feedback like a beep sound here
          return
     if is_recording:
-         print(f"[{time.strftime('%H:%M:%S')}] Hotkey '{start_hotkey}' detected, but already RECORDING.")
+         print(f"[{time.strftime('%H:%M:%S')}] Hotkey '{start_hotkey_str}' detected, but already RECORDING.")
          # Consider adding user feedback
          return
 
-    print(f"[{time.strftime('%H:%M:%S')}] Hotkey '{start_hotkey}' detected. Queuing context check & start command.")
+    print(f"[{time.strftime('%H:%M:%S')}] Hotkey '{start_hotkey_str}' detected. Queuing context check & start command.")
     action_queue.put("START_RECORDING") # Signal main loop
 
 
@@ -549,7 +559,7 @@ if __name__ == "__main__":
             print(f"Stops after {vad_config['silence_duration_ms']}ms of silence (Aggressiveness: {vad_config['aggressiveness']}).")
 
         print(f"\nTarget Application (Initial): TextEdit on macOS")
-        print(f"Press '{start_hotkey}' when TextEdit is active to issue a command.")
+        print(f"Press '{start_hotkey_str}' when TextEdit is active to issue a command.")
         print("Ensure required Accessibility/Automation permissions are granted (macOS).")
         print("Press Ctrl+C in the console to quit.")
 
@@ -557,13 +567,14 @@ if __name__ == "__main__":
         # Use the simple trigger function as the callback
         try:
             # Attempt to remove previous hook in case of reload (helps sometimes)
-            try: keyboard.remove_hotkey(start_hotkey)
-            except KeyError: pass
+            # try: keyboard.remove_hotkey(start_hotkey) TOD
+            # except KeyError: pass
             # Register the new hotkey
-            keyboard.add_hotkey(start_hotkey, trigger_start_recording)
-            print(f"Hotkey '{start_hotkey}' registered successfully.")
+            listener = keyboard.Listener(on_press=on_keyboard_press)
+            listener.start()
+            print(f"Hotkey '{start_hotkey_str}' registered successfully.")
         except Exception as e:
-            print(f"\nERROR setting hotkey '{start_hotkey}': {e}")
+            print(f"\nERROR setting hotkey '{start_hotkey_str}': {e}")
             print("This might be due to permissions issues (especially on macOS or Wayland).")
             print("Try checking System Settings > Privacy & Security > Accessibility / Input Monitoring.")
             print("Alternatively, try running the script with sudo (Linux/macOS) or as Administrator (Windows) - use with caution.")
@@ -604,16 +615,19 @@ if __name__ == "__main__":
                 stop_recording_event.set() # Ensure recording/monitor threads exit if active
 
             # Unregister hotkey
-            try:
-                print(f"Removing hotkey '{start_hotkey}'...")
-                keyboard.remove_hotkey(start_hotkey)
-            except (KeyError, NameError): # NameError if start_hotkey failed loading
-                 print("Hotkey was not registered or already removed.")
-            except Exception as e:
-                 print(f"Error removing hotkey: {e}")
+            # try:
+            #     print(f"Removing hotkey '{start_hotkey_str}'...")
+            #     keyboard.remove_hotkey(start_hotkey_str)
+            # except (KeyError, NameError): # NameError if start_hotkey failed loading
+            #      print("Hotkey was not registered or already removed.")
+            # except Exception as e:
+            #      print(f"Error removing hotkey: {e}")
 
 
             # Optional: Wait briefly for threads to potentially finish cleanup, though daemon=True helps
             # time.sleep(0.5)
 
             print("Exited.")
+
+    # Stop the hotkey listener
+    listener.stop()

@@ -1,7 +1,7 @@
 # Core Application Dependencies
 PyQt6==6.9.0
 numpy==2.2.4
-keyboard==0.13.5
+pynput==1.8.1
 sounddevice==0.5.1
 openai==1.72.0
 pyautogui==0.9.54

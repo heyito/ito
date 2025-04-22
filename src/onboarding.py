@@ -188,13 +188,23 @@ class SettingsWindow(QMainWindow):
         setup_complete = self.settings.value("permissionsSetupComplete", defaultValue=False, type=bool)
 
         if setup_complete:
-            print("Permissions setup previously completed. Skipping setup flow.")
-            # If setup is done, go directly to the completion screen
-            self.show_completion_screen(mark_complete=False) # Don't re-mark as complete
+            print("Permissions setup previously completed. Transitioning to home screen.")
+            # Import here to avoid circular imports
+            from home_window import HomeWindow
+            # Create home window but don't show it yet
+            self.home_window = HomeWindow()
+            # Hide this window before showing the home window
+            self.hide()
+            # Show the home window
+            self.home_window.show()
+            # Use a timer to close this window after a short delay
+            QTimer.singleShot(0, self.close)
         else:
             print("Starting permissions setup flow.")
             # If setup not done, start with the welcome screen
             self.show_welcome_screen()
+            # Now show the window
+            self.show()
 
     def clear_layout(self):
         """Helper function to remove all widgets from the main layout."""
@@ -472,7 +482,7 @@ class SettingsWindow(QMainWindow):
             error_label.setStyleSheet("color: #e74c3c;")
             self.layout.addWidget(error_label)
 
-    def show_completion_screen(self, mark_complete=True):
+    def show_completion_screen(self):
         self.clear_layout()
 
         # Success Icon
@@ -505,7 +515,7 @@ class SettingsWindow(QMainWindow):
 
         # Start Button
         start_button = QPushButton("Start Using Inten")
-        start_button.clicked.connect(lambda: self.complete_setup(mark_complete))
+        start_button.clicked.connect(self.complete_setup)
         start_button.setStyleSheet("""
             QPushButton {
                 background-color: #2ecc71;
@@ -524,15 +534,23 @@ class SettingsWindow(QMainWindow):
 
         self.layout.addStretch()
 
-    def complete_setup(self, mark_complete):
-        """Saves the setup complete flag if needed, then closes the window."""
-        if mark_complete:
-            print("Marking permissions setup as complete in settings.")
-            # Save the flag indicating setup is done
-            self.settings.setValue("permissionsSetupComplete", True)
-        else:
-            print("Setup already marked as complete, just closing.")
-        self.close() # Close the window
+    def complete_setup(self):
+        """Saves the setup complete flag if needed, then transitions to the home screen."""
+        print("Marking permissions setup as complete in settings.")
+        # Save the flag indicating setup is done
+        self.settings.setValue("permissionsSetupComplete", True)
+        
+        # Import here to avoid circular imports
+        from home_window import HomeWindow
+        
+        # Create home window but don't show it yet
+        self.home_window = HomeWindow()
+        # Hide this window before showing the home window
+        self.hide()
+        # Show the home window
+        self.home_window.show()
+        # Use a timer to close this window after a short delay
+        QTimer.singleShot(0, self.close)
 
     # --- Manual Dragging Event Handlers ---
     def mousePressEvent(self, event):

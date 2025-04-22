@@ -11,7 +11,7 @@ import json
 import logging
 from pynput import keyboard
 import traceback    
-from settings_ui import SettingsWindow
+from onboarding import SettingsWindow
 from PyQt6.QtWidgets import QApplication
 
 # Import platform utils conditionally

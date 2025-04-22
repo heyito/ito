@@ -11,8 +11,8 @@ import json
 import logging
 from pynput import keyboard
 import traceback    
-# from settings_ui import SettingsWindow
-# from PyQt6.QtWidgets import QApplication
+from settings_ui import SettingsWindow
+from PyQt6.QtWidgets import QApplication
 
 # Import platform utils conditionally
 if platform.system() == "Darwin":
@@ -502,11 +502,11 @@ def _initiate_recording_process():
     )
     monitor_thread_handle.start()
 
-# def show_settings():
-#     app = QApplication(sys.argv)
-#     window = SettingsWindow()
-#     window.show()
-#     app.exec()
+def show_settings():
+    app = QApplication(sys.argv)
+    window = SettingsWindow()
+    window.show()
+    app.exec()
 
 def run_native_messaging_host():
     """Run the native messaging host functionality"""
@@ -552,11 +552,14 @@ if __name__ == "__main__":
         print("Starting native messaging host...")
         run_native_messaging_host()
     else:
-        # Register native messaging host first
+        # Show the getting started page
+        show_settings()
+        
+        # Register native messaging host
         ensure_native_messaging_host_registered()
         
         print("\n--- Inten Tool (Document Command Mode) ---")
-        print(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}") # Add timestamp
+        print(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}")
         if not platform_utils.is_macos():
              print("WARNING: Running on non-macOS. TextEdit interaction will be disabled.")
 

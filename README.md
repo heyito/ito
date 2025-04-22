@@ -40,12 +40,7 @@ This tool listens for voice input via a hotkey, transcribes the speech, processe
     pip install -r requirements.txt
     ```
 
-4. **Install portaudio:**
-    ```bash
-    brew install portaudio
-    ```
-
-5.  **Configure the tool:**
+4.  **Configure the tool:**
     * Rename `config.ini.example` to `config.ini` (or create `config.ini`).
     * Edit `config.ini` and add your OpenAI API key.
     * (Optional) Run `python utils/list_audio_devices.py` to find your microphone's device index and update `config.ini` if needed (usually not required if default works).

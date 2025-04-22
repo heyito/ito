@@ -119,9 +119,10 @@ try:
     if dev_mode:
         print("Dev mode enabled")
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        manifest_path = os.path.join(current_dir, "native_messaging_host.sh")
+        native_messaging_script_path = os.path.join(current_dir, "native_messaging_host.sh")
     else:
-        manifest_path = "/Applications/Inten.app/Contents/Resources/native_messaging_host.sh"
+        print("Dev mode disabled")
+        native_messaging_script_path = "/Applications/Inten.app/Contents/Resources/native_messaging_host.sh"
     
 except (KeyError, FileNotFoundError, ValueError) as e:
     print(f"Error loading configuration from config.ini: {e}")
@@ -525,12 +526,13 @@ def ensure_native_messaging_host_registered():
         manifest = {
             "name": "ai.inten.app",
             "description": "Inten native messaging host",
-            "path": "/Applications/Inten.app/Contents/Resources/native_messaging_host.sh",
+            "path": native_messaging_script_path,
             "type": "stdio",
             "allowed_origins": [
                 "chrome-extension://jgfjmabgdpbccfecnilbjnjoglnholem/"
             ]
         }
+        print("creating manifest:", manifest)
 
         manifest_path = os.path.join(manifest_dir, "ai.inten.app.json")
         with open(manifest_path, 'w') as f:

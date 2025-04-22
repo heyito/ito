@@ -52,7 +52,7 @@ async function getPageContext() {
     const context = {
         url: window.location.href,
         title: document.title,
-        selectedText: window.getSelection().toString(), // User's actual selection before we start
+        selectedText: null, // User's actual selection before we start
         activeElement: null,
         activeElementType: null,
         activeElementContent: null // Where the final content will go
@@ -170,6 +170,9 @@ async function getPageContext() {
         console.log('[getContext] No active element found.');
     }
 
+    context.selectedText = context.activeElementContent;
+    console.log('[getContext] Returning context:', context);
+
     return context;
 }
 
@@ -238,14 +241,6 @@ async function insertText(text, replaceAll = true) {
 
                 // Wait briefly for selection to potentially register
                 await new Promise(resolve => setTimeout(resolve, 100));
-
-                // Optional: Log whether selection seemed to work
-                const selectedText = window.getSelection()?.toString() || "";
-                if (selectedText.length > 0) {
-                    console.log(` Verification: Text selected (${selectedText.length} chars).`);
-                } else {
-                    console.warn(' Verification: No text seems selected after key simulation. Delete might not work as expected.');
-                }
 
                 // Simulate Delete key press
                 // Note: If 'Delete' (keyCode 46) doesn't work, try 'Backspace' (keyCode 8)
@@ -351,13 +346,74 @@ async function insertText(text, replaceAll = true) {
 }
 
 // Listen for messages from the background script
-chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
-    if (request.type === 'getContext') {
-        const context = await getPageContext();
-        sendResponse(context);
-    } else if (request.type === 'insertText') {
-        const success = await insertText(request.text);
-        sendResponse({success});
-    }
-    return true;
-});
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // Optional: Log received messages for easier debugging
+  console.log("Message received in content script:", request);
+
+  if (request.type === 'getContext') {
+      console.log("Handling getContext request...");
+      // Use an immediately-invoked async function (IIFE)
+      (async () => {
+          try {
+              // Await the result of the async getPageContext function
+              const context = await getPageContext();
+              console.log("Sending getContext response:", context);
+              // Send the response AFTER the await completes
+              sendResponse(context);
+          } catch (error) {
+              // Handle any errors during the async operation
+              console.error("Error executing or awaiting getPageContext:", error);
+              sendResponse({ error: "Failed to get context", details: error.message });
+          }
+      })();
+      // Return true IMMEDIATELY after starting the async operation.
+      // This tells Chrome to keep the message channel open until sendResponse is called.
+      return true;
+
+  } else if (request.type === 'insertText') {
+      console.log("Handling insertText request...");
+      const textToInsert = request.text;
+      // Get the replaceAll flag, defaulting to true if not provided
+      const replaceAllContent = request.replaceAll || true;
+
+      // Basic check if text is provided
+      if (typeof textToInsert === 'undefined') {
+           console.error("insertText request received without 'text' property.");
+           // Send synchronous error response
+           sendResponse({ success: false, error: "No text provided in request." });
+           // Return false because we responded synchronously
+           return false;
+      }
+
+      // Use an immediately-invoked async function (IIFE)
+      (async () => {
+          try {
+              // Await the result of the async insertText function
+              // Pass both text and the replaceAll flag
+              const success = await insertText(textToInsert, replaceAllContent);
+              console.log("Sending insertText response:", { success: success });
+              // Send the response AFTER the await completes
+              sendResponse({ success: success });
+          } catch (error) {
+              // Handle any errors during the async operation
+              console.error("Error executing or awaiting insertText:", error);
+              sendResponse({ success: false, error: error.message });
+          }
+      })();
+      // Return true IMMEDIATELY after starting the async operation.
+      return true;
+  }
+
+  // Optional: If you have other synchronous message types, handle them here
+  // else if (request.type === 'someSyncAction') {
+  //    doSomethingSync();
+  //    sendResponse({ result: 'done' });
+  //    return false; // Or omit return statement for sync responses
+  // }
+
+  // If the message type isn't handled, Chrome assumes a synchronous response.
+  // Returning false explicitly or letting it return undefined signals this.
+  console.warn("Unhandled message type received in content script:", request.type);
+  // return false; // You can explicitly return false for unhandled types if desired
+
+}); // End of addListener

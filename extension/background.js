@@ -117,7 +117,7 @@ function connect() {
                                             });
                                         }
                                     } else {
-                                        console.log('Successfully got context:', context);
+                                        console.log('Successfully got context:', JSON.stringify(context));
                                         port.postMessage({
                                             type: 'context',
                                             data: context

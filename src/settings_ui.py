@@ -30,11 +30,17 @@ class PermissionChecker(QObject):
 
     def check_microphone(self):
         try:
-            # Try to list input devices
-            devices = sd.query_devices()
-            input_devices = [d for d in devices if d['max_input_channels'] > 0]
-            self.permission_checked.emit('microphone', len(input_devices) > 0)
-        except Exception:
+            # Try to actually open a stream - this will trigger permission check
+            with sd.InputStream(channels=1, samplerate=16000, blocksize=1024):
+                # If we get here, we have permission
+                print("Microphone permission granted")
+                self.permission_checked.emit('microphone', True)
+        except sd.PortAudioError as e:
+            print(f"Microphone permission error: {e}")
+            self.permission_checked.emit('microphone', False)
+        except Exception as e:
+            print(f"Unexpected error checking microphone: {e}")
+            traceback.print_exc()
             self.permission_checked.emit('microphone', False)
 
     def check_accessibility(self):

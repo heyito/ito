@@ -10,7 +10,7 @@ if [ -f ".env" ]; then
     set -a  # automatically export all variables
     source ".env"
     set +a
-
+fi
 
 # Check if DEV mode is enabled
 if [ "$DEV" = "true" ]; then

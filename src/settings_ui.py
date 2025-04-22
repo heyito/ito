@@ -3,7 +3,7 @@ import traceback
 import platform
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                            QLabel, QPushButton, QProgressBar, QHBoxLayout)
-from PyQt6.QtCore import Qt, QPointF, QTimer, pyqtSignal, QObject
+from PyQt6.QtCore import Qt, QPointF, QTimer, pyqtSignal, QObject, QSettings
 from PyQt6.QtGui import QPixmap, QColor, QPalette
 import sounddevice as sd
 import pynput.keyboard
@@ -30,11 +30,11 @@ class PermissionChecker(QObject):
 
     def check_microphone(self):
         try:
-            # Try to actually open a stream - this will trigger permission check
-            with sd.InputStream(channels=1, samplerate=16000, blocksize=1024):
-                # If we get here, we have permission
-                print("Microphone permission granted")
-                self.permission_checked.emit('microphone', True)
+            # Just try to query the default input device - this triggers permission check
+            # without actually opening a stream
+            device_info = sd.query_devices(kind='input')
+            print(f"Microphone permission granted - found device: {device_info['name']}")
+            self.permission_checked.emit('microphone', True)
         except sd.PortAudioError as e:
             print(f"Microphone permission error: {e}")
             self.permission_checked.emit('microphone', False)
@@ -63,6 +63,9 @@ class PermissionChecker(QObject):
             self.permission_checked.emit('accessibility', True)
 
 class SettingsWindow(QMainWindow):
+    ORGANIZATION_NAME = "Inten" # CHANGE THIS
+    APPLICATION_NAME = "Inten"
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Inten")
@@ -180,12 +183,39 @@ class SettingsWindow(QMainWindow):
         }
 
         # --- Show Welcome Screen ---
-        self.show_welcome_screen()
+        self.settings = QSettings(self.ORGANIZATION_NAME, self.APPLICATION_NAME)
+        # Use a specific key like 'permissionsSetupComplete'
+        setup_complete = self.settings.value("permissionsSetupComplete", defaultValue=False, type=bool)
+
+        if setup_complete:
+            print("Permissions setup previously completed. Skipping setup flow.")
+            # If setup is done, go directly to the completion screen
+            self.show_completion_screen(mark_complete=False) # Don't re-mark as complete
+        else:
+            print("Starting permissions setup flow.")
+            # If setup not done, start with the welcome screen
+            self.show_welcome_screen()
+
+    def clear_layout(self):
+        """Helper function to remove all widgets from the main layout."""
+        while self.layout.count():
+            item = self.layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.setParent(None)
+            else:
+                # Handle spacers or nested layouts if necessary
+                layout = item.layout()
+                if layout is not None:
+                    # Basic clearing for nested layouts, might need recursion for deeper nests
+                    while layout.count():
+                         sub_item = layout.takeAt(0)
+                         sub_widget = sub_item.widget()
+                         if sub_widget is not None:
+                              sub_widget.setParent(None)
 
     def show_welcome_screen(self):
-        # Clear existing widgets
-        for i in reversed(range(self.layout.count())): 
-            self.layout.itemAt(i).widget().setParent(None)
+        self.clear_layout()
 
         # Logo
         logo_label = QLabel()
@@ -244,11 +274,7 @@ class SettingsWindow(QMainWindow):
         self.layout.addStretch()
 
     def show_permission_screen(self):
-        # Clear existing widgets
-        for i in reversed(range(self.layout.count())): 
-            widget = self.layout.itemAt(i).widget()
-            if widget is not None:
-                widget.setParent(None)
+        self.clear_layout()
 
         # Title
         title_label = QLabel("Required Permissions")
@@ -274,6 +300,8 @@ class SettingsWindow(QMainWindow):
         self.layout.addWidget(desc_label)
 
         # Progress Bar
+        self.progress_bar = QProgressBar() # Store as instance variable
+        progress_bar = self.progress_bar # Local alias for convenience below
         progress_bar = QProgressBar()
         progress_bar.setRange(0, 2)
         progress_bar.setValue(0)
@@ -306,7 +334,8 @@ class SettingsWindow(QMainWindow):
         
         mic_layout.addStretch()
         
-        self.mic_status = QLabel("Not Granted")
+        # Start status as "Checking..."
+        self.mic_status = QLabel("Checking...")
         self.mic_status.setObjectName("permission_status")
         self.mic_status.setStyleSheet("color: #FF3B30;")
         mic_layout.addWidget(self.mic_status)
@@ -333,7 +362,8 @@ class SettingsWindow(QMainWindow):
         
         acc_layout.addStretch()
         
-        self.acc_status = QLabel("Not Granted")
+        # Start status as "Checking..."
+        self.acc_status = QLabel("Checking...")
         self.acc_status.setObjectName("permission_status")
         self.acc_status.setStyleSheet("color: #FF3B30;")
         acc_layout.addWidget(self.acc_status)
@@ -349,7 +379,7 @@ class SettingsWindow(QMainWindow):
 
         # Continue Button
         self.continue_button = QPushButton("Continue")
-        self.continue_button.clicked.connect(self.check_all_permissions)
+        self.continue_button.clicked.connect(self.check_all_permissions_and_proceed) # Changed connection
         self.continue_button.setEnabled(False)
         self.continue_button.setFixedWidth(200)
         self.continue_button.setStyleSheet("""
@@ -376,11 +406,16 @@ class SettingsWindow(QMainWindow):
         self.layout.addStretch()
 
         # Start checking permissions
+        self.update_progress() # Initial progress
         QTimer.singleShot(100, self.permission_checker.check_microphone)
-        QTimer.singleShot(100, self.permission_checker.check_accessibility)
+        QTimer.singleShot(200, self.permission_checker.check_accessibility)
 
     def handle_permission_check(self, permission, is_granted):
+        print(f"Permission check result - {permission}: {is_granted}")
         self.permission_states[permission] = is_granted
+
+        status_label = None
+        grant_button = None
         
         if permission == 'microphone':
             self.mic_status.setText("Granted" if is_granted else "Not Granted")
@@ -388,25 +423,47 @@ class SettingsWindow(QMainWindow):
         elif permission == 'accessibility':
             self.acc_status.setText("Granted" if is_granted else "Not Granted")
             self.acc_status.setStyleSheet("color: #34C759;" if is_granted else "color: #FF3B30;")
+
+        if status_label:
+            status_label.setText("Granted" if is_granted else "Not Granted")
+            status_label.setStyleSheet("color: #34C759;" if is_granted else "color: #FF3B30;")
+
+        if grant_button:
+            # Optionally disable/hide grant button if permission is granted
+            grant_button.setVisible(not is_granted)
+            # grant_button.setEnabled(not is_granted) # Or just disable
+        
+        self.update_progress()
         
         # Enable continue button if all permissions are granted
         self.continue_button.setEnabled(all(self.permission_states.values()))
 
+    def update_progress(self):
+        """Updates the progress bar based on granted permissions."""
+        granted_count = sum(1 for granted in self.permission_states.values() if granted)
+        if hasattr(self, 'progress_bar'): # Check if progress bar exists on current screen
+            self.progress_bar.setValue(granted_count)
+
     def request_microphone_permission(self):
         if platform.system() == 'Darwin':
+            # Also re-trigger the check after asking user
             os.system('open "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"')
+            QTimer.singleShot(3000, self.permission_checker.check_microphone) # Check again after 3s
         else:
             # For other platforms, direct to system settings
             print("Please grant microphone access in your system settings")
 
     def request_accessibility_permission(self):
         if platform.system() == 'Darwin':
+            # Also re-trigger the check after asking user
             os.system('open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"')
+            QTimer.singleShot(3000, self.permission_checker.check_accessibility) # Check again after 3s
         else:
             # For other platforms, direct to system settings
             print("Please grant accessibility access in your system settings")
 
-    def check_all_permissions(self):
+    def check_all_permissions_and_proceed(self):
+        """Checks if all permissions are granted and proceeds to completion screen."""
         if all(self.permission_states.values()):
             self.show_completion_screen()
         else:
@@ -415,10 +472,8 @@ class SettingsWindow(QMainWindow):
             error_label.setStyleSheet("color: #e74c3c;")
             self.layout.addWidget(error_label)
 
-    def show_completion_screen(self):
-        # Clear existing widgets
-        for i in reversed(range(self.layout.count())): 
-            self.layout.itemAt(i).widget().setParent(None)
+    def show_completion_screen(self, mark_complete=True):
+        self.clear_layout()
 
         # Success Icon
         success_icon = QLabel("✅")
@@ -450,7 +505,7 @@ class SettingsWindow(QMainWindow):
 
         # Start Button
         start_button = QPushButton("Start Using Inten")
-        start_button.clicked.connect(self.close)
+        start_button.clicked.connect(lambda: self.complete_setup(mark_complete))
         start_button.setStyleSheet("""
             QPushButton {
                 background-color: #2ecc71;
@@ -468,6 +523,16 @@ class SettingsWindow(QMainWindow):
         self.layout.addWidget(start_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
         self.layout.addStretch()
+
+    def complete_setup(self, mark_complete):
+        """Saves the setup complete flag if needed, then closes the window."""
+        if mark_complete:
+            print("Marking permissions setup as complete in settings.")
+            # Save the flag indicating setup is done
+            self.settings.setValue("permissionsSetupComplete", True)
+        else:
+            print("Setup already marked as complete, just closing.")
+        self.close() # Close the window
 
     # --- Manual Dragging Event Handlers ---
     def mousePressEvent(self, event):
@@ -497,6 +562,8 @@ class SettingsWindow(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    QApplication.setOrganizationName(SettingsWindow.ORGANIZATION_NAME)
+    QApplication.setApplicationName(SettingsWindow.APPLICATION_NAME)
     settings_window = SettingsWindow()
     settings_window.show()
     sys.exit(app.exec())

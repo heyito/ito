@@ -7,6 +7,9 @@ import sys
 import struct
 import time
 import socket
+import objc
+from Foundation import NSURL
+from AppKit import NSWorkspace
 
 def is_macos():
     """Check if the current OS is macOS."""
@@ -138,3 +141,26 @@ def send_native_message(message):
     except Exception as e:
         print(f"Error sending native message: {e}")
         return None
+
+def check_accessibility_permission():
+    """Check if the app has accessibility permissions."""
+    if not is_macos():
+        return False
+        
+    try:
+        # Use the AX API to check permissions
+        script = '''
+        tell application "System Events"
+            try
+                set frontAppName to name of first application process whose frontmost is true
+                return true
+            on error
+                return false
+            end try
+        end tell
+        '''
+        result = run_applescript(script)
+        return result.lower() == "true"
+    except Exception as e:
+        print(f"Error checking accessibility permissions: {e}")
+        return False

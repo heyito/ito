@@ -1,11 +1,15 @@
 import sys
 import traceback
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel
-from PyQt6.QtCore import Qt, QPointF # Import QPointF for precise positions
-from PyQt6.QtGui import QPixmap
+import platform
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
+                           QLabel, QPushButton, QProgressBar, QHBoxLayout)
+from PyQt6.QtCore import Qt, QPointF, QTimer, pyqtSignal, QObject
+from PyQt6.QtGui import QPixmap, QColor, QPalette
+import sounddevice as sd
+import pynput.keyboard
+import os
 
 # --- Platform specific code for macOS ---
-# Keep this section for the transparent title bar styling
 _ns_window = None
 if sys.platform == 'darwin':
     try:
@@ -20,23 +24,51 @@ if sys.platform == 'darwin':
         _objc_available = False
 else:
     _objc_available = False
-# --- End platform specific code ---
+
+class PermissionChecker(QObject):
+    permission_checked = pyqtSignal(str, bool)  # permission_name, is_granted
+
+    def check_microphone(self):
+        try:
+            # Try to list input devices
+            devices = sd.query_devices()
+            input_devices = [d for d in devices if d['max_input_channels'] > 0]
+            self.permission_checked.emit('microphone', len(input_devices) > 0)
+        except Exception:
+            self.permission_checked.emit('microphone', False)
+
+    def check_accessibility(self):
+        if platform.system() == 'Darwin':
+            try:
+                import platform_utils_macos
+                print("Checking accessibility permissions...")
+                has_permission = platform_utils_macos.check_accessibility_permission()
+                print(f"Accessibility permission check result: {has_permission}")
+                self.permission_checked.emit('accessibility', has_permission)
+            except ImportError as e:
+                print(f"Error importing platform_utils_macos: {e}")
+                self.permission_checked.emit('accessibility', False)
+            except Exception as e:
+                print(f"Error checking accessibility permission: {e}")
+                traceback.print_exc()
+                self.permission_checked.emit('accessibility', False)
+        else:
+            print("Not on macOS, assuming accessibility permissions granted")
+            self.permission_checked.emit('accessibility', True)
 
 class SettingsWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Inten")
-        self.setMinimumWidth(600)
-        self.setMinimumHeight(400)
+        self.setMinimumWidth(900)
+        self.setMinimumHeight(600)
 
         # --- Manual Dragging Variables ---
         self._dragging = False
-        self._drag_start_position = QPointF() # Use QPointF for accuracy
-        # Store effective top margin for drag area calculation
-        self._effective_top_margin = 40 # Default value
+        self._drag_start_position = QPointF()
+        self._effective_top_margin = 40
 
-
-        # --- Apply Native macOS Styling (if available) ---
+        # --- Apply Native macOS Styling ---
         if _objc_available:
             try:
                 view_id_sip = self.winId()
@@ -49,39 +81,106 @@ class SettingsWindow(QMainWindow):
                 if _ns_window:
                     _ns_window.setTitlebarAppearsTransparent_(True)
                     _ns_window.setStyleMask_(_ns_window.styleMask() | NSFullSizeContentViewWindowMask)
-                    # _ns_window.setMovableByWindowBackground_(True) # REMOVE THIS - using manual drag now
                 else:
                     print("Warning: Could not get NSWindow object.")
             except Exception as e:
                 print(f"Error applying native styling: {e}")
                 traceback.print_exc()
 
-
         # --- Qt Styling ---
         self.setStyleSheet("""
-            QMainWindow { background-color: #ffffff; }
-            QWidget#main_widget { background-color: transparent; }
-            QLabel { color: #333333; background-color: transparent; }
+            QMainWindow { 
+                background-color: #ffffff;
+            }
+            QWidget#main_widget { 
+                background-color: transparent;
+            }
+            QLabel { 
+                color: #333333; 
+                background-color: transparent;
+            }
+            QPushButton {
+                background-color: #0A84FF;
+                color: white;
+                border: none;
+                padding: 8px 20px;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #007AFF;
+            }
+            QPushButton:disabled {
+                background-color: #E5E5EA;
+                color: #8E8E93;
+            }
+            QProgressBar {
+                border: none;
+                border-radius: 3px;
+                text-align: center;
+                background-color: #F2F2F7;
+                max-height: 6px;
+                margin: 0px 2px;
+            }
+            QProgressBar::chunk {
+                background-color: #34C759;
+                border-radius: 3px;
+            }
+            QWidget#permission_row {
+                background-color: #F2F2F7;
+                border-radius: 10px;
+                min-height: 60px;
+                padding: 0px;
+                margin: 0px;
+            }
+            QLabel#permission_status {
+                font-size: 13px;
+                font-weight: 500;
+                padding-right: 16px;
+            }
+            QLabel#permission_text {
+                font-size: 15px;
+                color: #000000;
+                font-weight: 400;
+            }
+            QLabel#permission_icon {
+                font-size: 22px;
+                min-width: 30px;
+                margin-left: 16px;
+            }
         """)
 
         # --- Main widget and layout ---
         main_widget = QWidget()
         main_widget.setObjectName("main_widget")
         self.setCentralWidget(main_widget)
-        layout = QVBoxLayout(main_widget)
+        self.layout = QVBoxLayout(main_widget)
 
         # --- Adjust Margins ---
-        title_bar_offset = 0
-        if _objc_available and _ns_window and (_ns_window.styleMask() & NSFullSizeContentViewWindowMask):
-             title_bar_offset = 30 # Adjust if needed
-             print(f"Applying top margin offset: {title_bar_offset}")
+        title_bar_offset = 30 if _objc_available and _ns_window and (_ns_window.styleMask() & NSFullSizeContentViewWindowMask) else 0
+        self._effective_top_margin = 40 + title_bar_offset
+        self.layout.setContentsMargins(40, self._effective_top_margin, 40, 40)
+        self.layout.setSpacing(20)
 
-        base_top_margin = 40
-        self._effective_top_margin = base_top_margin + title_bar_offset # Store for dragging check
-        layout.setContentsMargins(40, self._effective_top_margin, 40, 40)
-        layout.setSpacing(20)
+        # --- Initialize Permission Checker ---
+        self.permission_checker = PermissionChecker()
+        self.permission_checker.permission_checked.connect(self.handle_permission_check)
 
-        # --- UI Elements (Logo, Title, Subtitle) ---
+        # --- Initialize Permission States ---
+        self.permission_states = {
+            'microphone': False,
+            'accessibility': False
+        }
+
+        # --- Show Welcome Screen ---
+        self.show_welcome_screen()
+
+    def show_welcome_screen(self):
+        # Clear existing widgets
+        for i in reversed(range(self.layout.count())): 
+            self.layout.itemAt(i).widget().setParent(None)
+
         # Logo
         logo_label = QLabel()
         logo_path = "inten-logo.png"
@@ -90,77 +189,306 @@ class SettingsWindow(QMainWindow):
             scaled_pixmap = logo_pixmap.scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             logo_label.setPixmap(scaled_pixmap)
         else:
-            print(f"Warning: Logo image not found or failed to load from '{logo_path}'.")
             logo_label.setText("🎯")
             logo_label.setStyleSheet("font-size: 80px; background-color: transparent;")
         logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(logo_label)
+        self.layout.addWidget(logo_label)
 
-        # Title Label
-        title_label = QLabel("Inten")
+        # Title
+        title_label = QLabel("Welcome to Inten")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setStyleSheet("""
-            font-size: 32px; font-weight: bold; color: #2c3e50;
-            margin-top: 10px; margin-bottom: 5px; background-color: transparent;
+            font-size: 32px; 
+            font-weight: bold; 
+            color: #2c3e50;
+            margin-top: 10px; 
+            margin-bottom: 5px;
         """)
-        layout.addWidget(title_label)
+        self.layout.addWidget(title_label)
 
-        # Subtitle Label
-        subtitle_label = QLabel("Speak Your Intent, AI Crafts Your Words.")
-        subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        subtitle_label.setStyleSheet("""
-            font-size: 16px; color: #7f8c8d; margin-top: 0px;
-            margin-bottom: 10px; background-color: transparent;
+        # Description
+        desc_label = QLabel("Let's set up your permissions to get started.")
+        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        desc_label.setStyleSheet("""
+            font-size: 16px; 
+            color: #7f8c8d;
+            margin-bottom: 30px;
         """)
-        layout.addWidget(subtitle_label)
+        self.layout.addWidget(desc_label)
 
-        layout.addStretch()
+        # Start Button
+        start_button = QPushButton("Get Started")
+        start_button.clicked.connect(self.show_permission_screen)
+        start_button.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                border: none;
+                padding: 12px 30px;
+                border-radius: 5px;
+                font-size: 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+        """)
+        self.layout.addWidget(start_button, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self.layout.addStretch()
+
+    def show_permission_screen(self):
+        # Clear existing widgets
+        for i in reversed(range(self.layout.count())): 
+            widget = self.layout.itemAt(i).widget()
+            if widget is not None:
+                widget.setParent(None)
+
+        # Title
+        title_label = QLabel("Required Permissions")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setStyleSheet("""
+            font-size: 28px; 
+            font-weight: 600; 
+            color: #000000;
+            margin-top: 40px; 
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        """)
+        self.layout.addWidget(title_label)
+
+        # Description
+        desc_label = QLabel("Inten needs a few permissions to help you be more productive")
+        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        desc_label.setStyleSheet("""
+            font-size: 15px; 
+            color: #666666;
+            margin-bottom: 40px;
+        """)
+        self.layout.addWidget(desc_label)
+
+        # Progress Bar
+        progress_bar = QProgressBar()
+        progress_bar.setRange(0, 2)
+        progress_bar.setValue(0)
+        progress_bar.setTextVisible(False)
+        progress_bar.setFixedWidth(200)
+        self.layout.addWidget(progress_bar, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        # Spacer
+        self.layout.addSpacing(30)
+
+        # Permissions Container
+        permissions_container = QWidget()
+        permissions_layout = QVBoxLayout(permissions_container)
+        permissions_layout.setSpacing(12)
+        permissions_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Microphone Permission
+        mic_container = QWidget()
+        mic_container.setObjectName("permission_row")
+        mic_layout = QHBoxLayout(mic_container)
+        mic_layout.setContentsMargins(0, 0, 16, 0)
+        
+        mic_icon = QLabel("🎤")
+        mic_icon.setObjectName("permission_icon")
+        mic_layout.addWidget(mic_icon)
+        
+        mic_text = QLabel("Microphone Access")
+        mic_text.setObjectName("permission_text")
+        mic_layout.addWidget(mic_text)
+        
+        mic_layout.addStretch()
+        
+        self.mic_status = QLabel("Not Granted")
+        self.mic_status.setObjectName("permission_status")
+        self.mic_status.setStyleSheet("color: #FF3B30;")
+        mic_layout.addWidget(self.mic_status)
+        
+        mic_button = QPushButton("Grant Access")
+        mic_button.clicked.connect(self.request_microphone_permission)
+        mic_layout.addWidget(mic_button)
+        
+        permissions_layout.addWidget(mic_container)
+
+        # Accessibility Permission
+        acc_container = QWidget()
+        acc_container.setObjectName("permission_row")
+        acc_layout = QHBoxLayout(acc_container)
+        acc_layout.setContentsMargins(0, 0, 16, 0)
+        
+        acc_icon = QLabel("⌨️")
+        acc_icon.setObjectName("permission_icon")
+        acc_layout.addWidget(acc_icon)
+        
+        acc_text = QLabel("Accessibility Access")
+        acc_text.setObjectName("permission_text")
+        acc_layout.addWidget(acc_text)
+        
+        acc_layout.addStretch()
+        
+        self.acc_status = QLabel("Not Granted")
+        self.acc_status.setObjectName("permission_status")
+        self.acc_status.setStyleSheet("color: #FF3B30;")
+        acc_layout.addWidget(self.acc_status)
+        
+        acc_button = QPushButton("Grant Access")
+        acc_button.clicked.connect(self.request_accessibility_permission)
+        acc_layout.addWidget(acc_button)
+        
+        permissions_layout.addWidget(acc_container)
+        
+        # Add permissions container to main layout
+        self.layout.addWidget(permissions_container)
+
+        # Continue Button
+        self.continue_button = QPushButton("Continue")
+        self.continue_button.clicked.connect(self.check_all_permissions)
+        self.continue_button.setEnabled(False)
+        self.continue_button.setFixedWidth(200)
+        self.continue_button.setStyleSheet("""
+            QPushButton {
+                background-color: #34C759;
+                color: white;
+                border: none;
+                padding: 12px 0px;
+                border-radius: 6px;
+                font-size: 15px;
+                font-weight: 500;
+                margin-top: 40px;
+            }
+            QPushButton:hover {
+                background-color: #30B955;
+            }
+            QPushButton:disabled {
+                background-color: #E5E5EA;
+                color: #8E8E93;
+            }
+        """)
+        self.layout.addWidget(self.continue_button, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self.layout.addStretch()
+
+        # Start checking permissions
+        QTimer.singleShot(100, self.permission_checker.check_microphone)
+        QTimer.singleShot(100, self.permission_checker.check_accessibility)
+
+    def handle_permission_check(self, permission, is_granted):
+        self.permission_states[permission] = is_granted
+        
+        if permission == 'microphone':
+            self.mic_status.setText("Granted" if is_granted else "Not Granted")
+            self.mic_status.setStyleSheet("color: #34C759;" if is_granted else "color: #FF3B30;")
+        elif permission == 'accessibility':
+            self.acc_status.setText("Granted" if is_granted else "Not Granted")
+            self.acc_status.setStyleSheet("color: #34C759;" if is_granted else "color: #FF3B30;")
+        
+        # Enable continue button if all permissions are granted
+        self.continue_button.setEnabled(all(self.permission_states.values()))
+
+    def request_microphone_permission(self):
+        if platform.system() == 'Darwin':
+            os.system('open "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"')
+        else:
+            # For other platforms, direct to system settings
+            print("Please grant microphone access in your system settings")
+
+    def request_accessibility_permission(self):
+        if platform.system() == 'Darwin':
+            os.system('open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"')
+        else:
+            # For other platforms, direct to system settings
+            print("Please grant accessibility access in your system settings")
+
+    def check_all_permissions(self):
+        if all(self.permission_states.values()):
+            self.show_completion_screen()
+        else:
+            # Show error message
+            error_label = QLabel("Please grant all required permissions to continue")
+            error_label.setStyleSheet("color: #e74c3c;")
+            self.layout.addWidget(error_label)
+
+    def show_completion_screen(self):
+        # Clear existing widgets
+        for i in reversed(range(self.layout.count())): 
+            self.layout.itemAt(i).widget().setParent(None)
+
+        # Success Icon
+        success_icon = QLabel("✅")
+        success_icon.setStyleSheet("font-size: 80px;")
+        success_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.layout.addWidget(success_icon)
+
+        # Title
+        title_label = QLabel("Setup Complete!")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setStyleSheet("""
+            font-size: 32px; 
+            font-weight: bold; 
+            color: #2c3e50;
+            margin-top: 20px; 
+            margin-bottom: 10px;
+        """)
+        self.layout.addWidget(title_label)
+
+        # Description
+        desc_label = QLabel("You're all set to start using Inten!")
+        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        desc_label.setStyleSheet("""
+            font-size: 16px; 
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        """)
+        self.layout.addWidget(desc_label)
+
+        # Start Button
+        start_button = QPushButton("Start Using Inten")
+        start_button.clicked.connect(self.close)
+        start_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2ecc71;
+                color: white;
+                border: none;
+                padding: 12px 30px;
+                border-radius: 5px;
+                font-size: 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #27ae60;
+            }
+        """)
+        self.layout.addWidget(start_button, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self.layout.addStretch()
 
     # --- Manual Dragging Event Handlers ---
-
     def mousePressEvent(self, event):
-        # Initiate drag only if left button is pressed in the 'title bar' area
         if event.button() == Qt.MouseButton.LeftButton:
-            # Check if the click Y position is within the effective top margin area
-            # This acts as our draggable "title bar" region
             if event.position().y() < self._effective_top_margin:
-                 self._dragging = True
-                 # Store the initial global position of the mouse cursor
-                 self._drag_start_position = event.globalPosition()
-                 event.accept() # We handled this event
-                 return # Prevent further processing
-
-        # If not dragging or not left button, call the base class implementation
+                self._dragging = True
+                self._drag_start_position = event.globalPosition()
+                event.accept()
+                return
         super().mousePressEvent(event)
 
-
     def mouseMoveEvent(self, event):
-        # Move the window if dragging is active
-        # Check if dragging AND left button is still held down (redundant check often good)
         if self._dragging and event.buttons() & Qt.MouseButton.LeftButton:
-            # Calculate the difference (delta) between current and start position
             delta = event.globalPosition() - self._drag_start_position
-            # Move the window's top-left corner by the delta
-            # Note: self.pos() is the window position, delta is QPointF, need conversion
             self.move(self.pos() + delta.toPoint())
-            # IMPORTANT: Update the start position for the *next* move event.
-            # This makes dragging relative to the last position, not the initial click.
             self._drag_start_position = event.globalPosition()
             event.accept()
             return
-
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        # Stop dragging when the left button is released
         if event.button() == Qt.MouseButton.LeftButton:
             self._dragging = False
             event.accept()
             return
-
         super().mouseReleaseEvent(event)
 
-# --- Application Execution Entry Point ---
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     settings_window = SettingsWindow()

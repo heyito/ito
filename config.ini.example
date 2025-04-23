@@ -2,7 +2,7 @@
 api_key = YOUR_OPENAI_API_KEY_HERE
 
 [ASR]
-provider = faster_whisper
+source = faster_whisper
 model = whisper-1
 
 # -- Settings for faster_whisper --
@@ -17,14 +17,14 @@ compute_type = default
 
 
 [LLM]
-# Provider options: 'openai_api' or 'local_llm'
-provider = openai_api
+# Source options: 'openai_api' or 'local_llm'
+source = openai_api
 
-# OpenAI API settings (only used if provider = openai_api)
+# OpenAI API settings (only used if source = openai_api)
 api_key = YOUR_OPENAI_API_KEY_HERE
 model = gpt-4.1
 
-# Local model settings (only used if provider = local_llm)
+# Local model settings (only used if source = local_llm)
 local_model = deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
 quantization = 8
 max_tokens = 2000

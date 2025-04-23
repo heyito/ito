@@ -7,6 +7,10 @@ import sys
 import struct
 import time
 import socket
+from pathlib import Path
+import os
+import uuid
+from src.apple_scripts.notes import json_dump_notes_script
 
 def is_macos():
     """Check if the current OS is macOS."""
@@ -37,6 +41,7 @@ def run_applescript(script):
 def get_active_window_info():
     """Gets the name of the frontmost application on macOS."""
     if not is_macos(): return None
+    # TODO: Potential improvement, pull these scripts from a file where they have syntax highlighting
     script = 'tell application "System Events" to get name of first application process whose frontmost is true'
     try:
         app_name = run_applescript(script)
@@ -55,6 +60,55 @@ def get_textedit_content():
         # Handle cases like TextEdit not running or no document open
         print(f"Could not get TextEdit content: {e}")
         return None
+    
+def get_notes_content():
+    """Gets the text content of the frontmost Notes document."""
+    if not is_macos(): return None
+    try:
+        return run_applescript(json_dump_notes_script)
+    except (RuntimeError, TimeoutError, FileNotFoundError) as e:
+        print(f"Could not get Notes content: {e}")
+        return None
+    
+def get_application_window_bounds(app_name):
+    """Use AppleScript to get application window bounds (x, y, width, height)."""
+    script = '''
+    tell application "System Events"
+        tell process "{app_name}"
+            set appPos to position of window 1
+            set appSize to size of window 1
+            return (item 1 of appPos) & "," & (item 2 of appPos) & "," & (item 1 of appSize) & "," & (item 2 of appSize)
+        end tell
+    end tell
+    '''
+    result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(f"AppleScript error: {result.stderr.strip()}")
+    
+    try:
+        x, y, w, h = map(int, result.stdout.strip().split(","))
+        return x, y, w, h
+    except Exception as e:
+        raise ValueError(f"Failed to parse AppleScript output: {result.stdout.strip()}") from e
+
+def capture_application_window(app_name):
+    """Capture screenshot of the application window."""
+    x, y, w, h = get_application_window_bounds(app_name)
+    region = f"{x},{y},{w},{h}"
+    output_path = get_screenshot_path()
+    subprocess.run(["screencapture", "-x", f"-R{region}", output_path], check=True)
+    print(f"Screenshot saved to: {output_path}")
+    return output_path
+
+def get_screenshot_path():
+    cache_dir = Path.home() / "Library" / "Caches" / "com.yourcompany.yourapp"
+    filename = f"notes_screenshot_{uuid.uuid4().hex}.png"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return str(cache_dir / filename)
+
+def delete_if_exists(path):
+    if os.path.exists(path):
+        os.remove(path)
 
 def set_textedit_content(text_content):
     """Sets the text content of the frontmost TextEdit document."""

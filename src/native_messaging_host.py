@@ -12,6 +12,8 @@ from platform_utils_macos import is_macos
 import socket
 import threading
 
+from src.constants import SOCKET_PATH
+
 def setup_logging():
     try:
         # Use /tmp directory which should be writable by Chrome's native messaging host
@@ -34,8 +36,6 @@ def setup_logging():
             format='%(asctime)s - %(levelname)s - %(message)s'
         )
         logging.error(f"Failed to setup file logging: {e}")
-
-SOCKET_PATH = "/tmp/inten_native_host.sock"
 
 class NativeHost:
     def __init__(self):

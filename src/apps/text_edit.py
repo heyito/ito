@@ -9,7 +9,8 @@ class TextEditApp:
         self.llm_handler = llm_handler
     
     def process_command(self, processing_text: str, user_command: str):
-        full_llm_input = prompt_templates.create_textedit_prompt(
+        full_llm_input = prompt_templates.create_general_document_body_prompt(
+            application="TextEdit",
             content=processing_text,
             command=user_command
         )

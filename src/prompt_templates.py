@@ -69,7 +69,7 @@ CHROME_PROMPT_TEMPLATE = PromptTemplate({
     "command": "[USER COMMAND]\n{command}"
 })
 
-TEXTEDIT_PROMPT_TEMPLATE = PromptTemplate({
+GENERAL_DOCUMENT_BODY_TEMPLATE = PromptTemplate({
     "application": "[APPLICATION]\n{application}",
     "content": "[START CURRENT DOCUMENT CONTENT]\n{content}\n[END CURRENT DOCUMENT CONTENT]",
     "command": "[USER COMMAND]\n{command}"
@@ -107,13 +107,14 @@ def create_chrome_prompt(
         command=command
     )
 
-def create_textedit_prompt(
+def create_general_document_body_prompt(
+    application: str,
     content: str,
     command: str
 ) -> str:
     """Create a prompt for TextEdit context."""
-    return TEXTEDIT_PROMPT_TEMPLATE.format(
-        application="TextEdit",
+    return GENERAL_DOCUMENT_BODY_TEMPLATE.format(
+        application=application,
         content=content,
         command=command
     )

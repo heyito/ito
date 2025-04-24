@@ -1,16 +1,18 @@
 
 from src.apps.google_chrome import GoogleChromeApp
+from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
 from src.constants import SOCKET_PATH
 from src.types.apps import IntenApp
 
 class ProcessingEngine:
-    def __init__(self, config, google_chrome_app: GoogleChromeApp, text_edit_app: TextEditApp, notes_app: NotesApp):
+    def __init__(self, config, google_chrome_app: GoogleChromeApp, text_edit_app: TextEditApp, notes_app: NotesApp, macos_app: MacOSapp):
         self.config = config
         self.google_chrome_app = google_chrome_app
         self.text_edit_app = text_edit_app
         self.notes_app = notes_app
+        self.macos_app = macos_app
         
     def process(self, current_context: dict, processing_text: str, user_command: str):
         print(f"Processing command: '{user_command}'")
@@ -24,7 +26,7 @@ class ProcessingEngine:
         elif current_context.get("app_name") == IntenApp.NOTES:
             self.notes_app.process_command(processing_text, user_command)
             pass
-        else:
-            # Defaults to TextEdit
-            # TODO: Make more robust
+        elif current_context.get("app_name") == IntenApp.TEXTEDIT:
             self.text_edit_app.process_command(processing_text, user_command)
+        else:
+            self.macos_app.process_command(current_context["app_name"], processing_text, user_command)

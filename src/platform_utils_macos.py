@@ -38,12 +38,13 @@ def run_applescript_one_line(script):
         raise FileNotFoundError("osascript command not found. Is Xcode Command Line Tools installed?")
     except Exception as e:
         raise RuntimeError(f"An unexpected error occurred running AppleScript: {e}") from e
+
 def run_applescript_file(relative_script_path, args=None):
     """
-    Executes an AppleScript file located in ./src/apple_scripts/ and returns the output.
+    Executes an AppleScript file located in src/apple_scripts and returns the output.
 
     Args:
-        relative_script_path (str): Path to the AppleScript file relative to ./src/apple_scripts/
+        relative_script_path (str): Path to the AppleScript file relative to src/apple_scripts/
         args (list[str], optional): List of arguments to pass to the script. Defaults to None.
 
     Returns:
@@ -219,6 +220,25 @@ def get_chrome_context(socket_path):
             sock.close()
         except:
             pass
+
+def get_active_body(app_name): 
+    """Gets the active body of the given application."""
+    if not is_macos(): return None
+    try:
+        return run_applescript_file("get_active_body.applescript", [app_name])
+    except (RuntimeError, TimeoutError, FileNotFoundError) as e:
+        print(f"Could not get active body: {e}")
+        return None
+
+def set_active_body(app_name, text_content):
+    """Sets the active body of the given application."""
+    if not is_macos(): return False
+    try:
+        run_applescript_file("set_active_body.applescript", [app_name, text_content])
+        return True
+    except (RuntimeError, TimeoutError, FileNotFoundError) as e:
+        print(f"Could not set active body: {e}")
+        return False
 
 def send_native_message(message):
     """Sends a message to the Chrome extension and waits for a response."""

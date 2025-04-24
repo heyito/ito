@@ -9,6 +9,7 @@ from src.application import Application
 # from src.apps.text_edit import TextEditApp
 # from src.apps.google_chrome import GoogleChromeApp
 from src.apps.google_chrome import GoogleChromeApp
+from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
 from src.engines.intent_engine import IntentEngine
@@ -79,10 +80,16 @@ class Container(containers.DeclarativeContainer):
         intent_engine=intent_engine
     )
 
+    macos_app = providers.Singleton(
+        MacOSapp,
+        llm_handler=llm_handler
+    )
+
     shared_apps = {
         'text_edit_app': text_edit_app,
         'google_chrome_app': google_chrome_app,
-        'notes_app': notes_app
+        'notes_app': notes_app,
+        'macos_app': macos_app
     }
 
     context_engine = providers.Singleton(

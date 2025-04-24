@@ -13,6 +13,7 @@ from pynput import keyboard
 import traceback    
 from onboarding import SettingsWindow
 from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import QTimer
 
 # Import platform utils conditionally
 if platform.system() == "Darwin":
@@ -553,12 +554,18 @@ if __name__ == "__main__":
     else:
         # Create the QApplication instance
         app = QApplication(sys.argv)
+        QApplication.setOrganizationName(SettingsWindow.ORGANIZATION_NAME)
+        QApplication.setApplicationName(SettingsWindow.APPLICATION_NAME)
         
         # Show the getting started page
-        show_settings()
+        settings_window = SettingsWindow()
+        settings_window.show()
         
         # Register native messaging host
-        ensure_native_messaging_host_registered()
+        try:
+            ensure_native_messaging_host_registered()
+        except Exception as e:
+            print(f"Warning: Failed to register native messaging host: {e}")
         
         print("\n--- Inten Tool (Document Command Mode) ---")
         print(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -578,12 +585,7 @@ if __name__ == "__main__":
         print("Press Ctrl+C in the console to quit.")
 
         # --- Setup Hotkey Listener ---
-        # Use the simple trigger function as the callback
         try:
-            # Attempt to remove previous hook in case of reload (helps sometimes)
-            # try: keyboard.remove_hotkey(start_hotkey) TOD
-            # except KeyError: pass
-            # Register the new hotkey
             listener = keyboard.Listener(on_press=on_keyboard_press)
             listener.start()
             print(f"Hotkey '{start_hotkey_str}' registered successfully.")
@@ -592,32 +594,29 @@ if __name__ == "__main__":
             print("This might be due to permissions issues (especially on macOS or Wayland).")
             print("Try checking System Settings > Privacy & Security > Accessibility / Input Monitoring.")
             print("Alternatively, try running the script with sudo (Linux/macOS) or as Administrator (Windows) - use with caution.")
-            exit()
+            sys.exit(1)
 
-        # --- Main Loop (Processing Action Queue) ---
+        # Create a timer to process the action queue
+        def process_action_queue():
+            try:
+                # Check the action queue for commands from the hotkey callback
+                action = action_queue.get_nowait()  # Non-blocking get
+                if action == "START_RECORDING":
+                    # Call the function that contains the context check & recording logic
+                    _initiate_recording_process()
+                else:
+                    print(f"Warning: Unknown action received in queue: {action}")
+            except queue.Empty:
+                pass  # No action to process
+
+        # Set up timer to process action queue every 100ms
+        timer = QTimer()
+        timer.timeout.connect(process_action_queue)
+        timer.start(100)  # Check every 100ms
+
+        # --- Main Loop ---
         try:
-            while True:
-                try:
-                    # Check the action queue for commands from the hotkey callback
-                    action = action_queue.get(block=True, timeout=0.1) # Wait briefly for action
-
-                    if action == "START_RECORDING":
-                        # Call the function that contains the context check & recording logic
-                        _initiate_recording_process()
-                    else:
-                        print(f"Warning: Unknown action received in queue: {action}")
-
-                except queue.Empty:
-                    # No action requested in this interval, loop continues
-                    pass
-
-                # Optional: A very small sleep prevents the loop from spinning uselessly
-                # when the queue is empty, reducing CPU usage slightly.
-                # time.sleep(0.01) # Disabled for now, timeout on queue.get serves similar role
-
-                # Process Qt events
-                app.processEvents()
-
+            sys.exit(app.exec())
         except KeyboardInterrupt:
             print("\nCtrl+C detected. Initiating shutdown...")
         except Exception as e:
@@ -631,20 +630,9 @@ if __name__ == "__main__":
                 print("Signaling active recording thread to stop...")
                 stop_recording_event.set() # Ensure recording/monitor threads exit if active
 
-            # Unregister hotkey
-            # try:
-            #     print(f"Removing hotkey '{start_hotkey_str}'...")
-            #     keyboard.remove_hotkey(start_hotkey_str)
-            # except (KeyError, NameError): # NameError if start_hotkey failed loading
-            #      print("Hotkey was not registered or already removed.")
-            # except Exception as e:
-            #      print(f"Error removing hotkey: {e}")
+            # Stop the timer
+            timer.stop()
 
-
-            # Optional: Wait briefly for threads to potentially finish cleanup, though daemon=True helps
-            # time.sleep(0.5)
-
+            # Stop the hotkey listener
+            listener.stop()
             print("Exited.")
-
-    # Stop the hotkey listener
-    listener.stop()

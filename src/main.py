@@ -503,10 +503,9 @@ def _initiate_recording_process():
     monitor_thread_handle.start()
 
 def show_settings():
-    app = QApplication(sys.argv)
+    # Create settings window and show it
     window = SettingsWindow()
     window.show()
-    app.exec()
 
 def run_native_messaging_host():
     """Run the native messaging host functionality"""
@@ -552,6 +551,9 @@ if __name__ == "__main__":
         print("Starting native messaging host...")
         run_native_messaging_host()
     else:
+        # Create the QApplication instance
+        app = QApplication(sys.argv)
+        
         # Show the getting started page
         show_settings()
         
@@ -612,6 +614,9 @@ if __name__ == "__main__":
                 # Optional: A very small sleep prevents the loop from spinning uselessly
                 # when the queue is empty, reducing CPU usage slightly.
                 # time.sleep(0.01) # Disabled for now, timeout on queue.get serves similar role
+
+                # Process Qt events
+                app.processEvents()
 
         except KeyboardInterrupt:
             print("\nCtrl+C detected. Initiating shutdown...")

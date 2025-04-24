@@ -311,13 +311,11 @@ class SettingsWindow(QMainWindow):
 
         # Progress Bar
         self.progress_bar = QProgressBar() # Store as instance variable
-        progress_bar = self.progress_bar # Local alias for convenience below
-        progress_bar = QProgressBar()
-        progress_bar.setRange(0, 2)
-        progress_bar.setValue(0)
-        progress_bar.setTextVisible(False)
-        progress_bar.setFixedWidth(200)
-        self.layout.addWidget(progress_bar, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.progress_bar.setRange(0, 2)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setTextVisible(False)
+        self.progress_bar.setFixedWidth(200)
+        self.layout.addWidget(self.progress_bar, alignment=Qt.AlignmentFlag.AlignCenter)
 
         # Spacer
         self.layout.addSpacing(30)

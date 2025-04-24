@@ -1,9 +1,10 @@
 import sys
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                            QLabel, QPushButton, QHBoxLayout, QStackedWidget)
-from PyQt6.QtCore import Qt, QPointF
+from PyQt6.QtCore import Qt, QPointF, QSettings
 from PyQt6.QtGui import QPixmap
 import platform
+from onboarding import SettingsWindow
 
 # --- Platform specific code for macOS ---
 _ns_window = None
@@ -169,6 +170,28 @@ class HomeWindow(QMainWindow):
             border: none;
         """)
         settings_layout.addWidget(settings_title)
+        
+        # Add Reset All button
+        reset_button = QPushButton("Reset All")
+        reset_button.setFixedWidth(120)  # Set a fixed width for the button
+        reset_button.clicked.connect(self.reset_all_settings)
+        reset_button.setStyleSheet("""
+            QPushButton {
+                background-color: #FF3B30;
+                color: white;
+                border: none;
+                padding: 8px 20px;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 500;
+                margin-top: 20px;
+            }
+            QPushButton:hover {
+                background-color: #FF453A;
+            }
+        """)
+        settings_layout.addWidget(reset_button)
+        
         settings_layout.addStretch()
         
         self.stacked_widget.addWidget(settings_page)
@@ -191,4 +214,18 @@ class HomeWindow(QMainWindow):
         """)
 
     def show_page(self, index):
-        self.stacked_widget.setCurrentIndex(index) 
+        self.stacked_widget.setCurrentIndex(index)
+
+    def reset_all_settings(self):
+        """Reset all settings and restart the onboarding process."""
+        # Clear all settings
+        settings = QSettings(SettingsWindow.ORGANIZATION_NAME, SettingsWindow.APPLICATION_NAME)
+        settings.clear()
+        settings.sync()  # Ensure settings are saved
+        
+        # Create and show new onboarding window
+        self.onboarding_window = SettingsWindow()
+        self.onboarding_window.show()
+        
+        # Close the current window
+        self.close() 

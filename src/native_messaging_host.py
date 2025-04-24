@@ -8,7 +8,7 @@ import logging
 import time
 import os
 import traceback
-from platform_utils_macos import is_macos
+from src.platform_utils_macos import is_macos
 import socket
 import threading
 
@@ -206,8 +206,8 @@ def get_active_application():
     
     script = 'tell application "System Events" to get name of first application process whose frontmost is true'
     try:
-        from platform_utils_macos import run_applescript
-        return run_applescript(script)
+        from src.platform_utils_macos import run_applescript_one_line
+        return run_applescript_one_line(script)
     except Exception as e:
         logging.error(f"Error getting active application: {e}")
         return None

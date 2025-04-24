@@ -9,12 +9,13 @@ from src.application import Application
 # from src.apps.text_edit import TextEditApp
 # from src.apps.google_chrome import GoogleChromeApp
 from src.apps.google_chrome import GoogleChromeApp
+from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
-from src.asr_handler import ASRHandler
-from src.audio_handler import AudioHandler
+from src.handlers.asr_handler import ASRHandler
+from src.handlers.audio_handler import AudioHandler
 from src.engines.context_engine import ContextEngine
 from src.engines.processing_engine import ProcessingEngine
-from src.llm_handler import LLMHandler
+from src.handlers.llm_handler import LLMHandler
 
 
 class Container(containers.DeclarativeContainer):
@@ -24,10 +25,6 @@ class Container(containers.DeclarativeContainer):
     # platform_utilities = providers.Object(platform_utils)
 
     # --- Core Handlers/Services ---
-    context_engine = providers.Singleton(
-        ContextEngine,
-        # platform_utils=platform_utilities # Inject if needed
-    )
 
     llm_handler = providers.Singleton(
         LLMHandler,
@@ -59,7 +56,7 @@ class Container(containers.DeclarativeContainer):
         device_index=config.Audio.device_index
     )
 
-    # --- App-Specific Logic (Example - Assuming ProcessingEngine routes to these) ---
+    # --- App-Specific Logic ---
     google_chrome_app = providers.Singleton(
         GoogleChromeApp,
         llm_handler=llm_handler
@@ -70,13 +67,27 @@ class Container(containers.DeclarativeContainer):
         llm_handler=llm_handler
     )
 
-    # --- Processing Engine ---
+    notes_app = providers.Singleton(
+        NotesApp,
+        llm_handler=llm_handler
+    )
+
+    shared_apps = {
+        'text_edit_app': text_edit_app,
+        'google_chrome_app': google_chrome_app,
+        'notes_app': notes_app
+    }
+
+    # --- Engines --
+    context_engine = providers.Singleton(
+        ContextEngine,
+        **shared_apps
+    )
+
     processing_engine = providers.Singleton(
         ProcessingEngine,
-        google_chrome_app=google_chrome_app,
-        text_edit_app=text_edit_app,
-        # TODO: Refactor ProcessingEngine to accept specific dependencies
-        config=config
+        config=config,
+        **shared_apps,
     )
 
     # --- Main Application ---

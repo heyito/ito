@@ -1,6 +1,6 @@
 from src import prompt_templates
 from src import platform_utils_macos as platform_utils
-from src.llm_handler import LLMHandler
+from src.handlers.llm_handler import LLMHandler
 
 class TextEditApp:
     system_prompt = prompt_templates.PAGE_EDITOR_SYSTEM_PROMPT
@@ -36,3 +36,11 @@ class TextEditApp:
         else:
             print("Failed to update TextEdit document via AppleScript.")
 
+    def get_context(self):
+        print("Getting content from TextEdit...")
+        context = platform_utils.get_textedit_content()
+        if context is None:
+            print("Error: Failed to get text from TextEdit (is a document open and frontmost?). Aborting.")
+            return # Do not proceed without context
+        print(f"Obtained TextEdit content (length: {len(context)} chars).")
+        return context

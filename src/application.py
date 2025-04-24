@@ -10,9 +10,9 @@ from src.engines.processing_engine import ProcessingEngine
 from src.engines.context_engine import ContextEngine
 from src.constants import SOCKET_PATH
 from src import platform_utils_macos as platform_utils
-from src.asr_handler import ASRHandler
-from src.audio_handler import AudioHandler
-from src.llm_handler import LLMHandler
+from src.handlers.asr_handler import ASRHandler
+from src.handlers.audio_handler import AudioHandler
+from src.handlers.llm_handler import LLMHandler
 
 class Application:
     def __init__(self, context_engine: ContextEngine, processing_engine: ProcessingEngine,
@@ -208,94 +208,9 @@ class Application:
         self.current_context_data['app_name'] = active_window.get("app_name", "Unknown")
         print(f"Active application: {self.current_context_data['app_name']}")
 
-        # --- Target specific application logic (TextEdit on macOS) ---
         original_doc_text_for_command = None # Variable to hold context for this operation
-        if platform_utils.is_macos():
-            if self.current_context_data['app_name'] == "TextEdit":
-                print("Getting content from TextEdit...")
-                original_doc_text_for_command = platform_utils.get_textedit_content()
-                if original_doc_text_for_command is None:
-                    print("Error: Failed to get text from TextEdit (is a document open and frontmost?). Aborting.")
-                    return # Do not proceed without context
-                print(f"Obtained TextEdit content (length: {len(original_doc_text_for_command)} chars).")
-            elif self.current_context_data['app_name'] == "Google Chrome":
-                print("Getting content from Chrome...")
-                # Request context from Chrome extension with timeout
-                try:
-                    import signal
-                    from functools import wraps
-                    import errno
-
-                    def timeout_handler(signum, frame):
-                        raise TimeoutError("Getting Chrome context timed out")
-
-                    # Set the signal handler and a 5-second timeout
-                    signal.signal(signal.SIGALRM, timeout_handler)
-                    signal.alarm(5)  # 5 seconds
-
-                    try:
-                        chrome_context = platform_utils.get_chrome_context(SOCKET_PATH)
-                        print(f"Received Chrome context: {chrome_context}")
-                        signal.alarm(0)  # Disable the alarm
-                        
-                        if chrome_context is None:
-                            print("Error: Failed to get context from Chrome. Aborting.")
-                            return
-                        
-                        # Print the chrome context
-                        print(f"Chrome context: {chrome_context}")
-                        # Combine relevant context from Chrome
-                        original_doc_text_for_command = ""
-                        
-                        # Application context
-                        original_doc_text_for_command += "[APPLICATION]\nGoogle Chrome\n\n"
-                        
-                        # Page context
-                        if chrome_context.get('url') or chrome_context.get('title'):
-                            original_doc_text_for_command += "[PAGE]\n"
-                            if chrome_context.get('url'):
-                                original_doc_text_for_command += f"{chrome_context['url']}\n"
-                            if chrome_context.get('title'):
-                                original_doc_text_for_command += f"{chrome_context['title']}\n"
-                            original_doc_text_for_command += "\n"
-                        
-                        # Content context
-                        original_doc_text_for_command += "[START CURRENT DOCUMENT CONTENT]\n"
-                        
-                        # Handle contenteditable elements
-                        if chrome_context.get('activeElement', {}).get('isContentEditable'):
-                            if chrome_context.get('activeElementValue'):
-                                original_doc_text_for_command += f"{chrome_context['activeElementValue']}\n"
-                        
-                        # Handle regular input/textarea elements
-                        elif chrome_context.get('activeElement', {}).get('isTextInput'):
-                            if chrome_context.get('activeElement', {}).get('value'):
-                                original_doc_text_for_command += f"{chrome_context['activeElement']['value']}\n"
-                        
-                        # Add selected text if any
-                        if chrome_context.get('selectedText'):
-                            original_doc_text_for_command += f"\nSelected text: {chrome_context['selectedText']}\n"
-                        
-                        original_doc_text_for_command += "\n[END CURRENT DOCUMENT CONTENT]\n"
-                        
-                        print(f"Obtained Chrome context (length: {len(original_doc_text_for_command)} chars).")
-                        
-                    except TimeoutError:
-                        print("Error: Timed out while getting Chrome context. Aborting.")
-                        return
-                    finally:
-                        signal.alarm(0)  # Ensure the alarm is disabled
-                        
-                except Exception as e:
-                    print(f"Error while getting Chrome context: {e}")
-                    return
-            else:
-                print(f"Info: Active application ({self.current_context_data['app_name']}) is not supported. Currently supported: TextEdit and Google Chrome.")
-                return
-        else:
-            print("Info: Not running on macOS, cannot get application context.")
-            return
-
+        context_engine = self.context_engine
+        original_doc_text_for_command = context_engine.get_context(self.current_context_data)
         # 3. If context is valid, start recording for the user's command
         self.is_recording = True # Set state flag
         self.stop_recording_event.clear()
@@ -337,7 +252,7 @@ class Application:
             import traceback
             traceback.print_exc()
         finally:
-            is_processing = False # Release processing state
+            self.is_processing = False # Release processing state
             print("--- Processing Pipeline Finished ---")
     
     def _vad_monitor_and_process_thread_target(self, original_doc_text):

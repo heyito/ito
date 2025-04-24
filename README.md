@@ -71,7 +71,7 @@ This tool listens for voice input via a hotkey, transcribes the speech, processe
 1.  Ensure your virtual environment is active.
 2.  Run the main script:
     ```bash
-    python main.py
+    sudo python3 -m src.main
     ```
 3.  The script will print "Inten tool running. Press [Your Hotkey] to toggle recording."
 4.  Go to any text field (text editor, browser, etc.).

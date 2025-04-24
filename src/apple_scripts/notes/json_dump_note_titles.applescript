@@ -1,14 +1,10 @@
-json_dump_notes_script = """
 set json to "["
 
 tell application "Notes"
     set firstNote to true
     repeat with theFolder in folders
-        set folderName to name of theFolder
         repeat with n in notes of theFolder
             set noteName to my escapeQuotes(name of n)
-            set noteBody to my escapeQuotes(plaintext of n)
-            set noteContainer to my escapeQuotes(folderName)
             
             if not firstNote then
                 set json to json & ","
@@ -16,11 +12,7 @@ tell application "Notes"
                 set firstNote to false
             end if
             
-            set json to json & "{" & ¬
-                "\"name\":\"" & noteName & "\"," & ¬
-                "\"body\":\"" & noteBody & "\"," & ¬
-                "\"container\":\"" & noteContainer & "\"" & ¬
-                "}"
+            set json to json & "\"" & noteName & "\""
         end repeat
     end repeat
 end tell
@@ -28,7 +20,7 @@ end tell
 set json to json & "]"
 
 -- write to Desktop
-set exportPath to (POSIX path of (path to desktop)) & "notes_export.json"
+set exportPath to (POSIX path of (path to desktop)) & "note_titles.json"
 do shell script "echo " & quoted form of json & " > " & quoted form of exportPath
 
 -- escape helper
@@ -49,4 +41,3 @@ on replaceText(theText, searchString, replacementString)
     set AppleScript's text item delimiters to ""
     return theText
 end replaceText
-"""

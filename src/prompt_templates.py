@@ -76,14 +76,14 @@ TEXTEDIT_PROMPT_TEMPLATE = PromptTemplate({
 })
 
 NOTES_PROMPT_TEMPLATE = PromptTemplate({
-    "notes_json": "[NOTES JSON]\n{notes_json}",
+    "content": "[START CURRENT NOTES CONTENT]\n{content}\n[END CURRENT NOTES CONTENT]",
     "command": "[USER COMMAND]\n{command}"
 })
 
-def create_notes_prompt(notes_json: str, command: str) -> str:
+def create_notes_prompt(content: str, command: str) -> str:
     """Create a prompt for Notes context."""
     return NOTES_PROMPT_TEMPLATE.format(
-        notes_json=notes_json,
+        content=content,
         command=command
     )
 

@@ -14,15 +14,13 @@ fi
 
 # Check if DEV mode is enabled
 if [ "$DEV" = "true" ]; then
-    echo "Native Messaging Host: Running in development mode (Python script)"
     # Activate venv if needed (can often be skipped if python3 links correctly)
     if [ -d "venv/bin" ]; then
        source "venv/bin/activate"
     fi
     # Run using python -m to treat src as a package
-    python3 -m src.native_messaging_host --native-messaging-host
+    DEV=true python3 -m src.native_messaging_host --native-messaging-host
 else
-    echo "Native Messaging Host: Running in production mode (Binary)"
     # Ensure the path is correct for production builds
     "/Applications/Inten.app/Contents/MacOS/Inten" --native-messaging-host
 fi

@@ -51,10 +51,10 @@ This tool listens for voice input via a hotkey, transcribes the speech, processe
 * `[OpenAI]`
     * `api_key`: Your OpenAI API key. **Keep this secret!**
 * `[ASR]`
-    * `provider`: Currently supports `openai_api`. Future: `whisper_local`.
+    * `source`: Currently supports `openai_api`. Future: `whisper_local`.
     * `model`: Model to use (e.g., `whisper-1`).
 * `[LLM]`
-    * `provider`: Currently supports `openai_api`. Future: `local_llm`.
+    * `source`: Currently supports `openai_api`. Future: `local_llm`.
     * `model`: Model to use (e.g., `gpt-4o-mini`, `gpt-3.5-turbo`).
     * `prompt`: The system prompt instructing the LLM how to refine the text. Modify this to tailor the output style.
 * `[Audio]`

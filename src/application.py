@@ -209,8 +209,7 @@ class Application:
         print(f"Active application: {self.current_context_data['app_name']}")
 
         original_doc_text_for_command = None # Variable to hold context for this operation
-        context_engine = self.context_engine
-        original_doc_text_for_command = context_engine.get_context(self.current_context_data)
+        original_doc_text_for_command = self.context_engine.get_context(self.current_context_data)
         # 3. If context is valid, start recording for the user's command
         self.is_recording = True # Set state flag
         self.stop_recording_event.clear()

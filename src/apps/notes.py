@@ -1,11 +1,13 @@
 from src import prompt_templates
+from src.engines.intent_engine import IntentEngine
 from src.handlers.llm_handler import LLMHandler
 import src.platform_utils_macos as platform_utils
 class NotesApp:
     system_prompt = prompt_templates.PAGE_EDITOR_SYSTEM_PROMPT
     
-    def __init__(self, llm_handler: LLMHandler):
+    def __init__(self, llm_handler: LLMHandler, intent_engine: IntentEngine):
         self.llm_handler = llm_handler
+        self.intent_engine = intent_engine
 
     def get_context(self):
         print("NotesApp: Getting context")
@@ -13,7 +15,9 @@ class NotesApp:
         return content
     
     def process_command(self, processing_text: str, user_command: str):
-        print("NotesApp: Not implemented yet -- passing")
+        intent = self.intent_engine.get_intent(user_command)
+        print(f"NotesApp: Intent: {intent}")
+        
         full_llm_input = prompt_templates.create_notes_prompt(
             content=processing_text,
             command=user_command

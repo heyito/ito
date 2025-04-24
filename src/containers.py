@@ -11,6 +11,7 @@ from src.application import Application
 from src.apps.google_chrome import GoogleChromeApp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
+from src.engines.intent_engine import IntentEngine
 from src.handlers.asr_handler import ASRHandler
 from src.handlers.audio_handler import AudioHandler
 from src.engines.context_engine import ContextEngine
@@ -56,6 +57,11 @@ class Container(containers.DeclarativeContainer):
         device_index=config.Audio.device_index
     )
 
+    intent_engine = providers.Singleton(
+        IntentEngine,
+        llm_handler=llm_handler
+    )
+
     # --- App-Specific Logic ---
     google_chrome_app = providers.Singleton(
         GoogleChromeApp,
@@ -69,7 +75,8 @@ class Container(containers.DeclarativeContainer):
 
     notes_app = providers.Singleton(
         NotesApp,
-        llm_handler=llm_handler
+        llm_handler=llm_handler,
+        intent_engine=intent_engine
     )
 
     shared_apps = {
@@ -78,7 +85,6 @@ class Container(containers.DeclarativeContainer):
         'notes_app': notes_app
     }
 
-    # --- Engines --
     context_engine = providers.Singleton(
         ContextEngine,
         **shared_apps
@@ -90,6 +96,7 @@ class Container(containers.DeclarativeContainer):
         **shared_apps,
     )
 
+    
     # --- Main Application ---
     application = providers.Singleton(
         Application,

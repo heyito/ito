@@ -1,8 +1,8 @@
 import sys
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
+from PyQt6.QtWidgets import (QApplication, QListView, QMainWindow, QWidget, QVBoxLayout, 
                            QLabel, QPushButton, QHBoxLayout, QStackedWidget,
                            QFormLayout, QLineEdit, QComboBox, QSpinBox, QCheckBox,
-                           QScrollArea, QDoubleSpinBox)
+                           QScrollArea, QScrollBar, QDoubleSpinBox)
 from PyQt6.QtCore import Qt, QPointF, QSettings
 from PyQt6.QtGui import QPixmap
 import platform
@@ -22,6 +22,37 @@ if sys.platform == 'darwin':
         _objc_available = False
 else:
     _objc_available = False
+
+class CustomCombo(QComboBox):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # use a pure-Qt list view so CSS works end-to-end
+        view = QListView(self)
+        view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setView(view)
+
+    def showPopup(self):
+        # grab the popup window (a QFrame in its own NSWindow)
+        popup = self.view().window()
+        if popup:
+            # find & hide any scrollbars Cocoa might have injected
+            for sb in popup.findChildren(QScrollBar):
+                sb.hide()
+
+            # zero out margins just in case
+            if popup.layout():
+                popup.layout().setContentsMargins(0,0,0,0)
+            popup.setContentsMargins(0,0,0,0)
+
+            popup.setStyleSheet("""
+                QWidget#comboPopup {
+                    background-color: white;
+                    border: 1px solid #E5E5EA;
+                }
+            """)
+
+        super().showPopup()
 
 class HomeWindow(QMainWindow):
     def __init__(self):
@@ -56,121 +87,156 @@ class HomeWindow(QMainWindow):
         # Add global stylesheet for macOS-style form elements
         self.setStyleSheet("""
             QMainWindow {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #F5F5F7,
-                    stop:0.244 #F5F5F7,
-                    stop:0.245 white,
-                    stop:1 white
-                );
+                background: white;
             }
+            
+            /* Base input styles - minimal styling */
             QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
-                padding: 6px 10px;
                 border: 1px solid #E5E5EA;
-                border-radius: 8px;
-                background-color: #F5F5F7;
-                color: #1C1C1E;
+                background: white;
+                padding: 5px;
                 min-width: 200px;
-                font-size: 13px;
+                color: #1C1C1E;
             }
-            QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
-                border: 1px solid #0A84FF;
-                background-color: white;
-            }
-            QComboBox {
-                padding-right: 24px;
-            }
-            QComboBox::drop-down {
-                border: none;
-                width: 24px;
-            }
-            QComboBox::down-arrow {
-                image: none;
-                border-left: 4px solid transparent;
-                border-right: 4px solid transparent;
-                border-top: 4px solid #8E8E93;
-                margin-right: 8px;
-            }
-            QComboBox:on {
-                border: 1px solid #0A84FF;
-                background-color: white;
-            }
-            QComboBox QAbstractItemView {
-                border: 1px solid #E5E5EA;
-                border-radius: 8px;
-                background-color: white;
-                selection-background-color: #F5F5F7;
-                selection-color: #1C1C1E;
-            }
+            
+            /* Remove all spin buttons */
             QSpinBox::up-button, QSpinBox::down-button,
             QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
+                width: 0;
+                height: 0;
                 border: none;
                 background: transparent;
-                width: 16px;
             }
-            QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
-                image: none;
-                border-left: 4px solid transparent;
-                border-right: 4px solid transparent;
-                border-bottom: 4px solid #8E8E93;
-            }
-            QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
-                image: none;
-                border-left: 4px solid transparent;
-                border-right: 4px solid transparent;
-                border-top: 4px solid #8E8E93;
-            }
-            QCheckBox {
+            
+            /* ComboBox styling */
+            QComboBox {
+                border: 1px solid #E5E5EA;
+                background: white;
+                padding: 5px;
+                min-width: 200px;
                 color: #1C1C1E;
-                spacing: 8px;
             }
-            QCheckBox::indicator {
-                width: 16px;
-                height: 16px;
-                border: 1px solid #8E8E93;
+
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+
+            QComboBox::down-arrow {
+                width: 8px;
+                height: 8px;
+                background: #8E8E93;
                 border-radius: 4px;
+            }
+                                      /* Style the dropdown popup frame/container */
+            /* This QFrame holds the QAbstractItemView */
+            QComboBox QFrame {
+                background-color: white;  /* Frame background */
+                border: 1px solid #E5E5EA;/* Apply border here */
+                margin: 0px;              /* No margin */
+                padding: 0px;             /* No padding */
+                border-image: none;       /* Optional: Uncomment if desperate to reset native look */
+            }
+
+            /* Style the list view *inside* the frame */
+            QComboBox QListView {
+                background-color: white; /* View background (can be white or transparent if frame bg works) */
+                color: #1C1C1E;                /* Default text color */
+                selection-background-color: #F2F2F7; /* Selection background */
+                selection-color: #1C1C1E;           /* Selection text color */
+                outline: 0px;                       /* No focus outline */
+                border: none;                       /* View itself has NO border (it's on the QFrame) */
+                padding: 0px;                       /* View itself has NO padding */
+                margin: 0px;                        /* View itself has NO margin */
+            }
+
+            /* Style the viewport *within* the list view - Often needed! */
+            QComboBox QListView::viewport {
+                background-color: white;  /* Ensure viewport background is white */
+                border: none;             /* Ensure viewport has no border */
+                margin: 0px;
+                padding: 0px;
+            }
+
+            /* Style individual items */
+            QComboBox QListView::item {
+                background-color: white; /* Use background-color consistently */
+                color: #1C1C1E;
+                border: none;
+                padding: 5px;             /* Padding *within* each item text area */
+                margin: 0px;              /* Ensure items don't have margins */
+                min-height: 20px; /* Optional: Ensure items have a minimum height */
+            }
+
+            /* Style selected items */
+            QComboBox QListView::item:selected {
+                background-color: #F2F2F7;
+                color: #1C1C1E;
+            }
+            
+            /* Checkbox - minimal styling */
+            QCheckBox {
+                spacing: 8px;
+                color: #1C1C1E;
+            }
+            
+            /* Menu panel */
+            QWidget#menu_panel {
+                background-color: #F5F5F7;
+            }
+            
+            /* Menu buttons - essential styling only */
+            QPushButton#settings_button {
+                text-align: left;
+                padding: 8px 16px;
+                border: none;
+                background-color: transparent;
+                color: #1C1C1E;
+            }
+            
+            QPushButton#settings_button:checked {
                 background-color: white;
+                color: #0A84FF;
             }
-            QCheckBox::indicator:hover {
-                border-color: #0A84FF;
+            
+            /* Action buttons - minimal styling */
+            QPushButton#save_button, QPushButton#reset_button {
+                padding: 8px 20px;
+                border: none;
+                border-radius: 6px;
+                color: white;
             }
-            QCheckBox::indicator:checked {
+            
+            QPushButton#save_button {
                 background-color: #0A84FF;
-                border-color: #0A84FF;
-                image: url(checkmark.png);
             }
-            QFormLayout {
-                spacing: 16px;
+            
+            QPushButton#reset_button {
+                background-color: #FF3B30;
             }
+
+            /* Form labels */
             QLabel {
                 color: #1C1C1E;
-                font-size: 13px;
             }
+
+            /* Section headers */
+            QLabel[isHeader="true"] {
+                font-size: 15px;
+                font-weight: 600;
+                color: #1C1C1E;
+                margin-top: 24px;
+                margin-bottom: 8px;
+            }
+
+            /* Scroll area */
             QScrollArea {
                 border: none;
-                background-color: white;
+                background: white;
             }
-            QScrollBar:vertical {
-                border: none;
-                background: transparent;
-                width: 12px;
-                margin: 0;
-            }
-            QScrollBar::handle:vertical {
-                background: #8E8E93;
-                border-radius: 6px;
-                min-height: 24px;
-            }
-            QScrollBar::handle:vertical:hover {
-                background: #636366;
-            }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
-                height: 0;
-                background: none;
-            }
-            QPushButton {
-                font-size: 13px;
-                font-weight: 500;
+
+            QWidget#scroll_content {
+                background: white;
             }
         """)
 
@@ -183,28 +249,17 @@ class HomeWindow(QMainWindow):
 
         # Left menu panel
         menu_panel = QWidget()
+        menu_panel.setObjectName("menu_panel")  # Add object name for styling
         menu_panel.setFixedWidth(220)
-        menu_panel.setStyleSheet("""
-            QWidget {
-                background-color: #F5F5F7;
-            }
-        """)
         menu_layout = QVBoxLayout(menu_panel)
         menu_layout.setContentsMargins(0, 0, 0, 0)
         menu_layout.setSpacing(0)
 
         # Logo container at the top of menu
         logo_container = QWidget()
-        logo_container.setFixedHeight(80)  # Increased height
-        logo_container.setStyleSheet("""
-            QWidget {
-                background-color: transparent;
-                border: none;
-            }
-        """)
+        logo_container.setFixedHeight(80)
         logo_layout = QHBoxLayout(logo_container)
-        logo_layout.setContentsMargins(0, 0, 0, 0)  # Remove margins to allow center alignment
-        logo_layout.setSpacing(12)  # Increased spacing between logo and text
+        logo_layout.setContentsMargins(0, 0, 0, 0)
 
         # Center container for logo and name
         center_container = QWidget()
@@ -222,20 +277,10 @@ class HomeWindow(QMainWindow):
             logo_label.setPixmap(scaled_pixmap)
         else:
             logo_label.setText("🎯")
-            logo_label.setStyleSheet("""
-                font-size: 24px;
-                border: none;
-            """)
         center_layout.addWidget(logo_label)
 
         # App name
         app_name = QLabel("Inten")
-        app_name.setStyleSheet("""
-            font-size: 16px;
-            font-weight: 600;
-            color: #1C1C1E;
-            border: none;
-        """)
         center_layout.addWidget(app_name)
 
         # Add the centered container to the main logo layout
@@ -244,29 +289,10 @@ class HomeWindow(QMainWindow):
 
         # Menu buttons
         self.settings_button = QPushButton("Settings")
+        self.settings_button.setObjectName("settings_button")  # Add object name for styling
         self.settings_button.setCheckable(True)
         self.settings_button.setChecked(True)
         self.settings_button.clicked.connect(lambda: self.show_page(0))
-        self.settings_button.setStyleSheet("""
-            QPushButton {
-                text-align: left;
-                padding: 8px 16px;
-                border: none;
-                border-radius: 0;
-                font-size: 13px;
-                font-weight: 500;
-                color: #1C1C1E;
-                background-color: transparent;
-            }
-            QPushButton:hover {
-                background-color: #E5E5EA;
-            }
-            QPushButton:checked {
-                background-color: white;
-                color: #0A84FF;
-                border-left: 2px solid #0A84FF;
-            }
-        """)
         menu_layout.addWidget(self.settings_button)
 
         # Add stretch to push everything up
@@ -274,12 +300,6 @@ class HomeWindow(QMainWindow):
 
         # Content area
         content_widget = QWidget()
-        content_widget.setStyleSheet("""
-            QWidget {
-                background-color: white;
-                border: none;
-            }
-        """)
         content_layout = QVBoxLayout(content_widget)
         content_layout.setContentsMargins(40, 40, 40, 40)
 
@@ -304,14 +324,9 @@ class HomeWindow(QMainWindow):
         # Create a scroll area for the settings form
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
-        scroll_area.setStyleSheet("""
-            QScrollArea {
-                border: none;
-                background-color: white;
-            }
-        """)
 
         scroll_content = QWidget()
+        scroll_content.setObjectName("scroll_content")  # Add object name for styling
         form_layout = QFormLayout(scroll_content)
         form_layout.setSpacing(16)
         form_layout.setContentsMargins(0, 0, 24, 0)  # Add right margin for scroll bar
@@ -326,12 +341,12 @@ class HomeWindow(QMainWindow):
 
         # ASR Section
         self.add_section_header(form_layout, "Speech Recognition Settings")
-        self.asr_source = QComboBox()
+        self.asr_source = CustomCombo()
         self.asr_source.addItems(["faster_whisper", "whisper-1"])
-        self.local_model_size = QComboBox()
+        self.local_model_size = CustomCombo()
         self.local_model_size.addItems(["tiny", "tiny.en", "base", "base.en", "small", "small.en", 
                                       "medium", "medium.en", "large-v1", "large-v2", "large-v3"])
-        self.device = QComboBox()
+        self.device = CustomCombo()
         self.device.addItems(["auto", "cpu", "cuda"])
         form_layout.addRow("ASR Source:", self.asr_source)
         form_layout.addRow("Local Model Size:", self.local_model_size)
@@ -339,7 +354,7 @@ class HomeWindow(QMainWindow):
 
         # LLM Section
         self.add_section_header(form_layout, "Language Model Settings")
-        self.llm_source = QComboBox()
+        self.llm_source = CustomCombo()
         self.llm_source.addItems(["openai_api", "local_llm"])
         self.llm_model = QLineEdit()
         self.max_tokens = QSpinBox()
@@ -372,7 +387,7 @@ class HomeWindow(QMainWindow):
         self.silence_duration = QSpinBox()
         self.silence_duration.setRange(100, 5000)
         self.silence_duration.setSingleStep(100)
-        self.frame_duration = QComboBox()
+        self.frame_duration = CustomCombo()
         self.frame_duration.addItems(["10", "20", "30"])
         form_layout.addRow("Enable VAD:", self.vad_enabled)
         form_layout.addRow("Aggressiveness:", self.vad_aggressiveness)
@@ -381,7 +396,7 @@ class HomeWindow(QMainWindow):
 
         # Output Section
         self.add_section_header(form_layout, "Output Settings")
-        self.output_method = QComboBox()
+        self.output_method = CustomCombo()
         self.output_method.addItems(["typewrite", "clipboard"])
         form_layout.addRow("Output Method:", self.output_method)
 
@@ -401,41 +416,15 @@ class HomeWindow(QMainWindow):
 
         # Save button
         save_button = QPushButton("Save Settings")
+        save_button.setObjectName("save_button")  # Add object name for styling
         save_button.clicked.connect(self.save_settings)
-        save_button.setStyleSheet("""
-            QPushButton {
-                background-color: #0A84FF;
-                color: white;
-                border: none;
-                padding: 8px 20px;
-                border-radius: 6px;
-                font-size: 13px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #0071E3;
-            }
-        """)
         button_layout.addWidget(save_button)
 
-        # Reset button (preserving existing style and functionality)
+        # Reset button
         reset_button = QPushButton("Reset All")
+        reset_button.setObjectName("reset_button")  # Add object name for styling
         reset_button.setFixedWidth(120)
         reset_button.clicked.connect(self.reset_all_settings)
-        reset_button.setStyleSheet("""
-            QPushButton {
-                background-color: #FF3B30;
-                color: white;
-                border: none;
-                padding: 8px 20px;
-                border-radius: 6px;
-                font-size: 13px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #FF453A;
-            }
-        """)
         button_layout.addWidget(reset_button)
         button_layout.addStretch()
 

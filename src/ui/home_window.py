@@ -28,6 +28,11 @@ class HomeWindow(QMainWindow):
         self.setMinimumWidth(900)
         self.setMinimumHeight(600)
 
+        # Add these variables for dragging functionality
+        self._dragging = False
+        self._drag_start_position = QPointF()
+        self._effective_top_margin = 40  # Same as onboarding window
+
         # Apply native macOS styling
         if _objc_available:
             try:
@@ -219,13 +224,39 @@ class HomeWindow(QMainWindow):
     def reset_all_settings(self):
         """Reset all settings and restart the onboarding process."""
         # Clear all settings
-        settings = QSettings(SettingsWindow.ORGANIZATION_NAME, SettingsWindow.APPLICATION_NAME)
+        settings = QSettings(OnboardingWindow.ORGANIZATION_NAME, OnboardingWindow.APPLICATION_NAME)
         settings.clear()
         settings.sync()  # Ensure settings are saved
         
         # Create and show new onboarding window
-        self.onboarding_window = SettingsWindow()
+        self.onboarding_window = OnboardingWindow()
         self.onboarding_window.show()
         
         # Close the current window
-        self.close() 
+        self.close()
+
+    # Add these three event handlers at the end of the class
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            if event.position().y() < self._effective_top_margin:
+                self._dragging = True
+                self._drag_start_position = event.globalPosition()
+                event.accept()
+                return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self._dragging and event.buttons() & Qt.MouseButton.LeftButton:
+            delta = event.globalPosition() - self._drag_start_position
+            self.move(self.pos() + delta.toPoint())
+            self._drag_start_position = event.globalPosition()
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._dragging = False
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)

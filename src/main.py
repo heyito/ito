@@ -8,8 +8,9 @@ from pynput import keyboard
 import traceback    
 from src.ui.onboarding import OnboardingWindow
 from PyQt6.QtWidgets import QApplication
-from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import QTimer, QThread
 from .containers import Container, get_resource_path
+import threading
 
 # Import platform utils conditionally
 if platform.system() == "Darwin":
@@ -115,9 +116,9 @@ if __name__ == "__main__":
         onboarding_window = OnboardingWindow()
         onboarding_window.show()
 
-        # Start the container application in a separate timer to not block the GUI
-        timer = QTimer()
-        timer.singleShot(0, container.application().run)
+        # Start the container application in a separate thread
+        app_thread = threading.Thread(target=container.application().run, daemon=True)
+        app_thread.start()
         
         # Start the event loop
         sys.exit(app.exec())

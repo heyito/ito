@@ -8,7 +8,7 @@ src_path = str(Path(__file__).parent.parent)
 if src_path not in sys.path:
     sys.path.append(src_path)
 
-from llm_handler import process_text_with_llm, get_available_device
+from src.handlers.llm_handler import process_text_with_llm, get_available_device
 
 def test_local_llm():
     """Test the local LLM functionality with various configurations."""

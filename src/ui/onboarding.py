@@ -46,7 +46,7 @@ class PermissionChecker(QObject):
     def check_accessibility(self):
         if platform.system() == 'Darwin':
             try:
-                import platform_utils_macos
+                from src import platform_utils_macos
                 print("Checking accessibility permissions...")
                 has_permission = platform_utils_macos.check_accessibility_permission()
                 print(f"Accessibility permission check result: {has_permission}")
@@ -62,7 +62,7 @@ class PermissionChecker(QObject):
             print("Not on macOS, assuming accessibility permissions granted")
             self.permission_checked.emit('accessibility', True)
 
-class SettingsWindow(QMainWindow):
+class OnboardingWindow(QMainWindow):
     ORGANIZATION_NAME = "Inten" # CHANGE THIS
     APPLICATION_NAME = "Inten"
 
@@ -190,7 +190,7 @@ class SettingsWindow(QMainWindow):
         if setup_complete:
             print("Permissions setup previously completed. Transitioning to home screen.")
             # Import here to avoid circular imports
-            from home_window import HomeWindow
+            from src.ui.home_window import HomeWindow
             # Create home window but don't show it yet
             self.home_window = HomeWindow()
             # Hide this window before showing the home window
@@ -539,7 +539,7 @@ class SettingsWindow(QMainWindow):
         self.settings.setValue("permissionsSetupComplete", True)
         
         # Import here to avoid circular imports
-        from home_window import HomeWindow
+        from src.ui.home_window import HomeWindow
         
         # Create home window but don't show it yet
         self.home_window = HomeWindow()
@@ -578,8 +578,8 @@ class SettingsWindow(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    QApplication.setOrganizationName(SettingsWindow.ORGANIZATION_NAME)
-    QApplication.setApplicationName(SettingsWindow.APPLICATION_NAME)
-    settings_window = SettingsWindow()
-    settings_window.show()
+    QApplication.setOrganizationName(OnboardingWindow.ORGANIZATION_NAME)
+    QApplication.setApplicationName(OnboardingWindow.APPLICATION_NAME)
+    onboarding_window = OnboardingWindow()
+    onboarding_window.show()
     sys.exit(app.exec())

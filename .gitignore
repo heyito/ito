@@ -8,6 +8,7 @@ venv
 env
 .venv/
 .env/
+.env
 
 # IDE configuration files
 .idea/

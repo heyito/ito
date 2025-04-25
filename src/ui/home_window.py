@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtCore import Qt, QPointF, QSettings
 from PyQt6.QtGui import QPixmap
 import platform
-from onboarding import SettingsWindow
+from src.ui.onboarding import OnboardingWindow
 
 # --- Platform specific code for macOS ---
 _ns_window = None

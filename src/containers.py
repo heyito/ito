@@ -10,7 +10,9 @@ from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
 from src.engines.intent_engine import IntentEngine
-from src.handlers.asr_handler import ASRHandler
+from src.handlers.asr_handler_interface import ASRHandlerInterface
+from src.handlers.openai_asr_handler import OpenAIASRHandler
+from src.handlers.faster_whisper_asr_handler import FasterWhisperASRHandler
 from src.handlers.audio_handler import AudioHandler
 from src.engines.context_engine import ContextEngine
 from src.engines.processing_engine import ProcessingEngine
@@ -34,16 +36,31 @@ class Container(containers.DeclarativeContainer):
         local_quantization=config.LLM.quantization
     )
 
-    asr_handler = providers.Singleton(
-        ASRHandler,
-        # Inject required values
-        source=config.ASR.source,
-        api_key=config.OpenAI.api_key,
-        model=config.ASR.model,
-        # Inject base providers for optional strings - handled in __init__
-        local_model_size=config.ASR.local_model_size,
-        device=config.ASR.device,
-        compute_type=config.ASR.compute_type
+    # --- ASR Handler Selection ---
+    # Use Selector to choose the ASR implementation based on config
+    asr_handler: providers.Provider[ASRHandlerInterface] = providers.Selector(
+        config.ASR.source, # The configuration value to select on
+
+        # Option 1: 'openai_api'
+        openai_api=providers.Singleton( # Use Singleton if you want only one instance
+            OpenAIASRHandler,
+            # Pass only the required dependencies for OpenAIASRHandler
+            api_key=config.OpenAI.api_key,
+            model=config.ASR.model, # Assumes config.ASR.model holds the OpenAI model name
+        ),
+
+        # Option 2: 'faster_whisper'
+        faster_whisper=providers.Singleton( # Use Singleton if you want only one instance
+            FasterWhisperASRHandler,
+            # Pass only the required dependencies for FasterWhisperASRHandler
+            local_model_size=config.ASR.local_model_size,
+            device=config.ASR.device,
+            compute_type=config.ASR.compute_type,
+            # Note: We are not passing config.ASR.model here, assuming it's not needed
+            # or FasterWhisperASRHandler derives it from local_model_size if necessary.
+        )
+        # Add more handlers here keyed by their config.ASR.source value
+        # e.g., some_other_asr_provider=providers.Singleton(SomeOtherASRHandler, ...)
     )
 
     audio_handler = providers.Singleton(

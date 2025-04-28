@@ -1,6 +1,46 @@
 accelerate==1.6.0
 altgraph==0.17.4
 annotated-types==0.7.0
+# Core Application Dependencies
+PyQt6==6.9.0
+numpy==2.2.4
+pynput==1.8.1
+sounddevice==0.5.1
+openai==1.72.0
+pyautogui==0.9.54
+PyAudio==0.2.14
+soundfile==0.13.1 # Use this instead of PySoundFile
+requests==2.32.3
+scipy==1.15.2 # Often needed by soundfile/sounddevice
+faster-whisper==1.1.1
+torch==2.6.0
+torchaudio==2.6.0
+# torchvision==0.21.0 # Keep only if you explicitly use it for computer vision tasks
+PyYAML==6.0.2 # Keep if you use YAML files
+psutil==7.0.0 # Keep if you use it for system monitoring
+coloredlogs==15.0.1 # Keep if you use it for logging
+
+# macOS Integration & Related
+pyobjc==11.0 # This replaces pyobjc-core and all pyobjc-framework-*
+rubicon-objc==0.5.0 # Keep this specific requirement
+
+# Build System
+py2app==0.28.8
+setuptools==78.1.0 # Good practice to include
+wheel==0.45.1 # Good practice to include
+
+# Testing
+pytest==8.3.2
+pytest-mock==3.14.0
+
+# Dependencies (Likely pulled in automatically, but safer to list if unsure)
+# --- Dependencies for Requests/OpenAI ---
+certifi==2025.1.31
+charset-normalizer==3.4.1
+idna==3.10
+urllib3==2.4.0
+httpx==0.28.1
+httpcore==1.0.7
 anyio==4.9.0
 autocommand==2.2.2
 av==14.3.0

@@ -10,13 +10,13 @@ from src.engines.processing_engine import ProcessingEngine
 from src.engines.context_engine import ContextEngine
 from src.constants import SOCKET_PATH
 from src import platform_utils_macos as platform_utils
-from src.handlers.asr_handler import ASRHandler
+from src.handlers.asr_handler_interface import ASRHandlerInterface
 from src.handlers.audio_handler import AudioHandler
 from src.handlers.llm_handler import LLMHandler
 
 class Application:
     def __init__(self, context_engine: ContextEngine, processing_engine: ProcessingEngine,
-                 asr_handler: ASRHandler, llm_handler: LLMHandler, audio_handler: AudioHandler,
+                 asr_handler: ASRHandlerInterface, llm_handler: LLMHandler, audio_handler: AudioHandler,
                  config: dict):
         self.context_engine = context_engine
         self.processing_engine = processing_engine

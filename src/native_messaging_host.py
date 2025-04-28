@@ -127,7 +127,6 @@ def read_message():
         # Read the message length (first 4 bytes)
         raw_length = sys.stdin.buffer.read(4)
         if not raw_length:
-            logging.warning("No length received, stdin closed")
             return None
 
         # Unpack length as native-endian unsigned int
@@ -273,7 +272,7 @@ def main():
                         native_host.handle_chrome_message(message)
                 else:
                     # If no message is received, wait a bit before trying again
-                    time.sleep(0.1)
+                    time.sleep(0.2)
             except Exception as e:
                 logging.error(f"Error in message loop: {e}")
                 logging.error(traceback.format_exc())

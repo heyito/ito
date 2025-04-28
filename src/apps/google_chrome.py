@@ -1,5 +1,7 @@
 import json
 import socket
+import threading
+import queue
 
 from src import prompt_templates
 from src.constants import SOCKET_PATH
@@ -78,21 +80,28 @@ class GoogleChromeApp:
         print("Getting content from Chrome...")
         # Request context from Chrome extension with timeout
         try:
-            import signal
-            from functools import wraps
-            import errno
+            result_queue = queue.Queue()
 
-            def timeout_handler(signum, frame):
-                raise TimeoutError("Getting Chrome context timed out")
+            def get_chrome_context_with_timeout():
+                try:
+                    chrome_context = platform_utils.get_chrome_context(SOCKET_PATH)
+                    result_queue.put(chrome_context)
+                except Exception as e:
+                    result_queue.put(e)
 
-            # Set the signal handler and a 5-second timeout
-            signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(5)  # 5 seconds
+            # Start the context fetching in a separate thread
+            context_thread = threading.Thread(target=get_chrome_context_with_timeout)
+            context_thread.daemon = True
+            context_thread.start()
 
+            # Wait for the result with a 5-second timeout
             try:
-                chrome_context = platform_utils.get_chrome_context(SOCKET_PATH)
+                result = result_queue.get(timeout=5)
+                if isinstance(result, Exception):
+                    raise result
+
+                chrome_context = result
                 print(f"Received Chrome context: {chrome_context}")
-                signal.alarm(0)  # Disable the alarm
                 
                 if chrome_context is None:
                     print("Error: Failed to get context from Chrome. Aborting.")
@@ -137,11 +146,10 @@ class GoogleChromeApp:
                 print(f"Obtained Chrome context (length: {len(original_doc_text_for_command)} chars).")
                 
                 return original_doc_text_for_command
-            except TimeoutError:
+
+            except queue.Empty:
                 print("Error: Timed out while getting Chrome context. Aborting.")
                 return
-            finally:
-                signal.alarm(0)  # Ensure the alarm is disabled
                 
         except Exception as e:
             print(f"Error while getting Chrome context: {e}")

@@ -5,10 +5,7 @@ import os
 import sys # Added for get_resource_path
 
 from src.application import Application
-# Removed unused TextEditApp/GoogleChromeApp imports for now
-# from src.apps.text_edit import TextEditApp
-# from src.apps.google_chrome import GoogleChromeApp
-from src.apps.google_chrome import GoogleChromeApp
+from src.apps.browser import BrowserApp
 from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
@@ -64,8 +61,8 @@ class Container(containers.DeclarativeContainer):
     )
 
     # --- App-Specific Logic ---
-    google_chrome_app = providers.Singleton(
-        GoogleChromeApp,
+    browser_app = providers.Singleton(
+        BrowserApp,
         llm_handler=llm_handler
     )
 
@@ -87,7 +84,7 @@ class Container(containers.DeclarativeContainer):
 
     shared_apps = {
         'text_edit_app': text_edit_app,
-        'google_chrome_app': google_chrome_app,
+        'browser_app': browser_app,
         'notes_app': notes_app,
         'macos_app': macos_app
     }

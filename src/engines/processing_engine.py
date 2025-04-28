@@ -1,5 +1,5 @@
 
-from src.apps.google_chrome import GoogleChromeApp
+from src.apps.browser import BrowserApp
 from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
@@ -7,9 +7,9 @@ from src.constants import SOCKET_PATH
 from src.types.apps import IntenApp
 
 class ProcessingEngine:
-    def __init__(self, config, google_chrome_app: GoogleChromeApp, text_edit_app: TextEditApp, notes_app: NotesApp, macos_app: MacOSapp):
+    def __init__(self, config, browser_app: BrowserApp, text_edit_app: TextEditApp, notes_app: NotesApp, macos_app: MacOSapp):
         self.config = config
-        self.google_chrome_app = google_chrome_app
+        self.browser_app = browser_app
         self.text_edit_app = text_edit_app
         self.notes_app = notes_app
         self.macos_app = macos_app
@@ -21,12 +21,15 @@ class ProcessingEngine:
         # 1. Construct LLM Prompt
         print("Constructing LLM prompt with distinct markers...")
         
-        if current_context.get("app_name") == IntenApp.CHROME:
-            self.google_chrome_app.process_command(processing_text, user_command)
-        elif current_context.get("app_name") == IntenApp.NOTES:
+        current_app = current_context.get("app_name").strip()
+        print(f"Current app: {repr(current_app)}")
+        if current_app == IntenApp.CHROME or current_app == IntenApp.BRAVE:
+            print("Processing command with Browser app...")
+            self.browser_app.process_command(processing_text, user_command)
+        elif current_app == IntenApp.NOTES:
             self.notes_app.process_command(processing_text, user_command)
             pass
-        elif current_context.get("app_name") == IntenApp.TEXTEDIT:
+        elif current_app == IntenApp.TEXTEDIT:
             self.text_edit_app.process_command(processing_text, user_command)
         else:
-            self.macos_app.process_command(current_context["app_name"], processing_text, user_command)
+            self.macos_app.process_command(current_app, processing_text, user_command)

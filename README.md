@@ -22,7 +22,7 @@ This tool listens for voice input via a hotkey, transcribes the speech, processe
 
 1.  **Clone the repository:**
     ```bash
-    git clone <your-repo-url>
+    git clone https://github.com/demox-labs/inten.git
     cd speech_to_intent
     ```
 

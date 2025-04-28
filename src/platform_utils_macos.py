@@ -178,7 +178,7 @@ def set_textedit_content(text_content):
         print(f"Could not set TextEdit content: {e}")
         return False
 
-def get_chrome_context(socket_path):
+def get_browser_context(socket_path):
     print("Getting content from Chrome...")
     try:
         sock = socket.socket(socket.AF_UNIX)

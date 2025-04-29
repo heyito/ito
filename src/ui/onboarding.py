@@ -229,9 +229,19 @@ class OnboardingWindow(QMainWindow):
 
         # Logo
         logo_label = QLabel()
-        logo_path = "inten-logo.png"
-        logo_pixmap = QPixmap(logo_path)
-        if not logo_pixmap.isNull():
+        # Try to load logo from multiple possible locations
+        logo_paths = [
+            "inten-logo.png",  # Development path
+            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "inten-logo.png"),  # Production path
+        ]
+        logo_pixmap = None
+        for path in logo_paths:
+            if os.path.exists(path):
+                logo_pixmap = QPixmap(path)
+                if not logo_pixmap.isNull():
+                    break
+        
+        if logo_pixmap and not logo_pixmap.isNull():
             scaled_pixmap = logo_pixmap.scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             logo_label.setPixmap(scaled_pixmap)
         else:

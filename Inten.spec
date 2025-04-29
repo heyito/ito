@@ -7,6 +7,7 @@ a = Analysis(
     binaries=[('/opt/homebrew/opt/portaudio/lib/libportaudio.dylib', '.')],
     datas=[
         ('config.ini', '.'),
+        ('inten-logo.png', '.'),
         ('./venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/platforms', 'PyQt6/Qt6/plugins/platforms'),
         ('./venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/styles', 'PyQt6/Qt6/plugins/styles'),
         ('./venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/imageformats', 'PyQt6/Qt6/plugins/imageformats'),
@@ -35,7 +36,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=True,
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,

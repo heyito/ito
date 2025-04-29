@@ -6,7 +6,11 @@ a = Analysis(
     pathex=['src'],
     binaries=[('/opt/homebrew/opt/portaudio/lib/libportaudio.dylib', '.')],
     datas=[('config.ini', '.')],
-    hiddenimports=['audio_handler', 'asr_handler', 'llm_handler', 'prompt_templates', 'platform_utils_macos', 'native_messaging_host'],
+    hiddenimports=[
+      'native_messaging_host',
+      'dependency_injector.errors',
+      'dependency_injector.wiring'
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

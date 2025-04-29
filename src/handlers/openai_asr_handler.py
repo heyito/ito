@@ -3,7 +3,7 @@ import io
 import time
 from openai import OpenAI, OpenAIError
 
-from .asr_handler_interface import ASRHandlerInterface
+from src.handlers.asr_handler_interface import ASRHandlerInterface
 
 
 class OpenAIASRHandler(ASRHandlerInterface):

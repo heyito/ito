@@ -4,7 +4,7 @@ import time
 import traceback
 from typing import Optional
 
-from .asr_handler_interface import ASRHandlerInterface
+from src.handlers.asr_handler_interface import ASRHandlerInterface
 
 # Attempt to import faster_whisper only once at the module level
 try:

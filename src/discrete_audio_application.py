@@ -2,7 +2,6 @@ import queue
 import threading
 import time
 import numpy as np
-from pynput import keyboard
 import traceback
 from typing import Optional, Dict, Any, Union, List
 
@@ -18,19 +17,14 @@ from src.handlers.llm_handler import LLMHandler
 from src.application_interface import ApplicationInterface
 
 # Define constants for actions
-_ACTION_START_RECORDING = "START_RECORDING"
+_ACTION_START_RECORDING = "START_RECORDING" # Keep this, it's used for the queue
 
 class AppConfig:
     """
     Handles application configuration loading and access.
+    (Keep this class as is)
     """
     def __init__(self, raw_config: Dict[str, Any]):
-        """
-        Initializes the AppConfig by parsing the configuration dictionary.
-
-        Args:
-            raw_config: The raw configuration dictionary.
-        """
         # OpenAI settings
         openai_section = raw_config.get('OpenAI', {})
         self.openai_api_key: str = openai_section.get('api_key', '')
@@ -62,7 +56,7 @@ class AppConfig:
             self.vad_enabled: bool = vad_enabled.lower() == 'true'
         else:
             self.vad_enabled: bool = bool(vad_enabled)
-            
+
         self.vad_aggressiveness: int = int(vad_section.get('aggressiveness', 1))
         self.silence_duration_ms: int = int(vad_section.get('silence_duration_ms', 1000))
         self.frame_duration_ms: int = int(vad_section.get('frame_duration_ms', 30))
@@ -80,25 +74,19 @@ class AppConfig:
                 f"silence_duration_ms={self.silence_duration_ms}, frame_duration_ms={self.frame_duration_ms}, "
                 f"start_recording_hotkey={self.start_recording_hotkey})")
 
+
 class DiscreteAudioApplication(ApplicationInterface):
     """
     Main application class orchestrating audio recording, processing,
     and interaction with ASR, LLM, and context engines based on user commands
-    triggered via hotkeys.
+    triggered via external signals (like hotkeys managed elsewhere).
     """
     def __init__(self, context_engine: ContextEngine, processing_engine: ProcessingEngine,
                  asr_handler: ASRHandlerInterface, llm_handler: LLMHandler, audio_handler: AudioHandler,
                  raw_config: Dict[str, Any]):
         """
         Initializes the Application.
-
-        Args:
-            context_engine: Engine to manage application context.
-            processing_engine: Engine to process user commands with context.
-            asr_handler: Handler for Automatic Speech Recognition.
-            llm_handler: Handler for Large Language Model interaction.
-            audio_handler: Handler for audio recording and processing.
-            raw_config: The raw configuration dictionary.
+        (Constructor mostly stays the same, just remove listener init if any)
         """
         # Configuration
         self.config: AppConfig = AppConfig(raw_config)
@@ -116,7 +104,7 @@ class DiscreteAudioApplication(ApplicationInterface):
         self.stop_recording_event: threading.Event = threading.Event()
         # Queue for audio chunks from the recording thread
         self.audio_queue: queue.Queue[np.ndarray] = queue.Queue()
-        # Queue for actions triggered by external events (like hotkeys)
+        # Queue for actions triggered by external events (like hotkeys via ApplicationManager)
         self.action_queue: queue.Queue[str] = queue.Queue()
         self.processing_lock: threading.Lock = threading.Lock() # Ensures only one processing task runs
         self.current_context_data: Dict[str, Optional[str]] = {"app_name": None, "doc_text": None}
@@ -124,22 +112,23 @@ class DiscreteAudioApplication(ApplicationInterface):
         # Thread Handles
         self.recording_thread_handle: Optional[threading.Thread] = None
         self.monitor_thread_handle: Optional[threading.Thread] = None
-        self.hotkey_listener: Optional[keyboard.Listener] = None
+        # self.hotkey_listener: Optional[keyboard.Listener] = None # REMOVE
 
     def run(self) -> None:
         """
-        Starts the application, sets up listeners, and enters the main event loop.
+        Starts the application's event loop in the background thread.
+        Hotkey listener is managed externally now.
         """
         self._print_initial_info()
         try:
-            self._setup_hotkey_listener()
-            self._run_event_loop()
+            # REMOVED: self._setup_hotkey_listener()
+            self._run_event_loop() # Directly run the event loop
         except Exception as e:
-            print(f"\nFATAL ERROR during application setup or run: {e}")
+            print(f"\nFATAL ERROR during application run: {e}")
             traceback.print_exc()
         finally:
             self._cleanup()
-            print("Inten shut down.")
+            # print("Inten background application shut down.") # Maybe log this instead
 
     def _print_initial_info(self) -> None:
         """Prints initial configuration and status information to the console."""
@@ -158,132 +147,53 @@ class DiscreteAudioApplication(ApplicationInterface):
         print(f"Press '{self.config.start_recording_hotkey}' when the target application is active to issue a command.")
         if platform_utils.is_macos():
             print("Ensure required Accessibility/Automation permissions are granted (macOS).")
-        print("Press Ctrl+C in the console to quit.")
+        print("Inten background process running. Use UI or Ctrl+C in original console to quit.") # Adjusted message
 
-    def _setup_hotkey_listener(self) -> None:
-        """
-        Registers the global hotkey listener using pynput.
-        Raises:
-            RuntimeError: If the hotkey listener cannot be set up.
-        """
-        hotkey_str = self.config.start_recording_hotkey
-        print(f"Setting up hotkey: {hotkey_str}")
-        try:
-            # Define the callback for key press events
-            def on_press_wrapper(key):
-                self._on_keyboard_press(key)
-
-            # Create and start the listener in a non-blocking way
-            listener = keyboard.Listener(on_press=on_press_wrapper)
-            listener.start()
-            self.hotkey_listener = listener # Store the listener instance
-            print(f"Hotkey '{hotkey_str}' registration initiated.")
-            # Note: Listener runs in its own thread managed by pynput.
-
-        except Exception as e:
-            # Catch a broad exception range as pynput setup can fail for various reasons
-            print(f"\nERROR setting hotkey '{hotkey_str}': {e}")
-            print("This might be due to permissions issues (e.g., macOS Accessibility/Input Monitoring, Wayland).")
-            print("Try checking System Settings > Privacy & Security.")
-            print("Running with elevated privileges (sudo/Administrator) might be needed but use with caution.")
-            # Stop the application if the hotkey is critical
-            raise RuntimeError(f"Failed to set up hotkey listener for '{hotkey_str}'") from e
-
-    def _on_keyboard_press(self, key: Union[keyboard.Key, keyboard.KeyCode, None]) -> None:
-        """
-        Internal callback triggered by the keyboard listener.
-        Checks if the pressed key matches the configured hotkey.
-
-        Args:
-            key: The key object from pynput (can be Key or KeyCode).
-        """
-        hotkey_str = self.config.start_recording_hotkey
-        target_key: Optional[Union[keyboard.Key, keyboard.KeyCode]] = None
-
-        # Attempt to parse the hotkey string into a pynput key object
-        try:
-            # Check if it's a special key (like Key.f9, Key.ctrl_l)
-            target_key = getattr(keyboard.Key, hotkey_str)
-        except AttributeError:
-            # If not a special key, treat it as a character key
-            if len(hotkey_str) == 1:
-                 target_key = keyboard.KeyCode.from_char(hotkey_str)
-            else:
-                 # Handle potential complex hotkey strings if needed in the future
-                 # For now, log an error if it's not a recognized special key or single char
-                 if not hasattr(self, '_logged_invalid_hotkey'): # Log only once
-                     print(f"ERROR: Invalid or unsupported hotkey string in config: '{hotkey_str}'. Only single characters or names from keyboard.Key (e.g., 'f9', 'ctrl_l') are currently directly supported by this check.")
-                     self._logged_invalid_hotkey = True # Prevent log flooding
-                 return
-
-        # Compare the pressed key with the target hotkey
-        if key == target_key:
-            self._trigger_start_recording(hotkey_str) # Pass the string representation for logging
-
-    def _trigger_start_recording(self, hotkey_name: str) -> None:
-        """
-        Checks application state and queues the start recording action.
-        This method is called from the keyboard listener thread, so it
-        should be quick and avoid blocking.
-
-        Args:
-            hotkey_name: The string representation of the hotkey that was pressed.
-        """
-        timestamp = time.strftime('%H:%M:%S')
-        # Prevent queuing multiple start actions if already busy
-        if self.is_processing:
-            print(f"[{timestamp}] Hotkey '{hotkey_name}' detected, but PROCESSING is busy.")
-            # Optional: Provide user feedback (e.g., system beep)
-            # platform_utils.beep()
-            return
-        if self.is_recording:
-            print(f"[{timestamp}] Hotkey '{hotkey_name}' detected, but already RECORDING.")
-            # Optional: Provide user feedback
-            # platform_utils.beep()
-            return
-
-        print(f"[{timestamp}] Hotkey '{hotkey_name}' detected. Queuing context check & start command.")
-        self.action_queue.put(_ACTION_START_RECORDING) # Signal the main loop
+    # REMOVE _setup_hotkey_listener method completely
+    # REMOVE _on_keyboard_press method completely
+    # REMOVE _trigger_start_recording method completely
 
     def _run_event_loop(self) -> None:
         """
-        The main event loop, processing actions from the action queue.
+        The main event loop for the background thread, processing actions
+        received from the action queue (triggered externally).
         """
-        print("Entering main event loop. Waiting for hotkey...")
+        print("Background event loop started. Waiting for actions...")
         try:
             while True:
+                 # Check if the main stop event is set (e.g., by ApplicationManager during shutdown)
+                if self.stop_recording_event.is_set(): # Reuse event for general stop signal
+                    print("Stop event detected in background loop. Exiting.")
+                    break
                 try:
-                    # Block waiting for an action from the queue (e.g., hotkey press)
-                    # Timeout prevents hard lock, allowing periodic checks or Ctrl+C
-                    action = self.action_queue.get(block=True, timeout=1.0)
+                    # Block waiting for an action from the queue
+                    # Use a timeout so the stop_recording_event check runs periodically
+                    action = self.action_queue.get(block=True, timeout=0.5) # Reduced timeout
 
                     if action == _ACTION_START_RECORDING:
-                        # Handle the recording initiation in the main thread
                         self._initiate_recording_process()
                     else:
                         print(f"Warning: Unknown action received in queue: {action}")
 
                 except queue.Empty:
-                    # Timeout reached, no action in the queue. Loop continues.
-                    # This is normal operation when waiting for the hotkey.
+                    # Timeout reached, loop continues to check stop event.
                     pass
                 except Exception as e:
-                    print(f"\nError in event loop action processing: {e}")
+                    print(f"\nError in background event loop action processing: {e}")
                     traceback.print_exc()
-                    # Decide if the error is recoverable or should halt the loop
 
-        except KeyboardInterrupt:
-            print("\nCtrl+C detected. Initiating shutdown...")
         except Exception as e:
-            # Catch unexpected errors in the loop itself
-            print(f"\nAn unexpected error occurred in the main loop: {e}")
+            print(f"\nAn unexpected error occurred in the background loop: {e}")
             traceback.print_exc()
-        # Cleanup is handled in the finally block of the run method
+        finally:
+             print("Background event loop finished.")
+            # Cleanup is handled in the finally block of the run method
+
 
     def _initiate_recording_process(self) -> None:
         """
         Checks context, and if valid, starts audio recording and monitoring threads.
-        This runs in the main thread after being triggered by the action queue.
+        (Keep this method as is)
         """
         timestamp = time.strftime('%H:%M:%S')
         # Double-check state flags immediately before starting
@@ -327,8 +237,13 @@ class DiscreteAudioApplication(ApplicationInterface):
 
         # 3. Start Recording and Monitoring
         self.is_recording = True
-        self.stop_recording_event.clear()
-        self.audio_queue = queue.Queue() # Ensure queue is empty before starting
+        # self.stop_recording_event.clear() # Event should be cleared before starting thread if reusing
+        # Clear the queue here, just before starting recording
+        while not self.audio_queue.empty():
+            try:
+                self.audio_queue.get_nowait()
+            except queue.Empty:
+                break
 
         print(f"[{timestamp}] Context OK. Starting command recording... (VAD: {self.config.vad_enabled})")
         print(f"[{timestamp}] Speak your command now (stops recording after {self.config.silence_duration_ms}ms silence)...")
@@ -336,7 +251,16 @@ class DiscreteAudioApplication(ApplicationInterface):
         # Start the audio recording thread
         self.recording_thread_handle = threading.Thread(
             target=self.audio_handler.record_audio_stream_with_vad,
-            args=(self.stop_recording_event, self.audio_queue, self.config.vad_enabled, self.config.vad_aggressiveness, self.config.silence_duration_ms, self.config.frame_duration_ms),
+            args=(
+                self.stop_recording_event,
+                self.audio_queue,
+                {
+                    'enabled': self.config.vad_enabled,
+                    'aggressiveness': self.config.vad_aggressiveness,
+                    'silence_duration_ms': self.config.silence_duration_ms,
+                    'frame_duration_ms': self.config.frame_duration_ms
+                }
+            ),
             daemon=True, # Daemon threads exit automatically when the main program exits
             name="AudioRecordingThread"
         )
@@ -351,14 +275,12 @@ class DiscreteAudioApplication(ApplicationInterface):
         )
         self.monitor_thread_handle.start()
 
+
     def _vad_monitor_and_process_thread_target(self, original_doc_context: Optional[str]) -> None:
         """
         Thread target: Waits for VAD to signal stop, collects audio,
         transcribes it, and then queues the processing task if not already processing.
-
-        Args:
-            original_doc_context: The document text captured at the start of the command.
-                                  Can be None if context retrieval failed or wasn't applicable.
+        (Keep this method as is)
         """
         timestamp = time.strftime('%H:%M:%S')
         # Block until the stop_recording_event is set (by VAD or potentially manual stop)
@@ -473,10 +395,7 @@ class DiscreteAudioApplication(ApplicationInterface):
         """
         Thread target: Executes the main processing pipeline using the engines.
         Acquires a lock to ensure exclusivity and manages the is_processing state.
-
-        Args:
-            original_doc_context: The document context captured before the command.
-            user_command: The transcribed user command.
+        (Keep this method as is)
         """
         timestamp = time.strftime('%H:%M:%S')
         # Basic validation
@@ -519,74 +438,39 @@ class DiscreteAudioApplication(ApplicationInterface):
             self.is_processing = False
             self.processing_lock.release()
             print(f"[{timestamp}] --- Processing Pipeline Finished ---")
-            print(f"[{timestamp}] Ready for next command (Press '{self.config.start_recording_hotkey}').")
+            print(f"[{timestamp}] Ready for next command.")
 
 
     def _cleanup(self) -> None:
         """
-        Performs cleanup operations when the application is shutting down.
-        Stops listeners and signals running threads to exit.
+        Performs cleanup operations for the background application thread.
+        Listener cleanup is handled externally.
         """
-        print("Initiating cleanup...")
+        print("Initiating background application cleanup...")
 
-        # Stop the hotkey listener
-        if self.hotkey_listener:
-            print("Stopping hotkey listener...")
-            try:
-                self.hotkey_listener.stop()
-                # Note: Joining the listener thread might be needed if precise shutdown is critical,
-                # but pynput's stop() is generally sufficient for daemon listeners.
-                # self.hotkey_listener.join() # Optional: wait for listener thread to exit
-                print("Hotkey listener stopped.")
-            except Exception as e:
-                print(f"Error stopping hotkey listener: {e}")
-            self.hotkey_listener = None
+        # REMOVE Listener stopping code from here
 
         # Signal recording thread to stop if it's running
-        if self.is_recording:
-            print("Signaling active recording thread to stop...")
-            self.stop_recording_event.set()
-            # Wait briefly for the recording thread to potentially finish processing the event
-            if self.recording_thread_handle and self.recording_thread_handle.is_alive():
-                 self.recording_thread_handle.join(timeout=0.5) # Wait max 0.5 sec
-                 if self.recording_thread_handle.is_alive():
-                      print("Warning: Recording thread did not exit cleanly.")
-
-
-        # Signal monitor thread if it's potentially waiting on the event
-        # (it usually exits quickly after the event is set, but signal just in case)
+        # Use the stop_recording_event, which is also checked by the main loop
         if not self.stop_recording_event.is_set():
-             self.stop_recording_event.set() # Ensure it's set for monitor thread too
+             print("Signaling running threads via stop event...")
+             self.stop_recording_event.set()
 
+        # Wait briefly for the recording thread to potentially finish
+        if self.recording_thread_handle and self.recording_thread_handle.is_alive():
+            print("Waiting for recording thread...")
+            self.recording_thread_handle.join(timeout=0.5) # Wait max 0.5 sec
+            if self.recording_thread_handle.is_alive():
+                print("Warning: Recording thread did not exit cleanly during cleanup.")
+
+
+        # Wait briefly for the monitor thread
         if self.monitor_thread_handle and self.monitor_thread_handle.is_alive():
-             print("Waiting briefly for monitor thread...")
-             self.monitor_thread_handle.join(timeout=0.5) # Wait max 0.5 sec
-             if self.monitor_thread_handle.is_alive():
-                  print("Warning: Monitor thread did not exit cleanly.")
+            print("Waiting for monitor thread...")
+            self.monitor_thread_handle.join(timeout=0.5) # Wait max 0.5 sec
+            if self.monitor_thread_handle.is_alive():
+                print("Warning: Monitor thread did not exit cleanly during cleanup.")
 
+        # Note: Processing thread is a daemon thread
 
-        # Note: Processing thread is a daemon thread, it will be terminated automatically
-        # if the main thread exits. If graceful shutdown of processing is required,
-        # a similar signaling mechanism (e.g., another event) would be needed.
-
-        # Clear queues potentially? Not usually necessary as daemon threads will die.
-        # while not self.audio_queue.empty(): self.audio_queue.get()
-        # while not self.action_queue.empty(): self.action_queue.get()
-
-        print("Cleanup sequence complete.")
-
-# Example Usage (assuming you have the necessary handlers and engines instantiated)
-# if __name__ == "__main__":
-#     # Load your config dictionary (e.g., from a file)
-#     config = load_config_from_file(...)
-#
-#     # Instantiate handlers and engines
-#     audio_h = AudioHandler(...)
-#     asr_h = MyASRHandler(...) # Your implementation
-#     llm_h = MyLLMHandler(...) # Your implementation
-#     context_e = ContextEngine(...)
-#     processing_e = ProcessingEngine(asr_handler=asr_h, llm_handler=llm_h, ...)
-#
-#     # Create and run the application
-#     app = Application(context_e, processing_e, asr_h, llm_h, audio_h, config)
-#     app.run()
+        print("Background application cleanup sequence complete.")

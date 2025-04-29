@@ -472,7 +472,7 @@ class HomeWindow(QMainWindow):
         main_layout.addWidget(menu_panel)
         main_layout.addWidget(content_widget)
 
-        # Load settings after UI is initialized
+        # Load settings after UI is fully initialized
         self.load_settings()
         
         # Start application if settings are valid

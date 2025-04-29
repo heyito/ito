@@ -86,7 +86,6 @@ class DiscreteAudioApplication(ApplicationInterface):
                  raw_config: Dict[str, Any]):
         """
         Initializes the Application.
-        (Constructor mostly stays the same, just remove listener init if any)
         """
         # Configuration
         self.config: AppConfig = AppConfig(raw_config)
@@ -101,7 +100,8 @@ class DiscreteAudioApplication(ApplicationInterface):
         # Application State
         self.is_recording: bool = False
         self.is_processing: bool = False
-        self.stop_recording_event: threading.Event = threading.Event()
+        self.stop_recording_event: threading.Event = threading.Event()  # For stopping individual recordings
+        self.stop_application_event: threading.Event = threading.Event()  # For stopping the entire application
         # Queue for audio chunks from the recording thread
         self.audio_queue: queue.Queue[np.ndarray] = queue.Queue()
         # Queue for actions triggered by external events (like hotkeys via ApplicationManager)
@@ -160,15 +160,11 @@ class DiscreteAudioApplication(ApplicationInterface):
         """
         print("Background event loop started. Waiting for actions...")
         try:
-            while True:
-                 # Check if the main stop event is set (e.g., by ApplicationManager during shutdown)
-                if self.stop_recording_event.is_set(): # Reuse event for general stop signal
-                    print("Stop event detected in background loop. Exiting.")
-                    break
+            while not self.stop_application_event.is_set():
                 try:
                     # Block waiting for an action from the queue
-                    # Use a timeout so the stop_recording_event check runs periodically
-                    action = self.action_queue.get(block=True, timeout=0.5) # Reduced timeout
+                    # Use a timeout so the stop_application_event check runs periodically
+                    action = self.action_queue.get(block=True, timeout=0.5)
 
                     if action == _ACTION_START_RECORDING:
                         self._initiate_recording_process()
@@ -186,14 +182,11 @@ class DiscreteAudioApplication(ApplicationInterface):
             print(f"\nAn unexpected error occurred in the background loop: {e}")
             traceback.print_exc()
         finally:
-             print("Background event loop finished.")
-            # Cleanup is handled in the finally block of the run method
-
+            print("Background event loop finished.")
 
     def _initiate_recording_process(self) -> None:
         """
         Checks context, and if valid, starts audio recording and monitoring threads.
-        (Keep this method as is)
         """
         timestamp = time.strftime('%H:%M:%S')
         # Double-check state flags immediately before starting
@@ -202,12 +195,14 @@ class DiscreteAudioApplication(ApplicationInterface):
                   f"Recording={self.is_recording}, Processing={self.is_processing}. Aborting start.")
             return
 
+        # Clear the stop_recording_event before starting a new recording
+        self.stop_recording_event.clear()
+
         # 1. Check Active Application Context (Platform Specific)
         print(f"[{timestamp}] Checking active window context...")
-        active_window_info = platform_utils.get_active_window_info() # Assumes this returns a dict or None
+        active_window_info = platform_utils.get_active_window_info()
         if not active_window_info or not active_window_info.get("app_name"):
             print(f"[{timestamp}] Error: Could not determine active window or application name. Aborting.")
-            # Optional: User feedback (e.g., different beep)
             return
 
         app_name = active_window_info.get("app_name", "Unknown")
@@ -215,29 +210,21 @@ class DiscreteAudioApplication(ApplicationInterface):
         print(f"[{timestamp}] Active application: {app_name}")
 
         # 2. Get Contextual Data (e.g., document text) using the ContextEngine
-        # This might involve platform-specific calls via the engine
         print(f"[{timestamp}] Fetching context from '{app_name}'...")
         try:
-            # The context engine determines if/how to get context based on app_name
             original_doc_text = self.context_engine.get_context(self.current_context_data)
-            # Handle cases where context retrieval might fail or return None meaningfully
             if original_doc_text is None:
                  print(f"[{timestamp}] Warning: Context engine returned None for '{app_name}'. Proceeding without document context.")
-                 # Decide if this is acceptable or should abort. Assuming proceed for now.
             else:
                  print(f"[{timestamp}] Context retrieved successfully.")
-                 # Store it if needed, though it's passed directly to monitor thread here
                  self.current_context_data['doc_text'] = original_doc_text
 
         except Exception as e:
             print(f"[{timestamp}] Error fetching context for '{app_name}': {e}")
-            # Decide how to handle context errors (e.g., abort, proceed without context)
-            # Aborting for now if context fetch fails unexpectedly.
             return
 
         # 3. Start Recording and Monitoring
         self.is_recording = True
-        # self.stop_recording_event.clear() # Event should be cleared before starting thread if reusing
         # Clear the queue here, just before starting recording
         while not self.audio_queue.empty():
             try:
@@ -261,7 +248,7 @@ class DiscreteAudioApplication(ApplicationInterface):
                     'frame_duration_ms': self.config.frame_duration_ms
                 }
             ),
-            daemon=True, # Daemon threads exit automatically when the main program exits
+            daemon=True,
             name="AudioRecordingThread"
         )
         self.recording_thread_handle.start()
@@ -269,12 +256,11 @@ class DiscreteAudioApplication(ApplicationInterface):
         # Start the VAD monitor thread, passing the context obtained *for this specific command*
         self.monitor_thread_handle = threading.Thread(
             target=self._vad_monitor_and_process_thread_target,
-            args=(original_doc_text,), # Pass the fetched context
+            args=(original_doc_text,),
             daemon=True,
             name="VADMonitorThread"
         )
         self.monitor_thread_handle.start()
-
 
     def _vad_monitor_and_process_thread_target(self, original_doc_context: Optional[str]) -> None:
         """

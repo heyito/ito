@@ -287,16 +287,16 @@ class ApplicationManager(QObject):
             self.container.config.from_dict(config)
 
             # Create application instance within the thread
-            # This instance is now accessible via self.app_instance from the main thread
-            # (be mindful of thread safety when accessing its state)
             self.app_instance = self.container.application()
 
-            # Pass the stop event to the app instance if it needs it
-            # We reuse the stop_recording_event for simplicity here
+            # Pass the stop event to the app instance
             self.app_instance.stop_recording_event = stop_event
 
             print("Starting DiscreteAudioApplication.run() in background thread...")
-            self.app_instance.run() # This enters the app's internal event loop
+            
+            # Run the application - it has its own event loop that will continue running
+            # until the stop_event is set
+            self.app_instance.run()
 
         except Exception as e:
             error_msg = f"Background Application Error: {str(e)}\n{traceback.format_exc()}"
@@ -305,10 +305,9 @@ class ApplicationManager(QObject):
             self.error_occurred.emit(f"Background Thread Error: {str(e)}")
             self.status_changed.emit("Application error occurred")
         finally:
-             print("Background application thread finished.")
-             # Clear the instance reference from the manager when the thread truly exits
-             # Note: This might race with stop_application clearing it, which is fine.
-             self.app_instance = None
+            print("Background application thread finished.")
+            # Clear the instance reference from the manager when the thread truly exits
+            self.app_instance = None
 
 
     # --- New methods for hotkey handling ---

@@ -6,9 +6,9 @@ import json
 import logging
 from pynput import keyboard
 import traceback    
-# from src.ui.onboarding import OnboardingWindow
-# from PyQt6.QtWidgets import QApplication
-# from PyQt6.QtCore import QTimer, QThread
+from src.ui.onboarding import OnboardingWindow
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import QTimer, QThread
 from src.containers import Container, get_resource_path
 import threading
 
@@ -107,19 +107,18 @@ if __name__ == "__main__":
         # Register native messaging host first
         ensure_native_messaging_host_registered(native_messaging_script_path)
         
-        # # Create QApplication instance
-        # app = QApplication(sys.argv)
-        # QApplication.setOrganizationName(OnboardingWindow.ORGANIZATION_NAME)
-        # QApplication.setApplicationName(OnboardingWindow.APPLICATION_NAME)
+        # Create QApplication instance
+        app = QApplication(sys.argv)
+        QApplication.setOrganizationName(OnboardingWindow.ORGANIZATION_NAME)
+        QApplication.setApplicationName(OnboardingWindow.APPLICATION_NAME)
         
-        # # Create and show the OnboardingWindow
-        # onboarding_window = OnboardingWindow()
-        # onboarding_window.show()
+        # Create and show the OnboardingWindow
+        onboarding_window = OnboardingWindow()
+        onboarding_window.show()
 
         # Start the container application in a separate thread
-        # app_thread = threading.Thread(target=container.application().run, daemon=True)
-        # app_thread.start()
+        app_thread = threading.Thread(target=container.application().run, daemon=True)
+        app_thread.start()
         
         # Start the event loop
-        # sys.exit(app.exec())
-        sys.exit(container.application().run())
+        sys.exit(app.exec())

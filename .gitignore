@@ -36,3 +36,4 @@ dist/
 .DS_Store
 *.zip
 dmg-layout.applescript
+.build/

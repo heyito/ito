@@ -4,7 +4,8 @@ import configparser
 import os
 import sys # Added for get_resource_path
 
-from src.application import Application
+from src.discrete_audio_application import DiscreteAudioApplication
+from src.application_interface import ApplicationInterface
 from src.apps.browser import BrowserApp
 from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
@@ -119,14 +120,14 @@ class Container(containers.DeclarativeContainer):
 
     
     # --- Main Application ---
-    application = providers.Singleton(
-        Application,
+    application: providers.Provider[ApplicationInterface] = providers.Singleton(
+        DiscreteAudioApplication,
         context_engine=context_engine,
         processing_engine=processing_engine,
         asr_handler=asr_handler,
         llm_handler=llm_handler,
         audio_handler=audio_handler,
-        config=config,
+        raw_config=config,
     )
 
 # Optional: Function to get the absolute path, similar to your main.py

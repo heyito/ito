@@ -248,6 +248,8 @@ class ApplicationManager(QObject):
             if self.app_instance:
                 # Also signal the recording event just in case it's stuck there
                 self.app_instance.stop_recording_event.set()
+                # Signal the application to stop
+                self.app_instance.stop_application_event.set()
 
             print("Waiting for background application thread to join...")
             self.app_thread.join(timeout=2.0) # Wait max 2 seconds

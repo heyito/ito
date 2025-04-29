@@ -599,7 +599,9 @@ class HomeWindow(QMainWindow):
                 
                 # Start application if not running
                 if not self.app_manager.app_thread or not self.app_manager.app_thread.is_alive():
-                    self.app_manager.start_application()
+                    if not self.app_manager.start_application():
+                        self.handle_error("Failed to start application after saving settings")
+                        return
                 
         except Exception as e:
             self.handle_error(f"Failed to save settings: {str(e)}")

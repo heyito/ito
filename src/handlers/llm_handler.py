@@ -26,10 +26,14 @@ class LLMHandler:
             self.ollama_running = self._check_ollama_running()
             if not self.ollama_running:
                 print("WARNING: Ollama is not running. Please start Ollama before using it.")
+            else:
+                self.ollama_running = True
         elif self.llm_source == "openai_api":
             print(f"OpenAI API key: {self.openai_api_key}")
             if not self.openai_api_key:
                 print("WARNING: OpenAI API key is invalid or missing. Please check your configuration.")
+            else:
+                self.openai_valid = True
 
     def _check_ollama_running(self, max_retries: int = 3, retry_delay: float = 1.0) -> bool:
         """

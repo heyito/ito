@@ -477,11 +477,12 @@ class HomeWindow(QMainWindow):
         
         # Start application if settings are valid
         current_settings = self.app_manager.load_settings()
-        is_valid, error_msg = self.app_manager.validate_settings(current_settings)
-        if is_valid:
-            self.app_manager.start_application()
-        else:
-            self.handle_error(error_msg)
+        if current_settings:  # Only validate if we have settings
+            is_valid, error_msg = self.app_manager.validate_settings(current_settings)
+            if is_valid:
+                self.app_manager.start_application()
+            else:
+                self.handle_error(error_msg)
 
     def show_page(self, index):
         self.stacked_widget.setCurrentIndex(index)

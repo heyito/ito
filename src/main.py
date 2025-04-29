@@ -11,6 +11,9 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QTimer, QThread
 from src.containers import Container, get_resource_path
 import threading
+import multiprocessing
+
+multiprocessing.freeze_support()
 
 # Import platform utils conditionally
 if platform.system() == "Darwin":

@@ -31,10 +31,16 @@ class Container(containers.DeclarativeContainer):
     llm_handler = providers.Singleton(
         LLMHandler,
         llm_source=config.LLM.source,
-        llm_model=config.LLM.model,
-        openai_api_key=config.OpenAI.api_key,
-        # Inject base provider for optional int - handled in __init__
-        local_quantization=config.LLM.quantization
+        llm_model=providers.Callable(
+            lambda source, model, ollama_model: (
+                ollama_model if source == "ollama"
+                else model
+            ),
+            config.LLM.source,
+            config.OpenAI.model,
+            config.Ollama.model,
+        ),
+        openai_api_key=config.OpenAI.api_key
     )
 
     # --- ASR Handler Selection ---
@@ -57,11 +63,7 @@ class Container(containers.DeclarativeContainer):
             local_model_size=config.ASR.local_model_size,
             device=config.ASR.device,
             compute_type=config.ASR.compute_type,
-            # Note: We are not passing config.ASR.model here, assuming it's not needed
-            # or FasterWhisperASRHandler derives it from local_model_size if necessary.
         )
-        # Add more handlers here keyed by their config.ASR.source value
-        # e.g., some_other_asr_provider=providers.Singleton(SomeOtherASRHandler, ...)
     )
 
     audio_handler = providers.Singleton(

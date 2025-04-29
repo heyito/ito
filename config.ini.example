@@ -1,6 +1,3 @@
-[OpenAI]
-api_key = YOUR_OPENAI_API_KEY_HERE
-
 [ASR]
 source = faster_whisper
 model = whisper-1
@@ -17,18 +14,18 @@ compute_type = default
 
 
 [LLM]
-# Source options: 'openai_api' or 'local_llm'
-source = openai_api
+# Source options: 'ollama' or 'openai_api'
+source = ollama
+max_tokens = 20000
+temperature = 0.7
 
+[OpenAI]
 # OpenAI API settings (only used if source = openai_api)
 api_key = YOUR_OPENAI_API_KEY_HERE
 model = gpt-4.1
 
-# Local model settings (only used if source = local_llm)
-local_model = deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
-quantization = 8
-max_tokens = 2000
-temperature = 0.7
+[Ollama]
+model = llama3.2:latest
 
 [Audio]
 sample_rate = 16000

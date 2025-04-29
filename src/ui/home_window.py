@@ -355,7 +355,7 @@ class HomeWindow(QMainWindow):
         # LLM Section
         self.add_section_header(form_layout, "Language Model Settings")
         self.llm_source = CustomCombo()
-        self.llm_source.addItems(["openai_api", "local_llm"])
+        self.llm_source.addItems(["ollama", "openai_api"])
         self.llm_model = QLineEdit()
         self.max_tokens = QSpinBox()
         self.max_tokens.setRange(1, 10000)

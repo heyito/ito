@@ -45,6 +45,7 @@ This tool listens for voice input via a hotkey, transcribes the speech, processe
     * Edit `config.ini` and add your OpenAI API key.
     * (Optional) Run `python utils/list_audio_devices.py` to find your microphone's device index and update `config.ini` if needed (usually not required if default works).
     * Review other settings like the `hotkey`.
+    * Create an `.env` with `DEV=true` in it.
 
 ## Configuration (`config.ini`)
 

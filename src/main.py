@@ -9,7 +9,6 @@ import traceback
 from src.ui.onboarding import OnboardingWindow
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QTimer, QThread
-from src.containers import Container, get_resource_path
 import threading
 import multiprocessing
 
@@ -80,20 +79,6 @@ def ensure_native_messaging_host_registered(native_messaging_script_path):
 
 # --- Main Execution Block ---
 if __name__ == "__main__":
-    container = Container()
-    config_path = get_resource_path("config.ini")
-    if os.path.exists(config_path):
-        try:
-            container.config.from_ini(config_path, required=True)
-            if 'YOUR_OPENAI_API_KEY_HERE' in container.config.OpenAI.api_key() or not container.config.OpenAI.api_key():
-                print("WARNING: OpenAI API key not set in config.ini. OpenAI features will fail.")
-        except Exception as e:
-            print(f"ERROR: Failed to load config from {config_path}: {e}")
-            sys.exit(1)
-    else:
-        print(f"ERROR: config.ini not found at {config_path}. Cannot proceed.")
-        sys.exit(1)
-
     dev_mode = os.getenv('DEV')
     if dev_mode:
         print("Dev mode enabled")
@@ -118,10 +103,6 @@ if __name__ == "__main__":
         # Create and show the OnboardingWindow
         onboarding_window = OnboardingWindow()
         onboarding_window.show()
-
-        # Start the container application in a separate thread
-        app_thread = threading.Thread(target=container.application().run, daemon=True)
-        app_thread.start()
         
         # Start the event loop
         sys.exit(app.exec())

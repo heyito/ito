@@ -24,46 +24,61 @@ class AppConfig:
     """
     Handles application configuration loading and access.
     """
-    def __init__(self, config_dict: Dict[str, Any]):
+    def __init__(self, raw_config: Dict[str, Any]):
         """
         Initializes the AppConfig by parsing the configuration dictionary.
 
         Args:
-            config_dict: The raw configuration dictionary loaded from a file or source.
+            raw_config: The raw configuration dictionary.
         """
-        # VAD Configuration
-        vad_section: Dict[str, Any] = config_dict.get('VAD', {})
-        self.vad_enabled: bool = vad_section.get('enabled', 'false').lower() == 'true'
+        # OpenAI settings
+        openai_section = raw_config.get('OpenAI', {})
+        self.openai_api_key: str = openai_section.get('api_key', '')
+        self.openai_model: str = openai_section.get('model', 'gpt-4')
+
+        # ASR settings
+        asr_section = raw_config.get('ASR', {})
+        self.asr_source: str = asr_section.get('source', 'faster_whisper')
+        self.local_model_size: str = asr_section.get('local_model_size', 'large-v3')
+        self.device: str = asr_section.get('device', 'auto')
+        self.compute_type: str = asr_section.get('compute_type', 'default')
+
+        # LLM settings
+        llm_section = raw_config.get('LLM', {})
+        self.llm_source: str = llm_section.get('source', 'openai_api')
+        self.llm_model: str = llm_section.get('model', 'gpt-4')
+        self.max_tokens: int = int(llm_section.get('max_tokens', 2000))
+        self.temperature: float = float(llm_section.get('temperature', 0.7))
+
+        # Audio settings
+        audio_section = raw_config.get('Audio', {})
+        self.sample_rate: int = int(audio_section.get('sample_rate', 16000))
+        self.channels: int = int(audio_section.get('channels', 1))
+
+        # VAD settings
+        vad_section = raw_config.get('VAD', {})
+        vad_enabled = vad_section.get('enabled', False)
+        if isinstance(vad_enabled, str):
+            self.vad_enabled: bool = vad_enabled.lower() == 'true'
+        else:
+            self.vad_enabled: bool = bool(vad_enabled)
+            
         self.vad_aggressiveness: int = int(vad_section.get('aggressiveness', 1))
-        self.vad_silence_duration_ms: int = int(vad_section.get('silence_duration_ms', 1500))
-        self.vad_frame_duration_ms: int = int(vad_section.get('frame_duration_ms', 30))
-        self.vad_config: Dict[str, Any] = {
-            'enabled': self.vad_enabled,
-            'aggressiveness': self.vad_aggressiveness,
-            'silence_duration_ms': self.vad_silence_duration_ms,
-            'frame_duration_ms': self.vad_frame_duration_ms,
-        }
+        self.silence_duration_ms: int = int(vad_section.get('silence_duration_ms', 1000))
+        self.frame_duration_ms: int = int(vad_section.get('frame_duration_ms', 30))
 
-        # Hotkey Configuration
-        hotkey_section: Dict[str, Any] = config_dict.get('Hotkeys', {})
-        self.start_recording_hotkey: str = hotkey_section.get('start_recording_hotkey', 'f9')
+        # Output settings
+        output_section = raw_config.get('Output', {})
+        self.output_method: str = output_section.get('method', 'typewrite')
 
-        # ASR Configuration
-        asr_section: Dict[str, Any] = config_dict.get('ASR', {})
-        self.asr_provider: str = asr_section.get('provider', 'openai_api')
-        self.asr_model: str = asr_section.get('model', 'whisper-1')
-        self.asr_local_model_size: str = asr_section.get('local_model_size', 'base.en')
-        self.asr_device: str = asr_section.get('device', 'auto')
-        self.asr_compute_type: str = asr_section.get('compute_type', 'default')
-        # Pass relevant ASR config to the handler if needed upon initialization there
+        # Hotkey settings
+        hotkeys_section = raw_config.get('Hotkeys', {})
+        self.start_recording_hotkey: str = hotkeys_section.get('start_recording_hotkey', 'f9')
 
-        # LLM Configuration
-        llm_section: Dict[str, Any] = config_dict.get('LLM', {})
-        self.llm_provider: str = llm_section.get('provider', 'openai_api')
-        self.llm_model: str = llm_section.get('model', 'gpt-4o')
-        self.llm_local_quantization: int = int(llm_section.get('local_quantization', 4))
-        # Pass relevant LLM config to the handler if needed upon initialization there
-
+    def __str__(self):
+        return (f"AppConfig(vad_enabled={self.vad_enabled}, vad_aggressiveness={self.vad_aggressiveness}, "
+                f"silence_duration_ms={self.silence_duration_ms}, frame_duration_ms={self.frame_duration_ms}, "
+                f"start_recording_hotkey={self.start_recording_hotkey})")
 
 class DiscreteAudioApplication(ApplicationInterface):
     """
@@ -133,11 +148,11 @@ class DiscreteAudioApplication(ApplicationInterface):
         if not platform_utils.is_macos():
              print("WARNING: Running on non-macOS. Application context/interaction may be limited.")
 
-        print(f"ASR Provider: {self.config.asr_provider} ({self.config.asr_model if self.config.asr_provider == 'openai_api' else self.config.asr_local_model_size})")
-        print(f"LLM Provider: {self.config.llm_provider} ({self.config.llm_model})")
+        print(f"ASR Provider: {self.config.asr_source} ({self.config.local_model_size})")
+        print(f"LLM Provider: {self.config.llm_source} ({self.config.llm_model})")
         print(f"VAD Enabled: {self.config.vad_enabled}")
         if self.config.vad_enabled:
-            print(f"Stops after {self.config.vad_silence_duration_ms}ms of silence (Aggressiveness: {self.config.vad_aggressiveness}).")
+            print(f"Stops after {self.config.silence_duration_ms}ms of silence (Aggressiveness: {self.config.vad_aggressiveness}).")
 
         print(f"\nTarget Application Context: Determined at runtime (initially TextEdit if macOS).")
         print(f"Press '{self.config.start_recording_hotkey}' when the target application is active to issue a command.")
@@ -316,12 +331,12 @@ class DiscreteAudioApplication(ApplicationInterface):
         self.audio_queue = queue.Queue() # Ensure queue is empty before starting
 
         print(f"[{timestamp}] Context OK. Starting command recording... (VAD: {self.config.vad_enabled})")
-        print(f"[{timestamp}] Speak your command now (stops recording after {self.config.vad_silence_duration_ms}ms silence)...")
+        print(f"[{timestamp}] Speak your command now (stops recording after {self.config.silence_duration_ms}ms silence)...")
 
         # Start the audio recording thread
         self.recording_thread_handle = threading.Thread(
             target=self.audio_handler.record_audio_stream_with_vad,
-            args=(self.stop_recording_event, self.audio_queue, self.config.vad_config),
+            args=(self.stop_recording_event, self.audio_queue, self.config.vad_enabled, self.config.vad_aggressiveness, self.config.silence_duration_ms, self.config.frame_duration_ms),
             daemon=True, # Daemon threads exit automatically when the main program exits
             name="AudioRecordingThread"
         )

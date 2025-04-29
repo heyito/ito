@@ -27,36 +27,8 @@ class LLMHandler:
             if not self.ollama_running:
                 print("WARNING: Ollama is not running. Please start Ollama before using it.")
         elif self.llm_source == "openai_api":
-            self.openai_valid = self._validate_openai_key()
-            if not self.openai_valid:
+            if not self.openai_api_key:
                 print("WARNING: OpenAI API key is invalid or missing. Please check your configuration.")
-
-    def _validate_openai_key(self) -> bool:
-        """
-        Validate the OpenAI API key by making a simple request.
-        
-        Returns:
-            bool: True if the API key is valid, False otherwise
-        """
-        if not self.openai_api_key or self.openai_api_key.strip() == "":
-            print("OpenAI API key is empty")
-            return False
-
-        try:
-            client = OpenAI(api_key=self.openai_api_key)
-            # Make a simple request to validate the key
-            client.models.list()
-            print("OpenAI API key is valid")
-            return True
-        except OpenAIError as e:
-            if "Incorrect API key" in str(e):
-                print("OpenAI API key is invalid")
-            else:
-                print(f"Error validating OpenAI API key: {e}")
-            return False
-        except Exception as e:
-            print(f"Unexpected error validating OpenAI API key: {e}")
-            return False
 
     def _check_ollama_running(self, max_retries: int = 3, retry_delay: float = 1.0) -> bool:
         """

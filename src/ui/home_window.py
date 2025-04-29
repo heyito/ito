@@ -2,12 +2,14 @@ import sys
 from PyQt6.QtWidgets import (QApplication, QListView, QMainWindow, QWidget, QVBoxLayout, 
                            QLabel, QPushButton, QHBoxLayout, QStackedWidget,
                            QFormLayout, QLineEdit, QComboBox, QSpinBox, QCheckBox,
-                           QScrollArea, QScrollBar, QDoubleSpinBox)
+                           QScrollArea, QScrollBar, QDoubleSpinBox, QMessageBox)
 from PyQt6.QtCore import Qt, QPointF, QSettings
 from PyQt6.QtGui import QPixmap
 import platform
 from src.ui.onboarding import OnboardingWindow
+from src.application_manager import ApplicationManager
 import os
+import traceback
 
 # --- Platform specific code for macOS ---
 _ns_window = None
@@ -62,6 +64,17 @@ class HomeWindow(QMainWindow):
         self.setMinimumWidth(900)
         self.setMinimumHeight(600)
 
+        # Initialize ApplicationManager
+        self.app_manager = ApplicationManager(
+            OnboardingWindow.ORGANIZATION_NAME,
+            OnboardingWindow.APPLICATION_NAME
+        )
+        
+        # Connect signals
+        self.app_manager.error_occurred.connect(self.handle_error)
+        self.app_manager.status_changed.connect(self.handle_status_change)
+        self.app_manager.settings_changed.connect(self.load_settings)
+        
         # Add these variables for dragging functionality
         self._dragging = False
         self._drag_start_position = QPointF()
@@ -441,6 +454,17 @@ class HomeWindow(QMainWindow):
 
         settings_layout.addWidget(button_container)
 
+        # Add status label at the bottom of the settings page
+        self.status_label = QLabel("Ready")
+        self.status_label.setStyleSheet("""
+            QLabel {
+                color: #8E8E93;
+                font-size: 13px;
+                margin-top: 20px;
+            }
+        """)
+        settings_layout.addWidget(self.status_label)
+
         # Add settings page to stacked widget
         self.stacked_widget.addWidget(settings_page)
 
@@ -450,6 +474,14 @@ class HomeWindow(QMainWindow):
 
         # Load settings after UI is initialized
         self.load_settings()
+        
+        # Start application if settings are valid
+        current_settings = self.app_manager.load_settings()
+        is_valid, error_msg = self.app_manager.validate_settings(current_settings)
+        if is_valid:
+            self.app_manager.start_application()
+        else:
+            self.handle_error(error_msg)
 
     def show_page(self, index):
         self.stacked_widget.setCurrentIndex(index)
@@ -480,117 +512,140 @@ class HomeWindow(QMainWindow):
         """)
         layout.addRow(header)
 
+    def handle_error(self, error_msg: str) -> None:
+        """Handle error messages from ApplicationManager"""
+        self.status_label.setText(f"Error: {error_msg}")
+        self.status_label.setStyleSheet("""
+            QLabel {
+                color: #FF3B30;
+                font-size: 13px;
+                margin-top: 20px;
+            }
+        """)
+        
+        # Show error in message box if it's a critical error
+        if "Failed to start application" in error_msg:
+            QMessageBox.critical(
+                self,
+                "Application Error",
+                f"Failed to start application:\n{error_msg}"
+            )
+
+    def handle_status_change(self, status: str) -> None:
+        """Handle status updates from ApplicationManager"""
+        self.status_label.setText(status)
+        self.status_label.setStyleSheet("""
+            QLabel {
+                color: #8E8E93;
+                font-size: 13px;
+                margin-top: 20px;
+            }
+        """)
+
     def save_settings(self):
         """Save all settings to QSettings"""
-        settings = QSettings(OnboardingWindow.ORGANIZATION_NAME, OnboardingWindow.APPLICATION_NAME)
-        
-        # Save OpenAI settings
-        settings.setValue("OpenAI/api_key", self.openai_api_key.text())
-        
-        # Save ASR settings
-        settings.setValue("ASR/source", self.asr_source.currentText())
-        settings.setValue("ASR/local_model_size", self.local_model_size.currentText())
-        settings.setValue("ASR/device", self.device.currentText())
-        
-        # Save LLM settings
-        settings.setValue("LLM/source", self.llm_source.currentText())
-        settings.setValue("LLM/model", self.llm_model.text())
-        settings.setValue("LLM/max_tokens", self.max_tokens.value())
-        settings.setValue("LLM/temperature", self.temperature.value())
-        
-        # Save Audio settings
-        settings.setValue("Audio/sample_rate", self.sample_rate.value())
-        settings.setValue("Audio/channels", self.channels.value())
-        
-        # Save VAD settings
-        settings.setValue("VAD/enabled", self.vad_enabled.isChecked())
-        settings.setValue("VAD/aggressiveness", self.vad_aggressiveness.value())
-        settings.setValue("VAD/silence_duration_ms", self.silence_duration.value())
-        settings.setValue("VAD/frame_duration_ms", self.frame_duration.currentText())
-        
-        # Save Output settings
-        settings.setValue("Output/method", self.output_method.currentText())
-        
-        # Save Hotkey settings
-        settings.setValue("Hotkeys/start_recording_hotkey", self.start_recording_hotkey.text())
-        
-        settings.sync()
+        try:
+            # Collect settings from UI
+            new_settings = {
+                'OpenAI': {
+                    'api_key': self.openai_api_key.text(),
+                },
+                'ASR': {
+                    'source': self.asr_source.currentText(),
+                    'local_model_size': self.local_model_size.currentText(),
+                    'device': self.device.currentText(),
+                },
+                'LLM': {
+                    'source': self.llm_source.currentText(),
+                    'model': self.llm_model.text(),
+                    'max_tokens': self.max_tokens.value(),
+                    'temperature': self.temperature.value(),
+                },
+                'Audio': {
+                    'sample_rate': self.sample_rate.value(),
+                    'channels': self.channels.value(),
+                },
+                'VAD': {
+                    'enabled': self.vad_enabled.isChecked(),
+                    'aggressiveness': self.vad_aggressiveness.value(),
+                    'silence_duration_ms': self.silence_duration.value(),
+                    'frame_duration_ms': int(self.frame_duration.currentText()),
+                },
+                'Output': {
+                    'method': self.output_method.currentText(),
+                },
+                'Hotkeys': {
+                    'start_recording_hotkey': self.start_recording_hotkey.text(),
+                }
+            }
+            
+            # Validate new settings
+            is_valid, error_msg = self.app_manager.validate_settings(new_settings)
+            if not is_valid:
+                self.handle_error(error_msg)
+                return
+                
+            # Save settings
+            if self.app_manager.save_settings(new_settings):
+                self.status_label.setText("Settings saved successfully")
+                self.status_label.setStyleSheet("""
+                    QLabel {
+                        color: #34C759;
+                        font-size: 13px;
+                        margin-top: 20px;
+                    }
+                """)
+                
+                # Start application if not running
+                if not self.app_manager.app_thread or not self.app_manager.app_thread.is_alive():
+                    self.app_manager.start_application()
+                
+        except Exception as e:
+            self.handle_error(f"Failed to save settings: {str(e)}")
+            print(f"Error details: {traceback.format_exc()}")  # Add debug logging
 
     def load_settings(self):
         """Load settings from QSettings"""
-        print("Loading settings...")  # Debug log
-        settings = QSettings(OnboardingWindow.ORGANIZATION_NAME, OnboardingWindow.APPLICATION_NAME)
-        
-        # Load OpenAI settings
-        api_key = settings.value("OpenAI/api_key", "")
-        print(f"Loading OpenAI API key: {api_key[:5]}...")  # Debug log
-        self.openai_api_key.setText(api_key)
-        
-        # Load ASR settings
-        asr_source = settings.value("ASR/source", "faster_whisper")
-        print(f"Loading ASR source: {asr_source}")  # Debug log
-        self.asr_source.setCurrentText(asr_source)
-        
-        local_model_size = settings.value("ASR/local_model_size", "large-v3")
-        print(f"Loading local model size: {local_model_size}")  # Debug log
-        self.local_model_size.setCurrentText(local_model_size)
-        
-        device = settings.value("ASR/device", "auto")
-        print(f"Loading device: {device}")  # Debug log
-        self.device.setCurrentText(device)
-        
-        # Load LLM settings
-        llm_source = settings.value("LLM/source", "openai_api")
-        print(f"Loading LLM source: {llm_source}")  # Debug log
-        self.llm_source.setCurrentText(llm_source)
-        
-        llm_model = settings.value("LLM/model", "gpt-4.1")
-        print(f"Loading LLM model: {llm_model}")  # Debug log
-        self.llm_model.setText(llm_model)
-        
-        max_tokens = int(settings.value("LLM/max_tokens", 2000))
-        print(f"Loading max tokens: {max_tokens}")  # Debug log
-        self.max_tokens.setValue(max_tokens)
-        
-        temperature = float(settings.value("LLM/temperature", 0.7))
-        print(f"Loading temperature: {temperature}")  # Debug log
-        self.temperature.setValue(temperature)
-        
-        # Load Audio settings
-        sample_rate = int(settings.value("Audio/sample_rate", 16000))
-        print(f"Loading sample rate: {sample_rate}")  # Debug log
-        self.sample_rate.setValue(sample_rate)
-        
-        channels = int(settings.value("Audio/channels", 1))
-        print(f"Loading channels: {channels}")  # Debug log
-        self.channels.setValue(channels)
-        
-        # Load VAD settings
-        vad_enabled = settings.value("VAD/enabled", True, type=bool)
-        print(f"Loading VAD enabled: {vad_enabled}")  # Debug log
-        self.vad_enabled.setChecked(vad_enabled)
-        
-        aggressiveness = int(settings.value("VAD/aggressiveness", 1))
-        print(f"Loading VAD aggressiveness: {aggressiveness}")  # Debug log
-        self.vad_aggressiveness.setValue(aggressiveness)
-        
-        silence_duration = int(settings.value("VAD/silence_duration_ms", 1000))
-        print(f"Loading silence duration: {silence_duration}")  # Debug log
-        self.silence_duration.setValue(silence_duration)
-        
-        frame_duration = settings.value("VAD/frame_duration_ms", "30")
-        print(f"Loading frame duration: {frame_duration}")  # Debug log
-        self.frame_duration.setCurrentText(frame_duration)
-        
-        # Load Output settings
-        output_method = settings.value("Output/method", "typewrite")
-        print(f"Loading output method: {output_method}")  # Debug log
-        self.output_method.setCurrentText(output_method)
-        
-        # Load Hotkey settings
-        start_recording_hotkey = settings.value("Hotkeys/start_recording_hotkey", "f9")
-        print(f"Loading start recording hotkey: {start_recording_hotkey}")  # Debug log
-        self.start_recording_hotkey.setText(start_recording_hotkey)
+        try:
+            config = self.app_manager.load_settings()
+            
+            # Load OpenAI settings
+            self.openai_api_key.setText(config['OpenAI']['api_key'])
+            
+            # Load ASR settings
+            self.asr_source.setCurrentText(config['ASR']['source'])
+            self.local_model_size.setCurrentText(config['ASR']['local_model_size'])
+            self.device.setCurrentText(config['ASR']['device'])
+            
+            # Load LLM settings
+            self.llm_source.setCurrentText(config['LLM']['source'])
+            self.llm_model.setText(config['LLM']['model'])
+            self.max_tokens.setValue(config['LLM']['max_tokens'])
+            self.temperature.setValue(config['LLM']['temperature'])
+            
+            # Load Audio settings
+            self.sample_rate.setValue(config['Audio']['sample_rate'])
+            self.channels.setValue(config['Audio']['channels'])
+            
+            # Load VAD settings
+            self.vad_enabled.setChecked(config['VAD']['enabled'])
+            self.vad_aggressiveness.setValue(config['VAD']['aggressiveness'])
+            self.silence_duration.setValue(config['VAD']['silence_duration_ms'])
+            self.frame_duration.setCurrentText(str(config['VAD']['frame_duration_ms']))
+            
+            # Load Output settings
+            self.output_method.setCurrentText(config['Output']['method'])
+            
+            # Load Hotkey settings
+            self.start_recording_hotkey.setText(config['Hotkeys']['start_recording_hotkey'])
+            
+        except Exception as e:
+            self.handle_error(f"Failed to load settings: {str(e)}")
+
+    def closeEvent(self, event):
+        """Handle window close event"""
+        self.app_manager.stop_application()
+        super().closeEvent(event)
 
     # Add these three event handlers at the end of the class
     def mousePressEvent(self, event):

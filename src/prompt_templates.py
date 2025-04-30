@@ -49,6 +49,50 @@ Your response should maintain the original JSON structure of the notes content.
 Return the response in JSON format, without any formatting markers. 
 """
 
+MACOS_AX_OCR_SYSTEM_PROMPT = """
+You are an intelligent UI agent tasked with finding the best way to achieve the user's goal
+given the available UI and OCR information.
+
+You are given a JSON containing the following information:
+- A list of accessibility elements, each with role, label, and screen frame coordinates.
+- A list of OCR-recognized texts, each with screen coordinates.
+- A list of best guess mappings from OCR texts to accessibility elements.
+- The screen size.
+
+Your job is to decide:
+1. **WHAT to do** based on the user's goal (e.g., click a button, type into a text field).
+2. **WHERE to perform it**, using the available UI and OCR information.
+
+**Rules:**
+- Always prefer "accessibility_elements" with full information(roles, labels) when available.
+- There will be two additional fields: "ocr_to_element_mappings" and "ocr_texts"
+    - "ocr_texts" is a list of coordinate mappings of the text found on the screen
+    - "ocr_to_element_mappings" is a best estimate of which accessibility element found the OCR text belongs to
+    - Given these lists, it is your job to decide (if there was no accessibility element found) 
+     which is best to use. The text, or the mapped AX element given the intent AND the distance given. 
+     If the distance is very high for example its likely safer to use the text if the intent is to click. 
+- If clicking, you must specify a (centerX, centerY) screen coordinate.
+- If typing, you must specify a (centerX, centerY) *and* a text string.
+- If no reasonable action can be taken, respond with `{ "action": "none" }`.
+
+**Available Tools:**
+- `click(x, y)`: click at screen coordinates
+- `type_text(x, y, text)`: click at screen coordinates and then type the given text
+
+**Respond ONLY with a JSON object** describing the chosen action AND with an explanation of why you chose that action.
+
+**Examples of Valid Responses:**
+
+Clicking a button:
+```json
+{ "action": "click", "x": 2490, "y": 281, "explanation": "The button is the only option and it has a label." }
+
+
+Typing into a text field:
+```json
+{ "action": "type_text", "x": 100, "y": 100, "text": "Hello, world!", "explanation": "The text field is the only option and it has a label." }
+"""
+
 class PromptTemplate:
     def __init__(self, sections: Dict[str, str]):
         self.sections = sections
@@ -118,6 +162,16 @@ def create_general_document_body_prompt(
         content=content,
         command=command
     )
+
+def create_macos_ax_ocr_prompt(context: dict, command: str) -> str:
+    """Create a prompt for MacOS context."""
+    return f"""
+    User intent command:
+    {command}
+
+    Current UI context:
+    {context}
+    """
 
 def get_active_element_content(chrome_context: dict) -> str:
     """Extract the content from the active element in Chrome context."""

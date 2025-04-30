@@ -37,3 +37,4 @@ dist/
 *.zip
 dmg-layout.applescript
 .build/
+capture-*.png

@@ -11,6 +11,7 @@ from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
 from src.engines.intent_engine import IntentEngine
+from src.engines.macos_engine import MacOSEngine
 from src.handlers.asr_handler_interface import ASRHandlerInterface
 from src.handlers.openai_asr_handler import OpenAIASRHandler
 from src.handlers.faster_whisper_asr_handler import FasterWhisperASRHandler
@@ -80,6 +81,10 @@ class Container(containers.DeclarativeContainer):
         llm_handler=llm_handler
     )
 
+    macos_engine = providers.Singleton(
+        MacOSEngine
+    )
+
     # --- App-Specific Logic ---
     browser_app = providers.Singleton(
         BrowserApp,
@@ -99,7 +104,8 @@ class Container(containers.DeclarativeContainer):
 
     macos_app = providers.Singleton(
         MacOSapp,
-        llm_handler=llm_handler
+        llm_handler=llm_handler,
+        macos_engine=macos_engine
     )
 
     shared_apps = {

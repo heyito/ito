@@ -1,3 +1,4 @@
+import re
 from openai import OpenAI, OpenAIError
 import requests
 import time
@@ -138,7 +139,10 @@ class LLMHandler:
 
                 processed_text = response.choices[0].message.content
                 print(f"LLM returned processed text: {processed_text}")
-                return processed_text.strip() if processed_text else ''
+                if processed_text:
+                    return re.sub(r"^```json\s*|\s*```$", "", processed_text.strip(), flags=re.MULTILINE)
+                else:
+                    return ""
 
             except OpenAIError as e:
                 print(f"OpenAI API Error during LLM processing: {e}")

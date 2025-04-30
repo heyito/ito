@@ -15,7 +15,7 @@ class ProcessingEngine:
         self.macos_app = macos_app
         
     def process(self, current_context: dict, processing_text: str, user_command: str):
-        print(f"Processing command: '{user_command}'")
+        print(f"\033[1m\033[34mProcessing command: '{user_command}'\033[0m")
         print(f"On document context (length: {len(processing_text)} chars)")
 
         # 1. Construct LLM Prompt
@@ -26,9 +26,6 @@ class ProcessingEngine:
         if current_app == IntenApp.CHROME or current_app == IntenApp.BRAVE:
             print("Processing command with Browser app...")
             self.browser_app.process_command(processing_text, user_command)
-        elif current_app == IntenApp.NOTES:
-            self.notes_app.process_command(processing_text, user_command)
-            pass
         elif current_app == IntenApp.TEXTEDIT:
             self.text_edit_app.process_command(processing_text, user_command)
         else:

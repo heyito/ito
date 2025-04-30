@@ -6,7 +6,7 @@ import Quartz
 import os
 import subprocess
 import json
-from src.handlers.llm_handler import LLMHandler
+
 class MacOSEngine:
     def __init__(self):
         # Path to your built Swift binary

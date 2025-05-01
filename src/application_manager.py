@@ -5,7 +5,7 @@ from src.discrete_audio_application import DiscreteAudioApplication, _ACTION_STA
 import threading
 import queue
 import traceback
-import time # Added for timestamp in logs
+import time
 from typing import Dict, Any, Optional, Union
 from src.ui.keyboard_manager import KeyboardManager
 

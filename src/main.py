@@ -16,23 +16,19 @@ from src.ui.keyboard_manager import KeyboardManager
 
 multiprocessing.freeze_support()
 
-# Import platform utils conditionally
 if platform.system() == "Darwin":
     try:
         from src import platform_utils_macos as platform_utils
         print("macOS detected. Loading macOS platform utilities.")
     except ImportError:
         print("WARNING: Running on macOS but failed to import 'platform_utils_macos'. OS interaction will fail.")
-        # Define dummy class to avoid errors later if import failed
         class PlatformUtilsDummy:
-            def is_macos(self): return True # Pretend it is for checks
+            def is_macos(self): return True
             def get_active_window_info(self): print("Error: platform_utils_macos import failed."); return None
             def get_textedit_content(self): print("Error: platform_utils_macos import failed."); return None
             def set_textedit_content(self, text): print("Error: platform_utils_macos import failed."); return False
         platform_utils = PlatformUtilsDummy()
-
 else:
-    # Define dummy functions or raise error if not macOS
     print(f"Running on {platform.system()}. OS-specific interactions limited.")
     class PlatformUtilsDummy:
         def is_macos(self): return False

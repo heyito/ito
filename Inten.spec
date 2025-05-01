@@ -11,6 +11,8 @@ a = Analysis(
         ('./venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/platforms', 'PyQt6/Qt6/plugins/platforms'),
         ('./venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/styles', 'PyQt6/Qt6/plugins/styles'),
         ('./venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/imageformats', 'PyQt6/Qt6/plugins/imageformats'),
+        ('./venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/permissions', 'PyQt6/Qt6/plugins/permissions'),
+        ('./venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/position', 'PyQt6/Qt6/plugins/position'),
     ],
     hiddenimports=[
       'native_messaging_host',
@@ -35,7 +37,7 @@ exe = EXE(
     debug=True,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
@@ -48,7 +50,7 @@ coll = COLLECT(
     a.binaries,
     a.datas,
     strip=False,
-    upx=True,
+    upx=False,
     upx_exclude=[],
     name='Inten',
 )
@@ -61,5 +63,6 @@ app = BUNDLE(
         'LSBackgroundOnly': False,
         'NSHighResolutionCapable': True,
         'CFBundleShortVersionString': '1.0.0',
+        'NSLocationWhenInUseUsageDescription': 'Inten uses location to provide relevant features based on your area.',
     },
 )

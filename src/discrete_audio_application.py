@@ -112,7 +112,6 @@ class DiscreteAudioApplication(ApplicationInterface):
         # Thread Handles
         self.recording_thread_handle: Optional[threading.Thread] = None
         self.monitor_thread_handle: Optional[threading.Thread] = None
-        # self.hotkey_listener: Optional[keyboard.Listener] = None # REMOVE
 
     def run(self) -> None:
         """
@@ -121,14 +120,12 @@ class DiscreteAudioApplication(ApplicationInterface):
         """
         self._print_initial_info()
         try:
-            # REMOVED: self._setup_hotkey_listener()
             self._run_event_loop() # Directly run the event loop
         except Exception as e:
             print(f"\nFATAL ERROR during application run: {e}")
             traceback.print_exc()
         finally:
             self._cleanup()
-            # print("Inten background application shut down.") # Maybe log this instead
 
     def _print_initial_info(self) -> None:
         """Prints initial configuration and status information to the console."""

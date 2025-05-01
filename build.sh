@@ -30,7 +30,7 @@ pyinstaller Inten.spec --noconfirm
 # Create directories for the installer
 echo "📁 Creating installer structure..."
 mkdir -p dist/dmg-contents
-cp -r "dist/Inten.app" dist/dmg-contents/
+rsync -a "dist/Inten.app" dist/dmg-contents/
 
 # Add native messaging host script to Resources
 echo "📝 Adding native messaging host script..."

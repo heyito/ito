@@ -1,5 +1,5 @@
 [Mode]
-streaming = true
+streaming = false
 
 [ASR]
 source = faster_whisper

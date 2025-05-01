@@ -450,29 +450,49 @@ class DiscreteAudioApplication(ApplicationInterface):
         """
         print("Initiating background application cleanup...")
 
-        # REMOVE Listener stopping code from here
-
-        # Signal recording thread to stop if it's running
-        # Use the stop_recording_event, which is also checked by the main loop
+        # Signal all threads to stop
         if not self.stop_recording_event.is_set():
-             print("Signaling running threads via stop event...")
-             self.stop_recording_event.set()
+            print("Signaling recording thread to stop...")
+            self.stop_recording_event.set()
 
-        # Wait briefly for the recording thread to potentially finish
+        if not self.stop_application_event.is_set():
+            print("Signaling application to stop...")
+            self.stop_application_event.set()
+
+        # Clear queues to prevent memory leaks
+        print("Clearing queues...")
+        while not self.audio_queue.empty():
+            try:
+                self.audio_queue.get_nowait()
+            except queue.Empty:
+                break
+
+        while not self.action_queue.empty():
+            try:
+                self.action_queue.get_nowait()
+            except queue.Empty:
+                break
+
+        # Wait for threads to finish with increased timeout
         if self.recording_thread_handle and self.recording_thread_handle.is_alive():
             print("Waiting for recording thread...")
-            self.recording_thread_handle.join(timeout=0.5) # Wait max 0.5 sec
+            self.recording_thread_handle.join(timeout=1.0)  # Increased timeout
             if self.recording_thread_handle.is_alive():
                 print("Warning: Recording thread did not exit cleanly during cleanup.")
 
-
-        # Wait briefly for the monitor thread
         if self.monitor_thread_handle and self.monitor_thread_handle.is_alive():
             print("Waiting for monitor thread...")
-            self.monitor_thread_handle.join(timeout=0.5) # Wait max 0.5 sec
+            self.monitor_thread_handle.join(timeout=1.0)  # Increased timeout
             if self.monitor_thread_handle.is_alive():
                 print("Warning: Monitor thread did not exit cleanly during cleanup.")
 
-        # Note: Processing thread is a daemon thread
+        # Clear context data
+        print("Clearing context data...")
+        self.current_context_data = {"app_name": None, "doc_text": None}
+
+        # Release processing lock if held
+        if self.processing_lock.locked():
+            print("Releasing processing lock...")
+            self.processing_lock.release()
 
         print("Background application cleanup sequence complete.")

@@ -227,7 +227,9 @@ class ApplicationManager(QObject):
 
     def stop_application(self) -> None:
         """Stop the application background thread. Do NOT stop the hotkey listener here."""
+        print("Initiating application stop sequence...")
         stopped_thread = False
+        
         # --- Signal and stop the background thread ---
         if self.app_thread and self.app_thread.is_alive():
             print("Signaling background application thread to stop...")
@@ -238,8 +240,9 @@ class ApplicationManager(QObject):
                     self.app_instance.stop_recording_event.set()
                 if hasattr(self.app_instance, "stop_application_event"):
                     self.app_instance.stop_application_event.set()
+            
             print("Waiting for background application thread to join...")
-            self.app_thread.join(timeout=2.0)
+            self.app_thread.join(timeout=2.0)  # Increased timeout
             if self.app_thread.is_alive():
                 print("Warning: Background application thread did not exit cleanly.")
             else:
@@ -250,15 +253,41 @@ class ApplicationManager(QObject):
         else:
             print("No background application thread to stop.")
 
+        # Clear queues
+        print("Clearing queues...")
+        while not self.error_queue.empty():
+            try:
+                self.error_queue.get_nowait()
+            except queue.Empty:
+                break
+
+        while not self.status_queue.empty():
+            try:
+                self.status_queue.get_nowait()
+            except queue.Empty:
+                break
+
         # Multiprocessing cleanup
         import multiprocessing
         try:
-            multiprocessing.active_children()
+            print("Cleaning up multiprocessing resources...")
+            # Get all active children
+            children = multiprocessing.active_children()
+            if children:
+                print(f"Found {len(children)} active multiprocessing children")
+                # Try to terminate them gracefully
+                for child in children:
+                    try:
+                        child.terminate()
+                        child.join(timeout=1.0)
+                    except Exception as e:
+                        print(f"Error terminating child process: {e}")
         except Exception as e:
             print(f"Error cleaning up multiprocessing children: {e}")
 
         if stopped_thread:
             self.status_changed.emit("Application stopped")
+            print("Application stop sequence complete.")
 
     def restart_application(self) -> bool:
         """Restart the application with current settings"""

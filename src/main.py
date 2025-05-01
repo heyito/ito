@@ -6,6 +6,7 @@ import json
 import logging
 from pynput import keyboard
 import traceback    
+import signal
 from src.ui.onboarding import OnboardingWindow
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QTimer, QThread
@@ -76,6 +77,25 @@ def ensure_native_messaging_host_registered(native_messaging_script_path):
         
     except Exception as e:
         logging.error(f"Failed to register native messaging host manifest: {e}")
+
+# --- Signal Handlers ---
+def signal_handler(signum, frame):
+    """Handle termination signals gracefully."""
+    print(f"\nReceived signal {signum}. Initiating graceful shutdown...")
+    # Get the QApplication instance
+    app = QApplication.instance()
+    if app:
+        # Close all windows
+        for window in app.topLevelWidgets():
+            window.close()
+        # Quit the application
+        app.quit()
+    else:
+        sys.exit(0)
+
+# Register signal handlers
+signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
+signal.signal(signal.SIGTERM, signal_handler)  # Termination signal
 
 # --- Main Execution Block ---
 if __name__ == "__main__":

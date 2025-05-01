@@ -192,32 +192,33 @@ class ApplicationManager(QObject):
                 self.error_occurred.emit(f"Invalid or unsupported hotkey '{self._hotkey_str}'. Cannot start listener.")
                 return False
 
-            # Clear the stop event before starting
+            # --- Always create a NEW stop event for each thread ---
             self._stop_app_thread_event = threading.Event()
+            # --- End fix ---
 
             # Start application in a separate thread
             self.status_changed.emit("Starting background application thread...")
             self.app_thread = threading.Thread(
-                target=self._run_application_thread, # Renamed target
-                args=(config, self._stop_app_thread_event), # Pass config and stop event
+                target=self._run_application_thread,
+                args=(config, self._stop_app_thread_event),
                 daemon=True,
                 name="DiscreteAppThread"
             )
             self.app_thread.start()
 
-            # --- Setup hotkey listener AFTER starting the thread ---
+            # --- Do NOT restart hotkey listener here ---
             self.setup_hotkey_listener()
-            # --- End Setup hotkey listener ---
+            # --- End ---
 
             self.status_changed.emit(f"Application thread started. Listening for '{self._hotkey_str}'.")
             return True
 
         except Exception as e:
             error_msg = f"Failed to start application: {str(e)}"
-            print(f"{error_msg}\n{traceback.format_exc()}") # Log detailed error
+            print(f"{error_msg}\n{traceback.format_exc()}")
             self.error_occurred.emit(error_msg)
             self.status_changed.emit("Application failed to start.")
-            self.stop_application() # Ensure cleanup if start fails
+            self.stop_application()
             return False
 
     def stop_application(self) -> None:
@@ -270,6 +271,7 @@ class ApplicationManager(QObject):
         """
         try:
             print("Background thread started.")
+            print(f"DEBUG: stop_event.is_set() at thread start: {stop_event.is_set()}")
             # Configure container within the thread using the passed config
             self.container.config.from_dict(config)
 
@@ -280,10 +282,10 @@ class ApplicationManager(QObject):
             self.app_instance.stop_recording_event = stop_event
 
             print("Starting DiscreteAudioApplication.run() in background thread...")
-            
             # Run the application - it has its own event loop that will continue running
             # until the stop_event is set
             self.app_instance.run()
+            print("DEBUG: DiscreteAudioApplication.run() exited normally.")
 
         except Exception as e:
             error_msg = f"Background Application Error: {str(e)}\n{traceback.format_exc()}"

@@ -100,8 +100,6 @@ class DiscreteAudioApplication(ApplicationInterface):
         # Application State
         self.is_recording: bool = False
         self.is_processing: bool = False
-        self.stop_recording_event: threading.Event = threading.Event()  # For stopping individual recordings
-        self.stop_application_event: threading.Event = threading.Event()  # For stopping the entire application
         # Queue for audio chunks from the recording thread
         self.audio_queue: queue.Queue[np.ndarray] = queue.Queue()
         # Queue for actions triggered by external events (like hotkeys via ApplicationManager)
@@ -120,6 +118,8 @@ class DiscreteAudioApplication(ApplicationInterface):
         """
         self._print_initial_info()
         try:
+            self.stop_recording_event: threading.Event = threading.Event()
+            self.stop_application_event: threading.Event = threading.Event()
             self._run_event_loop() # Directly run the event loop
         except Exception as e:
             print(f"\nFATAL ERROR during application run: {e}")

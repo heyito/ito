@@ -375,6 +375,8 @@ class DiscreteAudioApplication(ApplicationInterface):
         else:
             # Always fetch the latest context from self.current_context_data
             latest_doc_context = self.current_context_data.get('doc_text')
+            # Clear the doc_text to prevent reuse of stale context
+            self.current_context_data['doc_text'] = None
             print(f"[{timestamp}] Starting processing thread for the command.")
             processing_thread = threading.Thread(
                 target=self._processing_thread_target,

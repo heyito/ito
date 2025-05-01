@@ -75,10 +75,9 @@ class AudioHandler:
         samples_per_vad_frame = int(sample_rate * vad_frame_duration_ms / 1000)
         bytes_per_vad_frame = samples_per_vad_frame * channels * np.dtype(np.int16).itemsize # PCM16 = 2 bytes
 
-        # Sounddevice block size - use a multiple of VAD frame size if possible, or handle buffering
-        # Smaller blocksize = lower latency but higher CPU usage
-        # Larger blocksize = higher latency but lower CPU usage
-        blocksize = samples_per_vad_frame * 2 # Process roughly every 60ms if frame is 30ms
+        # Sounddevice block size - use exactly the VAD frame size for lowest latency
+        # This means we'll process audio in smaller chunks but with lower latency
+        blocksize = samples_per_vad_frame  # Changed from *2 to match VAD frame size exactly
         dtype = np.int16
 
         vad_instance = None
@@ -155,13 +154,16 @@ class AudioHandler:
         # --- Stream Execution ---
         try:
             print(f"Attempting to open stream: device={device_index}, rate={sample_rate}, channels={channels}, blocksize={blocksize}")
+            stream_start_time = time.monotonic()
             with sd.InputStream(samplerate=sample_rate,
                             channels=channels,
                             dtype=dtype,
-                            blocksize=blocksize, # Use calculated blocksize
+                            blocksize=blocksize,
                             device=device_index,
+                            latency='low',  # Request low latency mode
                             callback=callback):
-                print("Audio stream opened. Recording... (Waiting for speech and subsequent silence)")
+                stream_init_time = time.monotonic() - stream_start_time
+                print(f"Audio stream opened in {stream_init_time*1000:.1f}ms. Recording... (Waiting for speech and subsequent silence)")
                 # Keep the stream alive until stop_event is set by VAD or external signal
                 while not stop_event.is_set():
                     time.sleep(0.1)

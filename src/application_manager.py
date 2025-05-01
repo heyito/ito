@@ -88,7 +88,7 @@ class ApplicationManager(QObject):
         }
 
         # VAD settings - Convert string to boolean properly
-        vad_enabled = self.settings.value("VAD/enabled", "false")
+        vad_enabled = self.settings.value("VAD/enabled", "True")
         if isinstance(vad_enabled, str):
             vad_enabled = vad_enabled.lower() == 'true'
         else:

@@ -57,7 +57,7 @@ class AudioHandler:
             vad_config['enabled'] = False # Force disable if library missing
 
         # Get VAD settings safely from the passed dictionary
-        vad_enabled = vad_config.get('enabled', False)
+        vad_enabled = vad_config.get('enabled', True)
         vad_aggressiveness = vad_config.get('aggressiveness', 1)
         vad_silence_duration_ms = vad_config.get('silence_duration_ms', 1500)
         vad_frame_duration_ms = vad_config.get('frame_duration_ms', 30)

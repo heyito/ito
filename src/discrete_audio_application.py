@@ -55,7 +55,7 @@ class AppConfig:
 
         # VAD settings
         vad_section = raw_config.get('VAD', {})
-        vad_enabled = vad_section.get('enabled', False)
+        vad_enabled = vad_section.get('enabled', True)
         if isinstance(vad_enabled, str):
             self.vad_enabled: bool = vad_enabled.lower() == 'true'
         else:

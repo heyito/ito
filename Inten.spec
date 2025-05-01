@@ -64,5 +64,9 @@ app = BUNDLE(
         'NSHighResolutionCapable': True,
         'CFBundleShortVersionString': '1.0.0',
         'NSLocationWhenInUseUsageDescription': 'Inten uses location to provide relevant features based on your area.',
+        'NSMicrophoneUsageDescription': 'Inten needs access to your microphone to record and process voice commands.',
+        'NSAppleEventsUsageDescription': 'Inten needs access to control other applications to perform actions.',
+        'NSAccessibilityUsageDescription': 'Inten needs accessibility permissions to control other applications.',
     },
+    entitlements_file='entitlements.plist',
 )

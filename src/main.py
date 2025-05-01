@@ -7,12 +7,13 @@ import logging
 from pynput import keyboard
 import traceback    
 import signal
-from src.ui.onboarding import OnboardingWindow
+from src.ui.onboarding import OnboardingWindow, PermissionChecker
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QTimer, QThread, QSettings
 import threading
 import multiprocessing
 from src.ui.keyboard_manager import KeyboardManager
+import sounddevice as sd
 
 multiprocessing.freeze_support()
 
@@ -36,6 +37,21 @@ else:
         def get_textedit_content(self): print("Warning: TextEdit interaction not supported."); return None
         def set_textedit_content(self, text): print("Warning: TextEdit interaction not supported."); return False
     platform_utils = PlatformUtilsDummy()
+
+def check_microphone_permission():
+    """Check if microphone permission is granted and request it if needed."""
+    try:
+        # Try to query the default input device - this triggers permission check
+        device_info = sd.query_devices(kind='input')
+        print(f"Microphone permission granted - found device: {device_info['name']}")
+        return True
+    except sd.PortAudioError as e:
+        print(f"Microphone permission error: {e}")
+        return False
+    except Exception as e:
+        print(f"Unexpected error checking microphone: {e}")
+        traceback.print_exc()
+        return False
 
 def run_native_messaging_host():
     """Run the native messaging host functionality"""
@@ -116,6 +132,11 @@ if __name__ == "__main__":
         app = QApplication(sys.argv)
         QApplication.setOrganizationName(OnboardingWindow.ORGANIZATION_NAME)
         QApplication.setApplicationName(OnboardingWindow.APPLICATION_NAME)
+        
+        # Check microphone permission before proceeding
+        if not check_microphone_permission():
+            print("Warning: Microphone permission not granted. The app may not function properly.")
+            print("Please grant microphone access in System Settings > Privacy & Security > Microphone")
         
         # Initialize keyboard manager (without setting hotkey yet)
         keyboard_manager = KeyboardManager.instance()

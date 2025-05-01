@@ -5,13 +5,23 @@ import Vision
 
 // --- Constants ---
 
+let kAXLinkRole = "AXLink"
+let kAXStatusBarRole = "AXStatusBar"
+
 let interestingRoles: Set<String> = [
     kAXButtonRole,
     kAXTextFieldRole,
     kAXMenuItemRole,
     kAXStaticTextRole,
     kAXImageRole,
-    kAXTextAreaRole
+    kAXTextAreaRole,
+    kAXCheckBoxRole,
+    kAXRadioButtonRole,
+    kAXGroupRole,            // Containers with tooltip/description
+    kAXLinkRole,             // Clickable hyperlinks
+    kAXToolbarRole,          // May contain controls
+    kAXStatusBarRole,        // Sometimes has descriptive text
+    kAXDisclosureTriangleRole // Often unlabeled but clickable
 ]
 
 let specialContextRoles: Set<String> = [
@@ -23,6 +33,10 @@ let kAXVisibleAttribute = "AXVisible"
 let kAXFrameAttribute = "AXFrame"
 let kAXPositionAttribute = "AXPosition"
 let kAXSizeAttribute = "AXSize"
+let kAXHelpAttribute = "AXHelp"
+let kAXDescriptionAttribute = "AXDescription"
+let kAXIdentifierAttribute = "AXIdentifier"
+let kAXPlaceholderValueAttribute = "AXPlaceholderValue"
 
 // --- Helpers ---
 
@@ -40,16 +54,28 @@ func saveScreenshot(image: CGImage, filename: String = "capture-inten.png") {
     }
 }
 
-func getLabel(for element: AXUIElement) -> String? {
-    let possibleAttributes = [kAXTitleAttribute, kAXValueAttribute, kAXLabelValueAttribute]
-    for attribute in possibleAttributes {
+func getLabels(for element: AXUIElement) -> [String: String] {
+    let attributes = [
+        ("title", kAXTitleAttribute),
+        ("value", kAXValueAttribute),
+        ("label", kAXLabelValueAttribute),
+        ("help", kAXHelpAttribute),
+        ("description", kAXDescriptionAttribute),
+        ("identifier", kAXIdentifierAttribute),
+        ("placeholder", kAXPlaceholderValueAttribute)
+    ]
+
+    var result: [String: String] = [:]
+
+    for (key, attr) in attributes {
         var value: AnyObject?
-        if AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
-           let label = value as? String {
-            return label
+        if AXUIElementCopyAttributeValue(element, attr as CFString, &value) == .success,
+           let str = value as? String, !str.isEmpty {
+            result[key] = str
         }
     }
-    return nil
+
+    return result
 }
 
 func getFrame(for element: AXUIElement) -> [String: Int]? {
@@ -97,12 +123,10 @@ func walkChildren(element: AXUIElement, output: inout [[String: Any]], depth: In
         }
 
         if interestingRoles.contains(role) {
-            let label = getLabel(for: child)
-            let frame = getFrame(for: child) ?? [:]
             output.append([
                 "role": role.replacingOccurrences(of: "AX", with: ""),
-                "label": label ?? "",
-                "frame": frame
+                "labels": getLabels(for: child),
+                "frame": getFrame(for: child) ?? [:]
             ])
         }
 
@@ -135,41 +159,18 @@ func captureOCRText(focusedWindow: AXUIElement) -> [[String: Any]] {
 
     let windowRect = CGRect(origin: windowOrigin, size: windowSize)
 
-    var matchingScreen: NSScreen? = nil
-    for screen in NSScreen.screens {
-        if screen.frame.contains(windowOrigin) {
-            matchingScreen = screen
-            break
-        }
-    }
-
-    guard let screen = matchingScreen else {
-        print("No matching screen found for window position")
+    // Capture just the window image, not the full screen
+    guard let windowImage = CGWindowListCreateImage(
+        windowRect,
+        [.optionOnScreenOnly],
+        kCGNullWindowID,
+        [.bestResolution, .boundsIgnoreFraming]
+    ) else {
+        print("Failed to capture window image")
         return result
     }
 
-    guard let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
-          let fullImage = CGDisplayCreateImage(screenID) else {
-        print("Failed to capture correct screen")
-        return result
-    }
-
-    let screenHeight = screen.frame.height
-    let adjustedWindowRect = CGRect(
-        x: windowRect.origin.x - screen.frame.origin.x,
-        y: screenHeight - (windowRect.origin.y - screen.frame.origin.y) - windowRect.height,
-        width: windowRect.width,
-        height: windowRect.height
-    )
-
-    guard let croppedImage = fullImage.cropping(to: adjustedWindowRect) else {
-        print("Failed to crop image")
-        return result
-    }
-
-    saveScreenshot(image: croppedImage)
-
-    let requestHandler = VNImageRequestHandler(cgImage: croppedImage, options: [:])
+    let requestHandler = VNImageRequestHandler(cgImage: windowImage, options: [:])
     let request = VNRecognizeTextRequest()
     request.recognitionLevel = .accurate
     request.usesLanguageCorrection = true
@@ -181,24 +182,24 @@ func captureOCRText(focusedWindow: AXUIElement) -> [[String: Any]] {
         return result
     }
 
-    guard let observations = request.results as? [VNRecognizedTextObservation] else {
+    guard let observations = request.results else {
         return result
     }
+
+    let windowImageWidth = CGFloat(windowImage.width)
+    let windowImageHeight = CGFloat(windowImage.height)
 
     for observation in observations {
         guard let candidate = observation.topCandidates(1).first else { continue }
         let text = candidate.string
         let boundingBox = observation.boundingBox
 
-        let croppedWidth = CGFloat(croppedImage.width)
-        let croppedHeight = CGFloat(croppedImage.height)
+        let localX = boundingBox.minX * windowImageWidth
+        let localY = (1 - boundingBox.maxY) * windowImageHeight
+        let localWidth = boundingBox.width * windowImageWidth
+        let localHeight = boundingBox.height * windowImageHeight
 
-        let localX = boundingBox.minX * croppedWidth
-        let localY = (1 - boundingBox.maxY) * croppedHeight
-        let localWidth = boundingBox.width * croppedWidth
-        let localHeight = boundingBox.height * croppedHeight
-
-        // ⭐ Shift local (cropped window) coordinates to global (screen) coordinates
+        // ✅ Coordinates are now directly aligned with AX-origin
         let globalX = Int(windowOrigin.x + localX)
         let globalY = Int(windowOrigin.y + localY)
 

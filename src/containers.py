@@ -4,6 +4,7 @@ import configparser
 import os
 import sys # Added for get_resource_path
 
+from src.clients.openai_client import OpenAIWebRTCClient
 from src.discrete_audio_application import DiscreteAudioApplication
 from src.application_interface import ApplicationInterface
 from src.apps.browser import BrowserApp
@@ -11,6 +12,7 @@ from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
 from src.engines.intent_engine import IntentEngine
+from src.engines.macos_engine import MacOSEngine
 from src.handlers.asr_handler_interface import ASRHandlerInterface
 from src.handlers.openai_asr_handler import OpenAIASRHandler
 from src.handlers.faster_whisper_asr_handler import FasterWhisperASRHandler
@@ -18,7 +20,7 @@ from src.handlers.audio_handler import AudioHandler
 from src.engines.context_engine import ContextEngine
 from src.engines.processing_engine import ProcessingEngine
 from src.handlers.llm_handler import LLMHandler
-
+from src.streaming_audio_application import StreamingAudioApplication
 
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
@@ -75,9 +77,20 @@ class Container(containers.DeclarativeContainer):
         device_index=config.Audio.device_index
     )
 
+    # --- Clients --- Added section for clients
+    openai_webrtc_client = providers.Singleton(
+        OpenAIWebRTCClient,
+        api_key=config.OpenAI.api_key
+        # The session_url uses the default value in the client's __init__
+    )
+
     intent_engine = providers.Singleton(
         IntentEngine,
         llm_handler=llm_handler
+    )
+
+    macos_engine = providers.Singleton(
+        MacOSEngine
     )
 
     # --- App-Specific Logic ---
@@ -99,7 +112,8 @@ class Container(containers.DeclarativeContainer):
 
     macos_app = providers.Singleton(
         MacOSapp,
-        llm_handler=llm_handler
+        llm_handler=llm_handler,
+        macos_engine=macos_engine
     )
 
     shared_apps = {
@@ -122,14 +136,22 @@ class Container(containers.DeclarativeContainer):
 
     
     # --- Main Application ---
-    application: providers.Provider[ApplicationInterface] = providers.Singleton(
-        DiscreteAudioApplication,
-        context_engine=context_engine,
-        processing_engine=processing_engine,
-        asr_handler=asr_handler,
-        llm_handler=llm_handler,
-        audio_handler=audio_handler,
-        raw_config=config,
+    application: providers.Provider[ApplicationInterface] = providers.Selector(
+        config.Mode.streaming,
+        true=providers.Singleton(
+          StreamingAudioApplication,
+          audio_handler=audio_handler,
+          raw_config=config,
+          ),
+        false=providers.Singleton(
+          DiscreteAudioApplication,
+          context_engine=context_engine,
+          processing_engine=processing_engine,
+          asr_handler=asr_handler,
+          llm_handler=llm_handler,
+          audio_handler=audio_handler,
+          raw_config=config,
+          ),
     )
 
 # Optional: Function to get the absolute path, similar to your main.py

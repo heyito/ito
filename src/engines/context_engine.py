@@ -19,10 +19,8 @@ class ContextEngine:
                 return self.text_edit_app.get_context()
             elif current_context['app_name'] == IntenApp.CHROME:
                 return self.browser_app.get_context()
-            elif current_context['app_name'] == IntenApp.NOTES:
-                return self.notes_app.get_context()
             else:
-                return self.macos_app.get_context(current_context['app_name'])
+                return self.macos_app.get_context()
         else:
             print("Info: Not running on macOS, cannot get application context.")
             return

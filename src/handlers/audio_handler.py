@@ -1,3 +1,5 @@
+import asyncio
+import threading
 import sounddevice as sd
 import numpy as np
 import queue
@@ -179,6 +181,72 @@ class AudioHandler:
             raise
         finally:
             print("Audio stream closed.")
+
+     # --- Method for streaming to asyncio Queue (New) ---
+    def stream_audio_to_async_queue(self, stop_event: threading.Event, async_queue: asyncio.Queue, loop: asyncio.AbstractEventLoop):
+        """
+        Continuously records audio and puts chunks into an asyncio.Queue.
+        Stops when stop_event is set. Designed for WebRTC streaming.
+
+        Args:
+            stop_event: A threading.Event() to signal when to stop recording.
+            async_queue: An asyncio.Queue to put audio chunks (np.ndarray) into.
+            loop: The asyncio event loop running in the target thread for the queue.
+        """
+        device_index = self.device_index
+        sample_rate = self.sample_rate
+        channels = self.channels
+        dtype = np.int16 # Commonly used for Whisper/WebRTC (PCM16)
+        # Blocksize can be tuned. Smaller = lower latency, potentially higher CPU.
+        # OpenAI WebRTC examples often use 20ms frames (AUDIO_PTIME)
+        # Calculate blocksize based on a desired interval, e.g., 40ms
+        blocksize_ms = 40
+        blocksize = int(sample_rate * blocksize_ms / 1000)
+        print(f"Streaming blocksize: {blocksize} samples ({blocksize_ms}ms)")
+
+        def callback(indata: np.ndarray, frames: int, time_info, status: sd.CallbackFlags):
+            """Sounddevice callback: Puts data into the asyncio Queue thread-safely."""
+            if status:
+                print(f"Sounddevice status (streaming): {status}", flush=True)
+            try:
+                # Use loop.call_soon_threadsafe to schedule put_nowait in the asyncio loop
+                loop.call_soon_threadsafe(async_queue.put_nowait, indata.copy())
+            except asyncio.QueueFull:
+                print("Warning: Asyncio audio queue full! Audio data might be lost.", flush=True)
+            except Exception as e:
+                print(f"Error in stream_audio_to_async_queue callback: {e}", flush=True)
+
+        try:
+            print(f"Attempting to open stream (async streaming mode): device={device_index}, rate={sample_rate}, channels={channels}, blocksize={blocksize}")
+            with sd.InputStream(samplerate=sample_rate,
+                            channels=channels,
+                            dtype=dtype,
+                            blocksize=blocksize,
+                            device=device_index,
+                            callback=callback):
+                print("Audio stream opened (async streaming mode). Streaming...")
+                # Keep the stream alive until stop_event is set externally
+                while not stop_event.is_set():
+                    time.sleep(0.1) # Check stop event periodically
+                print("Stop event received by async streaming loop.")
+
+        except sd.PortAudioError as e:
+            print(f"\nPortAudio Error (async streaming mode): {e}")
+            # Signal stop if an error occurs, in case caller hasn't
+            if not stop_event.is_set():
+                stop_event.set()
+                # Also signal the queue that we are done by putting None (thread-safe)
+                loop.call_soon_threadsafe(async_queue.put_nowait, None)
+        except Exception as e:
+            print(f"An unexpected error occurred in the async audio stream: {e}")
+            if not stop_event.is_set():
+                stop_event.set()
+                loop.call_soon_threadsafe(async_queue.put_nowait, None)
+        finally:
+            print("Audio stream closed (async streaming mode).")
+            # Ensure None is put in the queue upon exit if not already stopped by error
+            if not stop_event.is_set(): # If loop exited cleanly via stop_event
+                 loop.call_soon_threadsafe(async_queue.put_nowait, None)
 
     @staticmethod
     def save_wav_to_buffer(audio_data_numpy, sample_rate, channels):

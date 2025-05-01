@@ -1,3 +1,4 @@
+import re
 from openai import OpenAI, OpenAIError
 import requests
 import time
@@ -66,6 +67,7 @@ class LLMHandler:
         system_prompt_override: str = None,
         max_tokens: int = 2000,
         temperature: float = 0.7,
+        tools: list[dict] = [],
     ):
         """
         Processes text using the specified LLM provider.
@@ -110,12 +112,21 @@ class LLMHandler:
                         {"role": "user", "content": text}
                     ],
                     temperature=temperature,
-                    max_tokens=max_tokens
+                    max_tokens=max_tokens,
+                    tools=tools,
+                    tool_choice="auto"
                 )
 
-                processed_text = response.choices[0].message.content
-                print(f"LLM returned processed text: {processed_text}")
-                return processed_text.strip() if processed_text else ''
+                if tools == []:
+                    processed_text = response.choices[0].message.content
+                    print(f"LLM returned processed text: {processed_text}")
+                    if processed_text:
+                        return re.sub(r"^```json\s*|\s*```$", "", processed_text.strip(), flags=re.MULTILINE)
+                    else:
+                        return ""
+                else:
+                    print(f"LLM returned: {response.choices[0]}")
+                    return response.choices[0].message.tool_calls
 
             except OpenAIError as e:
                 print(f"OpenAI API Error during LLM processing: {e}")

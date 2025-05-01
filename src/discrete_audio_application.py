@@ -6,10 +6,9 @@ import traceback
 from typing import Optional, Dict, Any, Union, List
 
 # Assuming these imports are correct relative to your project structure
-from src import prompt_templates # Assuming this is used somewhere, maybe in engines?
+from src.app_config import AppConfig
 from src.engines.processing_engine import ProcessingEngine
 from src.engines.context_engine import ContextEngine
-# from src.constants import SOCKET_PATH # Not used in the provided snippet
 from src import platform_utils_macos as platform_utils # Keep platform-specific name clear
 from src.handlers.asr_handler_interface import ASRHandlerInterface
 from src.handlers.audio_handler import AudioHandler
@@ -17,68 +16,7 @@ from src.handlers.llm_handler import LLMHandler
 from src.application_interface import ApplicationInterface
 
 # Define constants for actions
-_ACTION_START_RECORDING = "START_RECORDING" # Keep this, it's used for the queue
-
-class AppConfig:
-    """
-    Handles application configuration loading and access.
-    (Keep this class as is)
-    """
-    def __init__(self, raw_config: Dict[str, Any]):
-        # OpenAI settings
-        openai_section = raw_config.get('OpenAI', {})
-        self.openai_api_key: str = openai_section.get('api_key', '')
-        self.openai_model: str = openai_section.get('model', 'gpt-4.1')
-
-        # Ollama settings
-        ollama_section = raw_config.get('Ollama', {})
-        self.ollama_model: str = ollama_section.get('model', 'llama3.2:latest')
-
-        # ASR settings
-        asr_section = raw_config.get('ASR', {})
-        self.asr_source: str = asr_section.get('source', 'faster_whisper')
-        self.local_model_size: str = asr_section.get('local_model_size', 'large-v3')
-        self.device: str = asr_section.get('device', 'auto')
-        self.compute_type: str = asr_section.get('compute_type', 'default')
-
-        # LLM settings
-        llm_section = raw_config.get('LLM', {})
-        self.llm_source: str = llm_section.get('source', 'openai_api')
-        self.llm_model: str = self.ollama_model if self.llm_source == 'ollama' else self.openai_model
-        self.max_tokens: int = int(llm_section.get('max_tokens', 2000))
-        self.temperature: float = float(llm_section.get('temperature', 0.7))
-
-        # Audio settings
-        audio_section = raw_config.get('Audio', {})
-        self.sample_rate: int = int(audio_section.get('sample_rate', 16000))
-        self.channels: int = int(audio_section.get('channels', 1))
-
-        # VAD settings
-        vad_section = raw_config.get('VAD', {})
-        vad_enabled = vad_section.get('enabled', True)
-        if isinstance(vad_enabled, str):
-            self.vad_enabled: bool = vad_enabled.lower() == 'true'
-        else:
-            self.vad_enabled: bool = bool(vad_enabled)
-
-        self.vad_aggressiveness: int = int(vad_section.get('aggressiveness', 1))
-        self.silence_duration_ms: int = int(vad_section.get('silence_duration_ms', 1000))
-        self.frame_duration_ms: int = int(vad_section.get('frame_duration_ms', 30))
-
-        # Output settings
-        output_section = raw_config.get('Output', {})
-        self.output_method: str = output_section.get('method', 'typewrite')
-
-        # Hotkey settings
-        hotkeys_section = raw_config.get('Hotkeys', {})
-        self.start_recording_hotkey: str = hotkeys_section.get('start_recording_hotkey', 'f9')
-
-    def __str__(self):
-        return (f"AppConfig(vad_enabled={self.vad_enabled}, vad_aggressiveness={self.vad_aggressiveness}, "
-                f"silence_duration_ms={self.silence_duration_ms}, frame_duration_ms={self.frame_duration_ms}, "
-                f"start_recording_hotkey={self.start_recording_hotkey})")
-
-
+_ACTION_START_RECORDING = "START_RECORDING"
 class DiscreteAudioApplication(ApplicationInterface):
     """
     Main application class orchestrating audio recording, processing,

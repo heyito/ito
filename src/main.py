@@ -9,9 +9,10 @@ import traceback
 import signal
 from src.ui.onboarding import OnboardingWindow
 from PyQt6.QtWidgets import QApplication
-from PyQt6.QtCore import QTimer, QThread
+from PyQt6.QtCore import QTimer, QThread, QSettings
 import threading
 import multiprocessing
+from src.ui.keyboard_manager import KeyboardManager
 
 multiprocessing.freeze_support()
 
@@ -119,6 +120,10 @@ if __name__ == "__main__":
         app = QApplication(sys.argv)
         QApplication.setOrganizationName(OnboardingWindow.ORGANIZATION_NAME)
         QApplication.setApplicationName(OnboardingWindow.APPLICATION_NAME)
+        
+        # Initialize keyboard manager (without setting hotkey yet)
+        keyboard_manager = KeyboardManager.instance()
+        keyboard_manager.initialize_listener()
         
         # Create and show the OnboardingWindow
         onboarding_window = OnboardingWindow()

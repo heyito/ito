@@ -7,6 +7,7 @@ import queue
 import traceback
 import time # Added for timestamp in logs
 from typing import Dict, Any, Optional, Union
+from src.ui.keyboard_manager import KeyboardManager
 
 # --- Add pynput imports ---
 try:
@@ -34,29 +35,18 @@ class ApplicationManager(QObject):
         self.container = Container()
         self.app_thread: Optional[threading.Thread] = None
         self.app_instance: Optional[DiscreteAudioApplication] = None
-        self.error_queue = queue.Queue() # Keep if used elsewhere, maybe for internal errors
-        self.status_queue = queue.Queue() # <--- Add this line
+        self.error_queue = queue.Queue()
+        self.status_queue = queue.Queue()
 
-        # --- Add listener attribute ---
-        self.hotkey_listener: Optional[keyboard.Listener] = None
-        self._target_hotkey: Optional[Union[keyboard.Key, keyboard.KeyCode]] = None
-        self._hotkey_str: Optional[str] = None
-        self._listener_started = False  # NEW: Track if listener is started
-        # --- End Add listener attribute ---
+        # Get keyboard manager instance and connect to its signal
+        self.keyboard_manager = KeyboardManager.instance()
+        self.keyboard_manager.hotkey_pressed.connect(self._handle_hotkey_press)
 
         # Load initial settings
         self.load_settings()
 
-        # --- Connect the new signal to its handler ---
-        self.hotkey_pressed.connect(self._handle_hotkey_press)
-        # --- End Connect the new signal ---
-
-        # Start the hotkey listener ONCE
-        self.setup_hotkey_listener()
-
     def load_settings(self) -> Dict[str, Any]:
         """Load settings from QSettings and convert to config format"""
-        # (Keep this method as is)
         config = {}
 
         # OpenAI settings
@@ -111,58 +101,39 @@ class ApplicationManager(QObject):
             'start_recording_hotkey': self.settings.value("Hotkeys/start_recording_hotkey", "f9")
         }
 
-        # --- Store hotkey details for listener setup ---
-        self._hotkey_str = config['Hotkeys']['start_recording_hotkey']
-        self._target_hotkey = self._parse_hotkey(self._hotkey_str)
-        # --- End Store hotkey details ---
+        # Set the hotkey in the keyboard manager
+        self.keyboard_manager.set_hotkey(config['Hotkeys']['start_recording_hotkey'])
 
         return config
-
-    def _parse_hotkey(self, hotkey_str: str) -> Optional[Union[keyboard.Key, keyboard.KeyCode]]:
-        """ Parses the hotkey string from config into a pynput key object. """
-        if not _pynput_available or not hotkey_str:
-            return None
-        try:
-            # Check if it's a special key (like Key.f9, Key.ctrl_l)
-            return getattr(keyboard.Key, hotkey_str)
-        except AttributeError:
-            # If not a special key, treat it as a character key
-            if len(hotkey_str) == 1:
-                 return keyboard.KeyCode.from_char(hotkey_str)
-            else:
-                 # Handle potential complex hotkey strings (e.g., modifiers) if needed later
-                 # For now, return None if it's not recognized simply
-                 print(f"Warning: Hotkey '{hotkey_str}' is not a simple character or directly supported Key name.")
-                 return None
 
     def save_settings(self, new_settings: Dict[str, Any]) -> bool:
         """Save settings to QSettings and update application if running"""
         try:
-            # --- Update stored hotkey before saving ---
-            self._hotkey_str = new_settings.get('Hotkeys', {}).get('start_recording_hotkey', 'f9')
-            self._target_hotkey = self._parse_hotkey(self._hotkey_str)
-            # --- End Update stored hotkey ---
-
             # Save each section
             for section, values in new_settings.items():
                 for key, value in values.items():
                     self.settings.setValue(f"{section}/{key}", value)
 
             self.settings.sync()
-            self.settings_changed.emit() # Signal UI to reload maybe
+            self.settings_changed.emit()
 
-            # If application is running, restart it to apply new settings (including hotkey)
+            # Update hotkey if changed
+            new_hotkey = new_settings.get('Hotkeys', {}).get('start_recording_hotkey')
+            if new_hotkey:
+                self.keyboard_manager.set_hotkey(new_hotkey)
+
+            # If application is running, restart it to apply new settings
             if self.app_thread and self.app_thread.is_alive():
                 self.status_changed.emit("Settings saved. Restarting application...")
                 self.restart_application()
             else:
-                 self.status_changed.emit("Settings saved.")
+                self.status_changed.emit("Settings saved.")
 
             return True
 
         except Exception as e:
             error_msg = f"Failed to save settings: {str(e)}"
-            print(f"{error_msg}\n{traceback.format_exc()}") # Log detailed error
+            print(f"{error_msg}\n{traceback.format_exc()}")
             self.error_occurred.emit(error_msg)
             return False
 
@@ -183,19 +154,20 @@ class ApplicationManager(QObject):
             # Stop any existing application first (should be a no-op if already stopped)
             self.stop_application()
 
-            # Load current settings (ensures _hotkey_str and _target_hotkey are set)
+            # Load current settings
             config = self.load_settings()
             is_valid, error_msg = self.validate_settings(config)
             if not is_valid:
                 self.error_occurred.emit(f"Invalid settings, cannot start: {error_msg}")
                 return False
-            if not self._target_hotkey:
-                self.error_occurred.emit(f"Invalid or unsupported hotkey '{self._hotkey_str}'. Cannot start listener.")
+
+            # Check if keyboard manager has a valid hotkey
+            if not self.keyboard_manager._target_hotkey:
+                self.error_occurred.emit(f"Invalid or unsupported hotkey. Cannot start listener.")
                 return False
 
-            # --- Always create a NEW stop event for each thread ---
+            # Create a new stop event for the thread
             self._stop_app_thread_event = threading.Event()
-            # --- End fix ---
 
             # Start application in a separate thread
             self.status_changed.emit("Starting background application thread...")
@@ -210,11 +182,7 @@ class ApplicationManager(QObject):
             # Start status queue monitor thread
             self._start_status_queue_monitor()
 
-            # --- Do NOT restart hotkey listener here ---
-            self.setup_hotkey_listener()
-            # --- End ---
-
-            self.status_changed.emit(f"Application thread started. Listening for '{self._hotkey_str}'.")
+            self.status_changed.emit(f"Application thread started. Listening for hotkey.")
             return True
 
         except Exception as e:
@@ -226,11 +194,11 @@ class ApplicationManager(QObject):
             return False
 
     def stop_application(self) -> None:
-        """Stop the application background thread. Do NOT stop the hotkey listener here."""
+        """Stop the application background thread."""
         print("Initiating application stop sequence...")
         stopped_thread = False
         
-        # --- Signal and stop the background thread ---
+        # Signal and stop the background thread
         if self.app_thread and self.app_thread.is_alive():
             print("Signaling background application thread to stop...")
             if hasattr(self, '_stop_app_thread_event'):
@@ -488,3 +456,10 @@ class ApplicationManager(QObject):
                     break
         t = threading.Thread(target=monitor, daemon=True, name="StatusQueueMonitor")
         t.start()
+
+    def closeEvent(self, event):
+        """Handle window close event"""
+        self.stop_application()
+        # Clean up keyboard manager
+        self.keyboard_manager.cleanup()
+        super().closeEvent(event)

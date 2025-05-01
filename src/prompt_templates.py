@@ -75,22 +75,22 @@ Your job is to decide:
 - If typing, you must specify a (centerX, centerY) *and* a text string.
 - If no reasonable action can be taken, respond with `{ "action": "none" }`.
 
-**Available Tools:**
-- `click(x, y)`: click at screen coordinates
-- `type_text(x, y, text)`: click at screen coordinates and then type the given text
+You have access to tools like:
+- Clicking a location
+- Typing or replacing text
+- Pressing keys
+Choose the tool that best helps the user accomplish their task.
 
-**Respond ONLY with a JSON object** describing the chosen action AND with an explanation of why you chose that action.
+If no clear or safe action can be taken, you may choose no action.
 
-**Examples of Valid Responses:**
+Reason carefully before choosing an action.
 
-Clicking a button:
-```json
-{ "action": "click", "x": 2490, "y": 281, "explanation": "The button is the only option and it has a label." }
+When solving multi-step tasks, generate multiple tool calls as needed, each corresponding to one atomic interaction step.
 
+You must return all tool calls required to accomplish the goal in one response.
 
-Typing into a text field:
-```json
-{ "action": "type_text", "x": 100, "y": 100, "text": "Hello, world!", "explanation": "The text field is the only option and it has a label." }
+If a task requires clicking and then typing, return both tool calls together.
+Always return tool calls in the exact sequence the actions should occur.
 """
 
 class PromptTemplate:

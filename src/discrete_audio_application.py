@@ -28,7 +28,11 @@ class AppConfig:
         # OpenAI settings
         openai_section = raw_config.get('OpenAI', {})
         self.openai_api_key: str = openai_section.get('api_key', '')
-        self.openai_model: str = openai_section.get('model', 'gpt-4')
+        self.openai_model: str = openai_section.get('model', 'gpt-4.1')
+
+        # Ollama settings
+        ollama_section = raw_config.get('Ollama', {})
+        self.ollama_model: str = ollama_section.get('model', 'llama3.2:latest')
 
         # ASR settings
         asr_section = raw_config.get('ASR', {})
@@ -40,7 +44,7 @@ class AppConfig:
         # LLM settings
         llm_section = raw_config.get('LLM', {})
         self.llm_source: str = llm_section.get('source', 'openai_api')
-        self.llm_model: str = llm_section.get('model', 'gpt-4')
+        self.llm_model: str = self.ollama_model if self.llm_source == 'ollama' else self.openai_model
         self.max_tokens: int = int(llm_section.get('max_tokens', 2000))
         self.temperature: float = float(llm_section.get('temperature', 0.7))
 

@@ -393,6 +393,9 @@ class HomeWindow(QMainWindow):
         form_layout.addRow("Max Tokens:", self.max_tokens)
         form_layout.addRow("Temperature:", self.temperature)
 
+        # Connect LLM source change to update model field
+        self.llm_source.currentTextChanged.connect(self.update_llm_model_field)
+
         # Audio Section
         self.add_section_header(form_layout, "Audio Settings")
         self.sample_rate = QSpinBox()
@@ -546,10 +549,16 @@ class HomeWindow(QMainWindow):
     def save_settings(self):
         """Save all settings to QSettings"""
         try:
+            llm_source_value = self.llm_source.currentText()
+            llm_model_value = self.llm_model.text()
             # Collect settings from UI
             new_settings = {
                 'OpenAI': {
                     'api_key': self.openai_api_key.text(),
+                    'model': llm_model_value if llm_source_value == "openai_api" else self.app_manager.load_settings().get("OpenAI", {}).get("model", "gpt-4.1"),
+                },
+                'Ollama': {
+                    'model': llm_model_value if llm_source_value == "ollama" else self.app_manager.load_settings().get("Ollama", {}).get("model", "llama3.2:latest"),
                 },
                 'ASR': {
                     'source': self.asr_source.currentText(),
@@ -557,8 +566,8 @@ class HomeWindow(QMainWindow):
                     'device': self.device.currentText(),
                 },
                 'LLM': {
-                    'source': self.llm_source.currentText(),
-                    'model': self.llm_model.text(),
+                    'source': llm_source_value,
+                    'model': llm_model_value,
                     'max_tokens': self.max_tokens.value(),
                     'temperature': self.temperature.value(),
                 },
@@ -622,7 +631,11 @@ class HomeWindow(QMainWindow):
             
             # Load LLM settings
             self.llm_source.setCurrentText(config['LLM']['source'])
-            self.llm_model.setText(config['LLM']['model'])
+            # Set model field based on LLM source
+            if config['LLM']['source'] == "ollama":
+                self.llm_model.setText(config.get("Ollama", {}).get("model", "llama3.2:latest"))
+            else:
+                self.llm_model.setText(config.get("OpenAI", {}).get("model", "gpt-4.1"))
             self.max_tokens.setValue(config['LLM']['max_tokens'])
             self.temperature.setValue(config['LLM']['temperature'])
             
@@ -689,3 +702,12 @@ class HomeWindow(QMainWindow):
                             font-size: 13px;
                         }
                     """)
+
+    def update_llm_model_field(self):
+        """Update the model field based on the selected LLM source."""
+        config = self.app_manager.load_settings()
+        llm_source = self.llm_source.currentText()
+        if llm_source == "ollama":
+            self.llm_model.setText(config.get("Ollama", {}).get("model", "llama3.2:latest"))
+        else:
+            self.llm_model.setText(config.get("OpenAI", {}).get("model", "gpt-4.1"))

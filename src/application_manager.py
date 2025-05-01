@@ -62,7 +62,7 @@ class ApplicationManager(QObject):
         # OpenAI settings
         config['OpenAI'] = {
             'api_key': self.settings.value("OpenAI/api_key", ""),
-            'model': self.settings.value("OpenAI/model", "gpt-4")
+            'model': self.settings.value("OpenAI/model", "gpt-4.1")
         }
 
         # ASR settings
@@ -76,7 +76,7 @@ class ApplicationManager(QObject):
         # LLM settings
         config['LLM'] = {
             'source': self.settings.value("LLM/source", "openai_api"),
-            'model': self.settings.value("LLM/model", "gpt-4"),
+            'model': self.settings.value("LLM/model", "gpt-4.1"),
             'max_tokens': int(self.settings.value("LLM/max_tokens", 2000)),
             'temperature': float(self.settings.value("LLM/temperature", 0.7))
         }
@@ -277,9 +277,9 @@ class ApplicationManager(QObject):
             print("Background thread started.")
             print(f"DEBUG: stop_event.is_set() at thread start: {stop_event.is_set()}")
             # Configure container within the thread using the passed config
+            print("Config: ", config)
+            self.container = Container()  # Create a new container instance
             self.container.config.from_dict(config)
-
-            # Create application instance within the thread
             self.app_instance = self.container.application()
 
             # Pass the stop event to the app instance

@@ -111,6 +111,9 @@ class DiscreteAudioApplication(ApplicationInterface):
         self.recording_thread_handle: Optional[threading.Thread] = None
         self.monitor_thread_handle: Optional[threading.Thread] = None
 
+        # Status queue for UI updates (set by ApplicationManager)
+        self.status_queue: Optional[queue.Queue] = None
+
     def run(self) -> None:
         """
         Starts the application's event loop in the background thread.
@@ -161,7 +164,7 @@ class DiscreteAudioApplication(ApplicationInterface):
                 try:
                     # Block waiting for an action from the queue
                     # Use a timeout so the stop_application_event check runs periodically
-                    action = self.action_queue.get(block=True, timeout=0.5)
+                    action = self.action_queue.get(block=True, timeout=0.2)
 
                     if action == _ACTION_START_RECORDING:
                         self._initiate_recording_process()
@@ -206,21 +209,23 @@ class DiscreteAudioApplication(ApplicationInterface):
         self.current_context_data['app_name'] = app_name
         print(f"[{timestamp}] Active application: {app_name}")
 
-        # 2. Get Contextual Data (e.g., document text) using the ContextEngine
-        print(f"[{timestamp}] Fetching context from '{app_name}'...")
-        try:
-            original_doc_text = self.context_engine.get_context(self.current_context_data)
-            if original_doc_text is None:
-                 print(f"[{timestamp}] Warning: Context engine returned None for '{app_name}'. Proceeding without document context.")
-            else:
-                 print(f"[{timestamp}] Context retrieved successfully.")
-                 self.current_context_data['doc_text'] = original_doc_text
+        # 2. Start fetching context in a background thread
+        def fetch_context():
+            print(f"[{timestamp}] Fetching context from '{app_name}' (in background)...")
+            try:
+                original_doc_text = self.context_engine.get_context(self.current_context_data)
+                if original_doc_text is None:
+                    print(f"[{timestamp}] Warning: Context engine returned None for '{app_name}'. Proceeding without document context.")
+                else:
+                    print(f"[{timestamp}] Context retrieved successfully.")
+                    self.current_context_data['doc_text'] = original_doc_text
+            except Exception as e:
+                print(f"[{timestamp}] Error fetching context for '{app_name}': {e}")
 
-        except Exception as e:
-            print(f"[{timestamp}] Error fetching context for '{app_name}': {e}")
-            return
+        context_thread = threading.Thread(target=fetch_context, daemon=True, name="ContextFetchThread")
+        context_thread.start()
 
-        # 3. Start Recording and Monitoring
+        # 3. Start Recording and Monitoring (immediately, in parallel with context fetch)
         self.is_recording = True
         # Clear the queue here, just before starting recording
         while not self.audio_queue.empty():
@@ -229,7 +234,7 @@ class DiscreteAudioApplication(ApplicationInterface):
             except queue.Empty:
                 break
 
-        print(f"[{timestamp}] Context OK. Starting command recording... (VAD: {self.config.vad_enabled})")
+        print(f"[{timestamp}] Context fetch started in background. Starting command recording... (VAD: {self.config.vad_enabled})")
         print(f"[{timestamp}] Speak your command now (stops recording after {self.config.silence_duration_ms}ms silence)...")
 
         # Start the audio recording thread
@@ -253,17 +258,16 @@ class DiscreteAudioApplication(ApplicationInterface):
         # Start the VAD monitor thread, passing the context obtained *for this specific command*
         self.monitor_thread_handle = threading.Thread(
             target=self._vad_monitor_and_process_thread_target,
-            args=(original_doc_text,),
             daemon=True,
             name="VADMonitorThread"
         )
         self.monitor_thread_handle.start()
 
-    def _vad_monitor_and_process_thread_target(self, original_doc_context: Optional[str]) -> None:
+    def _vad_monitor_and_process_thread_target(self) -> None:
         """
         Thread target: Waits for VAD to signal stop, collects audio,
         transcribes it, and then queues the processing task if not already processing.
-        (Keep this method as is)
+        (Modified: always fetch latest context from self.current_context_data)
         """
         timestamp = time.strftime('%H:%M:%S')
         # Block until the stop_recording_event is set (by VAD or potentially manual stop)
@@ -348,6 +352,11 @@ class DiscreteAudioApplication(ApplicationInterface):
 
         if not user_command or not user_command.strip():
             print(f"[{timestamp}] Command transcription failed or resulted in empty text.")
+            if self.status_queue is not None:
+                try:
+                    self.status_queue.put("Ready")
+                except Exception as e:
+                    print(f"[{timestamp}] Error putting status in status_queue: {e}")
             return
         # --- Command Transcription Complete ---
         print(f"[{timestamp}] Transcription complete: '{user_command}'")
@@ -360,15 +369,13 @@ class DiscreteAudioApplication(ApplicationInterface):
             print(f"[{timestamp}] Processing lock is held. Another command is likely being processed. Skipping this one.")
             return
         else:
-             # We don't acquire the lock here, the processing thread will.
-             # This check just prevents queueing up multiple processing threads if
-             # transcription was very fast and another hotkey press occurred.
+            # Always fetch the latest context from self.current_context_data
+            latest_doc_context = self.current_context_data.get('doc_text')
             print(f"[{timestamp}] Starting processing thread for the command.")
-            # The processing thread itself will set self.is_processing and manage the lock.
             processing_thread = threading.Thread(
                 target=self._processing_thread_target,
-                args=(original_doc_context, user_command), # Pass context & transcribed command
-                daemon=True, # Ensures thread doesn't block exit if main thread finishes
+                args=(latest_doc_context, user_command), # Pass latest context & transcribed command
+                daemon=True,
                 name="ProcessingThread"
             )
             processing_thread.start()
@@ -423,6 +430,12 @@ class DiscreteAudioApplication(ApplicationInterface):
             print(f"[{timestamp}] --- Processing Pipeline Finished ---")
             print(f"[{timestamp}] Ready for next command.")
 
+            # Notify UI via status_queue if available
+            if self.status_queue is not None:
+                try:
+                    self.status_queue.put("Ready")
+                except Exception as e:
+                    print(f"[{timestamp}] Error putting status in status_queue: {e}")
 
     def _cleanup(self) -> None:
         """

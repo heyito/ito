@@ -35,6 +35,7 @@ class ApplicationManager(QObject):
         self.app_thread: Optional[threading.Thread] = None
         self.app_instance: Optional[DiscreteAudioApplication] = None
         self.error_queue = queue.Queue() # Keep if used elsewhere, maybe for internal errors
+        self.status_queue = queue.Queue() # <--- Add this line
 
         # --- Add listener attribute ---
         self.hotkey_listener: Optional[keyboard.Listener] = None
@@ -206,6 +207,9 @@ class ApplicationManager(QObject):
             )
             self.app_thread.start()
 
+            # Start status queue monitor thread
+            self._start_status_queue_monitor()
+
             # --- Do NOT restart hotkey listener here ---
             self.setup_hotkey_listener()
             # --- End ---
@@ -280,6 +284,9 @@ class ApplicationManager(QObject):
 
             # Pass the stop event to the app instance
             self.app_instance.stop_recording_event = stop_event
+
+            # Pass the status queue to the app instance
+            self.app_instance.status_queue = self.status_queue  # <--- Add this line
 
             print("Starting DiscreteAudioApplication.run() in background thread...")
             # Run the application - it has its own event loop that will continue running
@@ -437,3 +444,18 @@ class ApplicationManager(QObject):
                 print(f"Error stopping hotkey listener: {e}")
             self.hotkey_listener = None
             self._listener_started = False
+
+    def _start_status_queue_monitor(self):
+        """Start a thread to monitor the status_queue and emit status_changed."""
+        def monitor():
+            while self.app_thread and self.app_thread.is_alive():
+                try:
+                    status = self.status_queue.get(timeout=0.2)
+                    self.status_changed.emit(status)
+                except queue.Empty:
+                    continue
+                except Exception as e:
+                    print(f"Status queue monitor error: {e}")
+                    break
+        t = threading.Thread(target=monitor, daemon=True, name="StatusQueueMonitor")
+        t.start()

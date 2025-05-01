@@ -40,6 +40,7 @@ class ApplicationManager(QObject):
         self.hotkey_listener: Optional[keyboard.Listener] = None
         self._target_hotkey: Optional[Union[keyboard.Key, keyboard.KeyCode]] = None
         self._hotkey_str: Optional[str] = None
+        self._listener_started = False  # NEW: Track if listener is started
         # --- End Add listener attribute ---
 
         # Load initial settings
@@ -48,6 +49,9 @@ class ApplicationManager(QObject):
         # --- Connect the new signal to its handler ---
         self.hotkey_pressed.connect(self._handle_hotkey_press)
         # --- End Connect the new signal ---
+
+        # Start the hotkey listener ONCE
+        self.setup_hotkey_listener()
 
     def load_settings(self) -> Dict[str, Any]:
         """Load settings from QSettings and convert to config format"""
@@ -132,7 +136,6 @@ class ApplicationManager(QObject):
 
     def save_settings(self, new_settings: Dict[str, Any]) -> bool:
         """Save settings to QSettings and update application if running"""
-        # (Keep this method mostly as is, just update hotkey parsing if needed)
         try:
             # --- Update stored hotkey before saving ---
             self._hotkey_str = new_settings.get('Hotkeys', {}).get('start_recording_hotkey', 'f9')
@@ -169,27 +172,28 @@ class ApplicationManager(QObject):
             self.status_changed.emit("Application cannot start (missing pynput).")
             return False
 
+        # Prevent double-start
+        if self.app_thread and self.app_thread.is_alive():
+            print("Application thread already running. Not starting again.")
+            self.status_changed.emit("Application already running.")
+            return False
+
         try:
-            # Stop any existing application first
+            # Stop any existing application first (should be a no-op if already stopped)
             self.stop_application()
 
             # Load current settings (ensures _hotkey_str and _target_hotkey are set)
             config = self.load_settings()
             is_valid, error_msg = self.validate_settings(config)
             if not is_valid:
-                 self.error_occurred.emit(f"Invalid settings, cannot start: {error_msg}")
-                 return False
+                self.error_occurred.emit(f"Invalid settings, cannot start: {error_msg}")
+                return False
             if not self._target_hotkey:
-                 self.error_occurred.emit(f"Invalid or unsupported hotkey '{self._hotkey_str}'. Cannot start listener.")
-                 return False
-
-            # Configure container (happens inside _run_application now)
-            # self.container.config.from_dict(config) # Moved
+                self.error_occurred.emit(f"Invalid or unsupported hotkey '{self._hotkey_str}'. Cannot start listener.")
+                return False
 
             # Clear the stop event before starting
-            # Need an event dedicated to stopping the background thread
             self._stop_app_thread_event = threading.Event()
-
 
             # Start application in a separate thread
             self.status_changed.emit("Starting background application thread...")
@@ -202,12 +206,9 @@ class ApplicationManager(QObject):
             self.app_thread.start()
 
             # --- Setup hotkey listener AFTER starting the thread ---
-            # Give the thread a moment to initialize app_instance? Maybe not necessary yet.
-            # time.sleep(0.1) # Optional small delay
             self.setup_hotkey_listener()
             # --- End Setup hotkey listener ---
 
-            # Status update can happen before listener is fully confirmed active
             self.status_changed.emit(f"Application thread started. Listening for '{self._hotkey_str}'.")
             return True
 
@@ -220,55 +221,39 @@ class ApplicationManager(QObject):
             return False
 
     def stop_application(self) -> None:
-        """Stop the hotkey listener and the application background thread."""
-        stopped_listener = False
+        """Stop the application background thread. Do NOT stop the hotkey listener here."""
         stopped_thread = False
-
-        # --- Stop the hotkey listener ---
-        if self.hotkey_listener:
-            print("Stopping hotkey listener...")
-            try:
-                self.hotkey_listener.stop()
-                # Listener thread is daemon, join might not be strictly needed
-                # but can ensure it's cleaned up if pynput manages it well.
-                # Consider adding a timeout to join if used.
-                # self.hotkey_listener.join(timeout=0.5)
-                print("Hotkey listener stopped.")
-                stopped_listener = True
-            except Exception as e:
-                print(f"Error stopping hotkey listener: {e}")
-            self.hotkey_listener = None
-         # --- End Stop the hotkey listener ---
-
         # --- Signal and stop the background thread ---
         if self.app_thread and self.app_thread.is_alive():
             print("Signaling background application thread to stop...")
             if hasattr(self, '_stop_app_thread_event'):
-                 self._stop_app_thread_event.set() # Signal the loop to exit
+                self._stop_app_thread_event.set()
             if self.app_instance:
-                # Also signal the recording event just in case it's stuck there
-                self.app_instance.stop_recording_event.set()
-                # Signal the application to stop
-                self.app_instance.stop_application_event.set()
-
+                if hasattr(self.app_instance, "stop_recording_event"):
+                    self.app_instance.stop_recording_event.set()
+                if hasattr(self.app_instance, "stop_application_event"):
+                    self.app_instance.stop_application_event.set()
             print("Waiting for background application thread to join...")
-            self.app_thread.join(timeout=2.0) # Wait max 2 seconds
+            self.app_thread.join(timeout=2.0)
             if self.app_thread.is_alive():
-                 print("Warning: Background application thread did not exit cleanly.")
+                print("Warning: Background application thread did not exit cleanly.")
             else:
-                 print("Background application thread joined.")
-                 stopped_thread = True
+                print("Background application thread joined.")
+                stopped_thread = True
             self.app_thread = None
-            self.app_instance = None # Clear instance only after thread stops
-
-        # --- End Signal and stop the background thread ---
-
-        if stopped_listener or stopped_thread:
-             self.status_changed.emit("Application stopped")
+            self.app_instance = None
         else:
-             # If neither was running, maybe emit "Application already stopped" or nothing
-             pass
+            print("No background application thread to stop.")
 
+        # Multiprocessing cleanup
+        import multiprocessing
+        try:
+            multiprocessing.active_children()
+        except Exception as e:
+            print(f"Error cleaning up multiprocessing children: {e}")
+
+        if stopped_thread:
+            self.status_changed.emit("Application stopped")
 
     def restart_application(self) -> bool:
         """Restart the application with current settings"""
@@ -315,44 +300,40 @@ class ApplicationManager(QObject):
     # --- New methods for hotkey handling ---
     def setup_hotkey_listener(self) -> None:
         """
-        Sets up the global hotkey listener on the main thread.
-        Should be called after start_application.
+        Sets up the global hotkey listener ONCE.
         """
         if not _pynput_available:
             print("Cannot setup listener: Pynput not available.")
             return
-        if self.hotkey_listener:
-             print("Listener already running.")
-             return
+        if self._listener_started:
+            print("Hotkey listener already started (singleton).")
+            return
         if not self._target_hotkey:
-             print(f"Cannot setup listener: Invalid hotkey '{self._hotkey_str}'.")
-             self.error_occurred.emit(f"Invalid hotkey '{self._hotkey_str}', listener disabled.")
-             return
+            print(f"Cannot setup listener: Invalid hotkey '{self._hotkey_str}'.")
+            self.error_occurred.emit(f"Invalid hotkey '{self._hotkey_str}', listener disabled.")
+            return
 
         print(f"Setting up hotkey listener for: {self._hotkey_str} ({self._target_hotkey}) on main thread.")
         try:
-            # The listener runs its callback in its own thread, but that callback
-            # will emit a Qt signal directed back to the main thread.
             self.hotkey_listener = keyboard.Listener(on_press=self._on_keyboard_press)
-            self.hotkey_listener.start() # Start the listener thread
+            self.hotkey_listener.start()
+            self._listener_started = True
             print(f"Hotkey listener started successfully for '{self._hotkey_str}'.")
             self.status_changed.emit(f"Listening for hotkey '{self._hotkey_str}'...")
-
         except Exception as e:
             error_msg = f"Failed to start hotkey listener: {e}"
             print(f"{error_msg}\n{traceback.format_exc()}")
             self.error_occurred.emit(error_msg + " (Check Accessibility/Input Monitoring permissions)")
             self.status_changed.emit("Hotkey listener failed to start!")
-            self.hotkey_listener = None # Ensure it's cleared on failure
+            self.hotkey_listener = None
 
     def _on_keyboard_press(self, key: Union[keyboard.Key, keyboard.KeyCode, None]) -> None:
         """
         Internal callback for pynput listener. Runs in pynput's thread.
         Emits a Qt signal to be handled on the main thread.
         """
-        # Check if the pressed key matches the target hotkey
+        # Always check the current target hotkey (which may change)
         if key == self._target_hotkey:
-            # Emit the signal, passing the string representation for logging/display
             self.hotkey_pressed.emit(self._hotkey_str)
 
     @pyqtSlot(str)
@@ -440,3 +421,17 @@ class ApplicationManager(QObject):
              return False, f"Missing setting section/key: {e}"
         except Exception as e:
             return False, f"Settings validation error: {str(e)}"
+
+    def close_hotkey_listener(self) -> None:
+        """Call this ONCE on final shutdown to stop the listener."""
+        if self.hotkey_listener:
+            print("Stopping hotkey listener (final shutdown)...")
+            try:
+                if self.hotkey_listener.running:
+                    self.hotkey_listener.stop()
+                    self.hotkey_listener.join(timeout=1.0)
+                print("Hotkey listener stopped.")
+            except Exception as e:
+                print(f"Error stopping hotkey listener: {e}")
+            self.hotkey_listener = None
+            self._listener_started = False

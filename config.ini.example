@@ -1,3 +1,6 @@
+[Mode]
+streaming = true
+
 [ASR]
 source = faster_whisper
 model = whisper-1

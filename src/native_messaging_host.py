@@ -22,7 +22,8 @@ def setup_logging():
         # Configure logging
         logging.basicConfig(
             filename=log_file,
-            level=logging.INFO,
+            # pull from config.ini
+            level=logging.DEBUG,
             format='%(asctime)s - %(levelname)s - %(message)s'
         )
         

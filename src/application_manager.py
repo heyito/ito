@@ -8,6 +8,7 @@ import traceback
 import time
 from typing import Dict, Any, Optional, Union
 from src.ui.keyboard_manager import KeyboardManager
+import pathlib
 
 # --- Add pynput imports ---
 try:
@@ -90,6 +91,20 @@ class ApplicationManager(QObject):
             'aggressiveness': int(self.settings.value("VAD/aggressiveness", 1)),
             'silence_duration_ms': int(self.settings.value("VAD/silence_duration_ms", 1000)),
             'frame_duration_ms': int(self.settings.value("VAD/frame_duration_ms", 30))
+        }
+
+        # --- Vosk settings --- 
+        # Calculate default path inside the method
+        default_vosk_model_dir = "src/models/vosk-model-en-us-0.22-lgraph" # Adjust if needed
+        current_file_path = pathlib.Path(__file__).resolve()
+        project_root = current_file_path.parent.parent
+        default_vosk_model_path_str = str(project_root / default_vosk_model_dir)
+        
+        # Read from QSettings, check if empty, apply calculated default if needed
+        vosk_path_from_settings = self.settings.value("Vosk/model_path", "")
+        final_vosk_path = vosk_path_from_settings if vosk_path_from_settings else default_vosk_model_path_str
+        config['Vosk'] = {
+            'model_path': final_vosk_path
         }
 
         # Output settings
@@ -280,7 +295,6 @@ class ApplicationManager(QObject):
             print("Background thread started.")
             print(f"DEBUG: stop_event.is_set() at thread start: {stop_event.is_set()}")
             # Configure container within the thread using the passed config
-            print("Config: ", config)
             self.container = Container()  # Create a new container instance
             self.container.config.from_dict(config)
             self.app_instance = self.container.application()

@@ -1,16 +1,14 @@
 import sys
 import os
-import time
 import platform
 import json
 import logging
-from pynput import keyboard
 import traceback    
 import signal
-from src.ui.onboarding import OnboardingWindow, PermissionChecker
+from src.ui.onboarding import OnboardingWindow
 from PyQt6.QtWidgets import QApplication
-from PyQt6.QtCore import QTimer, QThread, QSettings
-import threading
+from src.ui.onboarding import OnboardingWindow
+from PyQt6.QtWidgets import QApplication
 import multiprocessing
 from src.ui.keyboard_manager import KeyboardManager
 import sounddevice as sd

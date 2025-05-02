@@ -1,4 +1,5 @@
 import asyncio
+from asyncio.log import logger
 import threading
 import sounddevice as sd
 import numpy as np
@@ -7,7 +8,7 @@ import scipy.io.wavfile as wavfile
 import io
 import time
 import collections
-from typing import Optional # Import Optional
+from typing import Literal, Optional # Import Optional
 
 # Import VAD library safely
 try:
@@ -183,70 +184,115 @@ class AudioHandler:
             print("Audio stream closed.")
 
      # --- Method for streaming to asyncio Queue (New) ---
-    def stream_audio_to_async_queue(self, stop_event: threading.Event, async_queue: asyncio.Queue, loop: asyncio.AbstractEventLoop):
+    def stream_audio_to_async_queue(self,
+                                  stop_event: threading.Event,
+                                  async_queue: asyncio.Queue,
+                                  loop: asyncio.AbstractEventLoop,
+                                  output_format: Literal['numpy', 'bytes'] = 'bytes'): # Default to bytes for Vosk
         """
         Continuously records audio and puts chunks into an asyncio.Queue.
-        Stops when stop_event is set. Designed for WebRTC streaming.
+        Stops when stop_event is set.
 
         Args:
             stop_event: A threading.Event() to signal when to stop recording.
-            async_queue: An asyncio.Queue to put audio chunks (np.ndarray) into.
+            async_queue: An asyncio.Queue to put audio chunks into.
             loop: The asyncio event loop running in the target thread for the queue.
+            output_format: The format of chunks put onto the queue ('numpy' or 'bytes').
+                           Defaults to 'bytes' for Vosk compatibility.
         """
+        if output_format not in ['numpy', 'bytes']:
+            logger.error(f"Invalid output_format '{output_format}'. Must be 'numpy' or 'bytes'.")
+            raise ValueError("Invalid output_format")
+
         device_index = self.device_index
         sample_rate = self.sample_rate
         channels = self.channels
-        dtype = np.int16 # Commonly used for Whisper/WebRTC (PCM16)
-        # Blocksize can be tuned. Smaller = lower latency, potentially higher CPU.
-        # OpenAI WebRTC examples often use 20ms frames (AUDIO_PTIME)
-        # Calculate blocksize based on a desired interval, e.g., 40ms
+        dtype = np.int16 # Required for Vosk (PCM16)
+
+        # Blocksize calculation (similar to before, good starting point)
         blocksize_ms = 40
         blocksize = int(sample_rate * blocksize_ms / 1000)
-        print(f"Streaming blocksize: {blocksize} samples ({blocksize_ms}ms)")
+        logger.info(f"Streaming blocksize: {blocksize} samples ({blocksize_ms}ms)")
+        logger.info(f"Outputting audio chunks as: {output_format}")
+
 
         def callback(indata: np.ndarray, frames: int, time_info, status: sd.CallbackFlags):
-            """Sounddevice callback: Puts data into the asyncio Queue thread-safely."""
+            """Sounddevice callback: Converts data and puts it into the asyncio Queue."""
             if status:
-                print(f"Sounddevice status (streaming): {status}", flush=True)
+                logger.warning(f"Sounddevice status (streaming): {status}")
+
+            # --- Convert to desired output format ---
+            try:
+                if output_format == 'bytes':
+                    audio_chunk = indata.tobytes()
+                else: # output_format == 'numpy'
+                    audio_chunk = indata.copy() # Important to copy numpy arrays
+            except Exception as e:
+                 logger.error(f"Error converting audio chunk in callback: {e}")
+                 return # Skip putting data on error
+
+            # --- Put data onto queue thread-safely ---
             try:
                 # Use loop.call_soon_threadsafe to schedule put_nowait in the asyncio loop
-                loop.call_soon_threadsafe(async_queue.put_nowait, indata.copy())
+                loop.call_soon_threadsafe(async_queue.put_nowait, audio_chunk)
             except asyncio.QueueFull:
-                print("Warning: Asyncio audio queue full! Audio data might be lost.", flush=True)
+                # Consider how critical losing data is. For real-time, dropping might be acceptable.
+                logger.warning("Asyncio audio queue full! Audio data chunk dropped.", exc_info=False) # Reduce log noise
             except Exception as e:
-                print(f"Error in stream_audio_to_async_queue callback: {e}", flush=True)
+                # Log unexpected errors during the queue put operation
+                logger.error(f"Error putting audio chunk onto queue in callback: {e}", exc_info=True)
+                # Potentially set stop_event here if queue errors are fatal?
+                # loop.call_soon_threadsafe(stop_event.set)
 
+
+        # --- Stream Execution ---
         try:
-            print(f"Attempting to open stream (async streaming mode): device={device_index}, rate={sample_rate}, channels={channels}, blocksize={blocksize}")
+            logger.info(f"Attempting to open stream (async streaming mode): device={device_index}, rate={sample_rate}, channels={channels}, blocksize={blocksize}")
             with sd.InputStream(samplerate=sample_rate,
                             channels=channels,
                             dtype=dtype,
                             blocksize=blocksize,
                             device=device_index,
                             callback=callback):
-                print("Audio stream opened (async streaming mode). Streaming...")
+                logger.info("Audio stream opened (async streaming mode). Streaming...")
                 # Keep the stream alive until stop_event is set externally
+                # Use wait with a timeout to be more responsive if needed,
+                # but simple sleep is often sufficient here.
                 while not stop_event.is_set():
-                    time.sleep(0.1) # Check stop event periodically
-                print("Stop event received by async streaming loop.")
+                    # time.sleep(0.1) # Check stop event periodically
+                    # Using wait() is slightly cleaner if timeout isn't strictly needed
+                    stop_event.wait(timeout=0.2) # Wait up to 0.2s for event or timeout
 
-        except sd.PortAudioError as e:
-            print(f"\nPortAudio Error (async streaming mode): {e}")
-            # Signal stop if an error occurs, in case caller hasn't
-            if not stop_event.is_set():
-                stop_event.set()
-                # Also signal the queue that we are done by putting None (thread-safe)
-                loop.call_soon_threadsafe(async_queue.put_nowait, None)
+                logger.info("Stop event received by async streaming loop.")
+
+        except sd.PortAudioError as pae:
+            logger.error(f"PortAudio Error (async streaming mode): {pae}")
+            # Signal stop if an error occurs
+            if not stop_event.is_set(): stop_event.set()
+            # If the loop isn't running, we can't put None, but the consumer should handle this
+            if loop.is_running(): loop.call_soon_threadsafe(async_queue.put_nowait, None)
+            raise # Re-raise the specific error
+        except ValueError as ve: # Catch specific errors like invalid device/settings
+             logger.error(f"Value Error during stream setup (async): {ve}")
+             if not stop_event.is_set(): stop_event.set()
+             if loop.is_running(): loop.call_soon_threadsafe(async_queue.put_nowait, None)
+             raise
         except Exception as e:
-            print(f"An unexpected error occurred in the async audio stream: {e}")
-            if not stop_event.is_set():
-                stop_event.set()
-                loop.call_soon_threadsafe(async_queue.put_nowait, None)
+            logger.error(f"An unexpected error occurred in the async audio stream: {e}", exc_info=True)
+            if not stop_event.is_set(): stop_event.set()
+            if loop.is_running(): loop.call_soon_threadsafe(async_queue.put_nowait, None)
+            raise # Re-raise general exceptions
         finally:
-            print("Audio stream closed (async streaming mode).")
-            # Ensure None is put in the queue upon exit if not already stopped by error
-            if not stop_event.is_set(): # If loop exited cleanly via stop_event
+            logger.info("Audio stream closing (async streaming mode).")
+            # Ensure None is put in the queue upon normal exit if loop still running
+            if stop_event.is_set() and loop.is_running():
+                 # Check if None might have already been put by an error handler
+                 # This is hard to guarantee perfectly without more complex state.
+                 # Putting None again is usually harmless if the consumer handles it.
+                 logger.info("Putting final None sentinel onto queue.")
                  loop.call_soon_threadsafe(async_queue.put_nowait, None)
+            elif not loop.is_running():
+                 logger.warning("Asyncio loop stopped before None could be reliably put on audio queue.")
 
     @staticmethod
     def save_wav_to_buffer(audio_data_numpy, sample_rate, channels):

@@ -10,6 +10,7 @@ from src.ui.onboarding import OnboardingWindow
 from src.application_manager import ApplicationManager
 import os
 import traceback
+import pathlib # Added for path manipulation
 
 # --- Platform specific code for macOS ---
 _ns_window = None
@@ -332,9 +333,9 @@ class HomeWindow(QMainWindow):
         content_layout.addWidget(self.stacked_widget)
 
         # Settings page
-        settings_page = QWidget()
-        settings_layout = QVBoxLayout(settings_page)
-        settings_layout.setContentsMargins(0, 0, 0, 0)  # Remove default margins
+        self.settings_page = QWidget()
+        settings_layout = QVBoxLayout(self.settings_page)
+        settings_layout.setContentsMargins(0, 0, 0, 0)
         settings_title = QLabel("Settings")
         settings_title.setStyleSheet("""
             font-size: 24px;
@@ -350,7 +351,7 @@ class HomeWindow(QMainWindow):
         scroll_area.setWidgetResizable(True)
 
         scroll_content = QWidget()
-        scroll_content.setObjectName("scroll_content")  # Add object name for styling
+        scroll_content.setObjectName("scroll_content")
         form_layout = QFormLayout(scroll_content)
         form_layout.setSpacing(16)
         form_layout.setContentsMargins(0, 0, 24, 0)  # Add right margin for scroll bar
@@ -381,6 +382,11 @@ class HomeWindow(QMainWindow):
         form_layout.addRow("Local Model Size:", self.asr_local_model_size)
         form_layout.addRow("Device:", self.asr_device)
         form_layout.addRow("Compute Type:", self.asr_compute_type)
+
+        # --- NEW: Vosk Section --- 
+        self.add_section_header(form_layout, "Vosk Settings (Streaming Mode)")
+        self.vosk_model_path_edit = QLineEdit()
+        form_layout.addRow("Model Path:", self.vosk_model_path_edit)
 
         # LLM Section
         self.add_section_header(form_layout, "Language Model Settings")
@@ -436,7 +442,8 @@ class HomeWindow(QMainWindow):
         # Mode Section
         self.add_section_header(form_layout, "Application Mode")
         self.streaming_mode = QCheckBox()
-        form_layout.addRow("Streaming Mode:", self.streaming_mode)
+        self.streaming_mode.stateChanged.connect(self.update_setting_visibility)
+        form_layout.addRow("Streaming Mode (Requires Vosk):", self.streaming_mode)
 
         # Hotkeys Section
         self.add_section_header(form_layout, "Hotkey Settings")
@@ -480,7 +487,7 @@ class HomeWindow(QMainWindow):
         settings_layout.addWidget(self.status_label)
 
         # Add settings page to stacked widget
-        self.stacked_widget.addWidget(settings_page)
+        self.stacked_widget.addWidget(self.settings_page)
 
         # Add panels to main layout
         main_layout.addWidget(menu_panel)
@@ -488,6 +495,7 @@ class HomeWindow(QMainWindow):
 
         # Load settings after UI is fully initialized
         self.load_settings()
+        self.update_setting_visibility()
         
         # Start application if settings are valid
         current_settings = self.app_manager.load_settings()
@@ -562,6 +570,14 @@ class HomeWindow(QMainWindow):
         try:
             llm_source_value = self.llm_source.currentText()
             llm_model_value = self.llm_model.text()
+            vosk_model_path_value = self.vosk_model_path_edit.text()
+            is_streaming = self.streaming_mode.isChecked()
+            
+            # Basic validation for Vosk path if streaming is enabled
+            if is_streaming and not vosk_model_path_value:
+                self.handle_error("Vosk Model Path cannot be empty when Streaming Mode is enabled.")
+                return
+                
             # Collect settings from UI
             new_settings = {
                 'OpenAI': {
@@ -577,6 +593,9 @@ class HomeWindow(QMainWindow):
                     'local_model_size': self.asr_local_model_size.currentText(),
                     'device': self.asr_device.currentText(),
                     'compute_type': self.asr_compute_type.currentText()
+                },
+                'Vosk': {
+                    'model_path': vosk_model_path_value
                 },
                 'LLM': {
                     'source': llm_source_value,
@@ -601,7 +620,7 @@ class HomeWindow(QMainWindow):
                     'start_recording_hotkey': self.start_recording_hotkey.text(),
                 },
                 'Mode': {
-                    'streaming': str(self.streaming_mode.isChecked()).lower()  # Convert to string and lowercase
+                    'streaming': str(is_streaming).lower()
                 }
             }
             
@@ -630,7 +649,7 @@ class HomeWindow(QMainWindow):
                 
         except Exception as e:
             self.handle_error(f"Failed to save settings: {str(e)}")
-            print(f"Error details: {traceback.format_exc()}")  # Add debug logging
+            print(f"Error details: {traceback.format_exc()}")
 
     def load_settings(self):
         """Load settings from QSettings"""
@@ -674,7 +693,13 @@ class HomeWindow(QMainWindow):
             self.start_recording_hotkey.setText(config['Hotkeys']['start_recording_hotkey'])
 
             # Load Mode settings
-            self.streaming_mode.setChecked(config['Mode']['streaming'] == "true")
+            mode_config = config.get('Mode', {}) 
+            self.streaming_mode.setChecked(mode_config.get('streaming', 'false') == "true")
+            
+            # Load Vosk settings (Path is now guaranteed by ApplicationManager)
+            vosk_config = config.get('Vosk', {}) 
+            vosk_path_from_config = vosk_config.get('model_path') # Should always have a valid path now
+            self.vosk_model_path_edit.setText(vosk_path_from_config if vosk_path_from_config else "") # Set text, handle potential None just in case
             
         except Exception as e:
             self.handle_error(f"Failed to load settings: {str(e)}")
@@ -732,3 +757,46 @@ class HomeWindow(QMainWindow):
             self.llm_model.setText(config.get("Ollama", {}).get("model", "llama3.2:latest"))
         else:
             self.llm_model.setText(config.get("OpenAI", {}).get("model", "gpt-4.1"))
+
+    def update_setting_visibility(self):
+        """Show/hide settings based on other selections (e.g., streaming mode)."""
+        is_streaming = self.streaming_mode.isChecked()
+        
+        # Find the Vosk model path row in the form layout and toggle visibility
+        # Now self.settings_page should exist
+        settings_form_layout = self.settings_page.findChild(QFormLayout)
+        if not settings_form_layout:
+            print("Error: Could not find QFormLayout within settings page in update_setting_visibility")
+            return
+
+        vosk_header_label = None
+        vosk_path_label = None
+        vosk_path_field = None
+        
+        for i in range(settings_form_layout.rowCount()):
+            label_item = settings_form_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
+            field_item = settings_form_layout.itemAt(i, QFormLayout.ItemRole.FieldRole)
+            
+            if label_item and label_item.widget() and isinstance(label_item.widget(), QLabel):
+                label_widget = label_item.widget()
+                if "Vosk Settings" in label_widget.text():
+                    vosk_header_label = label_widget
+                elif label_widget.text() == "Model Path:":
+                    vosk_path_label = label_widget
+                    if field_item and field_item.widget():
+                        vosk_path_field = field_item.widget()
+        
+        # Toggle visibility of found widgets
+        if vosk_header_label:
+            vosk_header_label.setVisible(is_streaming)
+        if vosk_path_label:
+            vosk_path_label.setVisible(is_streaming)
+        if vosk_path_field:
+            vosk_path_field.setVisible(is_streaming)
+
+        # Example: Hide ASR/LLM sections if streaming
+        # You would need to find their labels/widgets similarly and call setVisible(not is_streaming)
+
+        # You might want to hide/show other settings based on streaming mode too,
+        # e.g., maybe disable ASR/LLM sections if streaming only does transcription.
+        # Add similar logic here for other fields as needed.

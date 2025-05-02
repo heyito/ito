@@ -3,6 +3,7 @@ from dependency_injector import containers, providers
 import configparser
 import os
 import sys # Added for get_resource_path
+from typing import Any # Added for helper function type hint
 
 from src.clients.openai_client import OpenAIWebRTCClient
 from src.discrete_audio_application import DiscreteAudioApplication
@@ -21,6 +22,26 @@ from src.engines.context_engine import ContextEngine
 from src.engines.processing_engine import ProcessingEngine
 from src.handlers.llm_handler import LLMHandler
 from src.streaming_audio_application import StreamingAudioApplication
+
+# Helper function for Selector
+def _is_streaming_mode(config_value: Any) -> str:
+    """Checks if the config value represents streaming mode. Returns 'true' or 'false'."""
+    print(f"DEBUG: _is_streaming_mode received: {repr(config_value)} (type: {type(config_value)})") # DEBUG
+    bool_result = False # Default
+    if isinstance(config_value, bool):
+        bool_result = config_value
+    elif isinstance(config_value, str):
+        bool_result = config_value.lower() in ('true', '1', 't', 'y', 'yes', 'on')
+    elif isinstance(config_value, int):
+        bool_result = config_value == 1
+    else:
+        # Handle unexpected types if necessary, maybe log a warning
+        print(f"DEBUG: _is_streaming_mode received unexpected type: {type(config_value)}")
+        bool_result = False
+
+    str_result = str(bool_result).lower() # Convert boolean to lowercase string 'true' or 'false'
+    print(f"DEBUG: _is_streaming_mode returning: {repr(str_result)}") # DEBUG
+    return str_result
 
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
@@ -134,10 +155,15 @@ class Container(containers.DeclarativeContainer):
     
     # --- Main Application ---
     application: providers.Provider[ApplicationInterface] = providers.Selector(
-        providers.Callable(lambda x: x.lower(), config.Mode.streaming),
+        # Revert to using the Callable provider, which is more standard for Selector
+        providers.Callable(_is_streaming_mode, config.Mode.streaming),
+        # Keys are boolean True/False
         true=providers.Singleton(
           StreamingAudioApplication,
           audio_handler=audio_handler,
+          context_engine=context_engine,       # Injected
+          processing_engine=processing_engine, # Injected
+          llm_handler=llm_handler,           # Injected
           raw_config=config,
           ),
         false=providers.Singleton(

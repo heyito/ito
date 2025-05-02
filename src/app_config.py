@@ -60,3 +60,16 @@ class AppConfig:
         # Hotkey settings
         hotkeys_section = config_dict.get('Hotkeys', {})
         self.start_recording_hotkey: str = hotkeys_section.get('start_recording_hotkey', 'f9')
+
+        # Vosk settings (expected if streaming_mode is true)
+        vosk_section = config_dict.get('Vosk', {})
+        self.vosk_model_path: str = vosk_section.get('model_path', '')
+
+        # Mode settings
+        mode_section = config_dict.get('Mode', {})
+        streaming = mode_section.get('streaming', 'false')  # Default to false if missing
+        # Handle both boolean and string representations
+        if isinstance(streaming, bool):
+            self.streaming_mode: bool = streaming
+        else:
+            self.streaming_mode: bool = str(streaming).lower() == 'true'

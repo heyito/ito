@@ -21,6 +21,10 @@ config.ini
 # Temporary audio files (if saving intermediately)
 *.wav
 
+# Ignore model files, but not the models folder
+src/models/*
+!src/models/.gitkeep
+
 # Ignore log files
 *.log
 **/*.log

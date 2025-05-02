@@ -5,7 +5,7 @@ This tool listens for voice input via a hotkey, transcribes the speech, processe
 ## Features
 
 * **Hotkey Activated:** Press a configurable hotkey to start recording, press again to stop and process.
-* **Speech Recognition:** Transcribes spoken audio using selected ASR provider (initially OpenAI Whisper API).
+* **Speech Recognition:** Transcribes spoken audio using selected ASR source (initially OpenAI Whisper API).
 * **Intent Processing:** Uses an LLM (initially OpenAI GPT API) to refine the raw transcription into intended written text (e.g., correcting grammar, removing filler words, formatting).
 * **Automatic Typing:** Simulates keyboard input to type the final text into any application.
 
@@ -16,7 +16,7 @@ This tool listens for voice input via a hotkey, transcribes the speech, processe
     * **macOS:** `brew install portaudio`
     * **Debian/Ubuntu:** `sudo apt-get install libportaudio2 libportaudiocpp0 portaudio19-dev`
     * **Windows:** Often included with Python distributions, or installers available online.
-* An OpenAI API Key (for initial ASR and LLM providers)
+* An OpenAI API Key (for initial ASR and LLM sources)
 
 ## Setup
 
@@ -41,31 +41,9 @@ This tool listens for voice input via a hotkey, transcribes the speech, processe
     ```
 
 4.  **Configure the tool:**
-    * Rename `config.ini.example` to `config.ini` (or create `config.ini`).
-    * Edit `config.ini` and add your OpenAI API key.
-    * (Optional) Run `python utils/list_audio_devices.py` to find your microphone's device index and update `config.ini` if needed (usually not required if default works).
+    * (Optional) Run `python utils/list_audio_devices.py` to find your microphone's device index.
     * Review other settings like the `hotkey`.
     * Create an `.env` with `DEV=true` in it.
-
-## Configuration (`config.ini`)
-
-* `[OpenAI]`
-    * `api_key`: Your OpenAI API key. **Keep this secret!**
-* `[ASR]`
-    * `source`: Currently supports `openai_api`. Future: `whisper_local`.
-    * `model`: Model to use (e.g., `whisper-1`).
-* `[LLM]`
-    * `source`: Currently supports `openai_api`. Future: `local_llm`.
-    * `model`: Model to use (e.g., `gpt-4o-mini`, `gpt-3.5-turbo`).
-    * `prompt`: The system prompt instructing the LLM how to refine the text. Modify this to tailor the output style.
-* `[Audio]`
-    * `sample_rate`: Audio sample rate (e.g., `16000`).
-    * `channels`: Audio channels (usually `1` for mono mic).
-    * `device_index`: (Optional) Specify microphone index if the default is wrong. Leave blank or comment out to use default.
-* `[Output]`
-    * `method`: How to output text - `typewrite` (simulates typing) or `clipboard` (copies and pastes). `typewrite` is often more reliable.
-* `[Hotkeys]`
-    * `toggle_recording`: The key combination to start/stop recording (uses `keyboard` library syntax, e.g., `ctrl+alt+space`).
 
 ## Usage
 
@@ -106,30 +84,13 @@ brew install portaudio
 
 ### Building the App Bundle
 
-1. Navigate to the src directory:
+1. Run the build script:
 ```bash
-cd src
+./build.sh
 ```
 
-2. Build the app bundle:
-```bash
-pyinstaller src/main.py \
-    --name Inten \
-    --windowed \
-    --add-data "config.ini:." \
-    --add-binary "/opt/homebrew/opt/portaudio/lib/libportaudio.dylib:." \
-    --osx-bundle-identifier ai.inten.inten \
-    --noconfirm
-```
 
 This will create a `dist` directory containing your `.app` bundle.
-
-### Creating a DMG
-
-1. From the project root directory, create a DMG using hdiutil:
-```bash
-hdiutil create -volname "Inten" -srcfolder dist -ov -format UDZO Inten.dmg
-```
 
 Replace "Inten" with your desired app name.
 
@@ -154,29 +115,10 @@ cd dist
   ```bash
   chmod +x dist/Inten.app/Contents/MacOS/Inten
   ```
-- Build with verbose output to catch missing modules:
-  ```bash
-  pyinstaller src/main.py \
-    --name Inten \
-    --windowed \
-    --add-data "config.ini:." \
-    --add-binary "/opt/homebrew/opt/portaudio/lib/libportaudio.dylib:." \
-    --osx-bundle-identifier ai.inten.inten \
-    --hidden-import audio_handler \
-    --hidden-import asr_handler \
-    --hidden-import llm_handler \
-    --hidden-import prompt_templates \
-    --hidden-import platform_utils_macos \
-    --noconfirm
-  ```
 
 ### Customizing the App Bundle
 
-Customize the build command with:
-- App name: `--name`
-- Bundle identifier: `--osx-bundle-identifier`
-- Icon: `--icon`
-- Version: `--version-file`
+Customize the build through the `./Inten.spec` file:
 
 Example bundle identifier format:
 ```

@@ -23,7 +23,7 @@ class AudioHandler:
         self.sample_rate = sample_rate
         self.channels = channels
 
-        # Retrieve optional device_index from provider
+        # Retrieve optional device_index from source
         raw_device_index_str = device_index
         self.device_index = None # Default to None
         if raw_device_index_str:

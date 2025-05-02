@@ -25,9 +25,6 @@ from src.streaming_audio_application import StreamingAudioApplication
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
 
-    # --- Platform Utils (Example Injection) ---
-    # platform_utilities = providers.Object(platform_utils)
-
     # --- Core Handlers/Services ---
 
     llm_handler = providers.Singleton(
@@ -48,7 +45,7 @@ class Container(containers.DeclarativeContainer):
     # --- ASR Handler Selection ---
     # Use Selector to choose the ASR implementation based on config
     asr_handler: providers.Provider[ASRHandlerInterface] = providers.Selector(
-        config.ASR.source, # The configuration value to select on
+        config.ASR.source,
 
         # Option 1: 'openai_api'
         openai_api=providers.Singleton( # Use Singleton if you want only one instance
@@ -137,7 +134,7 @@ class Container(containers.DeclarativeContainer):
     
     # --- Main Application ---
     application: providers.Provider[ApplicationInterface] = providers.Selector(
-        config.Mode.streaming,
+        providers.Callable(lambda x: x.lower(), config.Mode.streaming),
         true=providers.Singleton(
           StreamingAudioApplication,
           audio_handler=audio_handler,

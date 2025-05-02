@@ -366,15 +366,21 @@ class HomeWindow(QMainWindow):
         # ASR Section
         self.add_section_header(form_layout, "Speech Recognition Settings")
         self.asr_source = CustomCombo()
-        self.asr_source.addItems(["faster_whisper", "whisper-1"])
-        self.local_model_size = CustomCombo()
-        self.local_model_size.addItems(["tiny", "tiny.en", "base", "base.en", "small", "small.en", 
-                                      "medium", "medium.en", "large-v1", "large-v2", "large-v3"])
-        self.device = CustomCombo()
-        self.device.addItems(["auto", "cpu", "cuda"])
-        form_layout.addRow("ASR Source:", self.asr_source)
-        form_layout.addRow("Local Model Size:", self.local_model_size)
-        form_layout.addRow("Device:", self.device)
+        self.asr_source.addItems(["openai_api", "faster_whisper"])
+        self.asr_model = CustomCombo()
+        self.asr_model.addItems(["whisper-1"])
+        self.asr_local_model_size = CustomCombo()
+        self.asr_local_model_size.addItems(["tiny", "tiny.en", "base", "base.en", "small", "small.en", 
+                                          "medium", "medium.en", "large-v1", "large-v2", "large-v3"])
+        self.asr_device = CustomCombo()
+        self.asr_device.addItems(["auto"])
+        self.asr_compute_type = CustomCombo()
+        self.asr_compute_type.addItems(["default"])
+        form_layout.addRow("ASR Provider:", self.asr_source)
+        form_layout.addRow("Model:", self.asr_model)
+        form_layout.addRow("Local Model Size:", self.asr_local_model_size)
+        form_layout.addRow("Device:", self.asr_device)
+        form_layout.addRow("Compute Type:", self.asr_compute_type)
 
         # LLM Section
         self.add_section_header(form_layout, "Language Model Settings")
@@ -426,6 +432,11 @@ class HomeWindow(QMainWindow):
         self.output_method = CustomCombo()
         self.output_method.addItems(["typewrite", "clipboard"])
         form_layout.addRow("Output Method:", self.output_method)
+
+        # Mode Section
+        self.add_section_header(form_layout, "Application Mode")
+        self.streaming_mode = QCheckBox()
+        form_layout.addRow("Streaming Mode:", self.streaming_mode)
 
         # Hotkeys Section
         self.add_section_header(form_layout, "Hotkey Settings")
@@ -562,8 +573,10 @@ class HomeWindow(QMainWindow):
                 },
                 'ASR': {
                     'source': self.asr_source.currentText(),
-                    'local_model_size': self.local_model_size.currentText(),
-                    'device': self.device.currentText(),
+                    'model': self.asr_model.currentText(),
+                    'local_model_size': self.asr_local_model_size.currentText(),
+                    'device': self.asr_device.currentText(),
+                    'compute_type': self.asr_compute_type.currentText()
                 },
                 'LLM': {
                     'source': llm_source_value,
@@ -586,6 +599,9 @@ class HomeWindow(QMainWindow):
                 },
                 'Hotkeys': {
                     'start_recording_hotkey': self.start_recording_hotkey.text(),
+                },
+                'Mode': {
+                    'streaming': str(self.streaming_mode.isChecked()).lower()  # Convert to string and lowercase
                 }
             }
             
@@ -626,8 +642,10 @@ class HomeWindow(QMainWindow):
             
             # Load ASR settings
             self.asr_source.setCurrentText(config['ASR']['source'])
-            self.local_model_size.setCurrentText(config['ASR']['local_model_size'])
-            self.device.setCurrentText(config['ASR']['device'])
+            self.asr_model.setCurrentText(config['ASR']['model'])
+            self.asr_local_model_size.setCurrentText(config['ASR']['local_model_size'])
+            self.asr_device.setCurrentText(config['ASR']['device'])
+            self.asr_compute_type.setCurrentText(config['ASR']['compute_type'])
             
             # Load LLM settings
             self.llm_source.setCurrentText(config['LLM']['source'])
@@ -654,6 +672,9 @@ class HomeWindow(QMainWindow):
             
             # Load Hotkey settings
             self.start_recording_hotkey.setText(config['Hotkeys']['start_recording_hotkey'])
+
+            # Load Mode settings
+            self.streaming_mode.setChecked(config['Mode']['streaming'] == "true")
             
         except Exception as e:
             self.handle_error(f"Failed to load settings: {str(e)}")

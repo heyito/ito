@@ -29,5 +29,3 @@ def list_audio_devices():
 
 if __name__ == "__main__":
     list_audio_devices()
-    print("\nUse the 'Index' number in config.ini's [Audio] section under 'device_index'")
-    print("if you need to specify a microphone other than the default.")

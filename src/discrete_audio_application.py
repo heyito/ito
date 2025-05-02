@@ -79,8 +79,7 @@ class DiscreteAudioApplication(ApplicationInterface):
         if not platform_utils.is_macos():
              print("WARNING: Running on non-macOS. Application context/interaction may be limited.")
 
-        print(f"ASR Provider: {self.config.asr_source} ({self.config.local_model_size})")
-        print(f"LLM Provider: {self.config.llm_source} ({self.config.llm_model})")
+        print(f"LLM Source: {self.config.llm_source} ({self.config.llm_model})")
         print(f"VAD Enabled: {self.config.vad_enabled}")
         if self.config.vad_enabled:
             print(f"Stops after {self.config.silence_duration_ms}ms of silence (Aggressiveness: {self.config.vad_aggressiveness}).")
@@ -281,11 +280,7 @@ class DiscreteAudioApplication(ApplicationInterface):
             # Pass ASR configuration details if needed by the handler implementation
             # For simplicity here, assume transcribe_audio uses pre-configured settings
             user_command = self.asr_handler.transcribe_audio(
-                audio_buffer=command_audio_buffer,
-                # Optionally pass more config:
-                # model=self.config.asr_model,
-                # provider=self.config.asr_provider,
-                # etc.
+                audio_buffer=command_audio_buffer
             )
         except Exception as e:
             print(f"[{timestamp}] Error during ASR transcription: {e}")

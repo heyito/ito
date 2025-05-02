@@ -19,8 +19,7 @@ class LLMHandler:
         self.ollama_running = False
         self.openai_valid = False
 
-        # Now self.llm_source etc. hold the actual values
-        print(f"LLM Provider: {self.llm_source}")
+        print(f"LLM Source: {self.llm_source}")
         print(f"LLM Model: {self.llm_model}")
 
         if self.llm_source == "ollama":
@@ -70,7 +69,7 @@ class LLMHandler:
         tools: list[dict] = [],
     ):
         """
-        Processes text using the specified LLM provider.
+        Processes text using the specified LLM source.
         
         Args:
             text: The user's message content (context + command)
@@ -187,5 +186,5 @@ class LLMHandler:
                 return None
 
         else:
-            print(f"Error: Unknown LLM provider '{self.llm_source}'")
+            print(f"Error: Unknown LLM source '{self.llm_source}'")
             return None

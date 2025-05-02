@@ -57,8 +57,9 @@ class ApplicationManager(QObject):
 
         # ASR settings
         config['ASR'] = {
-            'source': self.settings.value("ASR/source", "faster_whisper"),
-            'local_model_size': self.settings.value("ASR/local_model_size", "large-v3"),
+            'source': self.settings.value("ASR/source", "openai_api"),
+            'model': self.settings.value("ASR/model", "whisper-1"),
+            'local_model_size': self.settings.value("ASR/local_model_size", "base.en"),
             'device': self.settings.value("ASR/device", "auto"),
             'compute_type': self.settings.value("ASR/compute_type", "default")
         }
@@ -99,6 +100,11 @@ class ApplicationManager(QObject):
         # Hotkey settings
         config['Hotkeys'] = {
             'start_recording_hotkey': self.settings.value("Hotkeys/start_recording_hotkey", "f9")
+        }
+
+        # Mode settings
+        config['Mode'] = {
+            'streaming': str(self.settings.value("Mode/streaming", "false")).lower()  # Convert to string and lowercase
         }
 
         # Set the hotkey in the keyboard manager
@@ -402,7 +408,7 @@ class ApplicationManager(QObject):
                 return False, "OpenAI API key is required"
 
             # Check ASR settings
-            if new_settings['ASR']['source'] not in ['faster_whisper', 'whisper-1']:
+            if new_settings['ASR']['source'] not in ['openai_api', 'faster_whisper']:
                 return False, "Invalid ASR source"
 
             # Check LLM settings

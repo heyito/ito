@@ -1,7 +1,9 @@
+import platform
+import time
+
 import pyautogui
 import pyperclip
-import time
-import platform
+
 
 def output_text(text: str, method: str = 'typewrite'):
     """

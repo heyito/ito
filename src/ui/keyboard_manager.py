@@ -1,6 +1,8 @@
-from PyQt6.QtCore import QObject, pyqtSignal
-from pynput import keyboard
 import traceback
+
+from pynput import keyboard
+from PyQt6.QtCore import QObject, pyqtSignal
+
 
 class KeyboardManager(QObject):
     # Singleton instance

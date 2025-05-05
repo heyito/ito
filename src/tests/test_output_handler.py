@@ -1,4 +1,5 @@
-import src.output_handler as output_handler # Assuming output_handler.py is in the same directory or accessible
+import src.output_handler as output_handler  # Assuming output_handler.py is in the same directory or accessible
+
 
 def test_typewrite_output(mocker):
     """Test the typewrite output method."""

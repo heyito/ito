@@ -1,0 +1,44 @@
+[tool.poetry]
+name = "inten"
+version = "0.1.0"
+description = ""
+authors = ["Demox Labs <support@demoxlabs.xyz>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+PyQt6 = "6.9.0"
+numpy = "2.2.4"
+pynput = "1.8.1"
+sounddevice = "0.5.1"
+openai = "1.72.0"
+pyautogui = "0.9.54"
+PyAudio = "0.2.14"
+soundfile = "0.13.1"
+requests = "2.32.3"
+scipy = "1.15.2"
+faster-whisper = "1.1.1"
+torch = "2.6.0"
+torchaudio = "2.6.0"
+PyYAML = "6.0.2"
+psutil = "7.0.0"
+coloredlogs = "15.0.1"
+pyobjc = "*"
+rubicon-objc = "*"
+py2app = "*"
+setuptools = "*"
+wheel = "*"
+aiortc = "^1.11.0"
+aiohttp = "^3.11.18"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-mock = "*"
+ruff = "*"
+black = "*"
+pre-commit = "*"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

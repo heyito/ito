@@ -7,11 +7,11 @@ a = Analysis(
     binaries=[('/opt/homebrew/opt/portaudio/lib/libportaudio.dylib', '.')],
     datas=[
         ('inten-logo.png', '.'),
-        ('./venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/platforms', 'PyQt6/Qt6/plugins/platforms'),
-        ('./venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/styles', 'PyQt6/Qt6/plugins/styles'),
-        ('./venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/imageformats', 'PyQt6/Qt6/plugins/imageformats'),
-        ('./venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/permissions', 'PyQt6/Qt6/plugins/permissions'),
-        ('./venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/position', 'PyQt6/Qt6/plugins/position'),
+        ('./.venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/platforms', 'PyQt6/Qt6/plugins/platforms'),
+        ('./.venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/styles', 'PyQt6/Qt6/plugins/styles'),
+        ('./.venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/imageformats', 'PyQt6/Qt6/plugins/imageformats'),
+        ('./.venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/permissions', 'PyQt6/Qt6/plugins/permissions'),
+        ('./.venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/position', 'PyQt6/Qt6/plugins/position'),
     ],
     hiddenimports=[
       'native_messaging_host',

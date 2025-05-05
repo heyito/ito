@@ -3,8 +3,8 @@ from src.apps.browser import BrowserApp
 from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
-from src.constants import SOCKET_PATH
 from src.types.apps import IntenApp
+
 
 class ProcessingEngine:
     def __init__(self, config, browser_app: BrowserApp, text_edit_app: TextEditApp, notes_app: NotesApp, macos_app: MacOSapp):

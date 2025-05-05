@@ -1,24 +1,46 @@
-import sys
-from PyQt6.QtWidgets import (QApplication, QListView, QMainWindow, QWidget, QVBoxLayout, 
-                           QLabel, QPushButton, QHBoxLayout, QStackedWidget,
-                           QFormLayout, QLineEdit, QComboBox, QSpinBox, QCheckBox,
-                           QScrollArea, QScrollBar, QDoubleSpinBox, QMessageBox)
-from PyQt6.QtCore import Qt, QPointF, QSettings
-from PyQt6.QtGui import QPixmap
-import platform
-from src.ui.onboarding import OnboardingWindow
-from src.application_manager import ApplicationManager
 import os
+import sys
 import traceback
-import pathlib # Added for path manipulation
+
+from PyQt6.QtCore import QPointF, QSettings, Qt
+from PyQt6.QtGui import QPixmap
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDoubleSpinBox,
+    QFormLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListView,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QScrollBar,
+    QSpinBox,
+    QStackedWidget,
+    QVBoxLayout,
+    QWidget,
+)
+
+from src.application_manager import ApplicationManager
+from src.ui.onboarding import OnboardingWindow
 
 # --- Platform specific code for macOS ---
 _ns_window = None
 if sys.platform == 'darwin':
     try:
-        import objc
-        from AppKit import NSWindow, NSView, NSColor, NSWindowTitleHidden, NSFullSizeContentViewWindowMask
         from ctypes import c_void_p
+
+        import objc
+        from AppKit import (
+            NSColor,
+            NSFullSizeContentViewWindowMask,
+            NSView,
+            NSWindow,
+            NSWindowTitleHidden,
+        )
         print("PyObjC found. Applying native macOS styling.")
         _objc_available = True
     except ImportError:

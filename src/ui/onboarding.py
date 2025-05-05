@@ -1,21 +1,36 @@
+import os
+import platform
 import sys
 import traceback
-import platform
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                           QLabel, QPushButton, QProgressBar, QHBoxLayout)
-from PyQt6.QtCore import Qt, QPointF, QTimer, pyqtSignal, QObject, QSettings
-from PyQt6.QtGui import QPixmap, QColor, QPalette
+
 import sounddevice as sd
-import pynput.keyboard
-import os
+from PyQt6.QtCore import QObject, QPointF, QSettings, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QPixmap
+from PyQt6.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QProgressBar,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 # --- Platform specific code for macOS ---
 _ns_window = None
 if sys.platform == 'darwin':
     try:
-        import objc
-        from AppKit import NSWindow, NSView, NSColor, NSWindowTitleHidden, NSFullSizeContentViewWindowMask
         from ctypes import c_void_p
+
+        import objc
+        from AppKit import (
+            NSColor,
+            NSFullSizeContentViewWindowMask,
+            NSView,
+            NSWindow,
+            NSWindowTitleHidden,
+        )
         print("PyObjC found. Applying native macOS styling.")
         _objc_available = True
     except ImportError:

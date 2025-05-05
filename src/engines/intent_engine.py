@@ -1,5 +1,7 @@
 from enum import StrEnum
+
 from src.handlers.llm_handler import LLMHandler
+
 
 class IntentTypes(StrEnum):
     CREATE = "CREATE"

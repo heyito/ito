@@ -1,4 +1,3 @@
-from typing import Dict, Optional
 
 # System prompt for the LLM
 PAGE_EDITOR_SYSTEM_PROMPT = """You are an AI assistant helping to edit documents based on user commands. You will be given the current document content (marked by [START CURRENT DOCUMENT CONTENT] and [END CURRENT DOCUMENT CONTENT]) and a user command (marked by [USER COMMAND]). 
@@ -94,7 +93,7 @@ Always return tool calls in the exact sequence the actions should occur.
 """
 
 class PromptTemplate:
-    def __init__(self, sections: Dict[str, str]):
+    def __init__(self, sections: dict[str, str]):
         self.sections = sections
 
     def format(self, **kwargs) -> str:
@@ -136,7 +135,7 @@ def create_chrome_prompt(
     title: str,
     content: str,
     command: str,
-    selected_text: Optional[str] = None
+    selected_text: str | None = None
 ) -> str:
     """Create a prompt for Chrome context."""
     content_with_selection = content

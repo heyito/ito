@@ -1,6 +1,7 @@
-from src import prompt_templates
 from src import platform_utils_macos as platform_utils
+from src import prompt_templates
 from src.handlers.llm_handler import LLMHandler
+
 
 class TextEditApp:
     system_prompt = prompt_templates.PAGE_EDITOR_SYSTEM_PROMPT

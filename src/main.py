@@ -1,17 +1,17 @@
-import sys
-import os
-import platform
 import json
 import logging
-import traceback    
-import signal
-from src.ui.onboarding import OnboardingWindow
-from PyQt6.QtWidgets import QApplication
-from src.ui.onboarding import OnboardingWindow
-from PyQt6.QtWidgets import QApplication
 import multiprocessing
-from src.ui.keyboard_manager import KeyboardManager
+import os
+import platform
+import signal
+import sys
+import traceback
+
 import sounddevice as sd
+from PyQt6.QtWidgets import QApplication
+
+from src.ui.keyboard_manager import KeyboardManager
+from src.ui.onboarding import OnboardingWindow
 
 multiprocessing.freeze_support()
 

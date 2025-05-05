@@ -1,18 +1,15 @@
 # src/platform_utils_macos.py
-import subprocess
-import shlex
-import platform
 import json
-import sys
-import struct
-import time
-import socket
-import objc
-from Foundation import NSURL
-from AppKit import NSWorkspace
-from pathlib import Path
 import os
+import platform
+import socket
+import struct
+import subprocess
+import sys
+import time
 import uuid
+from pathlib import Path
+
 
 def is_macos():
     """Check if the current OS is macOS."""

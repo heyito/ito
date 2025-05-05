@@ -1,22 +1,22 @@
+import asyncio  # Added
 import logging
+import os  # Added for path validation
 import queue
 import threading
 import time
 import traceback
-import asyncio # Added
-from typing import Any, Dict, List, Optional, Union
-import os # Added for path validation
+from typing import Any
 
 from pynput import keyboard
-import numpy as np
+
+from src import platform_utils_macos as platform_utils  # Added for context
 from src.app_config import AppConfig
 from src.application_interface import ApplicationInterface
+from src.engines.context_engine import ContextEngine  # Added
+from src.engines.processing_engine import ProcessingEngine  # Added
 from src.handlers.audio_handler import AudioHandler
+from src.handlers.llm_handler import LLMHandler  # Added
 from src.handlers.vosk_processor import VoskProcessor
-from src.engines.context_engine import ContextEngine # Added
-from src.engines.processing_engine import ProcessingEngine # Added
-from src.handlers.llm_handler import LLMHandler # Added
-from src import platform_utils_macos as platform_utils # Added for context
 
 # Actions for the queue (can be simplified)
 _ACTION_TOGGLE_STREAMING = "TOGGLE_STREAMING"
@@ -31,7 +31,7 @@ class StreamingAudioApplication(ApplicationInterface):
                  context_engine: ContextEngine,     # Added
                  processing_engine: ProcessingEngine, # Added
                  llm_handler: LLMHandler,           # Added (though ProcessingEngine might use it internally)
-                 raw_config: Dict[str, Any]):
+                 raw_config: dict[str, Any]):
         """
         Initializes the streaming audio application.
 
@@ -58,22 +58,22 @@ class StreamingAudioApplication(ApplicationInterface):
         self.action_queue = queue.Queue() # For triggering actions from hotkey thread
         self.processing_lock: threading.Lock = threading.Lock() # Added
         self.hotkey_listener = None # keyboard or pynput listener
-        self.audio_capture_thread_handle: Optional[threading.Thread] = None
-        self.context_fetch_thread_handle: Optional[threading.Thread] = None # Added for background context fetching
-        self.processing_thread_handle: Optional[threading.Thread] = None # Added
+        self.audio_capture_thread_handle: threading.Thread | None = None
+        self.context_fetch_thread_handle: threading.Thread | None = None # Added for background context fetching
+        self.processing_thread_handle: threading.Thread | None = None # Added
 
-        self.asyncio_loop: Optional[asyncio.AbstractEventLoop] = None
-        self.asyncio_loop_thread: Optional[threading.Thread] = None
+        self.asyncio_loop: asyncio.AbstractEventLoop | None = None
+        self.asyncio_loop_thread: threading.Thread | None = None
 
         # --- Vosk specific ---
-        self.vosk_processor: Optional[VoskProcessor] = None
-        self.audio_stream_queue: Optional[asyncio.Queue] = None # Audio: AudioHandler -> VoskProcessor
-        self.transcript_queue: Optional[asyncio.Queue] = None # Transcript: VoskProcessor -> App
-        self._transcript_consumer_task: Optional[asyncio.Task] = None
+        self.vosk_processor: VoskProcessor | None = None
+        self.audio_stream_queue: asyncio.Queue | None = None # Audio: AudioHandler -> VoskProcessor
+        self.transcript_queue: asyncio.Queue | None = None # Transcript: VoskProcessor -> App
+        self._transcript_consumer_task: asyncio.Task | None = None
         self._current_partial_transcript: str = "" # Store the latest partial line
 
         # --- Current Context (Simplified for streaming example) ---
-        self.current_context_data: Dict[str, Any] = {"app_name": None, "doc_text": None} # Modified to match discrete
+        self.current_context_data: dict[str, Any] = {"app_name": None, "doc_text": None} # Modified to match discrete
 
         self.raw_config = raw_config
 
@@ -113,7 +113,7 @@ class StreamingAudioApplication(ApplicationInterface):
         """Prints initial configuration and status information."""
         print("\n--- Real-time Streaming Transcription ---")
         print(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"Using OpenAI Real-time API via WebRTC")
+        print("Using OpenAI Real-time API via WebRTC")
         print(f"Audio Device Index: {self.audio_handler.device_index}")
         print(f"Audio Sample Rate: {self.audio_handler.sample_rate}")
         print(f"Audio Channels: {self.audio_handler.channels}")
@@ -198,7 +198,7 @@ class StreamingAudioApplication(ApplicationInterface):
             # Stop the application if the hotkey is critical
             raise RuntimeError(f"Failed to set up hotkey listener for '{hotkey_str}'") from e
 
-    def _on_keyboard_press(self, key: Union[keyboard.Key, keyboard.KeyCode, None]) -> None:
+    def _on_keyboard_press(self, key: keyboard.Key | keyboard.KeyCode | None) -> None:
         """
         Internal callback triggered by the keyboard listener.
         Checks if the pressed key matches the configured hotkey.
@@ -207,7 +207,7 @@ class StreamingAudioApplication(ApplicationInterface):
             key: The key object from pynput (can be Key or KeyCode).
         """
         hotkey_str = self.config.start_recording_hotkey
-        target_key: Optional[Union[keyboard.Key, keyboard.KeyCode]] = None
+        target_key: keyboard.Key | keyboard.KeyCode | None = None
 
         # Attempt to parse the hotkey string into a pynput key object
         try:
@@ -587,7 +587,7 @@ class StreamingAudioApplication(ApplicationInterface):
         )
         self.processing_thread_handle.start()
 
-    def _llm_processing_thread_target(self, final_transcript: str, original_doc_context: Optional[str]) -> None:
+    def _llm_processing_thread_target(self, final_transcript: str, original_doc_context: str | None) -> None:
         """Thread target for executing the processing pipeline via ProcessingEngine."""
         timestamp = time.strftime('%H:%M:%S')
 

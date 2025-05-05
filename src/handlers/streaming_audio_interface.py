@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class StreamingAudioInterface(ABC):
     @abstractmethod
     def start_streaming(self):

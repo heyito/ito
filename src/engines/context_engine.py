@@ -1,10 +1,10 @@
+from src import platform_utils_macos as platform_utils
+from src.apps.browser import BrowserApp
 from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
-from src.constants import SOCKET_PATH
-from src.types.apps import IntenApp
-from src import platform_utils_macos as platform_utils
 from src.apps.text_edit import TextEditApp
-from src.apps.browser import BrowserApp
+from src.types.apps import IntenApp
+
 
 class ContextEngine:
     def __init__(self, text_edit_app: TextEditApp, browser_app: BrowserApp, notes_app: NotesApp, macos_app: MacOSapp):

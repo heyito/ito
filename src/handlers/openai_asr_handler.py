@@ -1,6 +1,7 @@
 # src/handlers/openai_asr_handler.py
 import io
 import time
+
 from openai import OpenAI, OpenAIError
 
 from src.handlers.asr_handler_interface import ASRHandlerInterface

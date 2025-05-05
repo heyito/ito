@@ -2,7 +2,6 @@
 import io
 import time
 import traceback
-from typing import Optional
 
 from src.handlers.asr_handler_interface import ASRHandlerInterface
 
@@ -33,7 +32,7 @@ class FasterWhisperASRHandler(ASRHandlerInterface):
         self.model_instance = self._load_model()
         print(f"FasterWhisperASRHandler Initialized: Size={self.local_model_size}, Device={self.device}, Compute={self.compute_type}")
 
-    def _load_model(self) -> Optional[WhisperModel]:
+    def _load_model(self) -> WhisperModel | None:
         """Loads the faster-whisper model, utilizing a class-level cache."""
         if not WhisperModel: # Check if import failed
             return None

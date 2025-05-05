@@ -1,7 +1,9 @@
+import src.platform_utils_macos as platform_utils
 from src import prompt_templates
 from src.engines.intent_engine import IntentEngine
 from src.handlers.llm_handler import LLMHandler
-import src.platform_utils_macos as platform_utils
+
+
 class NotesApp:
     system_prompt = prompt_templates.PAGE_EDITOR_SYSTEM_PROMPT
     

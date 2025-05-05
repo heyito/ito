@@ -1,48 +1,50 @@
 #!/usr/bin/env python3
 
-import sys
 import json
-import struct
-import platform
 import logging
-import time
 import os
-import traceback
-from src.platform_utils_macos import is_macos
+import platform
 import socket
+import struct
+import sys
 import threading
+import time
+import traceback
 
 from src.constants import SOCKET_PATH
+from src.platform_utils_macos import is_macos
+
 
 def setup_logging():
     try:
         # Use /tmp directory which should be writable by Chrome's native messaging host
         log_file = "/tmp/inten_native_messaging.log"
-        
+
         # Configure logging
         logging.basicConfig(
             filename=log_file,
             # pull from config.ini
             level=logging.DEBUG,
-            format='%(asctime)s - %(levelname)s - %(message)s'
+            format="%(asctime)s - %(levelname)s - %(message)s",
         )
-        
+
         logging.info("Logging initialized")
-        
+
     except Exception as e:
         # Fall back to stderr if file logging fails
         logging.basicConfig(
             stream=sys.stderr,
             level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s'
+            format="%(asctime)s - %(levelname)s - %(message)s",
         )
         logging.error(f"Failed to setup file logging: {e}")
+
 
 class NativeHost:
     def __init__(self):
         self.local_server = None
         self.connections = set()
-        
+
     def setup_local_server(self):
         # Remove existing socket if it exists
         if os.path.exists(SOCKET_PATH):
@@ -50,42 +52,44 @@ class NativeHost:
                 os.remove(SOCKET_PATH)
             except Exception as e:
                 logging.error(f"Error removing existing socket: {e}")
-            
+
         self.local_server = socket.socket(socket.AF_UNIX)
         self.local_server.bind(SOCKET_PATH)
         self.local_server.listen(1)
         logging.info(f"Local server listening on {SOCKET_PATH}")
-        
+
         # Start thread to accept connections from main.py
         threading.Thread(target=self.accept_connections, daemon=True).start()
-        
+
     def accept_connections(self):
         while True:
             try:
                 conn, _ = self.local_server.accept()
                 self.connections.add(conn)
-                threading.Thread(target=self.handle_local_connection, args=(conn,), daemon=True).start()
+                threading.Thread(
+                    target=self.handle_local_connection, args=(conn,), daemon=True
+                ).start()
                 logging.info("New connection accepted from main.py")
             except Exception as e:
                 logging.error(f"Error accepting connection: {e}")
                 time.sleep(1)
-            
+
     def handle_local_connection(self, conn):
         try:
             while True:
                 data = conn.recv(4096)
                 if not data:
                     break
-                    
+
                 try:
                     message = json.loads(data.decode())
                     logging.info(f"Received message from main.py: {message}")
-                    
+
                     # Forward message to Chrome with appropriate type conversion
                     if message.get("type") == "insert_text":
                         chrome_message = {
                             "type": "insert_text",
-                            "text": message.get("text", "")
+                            "text": message.get("text", ""),
                         }
                         self.send_to_chrome(chrome_message)
                     else:
@@ -94,7 +98,7 @@ class NativeHost:
                     logging.error(f"Invalid JSON received: {e}")
                 except Exception as e:
                     logging.error(f"Error handling message: {e}")
-                    
+
         except Exception as e:
             logging.error(f"Error in connection handler: {e}")
         finally:
@@ -109,18 +113,19 @@ class NativeHost:
     def handle_chrome_message(self, message):
         """Handle messages received from Chrome."""
         logging.info(f"Received message from Chrome: {message}")
-        
+
         # Forward message to all connected sockets
         for conn in self.connections:
             try:
                 conn.send(json.dumps(message).encode())
-                logging.info(f"Forwarded Chrome message to socket connection")
+                logging.info("Forwarded Chrome message to socket connection")
             except Exception as e:
                 logging.error(f"Error forwarding message to socket: {e}")
 
     def start(self):
         self.setup_local_server()
         logging.info("Native host started with local server")
+
 
 def read_message():
     """Read a message from stdin according to Chrome native messaging protocol."""
@@ -131,7 +136,7 @@ def read_message():
             return None
 
         # Unpack length as native-endian unsigned int
-        length = struct.unpack_from('=I', raw_length)[0]
+        length = struct.unpack_from("=I", raw_length)[0]
         logging.debug(f"Message length: {length}")
 
         # Chrome native messaging protocol has a 1MB message size limit
@@ -147,8 +152,8 @@ def read_message():
                 buffer.extend(byte)
                 try:
                     # Try to parse as JSON
-                    message = buffer.decode('utf-8')
-                    if message.startswith('{') and message.endswith('}'):
+                    message = buffer.decode("utf-8")
+                    if message.startswith("{") and message.endswith("}"):
                         data = json.loads(message)
                         logging.info(f"Recovered message after length error: {data}")
                         return data
@@ -157,19 +162,21 @@ def read_message():
             return None
 
         # Read the message of exactly specified length
-        message = sys.stdin.buffer.read(length).decode('utf-8')
+        message = sys.stdin.buffer.read(length).decode("utf-8")
         logging.debug(f"Raw message received: {message}")
-        
+
         # Verify message starts with { and ends with }
-        if not (message.startswith('{') and message.endswith('}')):
-            logging.error(f"Malformed message received, doesn't look like JSON: {message[:100]}...")
+        if not (message.startswith("{") and message.endswith("}")):
+            logging.error(
+                f"Malformed message received, doesn't look like JSON: {message[:100]}..."
+            )
             return None
 
         # Parse JSON
         data = json.loads(message)
         logging.info(f"Received message: {data}")
         return data
-        
+
     except struct.error as e:
         logging.error(f"Error reading message length: {e}")
         return None
@@ -181,32 +188,35 @@ def read_message():
         logging.error(traceback.format_exc())
         return None
 
+
 def write_message(message):
     """Write a message to stdout according to Chrome native messaging protocol."""
     try:
         # Convert message to JSON and encode as UTF-8
-        encoded_message = json.dumps(message).encode('utf-8')
-        
+        encoded_message = json.dumps(message).encode("utf-8")
+
         # Write message length as 32-bit unsigned integer
-        sys.stdout.buffer.write(struct.pack('=I', len(encoded_message)))
+        sys.stdout.buffer.write(struct.pack("=I", len(encoded_message)))
         # Write the message itself
         sys.stdout.buffer.write(encoded_message)
         sys.stdout.buffer.flush()
-        
+
         logging.debug(f"Message sent: {message}")
-        
+
     except Exception as e:
         logging.error(f"Error writing message: {e}")
         logging.error(traceback.format_exc())
+
 
 def get_active_application():
     """Get the name of the active application."""
     if not is_macos():
         return None
-    
+
     script = 'tell application "System Events" to get name of first application process whose frontmost is true'
     try:
         from src.platform_utils_macos import run_applescript_one_line
+
         return run_applescript_one_line(script)
     except Exception as e:
         logging.error(f"Error getting active application: {e}")
@@ -221,7 +231,9 @@ def send_message(message):
     except Exception as e:
         print(f"Error sending message: {e}")
         import traceback
+
         traceback.print_exc()
+
 
 def main():
     setup_logging()
@@ -232,7 +244,7 @@ def main():
     logging.info(f"Script path: {os.path.abspath(__file__)}")
     logging.info(f"Command line arguments: {sys.argv}")
     logging.info(f"Environment variables: {os.environ}")
-    
+
     if not is_macos():
         logging.error("This native messaging host is only supported on macOS")
         sys.exit(1)
@@ -240,6 +252,7 @@ def main():
     # Set stdin/stdout to binary mode
     if sys.platform == "win32":
         import msvcrt
+
         # Windows requires binary mode for native messaging protocol
         # This prevents line ending conversion and ensures proper message framing
         msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
@@ -249,16 +262,18 @@ def main():
         # Initialize and start the native host
         native_host = NativeHost()
         native_host.start()
-        
+
         # Send startup message
-        write_message({
-            "type": "startup",
-            "status": "ready",
-            "python_version": sys.version,
-            "platform": platform.platform()
-        })
+        write_message(
+            {
+                "type": "startup",
+                "status": "ready",
+                "python_version": sys.version,
+                "platform": platform.platform(),
+            }
+        )
         logging.info("Native messaging host is ready")
-        
+
         # Main message loop
         while True:
             try:
@@ -278,7 +293,7 @@ def main():
                 logging.error(f"Error in message loop: {e}")
                 logging.error(traceback.format_exc())
                 time.sleep(1)  # Wait a bit before retrying
-                
+
     except KeyboardInterrupt:
         logging.info("Native messaging host shutting down...")
     except Exception as e:
@@ -286,5 +301,6 @@ def main():
         logging.error(traceback.format_exc())
         raise
 
+
 if __name__ == "__main__":
-    main() 
+    main()

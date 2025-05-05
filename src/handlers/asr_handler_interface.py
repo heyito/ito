@@ -1,5 +1,6 @@
-from abc import ABC, abstractmethod
 import io
+from abc import ABC, abstractmethod
+
 
 class ASRHandlerInterface(ABC):
     @abstractmethod

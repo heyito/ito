@@ -1,14 +1,19 @@
 # application_manager.py
-from PyQt6.QtCore import QObject, pyqtSignal, QSettings, pyqtSlot
-from src.containers import Container
-from src.discrete_audio_application import DiscreteAudioApplication, _ACTION_START_RECORDING
-import threading
-import queue
-import traceback
-import time
-from typing import Dict, Any, Optional, Union
-from src.ui.keyboard_manager import KeyboardManager
 import pathlib
+import queue
+import threading
+import time
+import traceback
+from typing import Any
+
+from PyQt6.QtCore import QObject, QSettings, pyqtSignal, pyqtSlot
+
+from src.containers import Container
+from src.discrete_audio_application import (
+    _ACTION_START_RECORDING,
+    DiscreteAudioApplication,
+)
+from src.ui.keyboard_manager import KeyboardManager
 
 # --- Add pynput imports ---
 try:
@@ -34,8 +39,8 @@ class ApplicationManager(QObject):
         self.settings = QSettings(organization_name, application_name)
 
         self.container = Container()
-        self.app_thread: Optional[threading.Thread] = None
-        self.app_instance: Optional[DiscreteAudioApplication] = None
+        self.app_thread: threading.Thread | None = None
+        self.app_instance: DiscreteAudioApplication | None = None
         self.error_queue = queue.Queue()
         self.status_queue = queue.Queue()
 
@@ -46,7 +51,7 @@ class ApplicationManager(QObject):
         # Load initial settings
         self.load_settings()
 
-    def load_settings(self) -> Dict[str, Any]:
+    def load_settings(self) -> dict[str, Any]:
         """Load settings from QSettings and convert to config format"""
         config = {}
 
@@ -127,7 +132,7 @@ class ApplicationManager(QObject):
 
         return config
 
-    def save_settings(self, new_settings: Dict[str, Any]) -> bool:
+    def save_settings(self, new_settings: dict[str, Any]) -> bool:
         """Save settings to QSettings and update application if running"""
         try:
             # Save each section
@@ -184,7 +189,7 @@ class ApplicationManager(QObject):
 
             # Check if keyboard manager has a valid hotkey
             if not self.keyboard_manager._target_hotkey:
-                self.error_occurred.emit(f"Invalid or unsupported hotkey. Cannot start listener.")
+                self.error_occurred.emit("Invalid or unsupported hotkey. Cannot start listener.")
                 return False
 
             # Create a new stop event for the thread
@@ -203,7 +208,7 @@ class ApplicationManager(QObject):
             # Start status queue monitor thread
             self._start_status_queue_monitor()
 
-            self.status_changed.emit(f"Application thread started. Listening for hotkey.")
+            self.status_changed.emit("Application thread started. Listening for hotkey.")
             return True
 
         except Exception as e:
@@ -286,7 +291,7 @@ class ApplicationManager(QObject):
         # time.sleep(0.2)
         return self.start_application()
 
-    def _run_application_thread(self, config: Dict[str, Any], stop_event: threading.Event) -> None:
+    def _run_application_thread(self, config: dict[str, Any], stop_event: threading.Event) -> None:
         """
         Internal method executed in the background thread.
         Initializes and runs the DiscreteAudioApplication.
@@ -353,7 +358,7 @@ class ApplicationManager(QObject):
             self.status_changed.emit("Hotkey listener failed to start!")
             self.hotkey_listener = None
 
-    def _on_keyboard_press(self, key: Union[keyboard.Key, keyboard.KeyCode, None]) -> None:
+    def _on_keyboard_press(self, key: keyboard.Key | keyboard.KeyCode | None) -> None:
         """
         Internal callback for pynput listener. Runs in pynput's thread.
         Emits a Qt signal to be handled on the main thread.
@@ -413,7 +418,7 @@ class ApplicationManager(QObject):
 
     # --- End new methods ---
 
-    def validate_settings(self, new_settings: Dict[str, Any]) -> tuple[bool, str]:
+    def validate_settings(self, new_settings: dict[str, Any]) -> tuple[bool, str]:
         """Validate new settings and return (is_valid, error_message)"""
         # (Keep this method as is)
         try:

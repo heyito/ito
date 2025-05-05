@@ -1,9 +1,9 @@
 import json
 import time
+
 from src import prompt_templates
 from src.engines.macos_engine import MacOSEngine
 from src.handlers.llm_handler import LLMHandler
-import src.platform_utils_macos as platform_utils
 
 llm_tools = [
     {

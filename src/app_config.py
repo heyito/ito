@@ -1,11 +1,11 @@
-from typing import Any, Dict
+from typing import Any
 
 
 class AppConfig:
     """
     Handles application configuration loading and access.
     """
-    def __init__(self, config_dict: Dict[str, Any]):
+    def __init__(self, config_dict: dict[str, Any]):
         """
         Initializes the AppConfig by parsing the configuration dictionary.
 
@@ -22,7 +22,7 @@ class AppConfig:
         self.ollama_model: str = ollama_section.get('model', 'llama3.2:latest')
 
         # ASR settings
-        asr_section: Dict[str, Any] = config_dict.get('ASR', {})
+        asr_section: dict[str, Any] = config_dict.get('ASR', {})
         self.asr_source: str = asr_section.get('source', 'openai_api')
         self.asr_model: str = asr_section.get('model', 'whisper-1')
         self.asr_local_model_size: str = asr_section.get('local_model_size', 'base.en')

@@ -1,11 +1,9 @@
-import subprocess
 import json
 import os
+import subprocess
 import time
+
 import Quartz
-import os
-import subprocess
-import json
 
 KEY_MAP = {
     "enter": 0x24,

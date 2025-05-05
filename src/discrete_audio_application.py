@@ -1,19 +1,23 @@
 import queue
 import threading
 import time
-import numpy as np
 import traceback
-from typing import Optional, Dict, Any, Union, List
+from typing import Any
+
+import numpy as np
+
+from src import (
+    platform_utils_macos as platform_utils,  # Keep platform-specific name clear
+)
 
 # Assuming these imports are correct relative to your project structure
 from src.app_config import AppConfig
-from src.engines.processing_engine import ProcessingEngine
+from src.application_interface import ApplicationInterface
 from src.engines.context_engine import ContextEngine
-from src import platform_utils_macos as platform_utils # Keep platform-specific name clear
+from src.engines.processing_engine import ProcessingEngine
 from src.handlers.asr_handler_interface import ASRHandlerInterface
 from src.handlers.audio_handler import AudioHandler
 from src.handlers.llm_handler import LLMHandler
-from src.application_interface import ApplicationInterface
 
 # Define constants for actions
 _ACTION_START_RECORDING = "START_RECORDING"
@@ -25,7 +29,7 @@ class DiscreteAudioApplication(ApplicationInterface):
     """
     def __init__(self, context_engine: ContextEngine, processing_engine: ProcessingEngine,
                  asr_handler: ASRHandlerInterface, llm_handler: LLMHandler, audio_handler: AudioHandler,
-                 raw_config: Dict[str, Any]):
+                 raw_config: dict[str, Any]):
         """
         Initializes the Application.
         """
@@ -47,14 +51,14 @@ class DiscreteAudioApplication(ApplicationInterface):
         # Queue for actions triggered by external events (like hotkeys via ApplicationManager)
         self.action_queue: queue.Queue[str] = queue.Queue()
         self.processing_lock: threading.Lock = threading.Lock() # Ensures only one processing task runs
-        self.current_context_data: Dict[str, Optional[str]] = {"app_name": None, "doc_text": None}
+        self.current_context_data: dict[str, str | None] = {"app_name": None, "doc_text": None}
 
         # Thread Handles
-        self.recording_thread_handle: Optional[threading.Thread] = None
-        self.monitor_thread_handle: Optional[threading.Thread] = None
+        self.recording_thread_handle: threading.Thread | None = None
+        self.monitor_thread_handle: threading.Thread | None = None
 
         # Status queue for UI updates (set by ApplicationManager)
-        self.status_queue: Optional[queue.Queue] = None
+        self.status_queue: queue.Queue | None = None
 
     def run(self) -> None:
         """
@@ -84,7 +88,7 @@ class DiscreteAudioApplication(ApplicationInterface):
         if self.config.vad_enabled:
             print(f"Stops after {self.config.silence_duration_ms}ms of silence (Aggressiveness: {self.config.vad_aggressiveness}).")
 
-        print(f"\nTarget Application Context: Determined at runtime (initially TextEdit if macOS).")
+        print("\nTarget Application Context: Determined at runtime (initially TextEdit if macOS).")
         print(f"Press '{self.config.start_recording_hotkey}' when the target application is active to issue a command.")
         if platform_utils.is_macos():
             print("Ensure required Accessibility/Automation permissions are granted (macOS).")
@@ -229,7 +233,7 @@ class DiscreteAudioApplication(ApplicationInterface):
 
         # Retrieve all audio data from the queue
         print(f"[{timestamp}] Collecting command audio chunks...")
-        collected_audio_chunks: List[np.ndarray] = []
+        collected_audio_chunks: list[np.ndarray] = []
         while not self.audio_queue.empty():
             try:
                 # Use get_nowait for safety, though queue should be stable after recording stops
@@ -255,7 +259,7 @@ class DiscreteAudioApplication(ApplicationInterface):
             command_audio_data: np.ndarray = np.concatenate(collected_audio_chunks, axis=0)
             # Convert to a format suitable for ASR (e.g., WAV buffer)
             # Assuming audio_handler provides sample_rate and channels correctly
-            command_audio_buffer: Optional[bytes] = self.audio_handler.save_wav_to_buffer(
+            command_audio_buffer: bytes | None = self.audio_handler.save_wav_to_buffer(
                 command_audio_data,
                 self.audio_handler.sample_rate, # Get SR from handler
                 self.audio_handler.channels     # Get channels from handler
@@ -275,7 +279,7 @@ class DiscreteAudioApplication(ApplicationInterface):
             return
 
         print(f"[{timestamp}] Transcribing user command...")
-        user_command: Optional[str] = None
+        user_command: str | None = None
         try:
             # Pass ASR configuration details if needed by the handler implementation
             # For simplicity here, assume transcribe_audio uses pre-configured settings
@@ -320,7 +324,7 @@ class DiscreteAudioApplication(ApplicationInterface):
             processing_thread.start()
             # Note: We don't join this thread here; it runs independently.
 
-    def _processing_thread_target(self, original_doc_context: Optional[str], user_command: str) -> None:
+    def _processing_thread_target(self, original_doc_context: str | None, user_command: str) -> None:
         """
         Thread target: Executes the main processing pipeline using the engines.
         Acquires a lock to ensure exclusivity and manages the is_processing state.

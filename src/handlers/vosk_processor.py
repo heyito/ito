@@ -5,7 +5,6 @@ import queue
 import threading
 import time
 import traceback
-from typing import Optional
 
 try:
     import vosk
@@ -16,6 +15,7 @@ except ImportError:
 
 # Configure logging for the processor
 import logging
+
 logger = logging.getLogger("VoskProcessor")
 
 class VoskProcessor:
@@ -41,9 +41,9 @@ class VoskProcessor:
         self.transcript_output_queue = transcript_output_queue
         self.loop = loop
         self.stop_event = threading.Event()
-        self._thread: Optional[threading.Thread] = None
-        self._recognizer: Optional[vosk.KaldiRecognizer] = None
-        self._model: Optional[vosk.Model] = None
+        self._thread: threading.Thread | None = None
+        self._recognizer: vosk.KaldiRecognizer | None = None
+        self._model: vosk.Model | None = None
 
         # Load model immediately to catch errors early
         try:
@@ -75,7 +75,7 @@ class VoskProcessor:
                 try:
                      data = future.result(timeout=0.5) # Timeout allows checking stop_event
                      wait_duration = (time.monotonic() - wait_start_time) * 1000
-                except asyncio.TimeoutError:
+                except TimeoutError:
                      continue # No data yet, loop again
                 except Exception as e:
                      logger.error(f"Error getting data from audio queue: {e}")

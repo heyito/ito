@@ -26,21 +26,28 @@ This tool listens for voice input via a hotkey, transcribes the speech, processe
     cd inten
     ```
 
-2.  **Create and activate a virtual environment:**
+1.  **Install poetry (for dependency management):**
     ```bash
-    python -m venv venv
+    curl -sSL https://install.python-poetry.org | python3 -
+
+    poetry config virtualenvs.in-project true
+    ```
+
+1. **First time setup**
+    ```bash
+    make setup
+    ```
+    This runs a config setting for poetry so that `.venv` is created in the project rather than in OS root
+
+1. **Activate virtual environment**
+    ```bash
     # Windows
-    venv\Scripts\activate
+    .venv\Scripts\activate
     # macOS/Linux
-    source venv/bin/activate
+    source .venv/bin/activate
     ```
 
-3.  **Install dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-4.  **Configure the tool:**
+1.  **Configure the tool:**
     * (Optional) Run `python utils/list_audio_devices.py` to find your microphone's device index.
     * Review other settings like the `hotkey`.
     * Create an `.env` with `DEV=true` in it.
@@ -58,6 +65,17 @@ This tool listens for voice input via a hotkey, transcribes the speech, processe
 6.  Speak clearly.
 7.  Press the hotkey again. You'll see "Recording stopped. Processing..."
 8.  The refined text from the LLM should then be typed out at your cursor's location.
+
+## Linting & Formatting
+To lint: 
+```bash
+make lint
+```
+
+To auto format: 
+```bash
+make format
+```
 
 ## Notes & Caveats
 
@@ -126,3 +144,7 @@ ai.inten.inten
 ```
 
 Replace with your desired bundle identifier.
+
+## Development
+### Dependencies 
+* Use `poetry add <dependency>` to add dep to project

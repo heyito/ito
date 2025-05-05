@@ -1,14 +1,13 @@
 import asyncio
-from asyncio.log import logger
-import threading
-import sounddevice as sd
-import numpy as np
-import queue
-import scipy.io.wavfile as wavfile
 import io
+import threading
 import time
-import collections
-from typing import Literal, Optional # Import Optional
+from asyncio.log import logger
+from typing import Literal  # Import Optional
+
+import numpy as np
+import scipy.io.wavfile as wavfile
+import sounddevice as sd
 
 # Import VAD library safely
 try:

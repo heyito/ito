@@ -1,27 +1,28 @@
 # src/containers.py
-from dependency_injector import containers, providers
-import configparser
 import os
-import sys # Added for get_resource_path
-from typing import Any # Added for helper function type hint
+import sys  # Added for get_resource_path
+from typing import Any  # Added for helper function type hint
 
-from src.clients.openai_client import OpenAIWebRTCClient
-from src.discrete_audio_application import DiscreteAudioApplication
+from dependency_injector import containers, providers
+
 from src.application_interface import ApplicationInterface
 from src.apps.browser import BrowserApp
 from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
+from src.clients.openai_client import OpenAIWebRTCClient
+from src.discrete_audio_application import DiscreteAudioApplication
+from src.engines.context_engine import ContextEngine
 from src.engines.intent_engine import IntentEngine
 from src.engines.macos_engine import MacOSEngine
-from src.handlers.asr_handler_interface import ASRHandlerInterface
-from src.handlers.openai_asr_handler import OpenAIASRHandler
-from src.handlers.faster_whisper_asr_handler import FasterWhisperASRHandler
-from src.handlers.audio_handler import AudioHandler
-from src.engines.context_engine import ContextEngine
 from src.engines.processing_engine import ProcessingEngine
+from src.handlers.asr_handler_interface import ASRHandlerInterface
+from src.handlers.audio_handler import AudioHandler
+from src.handlers.faster_whisper_asr_handler import FasterWhisperASRHandler
 from src.handlers.llm_handler import LLMHandler
+from src.handlers.openai_asr_handler import OpenAIASRHandler
 from src.streaming_audio_application import StreamingAudioApplication
+
 
 # Helper function for Selector
 def _is_streaming_mode(config_value: Any) -> str:

@@ -1,15 +1,20 @@
 import asyncio
 import json
+import logging
 import ssl
 import time
-from typing import Callable, Optional
-import numpy as np
-import aiohttp
-from aiortc import RTCDataChannel, RTCPeerConnection, RTCSessionDescription, MediaStreamTrack, AudioStreamTrack as AIORTCAudioStreamTrack, VideoStreamTrack
-from aiortc.mediastreams import MediaStreamError, AudioFrame # Added AudioFrame
-from aiortc.contrib.media import MediaPlayer, MediaRelay
+from collections.abc import Callable
 from fractions import Fraction
-import logging
+
+import aiohttp
+import numpy as np
+from aiortc import AudioStreamTrack as AIORTCAudioStreamTrack
+from aiortc import (
+    RTCDataChannel,
+    RTCPeerConnection,
+    RTCSessionDescription,
+)
+from aiortc.mediastreams import AudioFrame, MediaStreamError  # Added AudioFrame
 
 # Configure logging for aiortc and our client
 logging.basicConfig(level=logging.INFO)
@@ -124,7 +129,7 @@ class OpenAIWebRTCClient:
     """
     Client to manage a WebRTC connection with OpenAI's real-time transcription API.
     """
-    def __init__(self, api_key: str, on_transcription_received: Optional[Callable[[dict], None]] = None, model: str = "gpt-4o-mini-transcribe"):
+    def __init__(self, api_key: str, on_transcription_received: Callable[[dict], None] | None = None, model: str = "gpt-4o-mini-transcribe"):
         """
         Initializes the client.
 
@@ -141,14 +146,14 @@ class OpenAIWebRTCClient:
         # --- Updated URL based on search results ---
         self.session_url = "https://api.openai.com/v1/realtime" # Use the base realtime endpoint
         self.pc = RTCPeerConnection()
-        self.audio_track: Optional[AudioInputTrack] = None # This will hold the AudioInputTrack instance
+        self.audio_track: AudioInputTrack | None = None # This will hold the AudioInputTrack instance
         self._session: aiohttp.ClientSession | None = None
-        self._connection_task: Optional[asyncio.Task] = None
-        self._audio_queue: Optional[asyncio.Queue] = None
-        self._sample_rate: Optional[int] = None
-        self._channels: Optional[int] = None
+        self._connection_task: asyncio.Task | None = None
+        self._audio_queue: asyncio.Queue | None = None
+        self._sample_rate: int | None = None
+        self._channels: int | None = None
         self._on_transcription_received = on_transcription_received # Store callback
-        self._datachannel: Optional[RTCDataChannel] = None # Added for receiving transcripts
+        self._datachannel: RTCDataChannel | None = None # Added for receiving transcripts
 
         # --- Setup Event Handlers ---
         @self.pc.on("connectionstatechange")
@@ -331,7 +336,7 @@ class OpenAIWebRTCClient:
             try:
                 await asyncio.wait_for(self._wait_for_connection(), timeout=20.0) # 20 second timeout
                 logger.info("WebRTC connection established successfully!")
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.error("Timeout waiting for WebRTC connection to establish.")
                 raise ConnectionError("WebRTC connection timed out")
 

@@ -8,6 +8,7 @@ from openai import OpenAI, OpenAIError
 # --- Default System Prompt (if none provided) ---
 DEFAULT_LLM_SYSTEM_PROMPT = "You are a helpful AI assistant."
 
+
 class LLMHandler:
     def __init__(self, llm_source: str, llm_model: str, openai_api_key: str):
         self.model_cache = {}
@@ -26,24 +27,30 @@ class LLMHandler:
         if self.llm_source == "ollama":
             self.ollama_running = self._check_ollama_running()
             if not self.ollama_running:
-                print("WARNING: Ollama is not running. Please start Ollama before using it.")
+                print(
+                    "WARNING: Ollama is not running. Please start Ollama before using it."
+                )
             else:
                 self.ollama_running = True
         elif self.llm_source == "openai_api":
             print(f"OpenAI API key: {self.openai_api_key}")
             if not self.openai_api_key:
-                print("WARNING: OpenAI API key is invalid or missing. Please check your configuration.")
+                print(
+                    "WARNING: OpenAI API key is invalid or missing. Please check your configuration."
+                )
             else:
                 self.openai_valid = True
 
-    def _check_ollama_running(self, max_retries: int = 3, retry_delay: float = 1.0) -> bool:
+    def _check_ollama_running(
+        self, max_retries: int = 3, retry_delay: float = 1.0
+    ) -> bool:
         """
         Check if Ollama is running by attempting to connect to its API.
-        
+
         Args:
             max_retries: Maximum number of connection attempts
             retry_delay: Delay between retries in seconds
-            
+
         Returns:
             bool: True if Ollama is running, False otherwise
         """
@@ -55,35 +62,41 @@ class LLMHandler:
                     return True
             except requests.exceptions.RequestException as e:
                 if attempt < max_retries - 1:
-                    print(f"Attempt {attempt + 1}/{max_retries}: Ollama not responding, retrying in {retry_delay} seconds...")
+                    print(
+                        f"Attempt {attempt + 1}/{max_retries}: Ollama not responding, retrying in {retry_delay} seconds..."
+                    )
                     time.sleep(retry_delay)
                 else:
-                    print(f"Failed to connect to Ollama after {max_retries} attempts: {e}")
+                    print(
+                        f"Failed to connect to Ollama after {max_retries} attempts: {e}"
+                    )
         return False
 
     def process_text_with_llm(
         self,
         text: str,
         system_prompt_override: str = None,
-        max_tokens: int = 2000,
+        max_tokens: int = 5000,
         temperature: float = 0.7,
         tools: list[dict] = [],
     ):
         """
         Processes text using the specified LLM source.
-        
+
         Args:
             text: The user's message content (context + command)
             system_prompt_override: Optional override for the system prompt
             max_tokens: Maximum number of tokens to generate
             temperature: Sampling temperature (0.0 to 1.0)
-            
+
         Returns:
             str: The processed text, or None if processing failed
         """
-        print(f"Sending context and command to LLM ({self.llm_source}, {self.llm_model})...")
-        print(f"System prompt: {system_prompt_override}")
-        print(f"Full LLM input:\n---\n{text}\n---")
+        print(
+            f"Sending context and command to LLM ({self.llm_source}, {self.llm_model})..."
+        )
+        # print(f"System prompt: {system_prompt_override}")
+        # print(f"Full LLM input:\n---\n{text}\n---")
         print("Sending to LLM...")
 
         if not text:
@@ -91,62 +104,84 @@ class LLMHandler:
             return None
 
         # Determine the system prompt to use
-        system_prompt = system_prompt_override if system_prompt_override else DEFAULT_LLM_SYSTEM_PROMPT
+        system_prompt = (
+            system_prompt_override
+            if system_prompt_override
+            else DEFAULT_LLM_SYSTEM_PROMPT
+        )
         if not system_prompt:
             print("Warning: LLM system prompt is empty.")
-            system_prompt = " " # Use a space to avoid errors with empty system message
+            system_prompt = " "  # Use a space to avoid errors with empty system message
 
         if self.llm_source == "openai_api":
             if not self.openai_valid:
-                print("Error: OpenAI API key is invalid or missing. Please check your configuration.")
+                print(
+                    "Error: OpenAI API key is invalid or missing. Please check your configuration."
+                )
                 return None
 
             try:
                 client = OpenAI(api_key=self.openai_api_key)
                 print(f"Sending request to OpenAI LLM API (model: {self.llm_model})...")
-
+                start_time = time.time()
                 response = client.chat.completions.create(
                     model=self.llm_model,
                     messages=[
                         {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": text}
+                        {"role": "user", "content": text},
                     ],
                     temperature=temperature,
                     max_tokens=max_tokens,
                     tools=tools,
-                    tool_choice="auto"
+                    tool_choice="required" if len(tools) != 0 else "none",
                 )
-
+                end_time = time.time()
+                print(
+                    f"OpenAI LLM API response time: {end_time - start_time:.2f} seconds"
+                )
                 if tools == []:
                     processed_text = response.choices[0].message.content
                     print(f"LLM returned processed text: {processed_text}")
                     if processed_text:
-                        return re.sub(r"^```json\s*|\s*```$", "", processed_text.strip(), flags=re.MULTILINE)
+                        return re.sub(
+                            r"^```json\s*|\s*```$",
+                            "",
+                            processed_text.strip(),
+                            flags=re.MULTILINE,
+                        )
                     else:
                         return ""
                 else:
-                    print(f"LLM returned: {response.choices[0]}")
+                    print(f"LLM returned: {response}")
+                    print(f"Tool calls: {response.choices[0].message.tool_calls}")
                     return response.choices[0].message.tool_calls
 
             except OpenAIError as e:
                 print(f"OpenAI API Error during LLM processing: {e}")
-                if hasattr(e, 'body') and e.body:
+                if hasattr(e, "body") and e.body:
                     print(f"Error Body: {e.body}")
                 return None
             except Exception as e:
                 print(f"An unexpected error occurred during LLM processing: {e}")
                 import traceback
+
                 traceback.print_exc()
                 return None
 
         elif self.llm_source == "ollama":
             if not self.ollama_running:
-                print("Error: Ollama is not running. Please start Ollama before using it.")
+                print(
+                    "Error: Ollama is not running. Please start Ollama before using it."
+                )
                 return None
 
             try:
                 # Compose prompt with system prompt if provided
-                system_prompt = system_prompt_override if system_prompt_override else DEFAULT_LLM_SYSTEM_PROMPT
+                system_prompt = (
+                    system_prompt_override
+                    if system_prompt_override
+                    else DEFAULT_LLM_SYSTEM_PROMPT
+                )
                 full_prompt = f"{system_prompt}\n\nUser: {text}\nAssistant:"
                 print(f"Sending request to Ollama (model: {self.llm_model})...")
 
@@ -157,11 +192,11 @@ class LLMHandler:
                         "prompt": full_prompt,
                         "options": {
                             "temperature": temperature,
-                            "num_predict": max_tokens
-                        }
+                            "num_predict": max_tokens,
+                        },
                     },
                     stream=True,  # Enable streaming
-                    timeout=120
+                    timeout=120,
                 )
                 response.raise_for_status()
 
@@ -183,6 +218,7 @@ class LLMHandler:
             except Exception as e:
                 print(f"Error during Ollama LLM processing: {e}")
                 import traceback
+
                 traceback.print_exc()
                 return None
 

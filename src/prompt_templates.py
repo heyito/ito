@@ -1,4 +1,3 @@
-
 # System prompt for the LLM
 PAGE_EDITOR_SYSTEM_PROMPT = """You are an AI assistant helping to edit documents based on user commands. You will be given the current document content (marked by [START CURRENT DOCUMENT CONTENT] and [END CURRENT DOCUMENT CONTENT]) and a user command (marked by [USER COMMAND]). 
 
@@ -52,11 +51,17 @@ MACOS_AX_OCR_SYSTEM_PROMPT = """
 You are an intelligent UI agent tasked with finding the best way to achieve the user's goal
 given the available UI and OCR information.
 
-You are given a JSON containing the following information:
+You are given a JSON for the Current UI Context containing the following information:
 - A list of accessibility elements, each with role, label, and screen frame coordinates.
 - A list of OCR-recognized texts, each with screen coordinates.
 - A list of best guess mappings from OCR texts to accessibility elements.
 - The screen size.
+
+You will also be given the user's command. 
+- It will be a natural language command that describes the user's goal.
+- The command may have errors consistent with natural language input.
+- Consider words that may sound similar or be misspelled as part of the command.
+- The command may be ambiguous, and you must use the context to disambiguate it.
 
 Your job is to decide:
 1. **WHAT to do** based on the user's goal (e.g., click a button, type into a text field).
@@ -70,27 +75,29 @@ Your job is to decide:
     - Given these lists, it is your job to decide (if there was no accessibility element found) 
      which is best to use. The text, or the mapped AX element given the intent AND the distance given. 
      If the distance is very high for example its likely safer to use the text if the intent is to click. 
-- If clicking, you must specify a (centerX, centerY) screen coordinate.
-- If typing, you must specify a (centerX, centerY) *and* a text string.
-- If no reasonable action can be taken, respond with `{ "action": "none" }`.
 
 You have access to tools like:
 - Clicking a location
 - Typing or replacing text
 - Pressing keys
-Choose the tool that best helps the user accomplish their task.
+Choose the tools that best helps the user accomplish their task.
 
-If no clear or safe action can be taken, you may choose no action.
+Reason carefully before choosing.
 
-Reason carefully before choosing an action.
+Explain your reasoning before using any tool.
 
-When solving multi-step tasks, generate multiple tool calls as needed, each corresponding to one atomic interaction step.
+IMPORTANT:
+Prefer returning some tool call over none, unless the action taken could be dangerous or damaging.
 
-You must return all tool calls required to accomplish the goal in one response.
+You MUST return a tool call for every single atomic step you describe.
+If you describe clicking, typing, or pressing a key, you MUST include each of those as a tool call in the `tool_calls` array.
 
-If a task requires clicking and then typing, return both tool calls together.
-Always return tool calls in the exact sequence the actions should occur.
+Do not assume typing or pressing enter is implied after a click. Each step must have its own tool call.
+
+Your final output MUST include all required tool calls in the correct sequence.
+If you omit a step, the user's goal will not be accomplished.
 """
+
 
 class PromptTemplate:
     def __init__(self, sections: dict[str, str]):
@@ -104,63 +111,63 @@ class PromptTemplate:
                 formatted_sections.append(section_template.format(**kwargs))
         return "\n\n".join(formatted_sections)
 
+
 # Define the base templates
-CHROME_PROMPT_TEMPLATE = PromptTemplate({
-    "application": "[APPLICATION]\n{application}",
-    "page": "[PAGE]\n{url}\n{title}",
-    "content": "[START CURRENT DOCUMENT CONTENT]\n{content}\n[END CURRENT DOCUMENT CONTENT]",
-    "command": "[USER COMMAND]\n{command}"
-})
+CHROME_PROMPT_TEMPLATE = PromptTemplate(
+    {
+        "application": "[APPLICATION]\n{application}",
+        "page": "[PAGE]\n{url}\n{title}",
+        "content": "[START CURRENT DOCUMENT CONTENT]\n{content}\n[END CURRENT DOCUMENT CONTENT]",
+        "command": "[USER COMMAND]\n{command}",
+    }
+)
 
-GENERAL_DOCUMENT_BODY_TEMPLATE = PromptTemplate({
-    "application": "[APPLICATION]\n{application}",
-    "content": "[START CURRENT DOCUMENT CONTENT]\n{content}\n[END CURRENT DOCUMENT CONTENT]",
-    "command": "[USER COMMAND]\n{command}"
-})
+GENERAL_DOCUMENT_BODY_TEMPLATE = PromptTemplate(
+    {
+        "application": "[APPLICATION]\n{application}",
+        "content": "[START CURRENT DOCUMENT CONTENT]\n{content}\n[END CURRENT DOCUMENT CONTENT]",
+        "command": "[USER COMMAND]\n{command}",
+    }
+)
 
-NOTES_PROMPT_TEMPLATE = PromptTemplate({
-    "content": "[START CURRENT NOTES CONTENT]\n{content}\n[END CURRENT NOTES CONTENT]",
-    "command": "[USER COMMAND]\n{command}"
-})
+NOTES_PROMPT_TEMPLATE = PromptTemplate(
+    {
+        "content": "[START CURRENT NOTES CONTENT]\n{content}\n[END CURRENT NOTES CONTENT]",
+        "command": "[USER COMMAND]\n{command}",
+    }
+)
+
 
 def create_notes_prompt(content: str, command: str) -> str:
     """Create a prompt for Notes context."""
-    return NOTES_PROMPT_TEMPLATE.format(
-        content=content,
-        command=command
-    )
+    return NOTES_PROMPT_TEMPLATE.format(content=content, command=command)
+
 
 def create_chrome_prompt(
-    url: str,
-    title: str,
-    content: str,
-    command: str,
-    selected_text: str | None = None
+    url: str, title: str, content: str, command: str, selected_text: str | None = None
 ) -> str:
     """Create a prompt for Chrome context."""
     content_with_selection = content
     if selected_text:
         content_with_selection += f"\n\nSelected text: {selected_text}"
-    
+
     return CHROME_PROMPT_TEMPLATE.format(
         application="Google Chrome",
         url=url,
         title=title,
         content=content_with_selection,
-        command=command
+        command=command,
     )
 
+
 def create_general_document_body_prompt(
-    application: str,
-    content: str,
-    command: str
+    application: str, content: str, command: str
 ) -> str:
     """Create a prompt for TextEdit context."""
     return GENERAL_DOCUMENT_BODY_TEMPLATE.format(
-        application=application,
-        content=content,
-        command=command
+        application=application, content=content, command=command
     )
+
 
 def create_macos_ax_ocr_prompt(context: dict, command: str) -> str:
     """Create a prompt for MacOS context."""
@@ -172,10 +179,11 @@ def create_macos_ax_ocr_prompt(context: dict, command: str) -> str:
     {context}
     """
 
+
 def get_active_element_content(chrome_context: dict) -> str:
     """Extract the content from the active element in Chrome context."""
-    if chrome_context.get('activeElement', {}).get('isContentEditable'):
-        return chrome_context.get('activeElementValue', '')
-    elif chrome_context.get('activeElement', {}).get('isTextInput'):
-        return chrome_context.get('activeElement', {}).get('value', '')
-    return '' 
+    if chrome_context.get("activeElement", {}).get("isContentEditable"):
+        return chrome_context.get("activeElementValue", "")
+    elif chrome_context.get("activeElement", {}).get("isTextInput"):
+        return chrome_context.get("activeElement", {}).get("value", "")
+    return ""

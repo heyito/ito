@@ -31,6 +31,8 @@ setuptools = "*"
 wheel = "*"
 aiortc = "^1.11.0"
 aiohttp = "^3.11.18"
+webrtcvad = "^2.0.10"
+dependency-injector = "^4.46.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

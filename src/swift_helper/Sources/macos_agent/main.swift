@@ -161,14 +161,27 @@ func captureOCRText(focusedWindow: AXUIElement) -> [[String: Any]] {
 
     // Capture just the window image, not the full screen
     guard let windowImage = CGWindowListCreateImage(
-        windowRect,
+        windowRect, // Rect is in points
         [.optionOnScreenOnly],
         kCGNullWindowID,
-        [.bestResolution, .boundsIgnoreFraming]
+        [.bestResolution, .boundsIgnoreFraming] // Image result is in pixels
     ) else {
         print("Failed to capture window image")
-        return result
+        return [] // Return empty array on failure
     }
+
+    // Determine the scale factor
+    // Find the screen containing the window's top-left corner
+    let mainScreenScale = NSScreen.main?.backingScaleFactor ?? 1.0 // Fallback
+    var windowScreenScale = mainScreenScale
+    for screen in NSScreen.screens {
+        if screen.frame.contains(windowRect.origin) { // screen.frame is also in points
+            windowScreenScale = screen.backingScaleFactor
+            break
+        }
+    }
+    // Note: A window could span multiple screens with different scales.
+    // Using the scale of the screen containing the origin is a reasonable heuristic.
 
     let requestHandler = VNImageRequestHandler(cgImage: windowImage, options: [:])
     let request = VNRecognizeTextRequest()
@@ -192,24 +205,31 @@ func captureOCRText(focusedWindow: AXUIElement) -> [[String: Any]] {
     for observation in observations {
         guard let candidate = observation.topCandidates(1).first else { continue }
         let text = candidate.string
-        let boundingBox = observation.boundingBox
+        let boundingBox = observation.boundingBox // Normalized, bottom-left origin
 
-        let localX = boundingBox.minX * windowImageWidth
-        let localY = (1 - boundingBox.maxY) * windowImageHeight
-        let localWidth = boundingBox.width * windowImageWidth
-        let localHeight = boundingBox.height * windowImageHeight
+        // Calculate dimensions in PIXELS relative to the image
+        let localX_pixels = boundingBox.minX * windowImageWidth
+        let localY_pixels = (1 - boundingBox.maxY) * windowImageHeight // Top-left origin now
+        let localWidth_pixels = boundingBox.width * windowImageWidth
+        let localHeight_pixels = boundingBox.height * windowImageHeight
 
-        // ✅ Coordinates are now directly aligned with AX-origin
-        let globalX = Int(windowOrigin.x + localX)
-        let globalY = Int(windowOrigin.y + localY)
+        // Convert PIXEL offsets within the image to POINT offsets
+        let localX_points = localX_pixels / windowScreenScale
+        let localY_points = localY_pixels / windowScreenScale
+        let localWidth_points = localWidth_pixels / windowScreenScale
+        let localHeight_points = localHeight_pixels / windowScreenScale
+
+        // Add POINT offsets to the window's POINT origin to get global POINT coordinates
+        let globalX = Int(windowOrigin.x + localX_points)
+        let globalY = Int(windowOrigin.y + localY_points)
 
         result.append([
             "text": text,
             "bounds": [
                 "x": globalX,
                 "y": globalY,
-                "width": Int(localWidth),
-                "height": Int(localHeight)
+                "width": Int(localWidth_points),
+                "height": Int(localHeight_points)
             ]
         ])
     }

@@ -1,4 +1,4 @@
-.PHONY: all install clean lint format test build shell
+.PHONY: all install clean lint format test build shell swift
 
 # -------------------------------------------------------------------
 # Install all dependencies (default)
@@ -33,3 +33,7 @@ test:
 # Drop into a poetry shell
 shell:
 	poetry shell
+
+# Build swift helpers
+swift: 
+	swift build --package-path src/swift_helper -c release --arch arm64 --arch x86_64

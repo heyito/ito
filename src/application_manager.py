@@ -221,7 +221,12 @@ class ApplicationManager(QObject):
             # Start status queue monitor thread
             self._start_status_queue_monitor()
 
+            # Emit STARTED status
             self.status_changed.emit(StatusMessage.STARTED.value)
+            
+            # Add a small delay to ensure the application is fully initialized
+            QTimer.singleShot(1000, lambda: self.status_changed.emit(StatusMessage.READY.value))
+            
             return True
 
         except Exception as e:

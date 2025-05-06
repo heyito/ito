@@ -2,7 +2,7 @@ import os
 import sys
 import traceback
 
-from PyQt6.QtCore import QPointF, QSettings, Qt
+from PyQt6.QtCore import QPointF, QSettings, Qt, QTimer
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
     QStackedWidget,
     QVBoxLayout,
     QWidget,
+    QFrame,
 )
 
 from src.application_manager import ApplicationManager
@@ -129,16 +130,18 @@ class HomeWindow(QMainWindow):
         # Add global stylesheet for macOS-style form elements
         self.setStyleSheet("""
             QMainWindow {
-                background: white;
+                background: #E05C5C;
+                font-family: "Inter";
             }
             
             /* Base input styles - minimal styling */
             QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
-                border: 1px solid #E5E5EA;
-                background: white;
+                border: 1px solid rgba(242, 228, 214, 0.3);
+                background: rgba(242, 228, 214, 0.1);
                 padding: 5px;
                 min-width: 200px;
-                color: #1C1C1E;
+                color: #F2E4D6;
+                font-family: "Inter";
             }
             
             /* Remove all spin buttons */
@@ -152,11 +155,12 @@ class HomeWindow(QMainWindow):
             
             /* ComboBox styling */
             QComboBox {
-                border: 1px solid #E5E5EA;
-                background: white;
+                border: 1px solid rgba(242, 228, 214, 0.3);
+                background: rgba(242, 228, 214, 0.1);
                 padding: 5px;
                 min-width: 200px;
-                color: #1C1C1E;
+                color: #F2E4D6;
+                font-family: "Inter";
             }
 
             QComboBox::drop-down {
@@ -167,78 +171,99 @@ class HomeWindow(QMainWindow):
             QComboBox::down-arrow {
                 width: 8px;
                 height: 8px;
-                background: #8E8E93;
+                background: #F2E4D6;
                 border-radius: 4px;
             }
                                       /* Style the dropdown popup frame/container */
             /* This QFrame holds the QAbstractItemView */
             QComboBox QFrame {
-                background-color: white;  /* Frame background */
-                border: 1px solid #E5E5EA;/* Apply border here */
+                background-color: #E05C5C;  /* Frame background */
+                border: 1px solid rgba(242, 228, 214, 0.3);/* Apply border here */
                 margin: 0px;              /* No margin */
                 padding: 0px;             /* No padding */
                 border-image: none;       /* Optional: Uncomment if desperate to reset native look */
+                font-family: "Inter";
             }
 
             /* Style the list view *inside* the frame */
             QComboBox QListView {
-                background-color: white; /* View background (can be white or transparent if frame bg works) */
-                color: #1C1C1E;                /* Default text color */
-                selection-background-color: #F2F2F7; /* Selection background */
-                selection-color: #1C1C1E;           /* Selection text color */
+                background-color: #E05C5C; /* View background (can be white or transparent if frame bg works) */
+                color: #F2E4D6;                /* Default text color */
+                selection-background-color: rgba(242, 228, 214, 0.2); /* Selection background */
+                selection-color: #F2E4D6;           /* Selection text color */
                 outline: 0px;                       /* No focus outline */
                 border: none;                       /* View itself has NO border (it's on the QFrame) */
                 padding: 0px;                       /* View itself has NO padding */
                 margin: 0px;                        /* View itself has NO margin */
+                font-family: "Inter";
             }
 
             /* Style the viewport *within* the list view - Often needed! */
             QComboBox QListView::viewport {
-                background-color: white;  /* Ensure viewport background is white */
+                background-color: #E05C5C;  /* Ensure viewport background is white */
                 border: none;             /* Ensure viewport has no border */
                 margin: 0px;
                 padding: 0px;
+                font-family: "Inter";
             }
 
             /* Style individual items */
             QComboBox QListView::item {
-                background-color: white; /* Use background-color consistently */
-                color: #1C1C1E;
+                background-color: #E05C5C; /* Use background-color consistently */
+                color: #F2E4D6;
                 border: none;
                 padding: 5px;             /* Padding *within* each item text area */
                 margin: 0px;              /* Ensure items don't have margins */
                 min-height: 20px; /* Optional: Ensure items have a minimum height */
+                font-family: "Inter";
             }
 
             /* Style selected items */
             QComboBox QListView::item:selected {
-                background-color: #F2F2F7;
-                color: #1C1C1E;
+                background-color: rgba(242, 228, 214, 0.2);
+                color: #F2E4D6;
             }
             
             /* Checkbox - minimal styling */
             QCheckBox {
                 spacing: 8px;
-                color: #1C1C1E;
+                color: #F2E4D6;
+                font-family: "Inter";
             }
             
             /* Menu panel */
             QWidget#menu_panel {
-                background-color: #F5F5F7;
+                background-color: #E05C5C;
+                font-family: "Inter";
             }
             
             /* Menu buttons - essential styling only */
             QPushButton#settings_button {
                 text-align: left;
-                padding: 8px 16px;
+                padding: 16px 24px;
                 border: none;
                 background-color: transparent;
-                color: #1C1C1E;
+                color: #F2E4D6;
+                font-size: 18px;
+                font-family: "Inter";
+                border-radius: 18px;
+                margin: 8px 16px 8px 8px;
+            }
+            
+            QPushButton#settings_button:hover {
+                background-color: rgba(242, 228, 214, 0.1);
             }
             
             QPushButton#settings_button:checked {
-                background-color: white;
-                color: #0A84FF;
+                background-color: rgba(242, 228, 214, 0.15);
+                color: #F2E4D6;
+                border-radius: 18px;
+                margin-left: 8px;
+                margin-right: 16px;
+            }
+            
+            QPushButton#settings_button:focus {
+                outline: none;
             }
             
             /* Action buttons - minimal styling */
@@ -246,39 +271,53 @@ class HomeWindow(QMainWindow):
                 padding: 8px 20px;
                 border: none;
                 border-radius: 6px;
-                color: white;
+                color: #E05C5C;
+                font-family: "Inter";
+                min-width: 120px;
             }
             
             QPushButton#save_button {
-                background-color: #0A84FF;
+                background-color: #F2E4D6;
+            }
+            
+            QPushButton#save_button:hover {
+                background-color: rgba(242, 228, 214, 0.8);
             }
             
             QPushButton#reset_button {
-                background-color: #FF3B30;
+                background-color: rgba(242, 228, 214, 0.5);
+            }
+            
+            QPushButton#reset_button:hover {
+                background-color: rgba(242, 228, 214, 0.7);
             }
 
             /* Form labels */
             QLabel {
-                color: #1C1C1E;
+                color: #F2E4D6;
+                font-family: "Inter";
             }
 
             /* Section headers */
             QLabel[isHeader="true"] {
                 font-size: 15px;
                 font-weight: 600;
-                color: #1C1C1E;
+                color: #F2E4D6;
                 margin-top: 24px;
                 margin-bottom: 8px;
+                font-family: "Inter";
             }
 
             /* Scroll area */
             QScrollArea {
                 border: none;
-                background: white;
+                background: transparent;
+                font-family: "Inter";
             }
 
             QWidget#scroll_content {
-                background: white;
+                background: transparent;
+                font-family: "Inter";
             }
         """)
 
@@ -367,7 +406,7 @@ class HomeWindow(QMainWindow):
         settings_title.setStyleSheet("""
             font-size: 24px;
             font-weight: 600;
-            color: #1C1C1E;
+            color: #F2E4D6;
             margin-bottom: 20px;
             border: none;
         """)
@@ -489,35 +528,42 @@ class HomeWindow(QMainWindow):
         # Save button
         save_button = QPushButton("Save Settings")
         save_button.setObjectName("save_button")  # Add object name for styling
+        save_button.setFixedWidth(120)  # Set fixed width
         save_button.clicked.connect(self.save_settings)
         button_layout.addWidget(save_button)
 
         # Reset button
         reset_button = QPushButton("Reset All")
         reset_button.setObjectName("reset_button")  # Add object name for styling
-        reset_button.setFixedWidth(120)
+        reset_button.setFixedWidth(120)  # Set fixed width
         reset_button.clicked.connect(self.reset_all_settings)
         button_layout.addWidget(reset_button)
         button_layout.addStretch()
 
         settings_layout.addWidget(button_container)
 
-        # Add status label at the bottom of the settings page
-        self.status_label = QLabel("Ready")
-        self.status_label.setStyleSheet("""
-            QLabel {
-                color: #8E8E93;
-                font-size: 13px;
-                margin-top: 20px;
-            }
-        """)
-        settings_layout.addWidget(self.status_label)
-
         # Add settings page to stacked widget
         self.stacked_widget.addWidget(self.settings_page)
 
-        # Add panels to main layout
-        main_layout.addWidget(menu_panel)
+        # --- Menu panel and divider container ---
+        menu_container = QWidget()
+        menu_container_layout = QVBoxLayout(menu_container)
+        menu_container_layout.setContentsMargins(0, 24, 0, 24)  # Add top/bottom margin
+        menu_container_layout.setSpacing(0)
+        menu_container_layout.addWidget(menu_panel)
+        # Add vertical divider
+        divider = QFrame()
+        divider.setFrameShape(QFrame.Shape.VLine)
+        divider.setFixedWidth(1)
+        divider.setMinimumHeight(100)  # Add minimum height
+        divider.setStyleSheet("""
+            QFrame {
+                background-color: rgba(242, 228, 214, 0.3);
+                border: none;
+            }
+        """)
+        menu_container_layout.addWidget(divider)
+        main_layout.addWidget(menu_container)
         main_layout.addWidget(content_widget)
 
         # Load settings after UI is fully initialized
@@ -551,28 +597,27 @@ class HomeWindow(QMainWindow):
         self.close()
 
     def add_section_header(self, layout, text):
-        """Helper method to add styled section headers to the form"""
+        """Helper method to add styled section headers and a horizontal divider to the form"""
+        # Add horizontal divider before each section except the first
+        if layout.rowCount() > 0:
+            divider = QFrame()
+            divider.setFrameShape(QFrame.Shape.HLine)
+            divider.setFixedHeight(1)
+            divider.setStyleSheet("background: rgba(242, 228, 214, 0.3); border: none; margin-top: 16px; margin-bottom: 16px;")
+            layout.addRow(divider)
         header = QLabel(text)
         header.setStyleSheet("""
             font-size: 15px;
             font-weight: 600;
-            color: #1C1C1E;
+            color: #F2E4D6;
             margin-top: 24px;
             margin-bottom: 8px;
+            font-family: "Inter";
         """)
         layout.addRow(header)
 
     def handle_error(self, error_msg: str) -> None:
         """Handle error messages from ApplicationManager"""
-        self.status_label.setText(f"Error: {error_msg}")
-        self.status_label.setStyleSheet("""
-            QLabel {
-                color: #FF3B30;
-                font-size: 13px;
-                margin-top: 20px;
-            }
-        """)
-        
         # Show error in message box if it's a critical error
         if "Failed to start application" in error_msg:
             QMessageBox.critical(
@@ -583,14 +628,7 @@ class HomeWindow(QMainWindow):
 
     def handle_status_change(self, status: str) -> None:
         """Handle status updates from ApplicationManager"""
-        self.status_label.setText(status)
-        self.status_label.setStyleSheet("""
-            QLabel {
-                color: #8E8E93;
-                font-size: 13px;
-                margin-top: 20px;
-            }
-        """)
+        pass  # Status is now handled by StatusWindow
 
     def save_settings(self):
         """Save all settings to QSettings"""
@@ -659,14 +697,13 @@ class HomeWindow(QMainWindow):
                 
             # Save settings
             if self.app_manager.save_settings(new_settings):
-                self.status_label.setText("Settings saved successfully")
-                self.status_label.setStyleSheet("""
-                    QLabel {
-                        color: #34C759;
-                        font-size: 13px;
-                        margin-top: 20px;
-                    }
-                """)
+                # Find the save button and update its text
+                for widget in self.findChildren(QPushButton):
+                    if widget.text() == "Save Settings":
+                        widget.setText("Saved")
+                        # Create a timer to reset the text after 3 seconds
+                        QTimer.singleShot(3000, lambda: widget.setText("Save Settings"))
+                        break
                 
                 # Start application if not running
                 if not self.app_manager.app_thread or not self.app_manager.app_thread.is_alive():

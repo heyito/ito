@@ -114,64 +114,73 @@ class OnboardingWindow(QMainWindow):
         # --- Qt Styling ---
         self.setStyleSheet("""
             QMainWindow { 
-                background-color: #ffffff;
+                background-color: #E05C5C;
+                font-family: "Inter";
             }
             QWidget#main_widget { 
                 background-color: transparent;
+                font-family: "Inter";
             }
             QLabel { 
-                color: #333333; 
+                color: #F2E4D6; 
                 background-color: transparent;
+                font-family: "Inter";
             }
             QPushButton {
-                background-color: #0A84FF;
-                color: white;
+                background-color: #F2E4D6;
+                color: #E05C5C;
                 border: none;
                 padding: 8px 20px;
                 border-radius: 6px;
                 font-size: 13px;
                 font-weight: 500;
+                font-family: "Inter";
             }
             QPushButton:hover {
-                background-color: #007AFF;
+                background-color: rgba(242, 228, 214, 0.8);
             }
             QPushButton:disabled {
-                background-color: #E5E5EA;
-                color: #8E8E93;
+                background-color: rgba(242, 228, 214, 0.3);
+                color: rgba(224, 92, 92, 0.5);
             }
             QProgressBar {
                 border: none;
                 border-radius: 3px;
                 text-align: center;
-                background-color: #F2F2F7;
+                background-color: rgba(242, 228, 214, 0.2);
                 max-height: 6px;
                 margin: 0px 2px;
+                font-family: "Inter";
             }
             QProgressBar::chunk {
-                background-color: #34C759;
+                background-color: #F2E4D6;
                 border-radius: 3px;
             }
             QWidget#permission_row {
-                background-color: #F2F2F7;
+                background-color: rgba(242, 228, 214, 0.1);
                 border-radius: 10px;
                 min-height: 60px;
                 padding: 0px;
                 margin: 0px;
+                font-family: "Inter";
             }
             QLabel#permission_status {
                 font-size: 13px;
                 font-weight: 500;
                 padding-right: 16px;
+                font-family: "Inter";
             }
             QLabel#permission_text {
                 font-size: 15px;
-                color: #000000;
+                color: #F2E4D6;
                 font-weight: 400;
+                font-family: "Inter";
             }
             QLabel#permission_icon {
                 font-size: 22px;
                 min-width: 30px;
                 margin-left: 16px;
+                font-family: "Inter";
             }
         """)
 
@@ -271,7 +280,7 @@ class OnboardingWindow(QMainWindow):
         title_label.setStyleSheet("""
             font-size: 32px; 
             font-weight: bold; 
-            color: #2c3e50;
+            color: #F2E4D6;
             margin-top: 10px; 
             margin-bottom: 5px;
         """)
@@ -282,7 +291,7 @@ class OnboardingWindow(QMainWindow):
         desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         desc_label.setStyleSheet("""
             font-size: 16px; 
-            color: #7f8c8d;
+            color: rgba(242, 228, 214, 0.8);
             margin-bottom: 30px;
         """)
         self.layout.addWidget(desc_label)
@@ -292,8 +301,8 @@ class OnboardingWindow(QMainWindow):
         start_button.clicked.connect(self.show_permission_screen)
         start_button.setStyleSheet("""
             QPushButton {
-                background-color: #3498db;
-                color: white;
+                background-color: #F2E4D6;
+                color: #E05C5C;
                 border: none;
                 padding: 12px 30px;
                 border-radius: 5px;
@@ -301,7 +310,7 @@ class OnboardingWindow(QMainWindow):
                 font-weight: bold;
             }
             QPushButton:hover {
-                background-color: #2980b9;
+                background-color: rgba(242, 228, 214, 0.8);
             }
         """)
         self.layout.addWidget(start_button, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -317,7 +326,7 @@ class OnboardingWindow(QMainWindow):
         title_label.setStyleSheet("""
             font-size: 28px; 
             font-weight: 600; 
-            color: #000000;
+            color: #F2E4D6;
             margin-top: 40px; 
             margin-bottom: 8px;
             letter-spacing: -0.5px;
@@ -329,7 +338,7 @@ class OnboardingWindow(QMainWindow):
         desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         desc_label.setStyleSheet("""
             font-size: 15px; 
-            color: #666666;
+            color: rgba(242, 228, 214, 0.8);
             margin-bottom: 40px;
         """)
         self.layout.addWidget(desc_label)
@@ -370,7 +379,7 @@ class OnboardingWindow(QMainWindow):
         # Start status as "Checking..."
         self.mic_status = QLabel("Checking...")
         self.mic_status.setObjectName("permission_status")
-        self.mic_status.setStyleSheet("color: #FF3B30;")
+        self.mic_status.setStyleSheet("color: rgba(242, 228, 214, 0.5);")
         mic_layout.addWidget(self.mic_status)
         
         mic_button = QPushButton("Grant Access")
@@ -398,7 +407,7 @@ class OnboardingWindow(QMainWindow):
         # Start status as "Checking..."
         self.acc_status = QLabel("Checking...")
         self.acc_status.setObjectName("permission_status")
-        self.acc_status.setStyleSheet("color: #FF3B30;")
+        self.acc_status.setStyleSheet("color: rgba(242, 228, 214, 0.5);")
         acc_layout.addWidget(self.acc_status)
         
         acc_button = QPushButton("Grant Access")
@@ -412,13 +421,13 @@ class OnboardingWindow(QMainWindow):
 
         # Continue Button
         self.continue_button = QPushButton("Continue")
-        self.continue_button.clicked.connect(self.check_all_permissions_and_proceed) # Changed connection
+        self.continue_button.clicked.connect(self.check_all_permissions_and_proceed)
         self.continue_button.setEnabled(False)
         self.continue_button.setFixedWidth(200)
         self.continue_button.setStyleSheet("""
             QPushButton {
-                background-color: #34C759;
-                color: white;
+                background-color: #F2E4D6;
+                color: #E05C5C;
                 border: none;
                 padding: 12px 0px;
                 border-radius: 6px;
@@ -427,11 +436,11 @@ class OnboardingWindow(QMainWindow):
                 margin-top: 40px;
             }
             QPushButton:hover {
-                background-color: #30B955;
+                background-color: rgba(242, 228, 214, 0.8);
             }
             QPushButton:disabled {
-                background-color: #E5E5EA;
-                color: #8E8E93;
+                background-color: rgba(242, 228, 214, 0.3);
+                color: rgba(224, 92, 92, 0.5);
             }
         """)
         self.layout.addWidget(self.continue_button, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -452,14 +461,14 @@ class OnboardingWindow(QMainWindow):
         
         if permission == 'microphone':
             self.mic_status.setText("Granted" if is_granted else "Not Granted")
-            self.mic_status.setStyleSheet("color: #34C759;" if is_granted else "color: #FF3B30;")
+            self.mic_status.setStyleSheet("color: #F2E4D6;" if is_granted else "color: rgba(242, 228, 214, 0.5);")
         elif permission == 'accessibility':
             self.acc_status.setText("Granted" if is_granted else "Not Granted")
-            self.acc_status.setStyleSheet("color: #34C759;" if is_granted else "color: #FF3B30;")
+            self.acc_status.setStyleSheet("color: #F2E4D6;" if is_granted else "color: rgba(242, 228, 214, 0.5);")
 
         if status_label:
             status_label.setText("Granted" if is_granted else "Not Granted")
-            status_label.setStyleSheet("color: #34C759;" if is_granted else "color: #FF3B30;")
+            status_label.setStyleSheet("color: #F2E4D6;" if is_granted else "color: rgba(242, 228, 214, 0.5);")
 
         if grant_button:
             # Optionally disable/hide grant button if permission is granted
@@ -520,7 +529,7 @@ class OnboardingWindow(QMainWindow):
         title_label.setStyleSheet("""
             font-size: 32px; 
             font-weight: bold; 
-            color: #2c3e50;
+            color: #F2E4D6;
             margin-top: 20px; 
             margin-bottom: 10px;
         """)
@@ -531,7 +540,7 @@ class OnboardingWindow(QMainWindow):
         desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         desc_label.setStyleSheet("""
             font-size: 16px; 
-            color: #7f8c8d;
+            color: rgba(242, 228, 214, 0.8);
             margin-bottom: 30px;
         """)
         self.layout.addWidget(desc_label)
@@ -541,8 +550,8 @@ class OnboardingWindow(QMainWindow):
         start_button.clicked.connect(self.complete_setup)
         start_button.setStyleSheet("""
             QPushButton {
-                background-color: #2ecc71;
-                color: white;
+                background-color: #F2E4D6;
+                color: #E05C5C;
                 border: none;
                 padding: 12px 30px;
                 border-radius: 5px;
@@ -550,7 +559,7 @@ class OnboardingWindow(QMainWindow):
                 font-weight: bold;
             }
             QPushButton:hover {
-                background-color: #27ae60;
+                background-color: rgba(242, 228, 214, 0.8);
             }
         """)
         self.layout.addWidget(start_button, alignment=Qt.AlignmentFlag.AlignCenter)

@@ -1,7 +1,29 @@
 import sys
+from enum import Enum, auto
 from PyQt6.QtCore import Qt, QPoint
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout
 from PyQt6.QtGui import QColor, QPalette
+
+class StatusMessage(Enum):
+    """Enum for all possible status messages in the application."""
+    READY = "Ready"
+    STARTING = "Starting background application thread..."
+    STARTED = "Application thread started. Listening for hotkey."
+    STOPPED = "Application stopped"
+    RESTARTING = "Restarting application..."
+    SETTINGS_SAVED = "Settings saved."
+    SETTINGS_SAVED_RESTARTING = "Settings saved. Restarting application..."
+    HOTKEY_IGNORED = "Hotkey ignored: Application not running."
+    HOTKEY_PRESSED = "Hotkey pressed, initiating command..."
+    PROCESSING_BUSY = "Processing busy, please wait..."
+    ALREADY_RECORDING = "Already recording..."
+    LISTENING = "Listening for hotkey '{hotkey}'..."
+    LISTENER_FAILED = "Hotkey listener failed to start!"
+    ERROR = "Application error occurred"
+
+    def format(self, **kwargs) -> str:
+        """Format the status message with any provided keyword arguments."""
+        return self.value.format(**kwargs)
 
 if sys.platform == 'darwin':
     try:
@@ -46,9 +68,10 @@ class StatusWindow(QWidget):
         # Create layout
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 8, 12, 8)
+        layout.setSpacing(0)  # Remove spacing between elements
         
         # Create status label
-        self.status_label = QLabel("Ready")
+        self.status_label = QLabel(StatusMessage.READY.value)
         self.status_label.setStyleSheet("""
             QLabel {
                 color: #8E8E93;
@@ -60,6 +83,10 @@ class StatusWindow(QWidget):
             }
         """)
         layout.addWidget(self.status_label)
+        
+        # Set fixed size for the window
+        self.setFixedWidth(300)  # Set a reasonable width
+        self.adjustSize()  # Adjust height based on content
         
         # Apply native macOS window behavior if available
         if _objc_available:
@@ -105,6 +132,10 @@ class StatusWindow(QWidget):
                 import traceback
                 traceback.print_exc()
         
+        # Ensure layout is complete and window is properly sized
+        self.layout().activate()
+        self.adjustSize()
+        
         # Position window at bottom center of screen
         self.update_position()
         
@@ -114,12 +145,29 @@ class StatusWindow(QWidget):
         if screen:
             screen_geometry = screen.geometry()
             window_geometry = self.geometry()
+            
+            # Calculate x position (center horizontally)
             x = (screen_geometry.width() - window_geometry.width()) // 2
-            y = screen_geometry.height() - window_geometry.height() - 20  # 20px from bottom
+            
+            # Calculate y position (just above dock)
+            # Dock height is typically 60-70px, plus we want a small margin
+            dock_height = 70
+            margin = 10
+            y = screen_geometry.height() - window_geometry.height() - dock_height - margin
+            
+            print(f"Window geometry: {window_geometry}")
+            print(f"Screen geometry: {screen_geometry}")
+            print(f"Calculated y position: {y}")
+            print(f"Dock height: {dock_height}")
+            print(f"Margin: {margin}")
+            print(f"X position: {x}")
+            
             self.move(x, y)
     
-    def update_status(self, status: str, is_error: bool = False):
+    def update_status(self, status: str | StatusMessage, is_error: bool = False):
         """Update the status text and style"""
+        if isinstance(status, StatusMessage):
+            status = status.value
         self.status_label.setText(status)
         if is_error:
             self.status_label.setStyleSheet("""

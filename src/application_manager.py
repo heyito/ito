@@ -17,7 +17,7 @@ from src.discrete_audio_application import (
     DiscreteAudioApplication,
 )
 from src.ui.keyboard_manager import KeyboardManager
-from src.ui.status_window import StatusWindow
+from src.ui.status_window import StatusWindow, StatusMessage
 
 # --- Add pynput imports ---
 try:
@@ -163,10 +163,10 @@ class ApplicationManager(QObject):
 
             # If application is running, restart it to apply new settings
             if self.app_thread and self.app_thread.is_alive():
-                self.status_changed.emit("Settings saved. Restarting application...")
+                self.status_changed.emit(StatusMessage.SETTINGS_SAVED_RESTARTING.value)
                 self.restart_application()
             else:
-                self.status_changed.emit("Settings saved.")
+                self.status_changed.emit(StatusMessage.SETTINGS_SAVED.value)
 
             return True
 
@@ -180,13 +180,13 @@ class ApplicationManager(QObject):
         """Start the application background thread and the hotkey listener."""
         if not _pynput_available:
             self.error_occurred.emit("Pynput library not found. Hotkeys disabled.")
-            self.status_changed.emit("Application cannot start (missing pynput).")
+            self.status_changed.emit(StatusMessage.ERROR.value)
             return False
 
         # Prevent double-start
         if self.app_thread and self.app_thread.is_alive():
             print("Application thread already running. Not starting again.")
-            self.status_changed.emit("Application already running.")
+            self.status_changed.emit(StatusMessage.STARTED.value)
             return False
 
         try:
@@ -209,7 +209,7 @@ class ApplicationManager(QObject):
             self._stop_app_thread_event = threading.Event()
 
             # Start application in a separate thread
-            self.status_changed.emit("Starting background application thread...")
+            self.status_changed.emit(StatusMessage.STARTING.value)
             self.app_thread = threading.Thread(
                 target=self._run_application_thread,
                 args=(config, self._stop_app_thread_event),
@@ -221,14 +221,14 @@ class ApplicationManager(QObject):
             # Start status queue monitor thread
             self._start_status_queue_monitor()
 
-            self.status_changed.emit("Application thread started. Listening for hotkey.")
+            self.status_changed.emit(StatusMessage.STARTED.value)
             return True
 
         except Exception as e:
             error_msg = f"Failed to start application: {str(e)}"
             print(f"{error_msg}\n{traceback.format_exc()}")
             self.error_occurred.emit(error_msg)
-            self.status_changed.emit("Application failed to start.")
+            self.status_changed.emit(StatusMessage.ERROR.value)
             self.stop_application()
             return False
 
@@ -293,12 +293,12 @@ class ApplicationManager(QObject):
             print(f"Error cleaning up multiprocessing children: {e}")
 
         if stopped_thread:
-            self.status_changed.emit("Application stopped")
+            self.status_changed.emit(StatusMessage.STOPPED.value)
             print("Application stop sequence complete.")
 
     def restart_application(self) -> bool:
         """Restart the application with current settings"""
-        self.status_changed.emit("Restarting application...")
+        self.status_changed.emit(StatusMessage.RESTARTING.value)
         self.stop_application()
         # Add a small delay to ensure resources are released if needed
         # time.sleep(0.2)
@@ -334,53 +334,12 @@ class ApplicationManager(QObject):
             print(error_msg)
             # Use signal to report error back to the main thread's UI
             self.error_occurred.emit(f"Background Thread Error: {str(e)}")
-            self.status_changed.emit("Application error occurred")
+            self.status_changed.emit(StatusMessage.ERROR.value)
         finally:
             print("Background application thread finished.")
             # Clear the instance reference from the manager when the thread truly exits
             self.app_instance = None
 
-
-    # --- New methods for hotkey handling ---
-    def setup_hotkey_listener(self) -> None:
-        """
-        Sets up the global hotkey listener ONCE.
-        """
-        if not _pynput_available:
-            print("Cannot setup listener: Pynput not available.")
-            return
-        if self._listener_started:
-            print("Hotkey listener already started (singleton).")
-            return
-        if not self._target_hotkey:
-            print(f"Cannot setup listener: Invalid hotkey '{self._hotkey_str}'.")
-            self.error_occurred.emit(f"Invalid hotkey '{self._hotkey_str}', listener disabled.")
-            return
-
-        print(f"Setting up hotkey listener for: {self._hotkey_str} ({self._target_hotkey}) on main thread.")
-        try:
-            self.hotkey_listener = keyboard.Listener(on_press=self._on_keyboard_press)
-            self.hotkey_listener.start()
-            self._listener_started = True
-            print(f"Hotkey listener started successfully for '{self._hotkey_str}'.")
-            self.status_changed.emit(f"Listening for hotkey '{self._hotkey_str}'...")
-        except Exception as e:
-            error_msg = f"Failed to start hotkey listener: {e}"
-            print(f"{error_msg}\n{traceback.format_exc()}")
-            self.error_occurred.emit(error_msg + " (Check Accessibility/Input Monitoring permissions)")
-            self.status_changed.emit("Hotkey listener failed to start!")
-            self.hotkey_listener = None
-
-    def _on_keyboard_press(self, key: keyboard.Key | keyboard.KeyCode | None) -> None:
-        """
-        Internal callback for pynput listener. Runs in pynput's thread.
-        Emits a Qt signal to be handled on the main thread.
-        """
-        # Always check the current target hotkey (which may change)
-        if key == self._target_hotkey:
-            self.hotkey_pressed.emit(self._hotkey_str)
-
-    @pyqtSlot(str)
     def _handle_hotkey_press(self, hotkey_name: str) -> None:
         """
         Handles the hotkey_pressed signal. Runs on the main Qt thread.
@@ -391,49 +350,40 @@ class ApplicationManager(QObject):
         # Check if the background application instance exists and is running
         if not self.app_instance or not self.app_thread or not self.app_thread.is_alive():
             print(f"[{timestamp}] Hotkey '{hotkey_name}' detected, but application is not running.")
-            # Optional: Provide user feedback (e.g., system beep or UI status)
-            self.status_changed.emit("Hotkey ignored: Application not running.")
+            self.status_changed.emit(StatusMessage.HOTKEY_IGNORED.value)
             return
 
         # Access state flags from app_instance carefully.
-        # Reading bool flags might be okay without locks if updates are infrequent
-        # and handled carefully within the app_instance's locks.
-        # If issues arise, use thread-safe getters or put status checks on the queue too.
         try:
             is_currently_processing = self.app_instance.is_processing
             is_currently_recording = self.app_instance.is_recording
         except AttributeError:
-             # app_instance might be in a state of flux during startup/shutdown
              print(f"[{timestamp}] Hotkey '{hotkey_name}' detected, but app instance state inaccessible.")
              return
-
 
         # Prevent queuing multiple start actions if already busy
         if is_currently_processing:
             print(f"[{timestamp}] Hotkey '{hotkey_name}' detected, but PROCESSING is busy.")
-            # self.status_changed.emit("Processing busy, please wait...") # Optional UI feedback
+            self.status_changed.emit(StatusMessage.PROCESSING_BUSY.value)
             return
         if is_currently_recording:
             print(f"[{timestamp}] Hotkey '{hotkey_name}' detected, but already RECORDING.")
-            # self.status_changed.emit("Already recording...") # Optional UI feedback
+            self.status_changed.emit(StatusMessage.ALREADY_RECORDING.value)
             return
 
         print(f"[{timestamp}] Hotkey '{hotkey_name}' detected by manager. Queuing action for background app.")
         # Safely put the action onto the background thread's queue
         try:
              self.app_instance.action_queue.put(_ACTION_START_RECORDING)
-             self.status_changed.emit("Hotkey pressed, initiating command...") # Update UI
+             self.status_changed.emit(StatusMessage.HOTKEY_PRESSED.value)
         except AttributeError:
              print(f"[{timestamp}] Error: Cannot queue action, app_instance or action_queue missing.")
         except Exception as e:
              print(f"[{timestamp}] Error queuing action: {e}")
              self.error_occurred.emit(f"Error sending action to background app: {e}")
 
-    # --- End new methods ---
-
     def validate_settings(self, new_settings: dict[str, Any]) -> tuple[bool, str]:
         """Validate new settings and return (is_valid, error_message)"""
-        # (Keep this method as is)
         try:
             # Check OpenAI settings
             if not new_settings['OpenAI']['api_key']:
@@ -457,7 +407,6 @@ class ApplicationManager(QObject):
             hotkey = new_settings.get('Hotkeys', {}).get('start_recording_hotkey')
             if not hotkey:
                  return False, "Start Recording Hotkey cannot be empty."
-            # Further validation could parse the hotkey string here if needed
 
             return True, ""
 

@@ -99,7 +99,6 @@ class StreamingAudioApplication(ApplicationInterface):
         """
         self._print_initial_info()
         try:
-            self._setup_hotkey_listener()
             self._start_asyncio_loop()
             self._run_event_loop()
         except Exception as e:
@@ -171,32 +170,6 @@ class StreamingAudioApplication(ApplicationInterface):
         self.asyncio_loop = None
         self.asyncio_loop_thread = None
         print("Asyncio loop stopped.")
-
-
-    def _setup_hotkey_listener(self) -> None:
-        """Registers the global hotkey listener."""
-        hotkey_str = self.config.start_recording_hotkey
-        print(f"Setting up hotkey: {hotkey_str}")
-        try:
-            # Define the callback for key press events
-            def on_press_wrapper(key):
-                self._on_keyboard_press(key)
-
-            # Create and start the listener in a non-blocking way
-            listener = keyboard.Listener(on_press=on_press_wrapper)
-            listener.start()
-            self.hotkey_listener = listener # Store the listener instance
-            print(f"Hotkey '{hotkey_str}' registration initiated.")
-            # Note: Listener runs in its own thread managed by pynput.
-
-        except Exception as e:
-            # Catch a broad exception range as pynput setup can fail for various reasons
-            print(f"\nERROR setting hotkey '{hotkey_str}': {e}")
-            print("This might be due to permissions issues (e.g., macOS Accessibility/Input Monitoring, Wayland).")
-            print("Try checking System Settings > Privacy & Security.")
-            print("Running with elevated privileges (sudo/Administrator) might be needed but use with caution.")
-            # Stop the application if the hotkey is critical
-            raise RuntimeError(f"Failed to set up hotkey listener for '{hotkey_str}'") from e
 
     def _on_keyboard_press(self, key: keyboard.Key | keyboard.KeyCode | None) -> None:
         """

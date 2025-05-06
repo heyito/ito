@@ -11,11 +11,8 @@ from typing import Any, Dict, Optional, Tuple
 from PyQt6.QtCore import QObject, QSettings, pyqtSignal, pyqtSlot, QTimer
 from PyQt6.QtWidgets import QApplication
 
+from src.application_interface import ApplicationInterface
 from src.containers import Container
-from src.discrete_audio_application import (
-    _ACTION_START_RECORDING,
-    DiscreteAudioApplication,
-)
 from src.ui.keyboard_manager import KeyboardManager
 from src.ui.status_window import StatusWindow, StatusMessage
 
@@ -44,7 +41,7 @@ class ApplicationManager(QObject):
 
         self.container = Container()
         self.app_thread: threading.Thread | None = None
-        self.app_instance: DiscreteAudioApplication | None = None
+        self.app_instance: ApplicationInterface | None = None
         self.error_queue = queue.Queue()
         self.status_queue = queue.Queue()
 
@@ -265,6 +262,11 @@ class ApplicationManager(QObject):
         else:
             print("No background application thread to stop.")
 
+        # Stop asyncio loop if streaming mode might have used it
+        if hasattr(self.container, 'asyncio_loop_manager'):
+             print("Stopping asyncio loop manager...")
+             self.container.asyncio_loop_manager().stop_loop()
+
         # Clear queues
         print("Clearing queues...")
         while not self.error_queue.empty():
@@ -301,6 +303,20 @@ class ApplicationManager(QObject):
             self.status_changed.emit(StatusMessage.STOPPED.value)
             print("Application stop sequence complete.")
 
+    def closeEvent(self, event):
+        """Handle window close event"""
+        print("ApplicationManager closeEvent: Stopping application...")
+        self.stop_application() # This now stops asyncio loop too
+        # Clean up keyboard manager
+        print("ApplicationManager closeEvent: Cleaning up keyboard manager...")
+        self.keyboard_manager.cleanup()
+        # Optional: Explicitly shutdown container resources if needed
+        # print("ApplicationManager closeEvent: Shutting down container...")
+        # self.container.shutdown_resources() # If using resource providers
+        print("ApplicationManager closeEvent: Calling super...")
+        super().closeEvent(event)
+        print("ApplicationManager closeEvent: Finished.")
+    
     def restart_application(self) -> bool:
         """Restart the application with current settings"""
         self.status_changed.emit(StatusMessage.RESTARTING.value)
@@ -358,29 +374,11 @@ class ApplicationManager(QObject):
             self.status_changed.emit(StatusMessage.HOTKEY_IGNORED.value)
             return
 
-        # Access state flags from app_instance carefully.
-        try:
-            is_currently_processing = self.app_instance.is_processing
-            is_currently_recording = self.app_instance.is_recording
-        except AttributeError:
-             print(f"[{timestamp}] Hotkey '{hotkey_name}' detected, but app instance state inaccessible.")
-             return
-
-        # Prevent queuing multiple start actions if already busy
-        if is_currently_processing:
-            print(f"[{timestamp}] Hotkey '{hotkey_name}' detected, but PROCESSING is busy.")
-            self.status_changed.emit(StatusMessage.PROCESSING_BUSY.value)
-            return
-        if is_currently_recording:
-            print(f"[{timestamp}] Hotkey '{hotkey_name}' detected, but already RECORDING.")
-            self.status_changed.emit(StatusMessage.ALREADY_RECORDING.value)
-            return
-
         print(f"[{timestamp}] Hotkey '{hotkey_name}' detected by manager. Queuing action for background app.")
         # Safely put the action onto the background thread's queue
         try:
-             self.app_instance.action_queue.put(_ACTION_START_RECORDING)
-             self.status_changed.emit(StatusMessage.HOTKEY_PRESSED.value)
+             self.app_instance.trigger_interaction()
+             self.status_changed.emit("Hotkey pressed, initiating command...") # Update UI
         except AttributeError:
              print(f"[{timestamp}] Error: Cannot queue action, app_instance or action_queue missing.")
         except Exception as e:

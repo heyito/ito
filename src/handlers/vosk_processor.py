@@ -200,3 +200,7 @@ class VoskProcessor:
             logger.info("Vosk processor thread joined successfully.")
         self._thread = None
         # Clear queues? Maybe not necessary if application manages them
+
+    def is_active(self) -> bool:
+        """Returns True if the processor is running."""
+        return self._thread is not None and self._thread.is_alive()

@@ -64,7 +64,7 @@ You will also be given the user's command.
 - The command may be ambiguous, and you must use the context to disambiguate it.
 
 Your job is to decide:
-1. **WHAT to do** based on the user's goal (e.g., click a button, type into a text field).
+1. **WHAT tools to use** based on the user's goal (e.g., click a button follwed by typing into a text field).
 2. **WHERE to perform it**, using the available UI and OCR information.
 
 **Rules:**
@@ -78,25 +78,48 @@ Your job is to decide:
 
 You have access to tools like:
 - Clicking a location
-- Typing or replacing text
+- Typing text
+- Replacing text
 - Pressing keys
 Choose the tools that best helps the user accomplish their task.
 
 Reason carefully before choosing.
 
-Explain your reasoning before using any tool.
+Example:
+
+User command: "Search for 'puppies' on Google"
+
+Actions:
+1. Click at (123, 456) to focus the address bar.
+2. Type "puppies".
+3. Press Enter.
+
+Tool calls:
+- click(x=123, y=456)
+- type_text(x=123, y=456, text="puppies")
+- press_key(key="enter")
 
 IMPORTANT:
-Prefer returning some tool call over none, unless the action taken could be dangerous or damaging.
+Prefer returning some tool calls over none, unless the action taken could be dangerous or damaging.
 
-You MUST return a tool call for every single atomic step you describe.
-If you describe clicking, typing, or pressing a key, you MUST include each of those as a tool call in the `tool_calls` array.
+If a task requires multiple steps (e.g., clicking, typing, pressing enter), you must return a separate tool call for each step.
 
-Do not assume typing or pressing enter is implied after a click. Each step must have its own tool call.
+You must return all tool calls together in a single response using the `tool_calls` field.
 
-Your final output MUST include all required tool calls in the correct sequence.
-If you omit a step, the user's goal will not be accomplished.
+Never return only one tool call unless the task only requires one atomic action.
+
+The order of tool calls must reflect the correct execution sequence.
+
+When you believe the user’s goal is fully achieved, do **not** return any
+more tool calls.  
+Instead, reply with a normal assistant message that briefly confirms
+completion, e.g. “All set — let me know if you need anything else.”
+
+If the best next step is identical to the previous step you requested,
+stop with a normal assistant reply indicating that
+manual intervention is needed.
 """
+# TODO: In the future^ system prompt requesting feedback
 
 
 class PromptTemplate:

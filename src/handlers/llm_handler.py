@@ -78,6 +78,7 @@ class LLMHandler:
         max_tokens: int = 5000,
         temperature: float = 0.7,
         tools: list[dict] = [],
+        messages_override: list[dict] = [],
     ):
         """
         Processes text using the specified LLM source.
@@ -123,9 +124,11 @@ class LLMHandler:
                 client = OpenAI(api_key=self.openai_api_key)
                 print(f"Sending request to OpenAI LLM API (model: {self.llm_model})...")
                 start_time = time.time()
+
                 response = client.chat.completions.create(
                     model=self.llm_model,
-                    messages=[
+                    messages=messages_override
+                    or [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": text},
                     ],
@@ -151,9 +154,7 @@ class LLMHandler:
                     else:
                         return ""
                 else:
-                    print(f"LLM returned: {response}")
-                    print(f"Tool calls: {response.choices[0].message.tool_calls}")
-                    return response.choices[0].message.tool_calls
+                    return response
 
             except OpenAIError as e:
                 print(f"OpenAI API Error during LLM processing: {e}")

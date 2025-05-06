@@ -104,6 +104,7 @@ llm_tools = [
 
 class MacOSapp:
     system_prompt = prompt_templates.MACOS_AX_OCR_SYSTEM_PROMPT
+    MAX_STEPS = 5
 
     def __init__(self, llm_handler: LLMHandler, macos_engine: MacOSEngine):
         self.llm_handler = llm_handler
@@ -127,50 +128,67 @@ class MacOSapp:
             context=processing_text, command=user_command
         )
 
-        response = self.llm_handler.process_text_with_llm(
-            text=full_llm_input,  # Pass combined context+command as user message content
-            system_prompt_override=self.system_prompt,  # Pass the system prompt from config
-            tools=llm_tools,
-        )
+        messages = [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": full_llm_input},
+        ]
 
-        if response is None:  # Check for None specifically
-            print("LLM processing failed or did not return content.")
-            # is_processing is released in finally block
-            return  # Exit processing early
+        # if response is None:  # Check for None specifically
+        #     print("LLM processing failed or did not return content.")
+        #     # is_processing is released in finally block
+        #     return  # Exit processing early
 
-        for tool_call in response:
-            tool_name = tool_call.function.name
-            args = json.loads(tool_call.function.arguments)
-            print(f"Tool call: {tool_name} with args: {args}")
-            time.sleep(0.4)  # Potentially going too fast right now
-            if tool_name == "click":
-                print(f"Clicking at {args['x']}, {args['y']}")
-                self.macos_engine.click_at_global(args["x"], args["y"])
-            elif tool_name == "type_text":
-                print(f"Typing at {args['x']}, {args['y']} with text: {args['text']}")
-                self.macos_engine.type_text_global(args["x"], args["y"], args["text"])
-            elif tool_name == "replace_text":
-                print(
-                    f"Replacing text at {args['x']}, {args['y']} with text: {args['text']}"
+        steps = 0
+        while steps < self.MAX_STEPS:
+            resp = self.llm_handler.process_text_with_llm(
+                text=full_llm_input,  # Pass combined context+command as user message content
+                system_prompt_override=self.system_prompt,  # Pass the system prompt from config
+                tools=llm_tools,
+                messages_override=messages,
+            )
+            tool_calls = resp.choices[0].message.tool_calls
+            if not tool_calls:
+                print(resp.choices[0].message.content or "done")
+                break
+
+            messages.append({"role": "assistant", "tool_calls": tool_calls})
+
+            tool_result_messages = []
+            for tool_call in tool_calls:
+                tool_name = tool_call.function.name
+                args = json.loads(tool_call.function.arguments)
+                if tool_name == "click":
+                    print(f"Clicking at {args['x']}, {args['y']}")
+                    self.macos_engine.click_at_global(args["x"], args["y"])
+                elif tool_name == "type_text":
+                    print(
+                        f"Typing at {args['x']}, {args['y']} with text: {args['text']}"
+                    )
+                    self.macos_engine.type_text_global(
+                        args["x"], args["y"], args["text"]
+                    )
+                elif tool_name == "replace_text":
+                    print(
+                        f"Replacing text at {args['x']}, {args['y']} with text: {args['text']}"
+                    )
+                    self.macos_engine.replace_text_at_global(
+                        args["x"], args["y"], args["text"]
+                    )
+                elif tool_name == "press_key":
+                    print(f"Pressing key: {args['key']}")
+                    self.macos_engine.press_key(args["key"])
+
+                tool_result_messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "name": tool_call.function.name,
+                        "content": "ok",
+                    }
                 )
-                self.macos_engine.replace_text_at_global(
-                    args["x"], args["y"], args["text"]
-                )
-            elif tool_name == "press_key":
-                print(f"Pressing key: {args['key']}")
-                self.macos_engine.press_key(args["key"])
 
-        # result = json.loads(response)
-
-        # print(f"Result: {result}")
-
-        # if result['action'] == 'none':
-        #     print("No action to take.")
-        #     return
-        # elif result['action'] == 'click':
-        #     self.macos_engine.click_at_global(result['x'], result['y'])
-        # elif result['action'] == 'type_text':
-        #     self.macos_engine.type_text_global(result['x'], result['y'], result['text'])
-        # else:
-        #     print(f"Unknown action: {result['action']}")
-        #     raise Exception(f"Unknown action: {result['action']}")
+            messages.extend(tool_result_messages)
+            new_context = f"New context: {self.get_context()}"
+            goal_reminder = f"\n\n(continue → {user_command})"
+            messages.append({"role": "user", "content": new_context + goal_reminder})
+            steps += 1

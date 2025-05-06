@@ -8,11 +8,8 @@ from typing import Any
 
 from PyQt6.QtCore import QObject, QSettings, pyqtSignal, pyqtSlot
 
+from src.application_interface import ApplicationInterface
 from src.containers import Container
-from src.discrete_audio_application import (
-    _ACTION_START_RECORDING,
-    DiscreteAudioApplication,
-)
 from src.ui.keyboard_manager import KeyboardManager
 
 # --- Add pynput imports ---
@@ -40,7 +37,7 @@ class ApplicationManager(QObject):
 
         self.container = Container()
         self.app_thread: threading.Thread | None = None
-        self.app_instance: DiscreteAudioApplication | None = None
+        self.app_instance: ApplicationInterface | None = None
         self.error_queue = queue.Queue()
         self.status_queue = queue.Queue()
 
@@ -247,6 +244,11 @@ class ApplicationManager(QObject):
         else:
             print("No background application thread to stop.")
 
+        # Stop asyncio loop if streaming mode might have used it
+        if hasattr(self.container, 'asyncio_loop_manager'):
+             print("Stopping asyncio loop manager...")
+             self.container.asyncio_loop_manager().stop_loop()
+
         # Clear queues
         print("Clearing queues...")
         while not self.error_queue.empty():
@@ -283,6 +285,20 @@ class ApplicationManager(QObject):
             self.status_changed.emit("Application stopped")
             print("Application stop sequence complete.")
 
+    def closeEvent(self, event):
+        """Handle window close event"""
+        print("ApplicationManager closeEvent: Stopping application...")
+        self.stop_application() # This now stops asyncio loop too
+        # Clean up keyboard manager
+        print("ApplicationManager closeEvent: Cleaning up keyboard manager...")
+        self.keyboard_manager.cleanup()
+        # Optional: Explicitly shutdown container resources if needed
+        # print("ApplicationManager closeEvent: Shutting down container...")
+        # self.container.shutdown_resources() # If using resource providers
+        print("ApplicationManager closeEvent: Calling super...")
+        super().closeEvent(event)
+        print("ApplicationManager closeEvent: Finished.")
+    
     def restart_application(self) -> bool:
         """Restart the application with current settings"""
         self.status_changed.emit("Restarting application...")
@@ -382,33 +398,10 @@ class ApplicationManager(QObject):
             self.status_changed.emit("Hotkey ignored: Application not running.")
             return
 
-        # Access state flags from app_instance carefully.
-        # Reading bool flags might be okay without locks if updates are infrequent
-        # and handled carefully within the app_instance's locks.
-        # If issues arise, use thread-safe getters or put status checks on the queue too.
-        try:
-            is_currently_processing = self.app_instance.is_processing
-            is_currently_recording = self.app_instance.is_recording
-        except AttributeError:
-             # app_instance might be in a state of flux during startup/shutdown
-             print(f"[{timestamp}] Hotkey '{hotkey_name}' detected, but app instance state inaccessible.")
-             return
-
-
-        # Prevent queuing multiple start actions if already busy
-        if is_currently_processing:
-            print(f"[{timestamp}] Hotkey '{hotkey_name}' detected, but PROCESSING is busy.")
-            # self.status_changed.emit("Processing busy, please wait...") # Optional UI feedback
-            return
-        if is_currently_recording:
-            print(f"[{timestamp}] Hotkey '{hotkey_name}' detected, but already RECORDING.")
-            # self.status_changed.emit("Already recording...") # Optional UI feedback
-            return
-
         print(f"[{timestamp}] Hotkey '{hotkey_name}' detected by manager. Queuing action for background app.")
         # Safely put the action onto the background thread's queue
         try:
-             self.app_instance.action_queue.put(_ACTION_START_RECORDING)
+             self.app_instance.trigger_interaction()
              self.status_changed.emit("Hotkey pressed, initiating command...") # Update UI
         except AttributeError:
              print(f"[{timestamp}] Error: Cannot queue action, app_instance or action_queue missing.")

@@ -33,7 +33,6 @@ class LLMHandler:
             else:
                 self.ollama_running = True
         elif self.llm_source == "openai_api":
-            print(f"OpenAI API key: {self.openai_api_key}")
             if not self.openai_api_key:
                 print(
                     "WARNING: OpenAI API key is invalid or missing. Please check your configuration."

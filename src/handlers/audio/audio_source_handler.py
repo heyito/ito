@@ -1,59 +1,15 @@
-import asyncio
-import io
-import threading
-import time
 from asyncio.log import logger
-from typing import Literal  # Import Optional
-
+import threading
+from typing import Literal
+from src.handlers.audio.audio_source_interface import AudioSourceInterface
+import webrtcvad
 import numpy as np
-import scipy.io.wavfile as wavfile
 import sounddevice as sd
+import asyncio
+import time
 
-# Import VAD library safely
-try:
-    import webrtcvad
-except ImportError:
-    print("Warning: webrtcvad library not found. VAD functionality will be disabled.")
-    print("Install it using: pip install webrtcvad-wheels")
-    webrtcvad = None
-
-class AudioHandler:
-    def __init__(self, sample_rate: int, channels: int, device_index: int):
-        # Assign required values directly
-        self.sample_rate = sample_rate
-        self.channels = channels
-
-        # Retrieve optional device_index from source
-        raw_device_index_str = device_index
-        self.device_index = None # Default to None
-        if raw_device_index_str:
-            try:
-                self.device_index = int(raw_device_index_str)
-            except (ValueError, TypeError):
-                print(f"Warning: Invalid device_index '{raw_device_index_str}' in config. Using default (None).")
-
-        # Add validation for required values if needed
-        if not isinstance(self.sample_rate, int) or self.sample_rate <= 0:
-             print(f"ERROR: Invalid sample_rate: {self.sample_rate}. Cannot continue.")
-             raise ValueError("Invalid sample_rate")
-        if not isinstance(self.channels, int) or self.channels <= 0:
-             print(f"ERROR: Invalid channels: {self.channels}. Cannot continue.")
-             raise ValueError("Invalid channels")
-
-        # Print initialized values
-        print(f"AudioHandler Initialized: Rate={self.sample_rate}, Channels={self.channels}, Device={self.device_index}")
-
+class AudioSourceHandler(AudioSourceInterface):
     def record_audio_stream_with_vad(self, stop_event, audio_queue, vad_config):
-        """
-        Continuously records audio, putting chunks into a queue.
-        Uses VAD to set stop_event after a period of silence.
-        Accepts VAD configuration dictionary.
-        """
-        # Use passed-in config values
-        device_index = self.device_index
-        sample_rate = self.sample_rate
-        channels = self.channels
-
         if not webrtcvad:
             print("VAD disabled because webrtcvad is not available.")
             vad_config['enabled'] = False # Force disable if library missing
@@ -66,16 +22,16 @@ class AudioHandler:
 
         # Validate VAD parameters
         if vad_enabled:
-            if sample_rate not in [8000, 16000, 32000, 48000]:
-                print(f"Error: Sample rate {sample_rate}Hz not supported by webrtcvad. Disabling VAD.")
+            if self.sample_rate not in [8000, 16000, 32000, 48000]:
+                print(f"Error: Sample rate {self.sample_rate}Hz not supported by webrtcvad. Disabling VAD.")
                 vad_enabled = False
             if vad_frame_duration_ms not in [10, 20, 30]:
                 print(f"Error: VAD frame duration {vad_frame_duration_ms}ms not supported. Must be 10, 20, or 30. Disabling VAD.")
                 vad_enabled = False
 
         # Calculate VAD frame size in samples and bytes
-        samples_per_vad_frame = int(sample_rate * vad_frame_duration_ms / 1000)
-        bytes_per_vad_frame = samples_per_vad_frame * channels * np.dtype(np.int16).itemsize # PCM16 = 2 bytes
+        samples_per_vad_frame = int(self.sample_rate * vad_frame_duration_ms / 1000)
+        bytes_per_vad_frame = samples_per_vad_frame * self.channels * np.dtype(np.int16).itemsize # PCM16 = 2 bytes
 
         # Sounddevice block size - use exactly the VAD frame size for lowest latency
         # This means we'll process audio in smaller chunks but with lower latency
@@ -121,48 +77,46 @@ class AudioHandler:
                         del vad_buffer[:bytes_per_vad_frame]
 
                         # VAD check (expects PCM16)
-                        if vad_instance.is_speech(frame_bytes, sample_rate):
+                        if vad_instance.is_speech(frame_bytes, self.sample_rate):
                             is_speech_in_block = True
-                            silence_start_time = None # Reset silence timer on speech
-                            # print("VAD: Speech detected", end='\r')
+                            # Break if one frame is speech, the whole block is considered speech.
+                            # Depending on VAD frame size vs. blocksize, might want to process all frames
+                            # For now, one positive VAD frame makes the block positive.
 
                     # Update silence tracking based on block-level speech detection
                     if is_speech_in_block:
+                        if not speech_detected_recently: # Check *before* updating speech_detected_recently
+                            print("\nInitial speech detected by VAD. Silence timeout is now active upon subsequent silence.")
                         speech_detected_recently = True
-                        silence_start_time = None
-                        # print("VAD State: Speech           ", end='\r')
+                        silence_start_time = None # Reset silence timer as speech is active
+                        print("VAD: Speech currently active.", end='\r')
                     else: # No speech in this entire block
-                        if speech_detected_recently: # Was speaking recently, now potentially silent
-                            if silence_start_time is None:
+                        if speech_detected_recently: # Only if speech had occurred at some point
+                            if silence_start_time is None: # Start timer if it's not already running for this silence period
                                 silence_start_time = time.monotonic()
-                                # print("VAD State: Silence starting...", end='\r')
-                        # Else: still silent, do nothing until timeout
-
-                        # Check for silence timeout ONLY if we've detected speech before
-                        # This prevents stopping immediately if recording starts in silence
-                        if speech_detected_recently and silence_start_time is not None:
-                            elapsed_silence = (time.monotonic() - silence_start_time) * 1000 # ms
-                            # print(f"VAD State: Silent for {elapsed_silence:.0f} ms", end='\r')
-                            if elapsed_silence >= vad_silence_duration_ms:
-                                print(f"\nSilence duration ({elapsed_silence:.0f}ms) exceeded threshold ({vad_silence_duration_ms}ms). Stopping recording.")
-                                if not stop_event.is_set():
-                                        stop_event.set() # Signal to stop
-                                return # Stop processing further in this callback once stopped
+                            
+                            # This check is important as silence_start_time might have been set in a previous silent block
+                            if silence_start_time is not None: 
+                                elapsed_silence = (time.monotonic() - silence_start_time) * 1000 # ms
+                                print(f"VAD State: Silent for {elapsed_silence:.0f}ms (threshold {vad_silence_duration_ms}ms).", end='\r')
+                                if elapsed_silence >= vad_silence_duration_ms:
+                                    print(f"\nSilence duration ({elapsed_silence:.0f}ms) exceeded threshold ({vad_silence_duration_ms}ms). Stopping recording.")
+                                    if not stop_event.is_set():
+                                            stop_event.set() # Signal to stop
 
                 except Exception as e:
                     print(f"\nError during VAD processing in callback: {e}")
-                    # Potentially disable VAD or stop recording on error? For now, just print.
 
         # --- Stream Execution ---
         try:
-            print(f"Attempting to open stream: device={device_index}, rate={sample_rate}, channels={channels}, blocksize={blocksize}")
+            print(f"Attempting to open stream: device={self.device_index}, rate={self.sample_rate}, channels={self.channels}, blocksize={blocksize}")
             stream_start_time = time.monotonic()
-            with sd.InputStream(samplerate=sample_rate,
-                            channels=channels,
+            with sd.InputStream(samplerate=self.sample_rate,
+                            channels=self.channels,
                             dtype=dtype,
                             blocksize=blocksize,
-                            device=device_index,
-                            latency='low',  # Request low latency mode
+                            device=self.device_index,
+                            latency='low',
                             callback=callback):
                 stream_init_time = time.monotonic() - stream_start_time
                 print(f"Audio stream opened in {stream_init_time*1000:.1f}ms. Recording... (Waiting for speech and subsequent silence)")
@@ -182,38 +136,21 @@ class AudioHandler:
         finally:
             print("Audio stream closed.")
 
-     # --- Method for streaming to asyncio Queue (New) ---
     def stream_audio_to_async_queue(self,
                                   stop_event: threading.Event,
                                   async_queue: asyncio.Queue,
                                   loop: asyncio.AbstractEventLoop,
-                                  output_format: Literal['numpy', 'bytes'] = 'bytes'): # Default to bytes for Vosk
-        """
-        Continuously records audio and puts chunks into an asyncio.Queue.
-        Stops when stop_event is set.
+                                  output_format: Literal['numpy', 'bytes'] = 'bytes'):
 
-        Args:
-            stop_event: A threading.Event() to signal when to stop recording.
-            async_queue: An asyncio.Queue to put audio chunks into.
-            loop: The asyncio event loop running in the target thread for the queue.
-            output_format: The format of chunks put onto the queue ('numpy' or 'bytes').
-                           Defaults to 'bytes' for Vosk compatibility.
-        """
         if output_format not in ['numpy', 'bytes']:
             logger.error(f"Invalid output_format '{output_format}'. Must be 'numpy' or 'bytes'.")
             raise ValueError("Invalid output_format")
-
-        device_index = self.device_index
-        sample_rate = self.sample_rate
-        channels = self.channels
+        
         dtype = np.int16 # Required for Vosk (PCM16)
-
-        # Blocksize calculation (similar to before, good starting point)
         blocksize_ms = 40
-        blocksize = int(sample_rate * blocksize_ms / 1000)
+        blocksize = int(self.sample_rate * blocksize_ms / 1000)
         logger.info(f"Streaming blocksize: {blocksize} samples ({blocksize_ms}ms)")
         logger.info(f"Outputting audio chunks as: {output_format}")
-
 
         def callback(indata: np.ndarray, frames: int, time_info, status: sd.CallbackFlags):
             """Sounddevice callback: Converts data and puts it into the asyncio Queue."""
@@ -246,12 +183,12 @@ class AudioHandler:
 
         # --- Stream Execution ---
         try:
-            logger.info(f"Attempting to open stream (async streaming mode): device={device_index}, rate={sample_rate}, channels={channels}, blocksize={blocksize}")
-            with sd.InputStream(samplerate=sample_rate,
-                            channels=channels,
+            logger.info(f"Attempting to open stream (async streaming mode): device={self.device_index}, rate={self.sample_rate}, channels={self.channels}, blocksize={blocksize}")
+            with sd.InputStream(samplerate=self.sample_rate,
+                            channels=self.channels,
                             dtype=dtype,
                             blocksize=blocksize,
-                            device=device_index,
+                            device=self.device_index,
                             callback=callback):
                 logger.info("Audio stream opened (async streaming mode). Streaming...")
                 # Keep the stream alive until stop_event is set externally
@@ -292,35 +229,3 @@ class AudioHandler:
                  loop.call_soon_threadsafe(async_queue.put_nowait, None)
             elif not loop.is_running():
                  logger.warning("Asyncio loop stopped before None could be reliably put on audio queue.")
-
-    @staticmethod
-    def save_wav_to_buffer(audio_data_numpy, sample_rate, channels):
-        """Save audio data to a WAV file in memory buffer.
-        
-        Args:
-            audio_data_numpy: NumPy array containing audio samples
-            sample_rate: Sample rate in Hz
-            channels: Number of audio channels
-            
-        Returns:
-            BytesIO buffer containing WAV file data, or None if failed
-        """
-        if not isinstance(audio_data_numpy, np.ndarray) or audio_data_numpy.size == 0:
-            print("Error: Invalid or empty audio data provided for saving.")
-            return None
-        try:
-            buffer = io.BytesIO()
-            # Ensure data is int16 for standard WAV format
-            # Convert float data to int16 with proper scaling
-            if audio_data_numpy.dtype != np.int16:
-                if np.issubdtype(audio_data_numpy.dtype, np.floating):
-                    audio_data_numpy = (audio_data_numpy * 32767).astype(np.int16)
-                else:
-                    audio_data_numpy = audio_data_numpy.astype(np.int16)
-
-            wavfile.write(buffer, sample_rate, audio_data_numpy)
-            buffer.seek(0) # Rewind buffer to the beginning for reading
-            return buffer
-        except Exception as e:
-            print(f"Error saving audio to WAV buffer: {e}")
-            return None

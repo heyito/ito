@@ -4,9 +4,12 @@ import queue
 import threading
 import time
 import traceback
-from typing import Any
+import os
+import sys
+from typing import Any, Dict, Optional, Tuple
 
-from PyQt6.QtCore import QObject, QSettings, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import QObject, QSettings, pyqtSignal, pyqtSlot, QTimer
+from PyQt6.QtWidgets import QApplication
 
 from src.containers import Container
 from src.discrete_audio_application import (
@@ -14,6 +17,7 @@ from src.discrete_audio_application import (
     DiscreteAudioApplication,
 )
 from src.ui.keyboard_manager import KeyboardManager
+from src.ui.status_window import StatusWindow
 
 # --- Add pynput imports ---
 try:
@@ -50,6 +54,15 @@ class ApplicationManager(QObject):
 
         # Load initial settings
         self.load_settings()
+
+        # Initialize status window
+        self.status_window = StatusWindow()
+        self.status_window.show()
+        print("Status window initialized")
+        
+        # Connect status signals to status window
+        self.status_changed.connect(lambda status: self.status_window.update_status(status))
+        self.error_occurred.connect(lambda error: self.status_window.update_status(error, is_error=True))
 
     def load_settings(self) -> dict[str, Any]:
         """Load settings from QSettings and convert to config format"""
@@ -487,4 +500,7 @@ class ApplicationManager(QObject):
         self.stop_application()
         # Clean up keyboard manager
         self.keyboard_manager.cleanup()
+        # Hide status window
+        if hasattr(self, 'status_window'):
+            self.status_window.hide()
         super().closeEvent(event)

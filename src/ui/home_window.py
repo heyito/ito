@@ -98,6 +98,11 @@ class HomeWindow(QMainWindow):
         self.app_manager.status_changed.connect(self.handle_status_change)
         self.app_manager.settings_changed.connect(self.load_settings)
         
+        # Show status window
+        if hasattr(self.app_manager, 'status_window'):
+            self.app_manager.status_window.show()
+            print("Status window shown 2")
+        
         # Add these variables for dragging functionality
         self._dragging = False
         self._drag_start_position = QPointF()
@@ -729,6 +734,9 @@ class HomeWindow(QMainWindow):
     def closeEvent(self, event):
         """Handle window close event"""
         self.app_manager.stop_application()
+        # Hide status window
+        if hasattr(self.app_manager, 'status_window'):
+            self.app_manager.status_window.hide()
         super().closeEvent(event)
 
     # Add these three event handlers at the end of the class

@@ -14,7 +14,8 @@ from PyQt6.QtWidgets import QApplication
 from src.application_interface import ApplicationInterface
 from src.containers import Container
 from src.ui.keyboard_manager import KeyboardManager
-from src.ui.status_window import StatusWindow, StatusMessage
+from src.ui.status_window import StatusWindow
+from src.types.status_messages import StatusMessage
 
 # --- Add pynput imports ---
 try:

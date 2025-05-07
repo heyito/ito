@@ -111,7 +111,6 @@ class StatusWindow(QWidget):
                 color: #F2E4D6;
                 font-size: 13px;
                 background-color: #141538;
-                border: {self.BORDER_WIDTH}px solid rgba(242, 228, 214, 0.3);
                 font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
                 min-width: {width}px;
                 max-width: {width}px;

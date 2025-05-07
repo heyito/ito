@@ -460,7 +460,7 @@ class HomeWindow(QMainWindow):
         self.llm_source.addItems(["ollama", "openai_api"])
         self.llm_model = QLineEdit()
         self.max_tokens = QSpinBox()
-        self.max_tokens.setRange(1, 10000)
+        self.max_tokens.setRange(1, 25000)
         self.max_tokens.setValue(2000)
         self.temperature = QDoubleSpinBox()
         self.temperature.setRange(0.0, 1.0)

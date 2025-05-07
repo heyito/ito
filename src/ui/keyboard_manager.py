@@ -29,6 +29,23 @@ class KeyboardManager(QObject):
         self._listener_started = False
         self._tap = None
         self._is_macos = platform.system() == 'Darwin'
+        
+        # Map of function key names to their Quartz keycodes
+        self._function_key_codes = {
+            'f1': 122,
+            'f2': 120,
+            'f3': 99,
+            'f4': 118,
+            'f5': 96,
+            'f6': 97,
+            'f7': 98,
+            'f8': 100,
+            'f9': 101,
+            'f10': 109,
+            'f11': 103,
+            'f12': 111,
+            'fn': 179
+        }
 
     def initialize_listener(self) -> bool:
         """Initialize the keyboard listener once. This should only be called once when the application starts."""
@@ -60,12 +77,13 @@ class KeyboardManager(QObject):
                 # Get the keycode from the event
                 keycode = Quartz.CGEventGetIntegerValueField(event, Quartz.kCGKeyboardEventKeycode)
                 
-                # Check if this is our target key (Fn key has keycode 179)
-                if keycode == 179 and self._target_hotkey and self._hotkey_str == 'fn':
-                    # Emit the signal
-                    self.hotkey_pressed.emit(self._hotkey_str)
-                    # Return None to consume the event
-                    return None
+                # Check if this is our target key
+                if self._target_hotkey and isinstance(self._target_hotkey, int):
+                    if keycode == self._target_hotkey:
+                        # Emit the signal
+                        self.hotkey_pressed.emit(self._hotkey_str)
+                        # Return None to consume the event
+                        return None
             
             # Return the event for all other keys
             return event
@@ -94,12 +112,17 @@ class KeyboardManager(QObject):
     def set_hotkey(self, hotkey_str: str) -> bool:
         """Set the target hotkey without restarting the listener"""
         try:
-            if self._is_macos and hotkey_str.lower() == 'fn':
-                # For Fn key on macOS, we just store the string
-                self._hotkey_str = hotkey_str
-                self._target_hotkey = True
-                print(f"Hotkey updated to: {hotkey_str}")
-                return True
+            if self._is_macos:
+                # For macOS, we need to handle function keys differently
+                hotkey_str = hotkey_str.lower()
+                if hotkey_str in self._function_key_codes:
+                    self._hotkey_str = hotkey_str
+                    self._target_hotkey = self._function_key_codes[hotkey_str]
+                    print(f"Hotkey updated to: {hotkey_str}")
+                    return True
+                else:
+                    print(f"Unsupported hotkey for macOS: {hotkey_str}")
+                    return False
             
             new_hotkey = self._parse_hotkey(hotkey_str)
             if not new_hotkey:

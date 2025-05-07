@@ -56,7 +56,6 @@ class ApplicationManager(QObject):
         # Initialize status window
         self.status_window = StatusWindow()
         self.status_window.show()
-        print("Status window initialized")
         
         # Connect status signals to status window
         self.status_changed.connect(lambda status: self.status_window.update_status(status))

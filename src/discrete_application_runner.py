@@ -13,6 +13,7 @@ from src.context_manager import ContextManager
 from src.command_processor import CommandProcessor
 from src.handlers.audio.audio_recorder import AudioRecorder
 from src.handlers.asr_handler_interface import ASRHandlerInterface
+from src.types.status_messages import StatusMessage
 
 
 class DiscreteApplicationRunner(ApplicationInterface):
@@ -57,16 +58,16 @@ class DiscreteApplicationRunner(ApplicationInterface):
         timestamp = time.strftime('%H:%M:%S')
         if self.command_processor.is_processing:
             print(f"[{timestamp}] Trigger ignored: Command processor busy.")
-            self._update_status("Processing busy, please wait...")
+            self._update_status(StatusMessage.PROCESSING_BUSY)
             return
         if self.audio_recorder.is_recording:
             print(f"[{timestamp}] Trigger ignored: Already recording.")
-            self._update_status("Already recording...")
+            self._update_status(StatusMessage.ALREADY_RECORDING)
             return
 
         print(f"[{timestamp}] Trigger received. Queuing start action.")
         self._action_queue.put("START")
-        self._update_status("Hotkey pressed, initiating command...")
+        self._update_status(StatusMessage.HOTKEY_PRESSED)
 
     def run(self) -> None:
         """Main event loop processing actions."""
@@ -112,20 +113,20 @@ class DiscreteApplicationRunner(ApplicationInterface):
 
         # --- Transcribe ---
         print(f"[{timestamp}] Discrete Runner: Transcribing...")
-        self._update_status("Transcribing command...")
+        self._update_status(StatusMessage.TRANSCRIBING)
         user_command: Optional[str] = None
         try:
             user_command = self.asr_handler.transcribe_audio(audio_buffer)
             if not user_command or not user_command.strip():
                 print(f"[{timestamp}] Discrete Runner: Transcription empty.")
-                self._update_status("Ready (empty transcription)")
+                self._update_status(StatusMessage.READY_EMPTY)
                 return
             print(f"[{timestamp}] Discrete Runner: Transcribed: '{user_command}'")
-            self._update_status(f"Transcribed: '{user_command[:40]}...'")
+            self._update_status(StatusMessage.TRANSCRIBED.format(text=user_command[:40]))
         except Exception as e:
             print(f"[{timestamp}] Discrete Runner: ASR Error: {e}")
             traceback.print_exc()
-            self._update_status(f"ASR Error: {e}")
+            self._update_status(StatusMessage.ASR_ERROR.format(error=str(e)))
             return
 
         # --- Wait for Context ---
@@ -139,11 +140,30 @@ class DiscreteApplicationRunner(ApplicationInterface):
         print(f"[{timestamp}] Discrete Runner: Initiating command processing...")
         # CommandProcessor handles the processing lock and thread internally
         self.command_processor.process_command(current_context_data, user_command)
+        
+        # Add a 500ms delay before returning to READY state
+        time.sleep(0.5)
+        # Return to READY state after transcription and command processing is initiated
+        self._update_status(StatusMessage.READY)
 
-    def _update_status(self, message: str):
+    def _update_status(self, status: StatusMessage | str):
+        """Update status, handling both enum values and custom messages."""
         if self.status_queue:
-            try: self.status_queue.put_nowait(message)
-            except Exception: pass
+            try:
+                if isinstance(status, StatusMessage):
+                    # If it's a StatusMessage enum, use its value directly
+                    self.status_queue.put_nowait(status.value)
+                else:
+                    # Try to match custom message to enum
+                    matched_status = StatusMessage.from_custom_message(status)
+                    if matched_status:
+                        # If we found a match, use the formatted message
+                        self.status_queue.put_nowait(status)
+                    else:
+                        # If no match, use the message as is
+                        self.status_queue.put_nowait(status)
+            except Exception:
+                pass
 
     def cleanup(self) -> None:
         """Cleans up all composed components."""

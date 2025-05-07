@@ -114,9 +114,9 @@ class AudioSourceHandler(AudioSourceInterface):
             with sd.InputStream(samplerate=self.sample_rate,
                             channels=self.channels,
                             dtype=dtype,
-                            blocksize=blocksize,
+                            blocksize=128,
                             device=self.device_index,
-                            latency='low',
+                            latency=0.020,
                             callback=callback):
                 stream_init_time = time.monotonic() - stream_start_time
                 print(f"Audio stream opened in {stream_init_time*1000:.1f}ms. Recording... (Waiting for speech and subsequent silence)")
@@ -187,7 +187,8 @@ class AudioSourceHandler(AudioSourceInterface):
             with sd.InputStream(samplerate=self.sample_rate,
                             channels=self.channels,
                             dtype=dtype,
-                            blocksize=blocksize,
+                            blocksize=128,
+                            latency=0.020,
                             device=self.device_index,
                             callback=callback):
                 logger.info("Audio stream opened (async streaming mode). Streaming...")

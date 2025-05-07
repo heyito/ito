@@ -102,7 +102,6 @@ class HomeWindow(QMainWindow):
         # Show status window
         if hasattr(self.app_manager, 'status_window'):
             self.app_manager.status_window.show()
-            print("Status window shown 2")
         
         # Add these variables for dragging functionality
         self._dragging = False

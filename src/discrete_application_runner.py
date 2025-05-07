@@ -140,11 +140,6 @@ class DiscreteApplicationRunner(ApplicationInterface):
         print(f"[{timestamp}] Discrete Runner: Initiating command processing...")
         # CommandProcessor handles the processing lock and thread internally
         self.command_processor.process_command(current_context_data, user_command)
-        
-        # Add a 500ms delay before returning to READY state
-        time.sleep(0.75)
-        # Return to READY state after transcription and command processing is initiated
-        self._update_status(StatusMessage.READY)
 
     def _update_status(self, status: StatusMessage | str):
         """Update status, handling both enum values and custom messages."""

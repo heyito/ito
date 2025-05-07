@@ -71,6 +71,11 @@ class ApplicationManager(QObject):
             'model': self.settings.value("OpenAI/model", "gpt-4.1")
         }
 
+        # Ollama settings
+        config['Ollama'] = {
+            'model': self.settings.value("Ollama/model", "llama3.2:latest")
+        }
+
         # ASR settings
         config['ASR'] = {
             'source': self.settings.value("ASR/source", "openai_api"),

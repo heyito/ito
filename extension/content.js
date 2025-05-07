@@ -263,17 +263,18 @@ async function getPageContext() {
         
         if (!copyCommandSuccess) {
           console.warn("[getContext] Copy command failed or was blocked");
-        }
-
-        // Read from Clipboard
-        try {
-          context.activeElementContent = await navigator.clipboard.readText();
-          console.log(`[getContext] Content read from clipboard (${context.activeElementContent.length} chars)`);
-        } catch (clipboardError) {
-          console.error("[getContext] Clipboard read failed:", clipboardError);
-          context.activeElementContent = clipboardError.name === "NotAllowedError" 
-            ? "[Clipboard permission denied]" 
-            : "[Clipboard read error]";
+          // Backing up to innerText
+          context.activeElementContent = activeElement.innerText;
+        } else {
+          try {
+            context.activeElementContent = await navigator.clipboard.readText();
+            console.log(`[getContext] Content read from clipboard (${context.activeElementContent.length} chars)`);
+          } catch (clipboardError) {
+            console.error("[getContext] Clipboard read failed:", clipboardError);
+            context.activeElementContent = clipboardError.name === "NotAllowedError" 
+              ? "[Clipboard permission denied]" 
+              : "[Clipboard read error]";
+          }
         }
       } catch (error) {
         console.error("[getContext] Error during content retrieval:", error);

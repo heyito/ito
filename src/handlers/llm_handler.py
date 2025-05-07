@@ -184,6 +184,7 @@ class LLMHandler:
                 )
                 full_prompt = f"{system_prompt}\n\nUser: {text}\nAssistant:"
                 print(f"Sending request to Ollama (model: {self.llm_model})...")
+                start_time = time.time()
 
                 response = requests.post(
                     "http://localhost:11434/api/generate",
@@ -212,7 +213,7 @@ class LLMHandler:
                             print(f"Error decoding JSON chunk: {e}")
                             continue
 
-                print(f"Ollama returned processed text: {full_response}")
+                print(f"Ollama returned in {time.time() - start_time:.2f} seconds")
                 return full_response.strip()
 
             except Exception as e:

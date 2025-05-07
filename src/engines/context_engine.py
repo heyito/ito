@@ -17,7 +17,7 @@ class ContextEngine:
         if platform_utils.is_macos():
             if current_context['app_name'] == IntenApp.TEXTEDIT:
                 return self.text_edit_app.get_context()
-            elif current_context['app_name'] == IntenApp.CHROME:
+            elif current_context['app_name'] == IntenApp.CHROME or current_context['app_name'] == IntenApp.BRAVE:
                 return self.browser_app.get_context()
             else:
                 return self.macos_app.get_context()

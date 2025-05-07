@@ -127,6 +127,10 @@ llm_tools = [
                                 "y": {"type": "integer"},
                                 "text": {"type": "string"},
                                 "key": {"type": "string"},
+                                "element_description": {
+                                    "type": "string",
+                                    "description": "A short description of the action taken",
+                                },
                             },
                             "required": ["action"],
                         },

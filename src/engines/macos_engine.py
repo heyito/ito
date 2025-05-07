@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 import time
+import uuid
 
 import Quartz
 
@@ -91,13 +92,25 @@ class MacOSEngine:
 
     def get_active_window_info(self):
         try:
+            start_time = time.perf_counter()
             result = subprocess.run(
                 [self.swift_helper_path, "get-window-info"],
                 capture_output=True,
                 text=True,
                 check=True,
             )
-            return json.loads(result.stdout)
+            end_time = time.perf_counter()
+            elapsed_ms = (end_time - start_time) * 1000  # Convert to milliseconds
+            print(f"Swift helper execution time: {elapsed_ms:.2f} ms")
+
+            window_info = json.loads(result.stdout)
+
+            # Write the JSON to a file
+            with open(f"context-{uuid.uuid4()}.json", "w") as f:
+                json.dump(window_info, f, indent=4)  # 'indent' for pretty formatting
+
+            return window_info
+
         except subprocess.CalledProcessError as e:
             print(f"Swift helper error: {e.stderr}")
             return None
@@ -124,9 +137,9 @@ class MacOSEngine:
     def replace_text_at_global(self, x, y, text):
         self._click_at(x, y)
         self._send_shortcut(["command"], 0x00)  # Cmd+A
-        time.sleep(0.1)
+        time.sleep(0.3)
         self._send_shortcut([], 0x33)  # Delete
-        time.sleep(0.1)
+        time.sleep(0.3)
         self._type_text(text)
         print(f"✅ Replaced text at ({x}, {y}): {text}")
 

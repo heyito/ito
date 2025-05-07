@@ -28,6 +28,7 @@ src/models/*
 # Ignore log files
 *.log
 **/*.log
+context-*.json
 
 # Ignore build files
 build/

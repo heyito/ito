@@ -37,3 +37,6 @@ shell:
 # Build swift helpers
 swift: 
 	swift build --package-path src/swift_helper -c release --arch arm64 --arch x86_64
+
+clean:
+	rm -rf context-*

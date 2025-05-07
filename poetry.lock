@@ -219,6 +219,7 @@ files = [
 [package.dependencies]
 idna = ">=2.8"
 sniffio = ">=1.1"
+typing_extensions = {version = ">=4.5", markers = "python_version < \"3.13\""}
 
 [package.extras]
 doc = ["Sphinx (>=8.2,<9.0)", "packaging", "sphinx-autodoc-typehints (>=1.2.0)", "sphinx_rtd_theme"]
@@ -694,6 +695,25 @@ files = [
 numpy = "*"
 pyyaml = ">=5.3,<7"
 setuptools = "*"
+
+[[package]]
+name = "deepdiff"
+version = "8.4.2"
+description = "Deep Difference and Search of any Python object/data. Recreate objects by adding adding deltas to each other."
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "deepdiff-8.4.2-py3-none-any.whl", hash = "sha256:7e39e5b26f3747c54f9d0e8b9b29daab670c3100166b77cc0185d5793121b099"},
+    {file = "deepdiff-8.4.2.tar.gz", hash = "sha256:5c741c0867ebc7fcb83950ad5ed958369c17f424e14dee32a11c56073f4ee92a"},
+]
+
+[package.dependencies]
+orderly-set = ">=5.3.0,<6"
+
+[package.extras]
+cli = ["click (==8.1.8)", "pyyaml (==6.0.2)"]
+optimize = ["orjson"]
 
 [[package]]
 name = "dependency-injector"
@@ -1987,6 +2007,18 @@ typing-extensions = ">=4.11,<5"
 datalib = ["numpy (>=1)", "pandas (>=1.2.3)", "pandas-stubs (>=1.1.0.11)"]
 realtime = ["websockets (>=13,<16)"]
 voice-helpers = ["numpy (>=2.0.2)", "sounddevice (>=0.5.1)"]
+
+[[package]]
+name = "orderly-set"
+version = "5.4.0"
+description = "Orderly set"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "orderly_set-5.4.0-py3-none-any.whl", hash = "sha256:f0192a7f9ae3385b587b71688353fae491d1ca45878496eb71ea118be1623639"},
+    {file = "orderly_set-5.4.0.tar.gz", hash = "sha256:c8ff5ba824abe4eebcbbdd3f646ff3648ad0dd52239319d90056d8d30b6cccdd"},
+]
 
 [[package]]
 name = "packaging"
@@ -5910,6 +5942,7 @@ files = [
 
 [package.dependencies]
 cryptography = ">=41.0.5,<45"
+typing-extensions = {version = ">=4.9", markers = "python_version < \"3.13\" and python_version >= \"3.8\""}
 
 [package.extras]
 docs = ["sphinx (!=5.2.0,!=5.2.0.post0,!=7.2.5)", "sphinx_rtd_theme"]
@@ -6793,5 +6826,5 @@ propcache = ">=0.2.1"
 
 [metadata]
 lock-version = "2.1"
-python-versions = "^3.13.2"
-content-hash = "2e2a9ffcb1f5e13f2aa234ba9e6acb9fbbe219d4f118a4875fef3eab442b1dc7"
+python-versions = "^3.12"
+content-hash = "8161699a7d87b4408ee4fba5b9bf991edb7c989c1acd3352c05fcfbbdae81ee9"

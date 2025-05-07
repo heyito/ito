@@ -1,102 +1,149 @@
 import json
 import time
 
+from deepdiff import DeepDiff, Delta
+
 from src import prompt_templates
 from src.engines.macos_engine import MacOSEngine
 from src.handlers.llm_handler import LLMHandler
 
 llm_tools = [
+    # {
+    #     "type": "function",
+    #     "function": {
+    #         "name": "click",
+    #         "description": "Click at a specific screen coordinate.",
+    #         "parameters": {
+    #             "type": "object",
+    #             "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}},
+    #             "required": ["x", "y"],
+    #         },
+    #     },
+    # },
+    # {
+    #     "type": "function",
+    #     "function": {
+    #         "name": "type_text",
+    #         "description": "Type a string at a coordinate (assumes field is focused by clicking there).",
+    #         "parameters": {
+    #             "type": "object",
+    #             "properties": {
+    #                 "x": {"type": "integer"},
+    #                 "y": {"type": "integer"},
+    #                 "text": {"type": "string"},
+    #             },
+    #             "required": ["x", "y", "text"],
+    #         },
+    #     },
+    # },
+    # {
+    #     "type": "function",
+    #     "function": {
+    #         "name": "press_key",
+    #         "description": "Presses a special key or key combination, such as 'Enter', 'Cmd+C', or arrow keys.",
+    #         "parameters": {
+    #             "type": "object",
+    #             "properties": {
+    #                 "key": {
+    #                     "type": "string",
+    #                     "description": "Special key or key combination. Supported values include modifier combos.",
+    #                     "enum": [
+    #                         "enter",
+    #                         "escape",
+    #                         "tab",
+    #                         "space",
+    #                         "up",
+    #                         "down",
+    #                         "left",
+    #                         "right",
+    #                         "cmd+a",
+    #                         "cmd+c",
+    #                         "cmd+v",
+    #                         "cmd+z",
+    #                         "cmd+x",
+    #                         "cmd+a",
+    #                         "cmd+c",
+    #                         "cmd+v",
+    #                         "cmd+w",
+    #                         "cmd+q",
+    #                         "cmd+enter",
+    #                         "shift+tab",
+    #                         "shift+enter",
+    #                     ],
+    #                 }
+    #             },
+    #             "required": ["key"],
+    #         },
+    #     },
+    # },
+    # {
+    #     "type": "function",
+    #     "function": {
+    #         "name": "replace_text",
+    #         "description": "Replace the contents of a text field with new content at the specified screen coordinate.",
+    #         "parameters": {
+    #             "type": "object",
+    #             "properties": {
+    #                 "x": {
+    #                     "type": "integer",
+    #                     "description": "The x-coordinate of the text field center.",
+    #                 },
+    #                 "y": {
+    #                     "type": "integer",
+    #                     "description": "The y-coordinate of the text field center.",
+    #                 },
+    #                 "text": {
+    #                     "type": "string",
+    #                     "description": "The full new content to replace the existing text.",
+    #                 },
+    #             },
+    #             "required": ["x", "y", "text"],
+    #         },
+    #     },
+    # },
     {
         "type": "function",
         "function": {
-            "name": "click",
-            "description": "Click at a specific screen coordinate.",
-            "parameters": {
-                "type": "object",
-                "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}},
-                "required": ["x", "y"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "type_text",
-            "description": "Type a string at a coordinate (assumes field is focused by clicking there).",
+            "name": "ui_batch",
+            "description": "Run 1-5 low-risk UI actions back-to-back.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "x": {"type": "integer"},
-                    "y": {"type": "integer"},
-                    "text": {"type": "string"},
-                },
-                "required": ["x", "y", "text"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "press_key",
-            "description": "Presses a special key or key combination, such as 'Enter', 'Cmd+C', or arrow keys.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "key": {
-                        "type": "string",
-                        "description": "Special key or key combination. Supported values include modifier combos.",
-                        "enum": [
-                            "enter",
-                            "escape",
-                            "tab",
-                            "space",
-                            "up",
-                            "down",
-                            "left",
-                            "right",
-                            "cmd+a",
-                            "cmd+c",
-                            "cmd+v",
-                            "cmd+z",
-                            "cmd+x",
-                            "cmd+a",
-                            "cmd+c",
-                            "cmd+v",
-                            "cmd+w",
-                            "cmd+q",
-                            "cmd+enter",
-                            "shift+tab",
-                            "shift+enter",
-                        ],
+                    "steps": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "action": {
+                                    "type": "string",
+                                    "enum": [
+                                        "click",
+                                        "type_text",
+                                        "press_key",
+                                        "replace_text",
+                                    ],
+                                },
+                                "x": {"type": "integer"},
+                                "y": {"type": "integer"},
+                                "text": {"type": "string"},
+                                "key": {"type": "string"},
+                            },
+                            "required": ["action"],
+                        },
+                        "minItems": 1,
+                        "maxItems": 5,
                     }
                 },
-                "required": ["key"],
+                "required": ["steps"],
             },
         },
     },
     {
         "type": "function",
         "function": {
-            "name": "replace_text",
-            "description": "Replace the contents of a text field with new content at the specified screen coordinate.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "x": {
-                        "type": "integer",
-                        "description": "The x-coordinate of the text field center.",
-                    },
-                    "y": {
-                        "type": "integer",
-                        "description": "The y-coordinate of the text field center.",
-                    },
-                    "text": {
-                        "type": "string",
-                        "description": "The full new content to replace the existing text.",
-                    },
-                },
-                "required": ["x", "y", "text"],
-            },
+            "name": "no_action",
+            "description": "Indicates that no further UI action is required. Call this when the user's goal appears to be satisfied or when repeating an action would have no additional effect.",
+            "parameters": {"type": "object", "properties": {}},
         },
     },
 ]
@@ -104,11 +151,34 @@ llm_tools = [
 
 class MacOSapp:
     system_prompt = prompt_templates.MACOS_AX_OCR_SYSTEM_PROMPT
-    MAX_STEPS = 5
+    MAX_STEPS = 3
 
     def __init__(self, llm_handler: LLMHandler, macos_engine: MacOSEngine):
         self.llm_handler = llm_handler
         self.macos_engine = macos_engine
+
+    def _run_atomic(self, step: dict):
+        """
+        Executes a single low-level action and returns a short result string.
+        step = {action:'click'|'type_text'|…, x:…, y:…, text:, key:…}
+        """
+        a = step["action"]
+        try:
+            if a == "click":
+                self.macos_engine.click_at_global(step["x"], step["y"])
+            elif a == "type_text":
+                self.macos_engine.type_text_global(step["x"], step["y"], step["text"])
+            elif a == "replace_text":
+                self.macos_engine.replace_text_at_global(
+                    step["x"], step["y"], step["text"]
+                )
+            elif a == "press_key":
+                self.macos_engine.press_key(step["key"])
+            else:
+                raise ValueError(f"Unknown action: {a}")
+            return "ok"
+        except Exception as e:
+            return f"error: {e}"
 
     def get_context(self):
         context = self.macos_engine.get_active_window_info()
@@ -139,6 +209,8 @@ class MacOSapp:
         #     return  # Exit processing early
 
         steps = 0
+        old_context = processing_text
+
         while steps < self.MAX_STEPS:
             resp = self.llm_handler.process_text_with_llm(
                 text=full_llm_input,  # Pass combined context+command as user message content
@@ -151,44 +223,53 @@ class MacOSapp:
                 print(resp.choices[0].message.content or "done")
                 break
 
+            print("Tool calls:", tool_calls)
+
             messages.append({"role": "assistant", "tool_calls": tool_calls})
 
             tool_result_messages = []
-            for tool_call in tool_calls:
-                tool_name = tool_call.function.name
-                args = json.loads(tool_call.function.arguments)
-                if tool_name == "click":
-                    print(f"Clicking at {args['x']}, {args['y']}")
-                    self.macos_engine.click_at_global(args["x"], args["y"])
-                elif tool_name == "type_text":
-                    print(
-                        f"Typing at {args['x']}, {args['y']} with text: {args['text']}"
-                    )
-                    self.macos_engine.type_text_global(
-                        args["x"], args["y"], args["text"]
-                    )
-                elif tool_name == "replace_text":
-                    print(
-                        f"Replacing text at {args['x']}, {args['y']} with text: {args['text']}"
-                    )
-                    self.macos_engine.replace_text_at_global(
-                        args["x"], args["y"], args["text"]
-                    )
-                elif tool_name == "press_key":
-                    print(f"Pressing key: {args['key']}")
-                    self.macos_engine.press_key(args["key"])
+            tool_call = tool_calls[0]
+            tool_name = tool_call.function.name
+            args = json.loads(tool_call.function.arguments)
+            result = None
 
-                tool_result_messages.append(
-                    {
-                        "role": "tool",
-                        "tool_call_id": tool_call.id,
-                        "name": tool_call.function.name,
-                        "content": "ok",
-                    }
-                )
+            if tool_name == "ui_batch":
+                result = []
+                for step in args["steps"]:
+                    time.sleep(0.6)  # Add a small delay between actions
+                    outcome = self._run_atomic(step)
+                    result.append(outcome)
+            elif tool_name == "no_action":
+                print("No action required. Tool call completed.")
+                break
+            else:
+                result = self._run_atomic({"action": tool_name, **args})
 
+            tool_result_messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "name": tool_call.function.name,
+                    "content": json.dumps({"result": result}),
+                }
+            )
             messages.extend(tool_result_messages)
-            new_context = f"New context: {self.get_context()}"
-            goal_reminder = f"\n\n(continue → {user_command})"
-            messages.append({"role": "user", "content": new_context + goal_reminder})
+
+            new_context = self.get_context()
+            delta = DeepDiff(old_context, new_context, verbose_level=2).to_json()
+
+            messages.append(
+                {
+                    "role": "user",
+                    "content": json.dumps(
+                        {
+                            "ui_delta": delta,
+                            "user_command": user_command,
+                        }
+                    ),
+                }
+            )
+            old_context = new_context
             steps += 1
+
+        print("Processing complete.")

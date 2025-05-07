@@ -7,15 +7,15 @@ import time
 import traceback
 from typing import Any
 
-from pynput import keyboard
+import keyboard
 
 from src import platform_utils_macos as platform_utils
 from src.app_config import AppConfig
 from src.application_interface import ApplicationInterface
-from src.engines.context_engine import ContextEngine
-from src.engines.processing_engine import ProcessingEngine
-from src.handlers.audio_handler import AudioHandler
-from src.handlers.llm_handler import LLMHandler
+from src.engines.context_engine import ContextEngine  # Added
+from src.engines.processing_engine import ProcessingEngine  # Added
+from src.handlers.audio.audio_source_handler import AudioSourceHandler
+from src.handlers.llm_handler import LLMHandler  # Added
 from src.handlers.vosk_processor import VoskProcessor
 
 # Actions for the queue (can be simplified)
@@ -27,7 +27,7 @@ _ACTION_FINALIZE_STREAM = "FINALIZE_STREAM" # New action
 class StreamingAudioApplication(ApplicationInterface):
     # Add type hints for new handlers/engines
     def __init__(self,
-                 audio_handler: AudioHandler,
+                 audio_handler: AudioSourceHandler,
                  context_engine: ContextEngine,     # Added
                  processing_engine: ProcessingEngine, # Added
                  llm_handler: LLMHandler,           # Added (though ProcessingEngine might use it internally)
@@ -44,7 +44,7 @@ class StreamingAudioApplication(ApplicationInterface):
                        Expected to have ['Vosk']['model_path'].
         """
         self.config: AppConfig = AppConfig(raw_config)
-        self.audio_handler: AudioHandler = audio_handler
+        self.audio_handler: AudioSourceHandler = audio_handler
         self.context_engine: ContextEngine = context_engine         # Added
         self.processing_engine: ProcessingEngine = processing_engine # Added
         self.llm_handler: LLMHandler = llm_handler                 # Added
@@ -112,7 +112,6 @@ class StreamingAudioApplication(ApplicationInterface):
         """Prints initial configuration and status information."""
         print("\n--- Real-time Streaming Transcription ---")
         print(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-        print("Using OpenAI Real-time API via WebRTC")
         print(f"Audio Device Index: {self.audio_handler.device_index}")
         print(f"Audio Sample Rate: {self.audio_handler.sample_rate}")
         print(f"Audio Channels: {self.audio_handler.channels}")

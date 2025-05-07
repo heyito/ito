@@ -1,10 +1,8 @@
 # src/containers.py
-import asyncio
 import os
 import queue
-import sys  # Added for get_resource_path
-import threading
-from typing import Any  # Added for helper function type hint
+import sys
+from typing import Any
 
 from dependency_injector import containers, providers
 
@@ -14,7 +12,11 @@ from src.apps.browser import BrowserApp
 from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
-from src.clients.openai_client import OpenAIWebRTCClient
+from src.asyncio_loop_manager import AsyncioLoopManager
+from src.clients.llm_client_interface import LLMClientInterface
+from src.clients.ollama_client import OllamaClient
+from src.clients.openai_client import OpenAIClient
+from src.clients.openai_webrtc_client import OpenAIWebRTCClient
 from src.command_processor import CommandProcessor
 from src.context_manager import ContextManager
 from src.discrete_application_runner import DiscreteApplicationRunner
@@ -31,70 +33,6 @@ from src.handlers.llm_handler import LLMHandler
 from src.handlers.openai_asr_handler import OpenAIASRHandler
 from src.handlers.vosk_processor import VoskProcessor
 from src.streaming_application_runner import StreamingApplicationRunner
-
-# --- Asyncio Loop Provider ---
-# Manage the asyncio loop lifecycle here, started/stopped by the container/app manager
-class AsyncioLoopManager:
-    def __init__(self):
-        self._loop: asyncio.AbstractEventLoop | None = None
-        self._thread: threading.Thread | None = None
-        self._lock = threading.Lock()
-        self._stop_event = threading.Event()
-
-    def get_loop(self) -> asyncio.AbstractEventLoop:
-        with self._lock:
-            if self._loop is None or not self._loop.is_running():
-                print("AsyncioLoopManager: Starting loop...")
-                self._stop_event.clear()
-                start_event = threading.Event()
-                self._thread = threading.Thread(target=self._run_loop, args=(start_event,), daemon=True)
-                self._thread.start()
-                if not start_event.wait(timeout=3.0):
-                    raise RuntimeError("Asyncio loop failed to start")
-                print("AsyncioLoopManager: Loop started.")
-            if self._loop is None: # Check again after wait
-                 raise RuntimeError("Asyncio loop is None after start attempt")
-            return self._loop
-
-    def _run_loop(self, start_event: threading.Event):
-        try:
-            self._loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self._loop)
-            start_event.set() # Signal loop object is ready
-            # Run until explicitly stopped
-            while not self._stop_event.is_set():
-                 self._loop.run_until_complete(asyncio.sleep(0.1)) # Keep running
-            # Perform final cleanup if needed before closing
-            print("AsyncioLoopManager: Running final loop tasks before close...")
-            self._loop.run_until_complete(self._loop.shutdown_asyncgens())
-            print("AsyncioLoopManager: Closing loop...")
-            self._loop.close()
-        except Exception as e:
-            print(f"AsyncioLoopManager: Error in loop thread: {e}")
-        finally:
-             print("AsyncioLoopManager: Loop thread finished.")
-             with self._lock: # Ensure setting loop to None is safe
-                self._loop = None
-
-
-    def stop_loop(self):
-        thread_to_join = None # Initialize here
-        with self._lock:
-            if self._thread and self._thread.is_alive():
-                print("AsyncioLoopManager: Stopping loop...")
-                self._stop_event.set() # Signal run_until_complete loop to exit
-                if self._loop and self._loop.is_running():
-                     # Request stop for run_forever if it was used instead
-                     self._loop.call_soon_threadsafe(self._loop.stop)
-
-                thread_to_join = self._thread # Copy handle
-
-        # Join outside lock
-        if thread_to_join:
-            thread_to_join.join(timeout=3.0)
-            if thread_to_join.is_alive():
-                 print("Warning: Asyncio loop thread did not stop cleanly.")
-        print("AsyncioLoopManager: Loop stop sequence finished.")
 
 # Helper function for Selector
 def _is_streaming_mode(config_value: Any) -> str:
@@ -128,21 +66,34 @@ class Container(containers.DeclarativeContainer):
     # Provide the loop instance itself via the manager
     asyncio_loop = providers.Callable(lambda m: m.get_loop(), asyncio_loop_manager)
 
+    # --- LLM Clients ---
+    openai_llm_client_provider = providers.Singleton(
+        OpenAIClient,
+        api_key=config.OpenAI.api_key,
+        model=config.OpenAI.model  # This should be the currently selected OpenAI model
+    )
+
+    ollama_llm_client_provider = providers.Singleton(
+        OllamaClient,
+        model=config.Ollama.model,
+        base_url=config.Ollama.base_url.as_str()
+    )
+
+    # Selector for the LLM client instance based on config.LLM.source
+    # The keys ('openai_api', 'ollama') must match the possible values of config.LLM.source
+    selected_llm_client: providers.Provider[LLMClientInterface] = providers.Selector(
+        config.LLM.source,
+        openai_api=openai_llm_client_provider,
+        ollama=ollama_llm_client_provider,
+        # google_gemini=google_gemini_client_provider, # Future
+        # groq=groq_client_provider,                   # Future
+    )
+
     # --- Core Handlers/Services ---
 
     llm_handler = providers.Singleton(
         LLMHandler,
-        llm_source=config.LLM.source,
-        llm_model=providers.Callable(
-            lambda source, model, ollama_model: (
-                ollama_model if source == "ollama"
-                else model
-            ),
-            config.LLM.source,
-            config.OpenAI.model,
-            config.Ollama.model,
-        ),
-        openai_api_key=config.OpenAI.api_key
+        client=selected_llm_client  # Inject the chosen client
     )
 
     audio_source_handler = providers.Singleton(

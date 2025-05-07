@@ -1,87 +1,37 @@
-import json
-import re
-import time
+from typing import Any, List, Dict, Optional
 
-import requests
-from openai import OpenAI, OpenAIError
+from src.clients.llm_client_interface import LLMClientInterface
 
-# --- Default System Prompt (if none provided) ---
+# Default System Prompt (can be configured or overridden)
 DEFAULT_LLM_SYSTEM_PROMPT = "You are a helpful AI assistant."
 
-
 class LLMHandler:
-    def __init__(self, llm_source: str, llm_model: str, openai_api_key: str):
-        self.model_cache = {}
-        self.tokenizer_cache = {}
-
-        # Assign the received values directly
-        self.llm_source = llm_source
-        self.llm_model = llm_model
-        self.openai_api_key = openai_api_key
-        self.ollama_running = False
-        self.openai_valid = False
-
-        print(f"LLM Source: {self.llm_source}")
-        print(f"LLM Model: {self.llm_model}")
-
-        if self.llm_source == "ollama":
-            self.ollama_running = self._check_ollama_running()
-            if not self.ollama_running:
-                print(
-                    "WARNING: Ollama is not running. Please start Ollama before using it."
-                )
-            else:
-                self.ollama_running = True
-        elif self.llm_source == "openai_api":
-            if not self.openai_api_key:
-                print(
-                    "WARNING: OpenAI API key is invalid or missing. Please check your configuration."
-                )
-            else:
-                self.openai_valid = True
-
-    def _check_ollama_running(
-        self, max_retries: int = 3, retry_delay: float = 1.0
-    ) -> bool:
+    def __init__(self, client: LLMClientInterface):
         """
-        Check if Ollama is running by attempting to connect to its API.
+        Initializes the LLMHandler with a specific LLM client.
 
         Args:
-            max_retries: Maximum number of connection attempts
-            retry_delay: Delay between retries in seconds
-
-        Returns:
-            bool: True if Ollama is running, False otherwise
+            client: An instance of a class that implements LLMClientInterface.
         """
-        for attempt in range(max_retries):
-            try:
-                response = requests.get("http://localhost:11434/api/tags", timeout=5)
-                if response.status_code == 200:
-                    print("Ollama is running and accessible")
-                    return True
-            except requests.exceptions.RequestException as e:
-                if attempt < max_retries - 1:
-                    print(
-                        f"Attempt {attempt + 1}/{max_retries}: Ollama not responding, retrying in {retry_delay} seconds..."
-                    )
-                    time.sleep(retry_delay)
-                else:
-                    print(
-                        f"Failed to connect to Ollama after {max_retries} attempts: {e}"
-                    )
-        return False
+        self.client = client
+        self.is_client_available = self.client.check_availability()
+
+        if self.is_client_available:
+            print(f"LLMHandler initialized with client: {self.client.source_name}, model: {self.client.model_name}")
+        else:
+            print(f"LLMHandler WARNING: Client {self.client.source_name} is not available or not configured correctly.")
 
     def process_text_with_llm(
         self,
         text: str,
-        system_prompt_override: str = None,
+        system_prompt_override: Optional[str] = None, # Use Optional
         max_tokens: int = 4096,
         temperature: float = 0.7,
-        tools: list[dict] = [],
-        messages_override: list[dict] = [],
-    ):
+        tools: Optional[List[Dict]] = None, # Use Optional
+        messages_override: Optional[List[Dict]] = None, # Use Optional
+    ) -> Any: # Return type depends on client (string or OpenAI response object)
         """
-        Processes text using the specified LLM source.
+        Processes text using the configured LLM client.
 
         Args:
             text: The user's message content (context + command)
@@ -92,170 +42,62 @@ class LLMHandler:
             messages_override: Optional override for the message history
 
         Returns:
-            str: The processed text, or None if processing failed
+            The processed response from the LLM, or None if processing failed.
+            This can be a string or an OpenAI response object if tools are used.
         """
         print(
             f"Sending context and command to LLM ({self.llm_source}, {self.llm_model})..."
         )
         print("Sending to LLM...")
 
-        if not text:
-            print("LLM Handler: Received empty text for user message.")
+        if not text and not messages_override: # If messages_override is present, text might be implicitly handled
+            print("LLMHandler: Received empty text for user message and no messages_override.")
             return None
 
         # Determine the system prompt to use
+        # If messages_override is provided, it might already contain a system message.
+        # The client's generate_response method should handle how system_prompt and messages_override interact.
         system_prompt = (
             system_prompt_override
             if system_prompt_override
             else DEFAULT_LLM_SYSTEM_PROMPT
         )
-        if not system_prompt:
-            print("Warning: LLM system prompt is empty.")
-            system_prompt = " "  # Use a space to avoid errors with empty system message
+        if not system_prompt: # Ensure system_prompt is not empty if it's going to be used
+            print("LLMHandler Warning: LLM system prompt is empty. Using a default space.")
+            system_prompt = " "
 
-        if self.llm_source == "openai_api":
-            if not self.openai_valid:
-                print(
-                    "Error: OpenAI API key is invalid or missing. Please check your configuration."
-                )
-                return None
+        print(
+            f"LLMHandler: Sending request to {self.client.source_name} (model: {self.client.model_name})..."
+        )
+        # print(f"LLMHandler: Effective System prompt: {system_prompt}") # Debug
+        # print(f"LLMHandler: Input text: {text}") # Debug
+        # print(f"LLMHandler: Tools: {tools}") # Debug
+        # print(f"LLMHandler: Messages Override: {messages_override}") # Debug
 
-            try:
-                client = OpenAI(api_key=self.openai_api_key)
-                print(f"Sending request to OpenAI LLM API (model: {self.llm_model})...")
-                start_time = time.time()
+        try:
+            response = self.client.generate_response(
+                text=text,
+                system_prompt=system_prompt,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                tools=tools or [], # Pass empty list if None
+                messages_override=messages_override or [], # Pass empty list if None
+            )
 
-                response = client.chat.completions.create(
-                    model=self.llm_model,
-                    messages=messages_override
-                    or [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": text},
-                    ],
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    tools=tools,
-                    tool_choice="required" if len(tools) != 0 else "none",
-                )
-                end_time = time.time()
-                print(
-                    f"OpenAI LLM API response time: {end_time - start_time:.2f} seconds"
-                )
-                if tools == []:
-                    processed_text = response.choices[0].message.content
-                    print(f"LLM returned processed text: {processed_text}")
-                    if processed_text:
-                        return re.sub(
-                            r"^```json\s*|\s*```$",
-                            "",
-                            processed_text.strip(),
-                            flags=re.MULTILINE,
-                        )
-                    else:
-                        return ""
-                else:
-                    return response
+            # The client is responsible for primary processing.
+            # OpenAIClient returns raw response for tools, string otherwise.
+            # OllamaClient returns string.
+            # No further specific processing needed here unless abstracting tool responses.
+            if response is not None:
+                # print(f"LLMHandler: Received response from client: {type(response)}") # Debug
+                pass # Response is already in desired format from client
+            else:
+                print(f"LLMHandler: Received no response or an error from {self.client.source_name}.")
 
-            except OpenAIError as e:
-                print(f"OpenAI API Error during LLM processing: {e}")
-                if hasattr(e, "body") and e.body:
-                    print(f"Error Body: {e.body}")
-                return None
-            except Exception as e:
-                print(f"An unexpected error occurred during LLM processing: {e}")
-                import traceback
+            return response
 
-                traceback.print_exc()
-                return None
-
-        elif self.llm_source == "ollama":
-            if not self.ollama_running:
-                print(
-                    "Error: Ollama is not running. Please start Ollama before using it."
-                )
-                return None
-
-            try:
-                # Prepare messages for chat completion
-                messages = messages_override or [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": text},
-                ]
-
-                print(f"Sending request to Ollama (model: {self.llm_model})...")
-                start_time = time.time()
-
-                # Prepare the request payload
-                payload = {
-                    "model": self.llm_model,
-                    "messages": messages,
-                    "options": {
-                        "temperature": temperature,
-                        "num_predict": max_tokens,
-                    },
-                    "stream": False,
-                }
-
-                # Only add tools if they are provided
-                if tools:
-                    payload["tools"] = tools
-
-                print(f"Request payload: {json.dumps(payload, indent=2)}")
-
-                response = requests.post(
-                    "http://localhost:11434/api/chat",
-                    json=payload,
-                    timeout=120,
-                )
-
-                # Print the raw response for debugging
-                print(f"Raw response status: {response.status_code}")
-                print(f"Raw response headers: {response.headers}")
-                print(f"Raw response text: {response.text}")
-
-                response.raise_for_status()
-                response_data = response.json()
-
-                print(f"Ollama returned in {time.time() - start_time:.2f} seconds")
-                print(f"Ollama returned: {json.dumps(response_data, indent=2)}")
-
-                if tools == []:
-                    processed_text = response_data["message"]["content"]
-                    print(f"Ollama returned processed text: {processed_text}")
-                    if processed_text:
-                        return re.sub(
-                            r"^```json\s*|\s*```$",
-                            "",
-                            processed_text.strip(),
-                            flags=re.MULTILINE,
-                        )
-                    else:
-                        return ""
-                else:
-                    # Convert Ollama response to OpenAI format for consistency
-                    openai_format = {
-                        "choices": [
-                            {
-                                "message": {
-                                    "content": response_data["message"]["content"],
-                                    "tool_calls": response_data["message"].get("tool_calls", []),
-                                }
-                            }
-                        ]
-                    }
-                    return openai_format
-
-            except requests.exceptions.HTTPError as e:
-                print(f"HTTP Error during Ollama LLM processing: {e}")
-                print(f"Response content: {e.response.text if hasattr(e, 'response') else 'No response content'}")
-                return None
-            except Exception as e:
-                print(f"Error during Ollama LLM processing: {e}")
-                import traceback
-
-                traceback.print_exc()
-                return None
-
-        else:
-            print(f"Error: Unknown LLM source '{self.llm_source}'")
+        except Exception as e:
+            print(f"LLMHandler: An unexpected error occurred while calling client's generate_response: {e}")
+            import traceback
+            traceback.print_exc()
             return None

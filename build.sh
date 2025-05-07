@@ -5,6 +5,28 @@ set -e
 
 echo "🚀 Starting build process for Inten..."
 
+# --- Build Swift Helper ---
+echo "🛠️ Building Swift helper (inten_macos_agent)..."
+# Navigate to the swift_helper directory, build, and navigate back
+(cd ./src/swift_helper && swift build -c release --arch arm64 --arch x86_64)
+# Define the path to the built Swift helper
+SWIFT_HELPER_BUILD_PATH="./src/swift_helper/.build/apple/Products/Release/inten_macos_agent"
+
+# Check if Swift helper was built
+if [ ! -f "$SWIFT_HELPER_BUILD_PATH" ]; then
+    echo "❌ Swift helper build failed or not found at $SWIFT_HELPER_BUILD_PATH"
+    exit 1
+fi
+echo "✅ Swift helper built successfully."
+
+# --- Prepare for PyInstaller ---
+# Create a directory in src to store binaries that PyInstaller will pick up
+echo "📦 Preparing Swift helper for packaging..."
+mkdir -p src/bin
+cp "$SWIFT_HELPER_BUILD_PATH" src/bin/inten_macos_agent
+chmod +x src/bin/inten_macos_agent # Ensure it's executable
+echo "Copied Swift helper to src/bin/inten_macos_agent"
+
 # Create temporary iconset directory
 echo "🎨 Creating application icon..."
 mkdir -p icon.iconset

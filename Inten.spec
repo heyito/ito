@@ -4,19 +4,25 @@
 a = Analysis(
     ['src/main.py'],
     pathex=['src'],
-    binaries=[('/opt/homebrew/opt/portaudio/lib/libportaudio.dylib', '.')],
+    binaries=[
+        ('/opt/homebrew/opt/portaudio/lib/libportaudio.dylib', '.'),
+        ('./.venv/lib/python3.12/site-packages/vosk/libvosk.dyld', 'vosk'),
+    ],
     datas=[
         ('inten-logo.png', '.'),
+        ('src/bin/inten_macos_agent', 'Resources'),
         ('./.venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/platforms', 'PyQt6/Qt6/plugins/platforms'),
         ('./.venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/styles', 'PyQt6/Qt6/plugins/styles'),
         ('./.venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/imageformats', 'PyQt6/Qt6/plugins/imageformats'),
         ('./.venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/permissions', 'PyQt6/Qt6/plugins/permissions'),
         ('./.venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/position', 'PyQt6/Qt6/plugins/position'),
+        ('src/models/vosk-model-en-us-0.22-lgraph', 'models/vosk-model-en-us-0.22-lgraph'),
     ],
     hiddenimports=[
       'native_messaging_host',
       'dependency_injector.errors',
-      'dependency_injector.wiring'
+      'dependency_injector.wiring',
+      'vosk'
     ],
     hookspath=[],
     hooksconfig={},

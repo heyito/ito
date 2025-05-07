@@ -30,20 +30,24 @@ MODIFIER_MAP = {
     "ctrl": Quartz.kCGEventFlagMaskControl,
 }
 
+DEV_MODE = os.getenv('DEV')
 
 class MacOSEngine:
     def __init__(self):
         # Path to your built Swift binary
-        self.swift_helper_path = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "swift_helper",
-            ".build",
-            "apple",
-            "Products",
-            "Release",
-            "macos_agent",
-        )
+        if DEV_MODE:
+          self.swift_helper_path = os.path.join(
+              os.path.dirname(__file__),
+              "..",
+              "swift_helper",
+              ".build",
+              "apple",
+              "Products",
+              "Release",
+              "inten_macos_agent",
+          )
+        else:
+          self.swift_helper_path = "/Applications/Inten.app/Contents/Resources/inten_macos_agent"
 
     def _click_at(self, x, y):
         for event_type in [

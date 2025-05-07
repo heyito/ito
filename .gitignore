@@ -43,3 +43,4 @@ dist/
 dmg-layout.applescript
 .build/
 capture-*.png
+src/bin

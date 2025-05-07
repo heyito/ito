@@ -91,7 +91,7 @@ make format
 
 1. Install PyInstaller:
 ```bash
-pip install pyinstaller
+pip3 install pyinstaller
 ```
 
 2. Install system dependencies:

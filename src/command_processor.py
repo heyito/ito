@@ -62,7 +62,6 @@ class CommandProcessor:
         
         # Start the thread outside the lock
         print(f"[{timestamp}] CommandProcessor: Starting processing thread for command: '{command_copy[:30]}...'")
-        self._update_status("Processing command...")
         self._processing_thread.start()
         return True
 

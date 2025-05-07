@@ -75,7 +75,7 @@ class LLMHandler:
         self,
         text: str,
         system_prompt_override: str = None,
-        max_tokens: int = 5000,
+        max_tokens: int = 4096,
         temperature: float = 0.7,
         tools: list[dict] = [],
         messages_override: list[dict] = [],

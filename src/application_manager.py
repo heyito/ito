@@ -328,7 +328,7 @@ class ApplicationManager(QObject):
     def _run_application_thread(self, config: dict[str, Any], stop_event: threading.Event) -> None:
         """
         Internal method executed in the background thread.
-        Initializes and runs the DiscreteAudioApplication.
+        Initializes and runs the AudioApplication.
         """
         try:
             print("Background thread started.")
@@ -344,11 +344,11 @@ class ApplicationManager(QObject):
             # Pass the status queue to the app instance
             self.app_instance.status_queue = self.status_queue  # <--- Add this line
 
-            print("Starting DiscreteAudioApplication.run() in background thread...")
+            print("Starting AudioApplication.run() in background thread...")
             # Run the application - it has its own event loop that will continue running
             # until the stop_event is set
             self.app_instance.run()
-            print("DEBUG: DiscreteAudioApplication.run() exited normally.")
+            print("DEBUG: AudioApplication.run() exited normally.")
 
         except Exception as e:
             error_msg = f"Background Application Error: {str(e)}\n{traceback.format_exc()}"

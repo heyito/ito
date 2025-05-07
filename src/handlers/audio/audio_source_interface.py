@@ -44,7 +44,7 @@ class AudioSourceInterface(ABC):
         # At application startup
         try:
             if self.device_index is None:
-                devices = sd.query_devices()
+                sd.query_devices()
                 default_input_idx = sd.default.device[0]
                 print(f"No device index provided. Using default input device index: {default_input_idx}")
                 self.device_index = default_input_idx

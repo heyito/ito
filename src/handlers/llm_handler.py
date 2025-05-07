@@ -88,6 +88,8 @@ class LLMHandler:
             system_prompt_override: Optional override for the system prompt
             max_tokens: Maximum number of tokens to generate
             temperature: Sampling temperature (0.0 to 1.0)
+            tools: List of tools available to the model
+            messages_override: Optional override for the message history
 
         Returns:
             str: The processed text, or None if processing failed
@@ -95,8 +97,6 @@ class LLMHandler:
         print(
             f"Sending context and command to LLM ({self.llm_source}, {self.llm_model})..."
         )
-        # print(f"System prompt: {system_prompt_override}")
-        # print(f"Full LLM input:\n---\n{text}\n---")
         print("Sending to LLM...")
 
         if not text:
@@ -176,46 +176,79 @@ class LLMHandler:
                 return None
 
             try:
-                # Compose prompt with system prompt if provided
-                system_prompt = (
-                    system_prompt_override
-                    if system_prompt_override
-                    else DEFAULT_LLM_SYSTEM_PROMPT
-                )
-                full_prompt = f"{system_prompt}\n\nUser: {text}\nAssistant:"
+                # Prepare messages for chat completion
+                messages = messages_override or [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": text},
+                ]
+
                 print(f"Sending request to Ollama (model: {self.llm_model})...")
                 start_time = time.time()
 
-                response = requests.post(
-                    "http://localhost:11434/api/generate",
-                    json={
-                        "model": self.llm_model,
-                        "prompt": full_prompt,
-                        "options": {
-                            "temperature": temperature,
-                            "num_predict": max_tokens,
-                        },
+                # Prepare the request payload
+                payload = {
+                    "model": self.llm_model,
+                    "messages": messages,
+                    "options": {
+                        "temperature": temperature,
+                        "num_predict": max_tokens,
                     },
-                    stream=True,  # Enable streaming
+                    "stream": False,
+                }
+
+                # Only add tools if they are provided
+                if tools:
+                    payload["tools"] = tools
+
+                print(f"Request payload: {json.dumps(payload, indent=2)}")
+
+                response = requests.post(
+                    "http://localhost:11434/api/chat",
+                    json=payload,
                     timeout=120,
                 )
-                response.raise_for_status()
 
-                # Process streaming response
-                full_response = ""
-                for line in response.iter_lines():
-                    if line:
-                        try:
-                            chunk = json.loads(line)
-                            if "response" in chunk:
-                                full_response += chunk["response"]
-                        except json.JSONDecodeError as e:
-                            print(f"Error decoding JSON chunk: {e}")
-                            continue
+                # Print the raw response for debugging
+                print(f"Raw response status: {response.status_code}")
+                print(f"Raw response headers: {response.headers}")
+                print(f"Raw response text: {response.text}")
+
+                response.raise_for_status()
+                response_data = response.json()
 
                 print(f"Ollama returned in {time.time() - start_time:.2f} seconds")
-                return full_response.strip()
+                print(f"Ollama returned: {json.dumps(response_data, indent=2)}")
 
+                if tools == []:
+                    processed_text = response_data["message"]["content"]
+                    print(f"Ollama returned processed text: {processed_text}")
+                    if processed_text:
+                        return re.sub(
+                            r"^```json\s*|\s*```$",
+                            "",
+                            processed_text.strip(),
+                            flags=re.MULTILINE,
+                        )
+                    else:
+                        return ""
+                else:
+                    # Convert Ollama response to OpenAI format for consistency
+                    openai_format = {
+                        "choices": [
+                            {
+                                "message": {
+                                    "content": response_data["message"]["content"],
+                                    "tool_calls": response_data["message"].get("tool_calls", []),
+                                }
+                            }
+                        ]
+                    }
+                    return openai_format
+
+            except requests.exceptions.HTTPError as e:
+                print(f"HTTP Error during Ollama LLM processing: {e}")
+                print(f"Response content: {e.response.text if hasattr(e, 'response') else 'No response content'}")
+                return None
             except Exception as e:
                 print(f"Error during Ollama LLM processing: {e}")
                 import traceback

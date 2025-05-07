@@ -182,31 +182,46 @@ def get_browser_context(socket_path):
         sock.connect(socket_path)
         
         # Send request for context
-        sock.send(json.dumps({"type": "request_context"}).encode())
+        request = {"type": "request_context"}
+        print(f"Sending request: {request}")
+        sock.send(json.dumps(request).encode())
         print("Waiting for response...")
         
         # Keep reading responses until we get the context one
         start_time = time.time()
         timeout = 5  # 5 second timeout
+        buffer = b''
         
         while time.time() - start_time < timeout:
             try:
-                response = sock.recv(4096)
-                if not response:
+                chunk = sock.recv(4096)
+                if not chunk:
                     break
-                    
-                data = json.loads(response.decode())
-                print(f"Received message type: {data.get('type')}")
                 
-                # Only return if it's the context response we're waiting for
-                if data.get('type') == 'context':
-                    return data.get('data')
-                else:
-                    print(f"Ignoring non-context message of type: {data.get('type')}")
+                buffer += chunk
+                print(f"Received chunk, buffer size: {len(buffer)}")
+                
+                try:
+                    # Try to parse the buffer as JSON
+                    data = json.loads(buffer.decode())
+                    print(f"Successfully parsed JSON message type: {data.get('type')}")
+                    
+                    # Only return if it's the context response we're waiting for
+                    if data.get('type') == 'context':
+                        return data.get('data')
+                    else:
+                        print(f"Ignoring non-context message of type: {data.get('type')}")
+                        buffer = b''  # Clear buffer after successful parse
+                        continue
+                        
+                except json.JSONDecodeError:
+                    # If we can't parse the buffer yet, it might be incomplete
+                    # Continue reading more data
                     continue
                     
-            except json.JSONDecodeError as e:
-                print(f"Error decoding response: {e}")
+            except UnicodeDecodeError as e:
+                print(f"Error decoding response bytes: {e}")
+                print(f"Raw buffer: {buffer}")
                 continue
                 
         print("Timeout waiting for context response")

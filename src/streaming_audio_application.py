@@ -9,13 +9,13 @@ from typing import Any
 
 from pynput import keyboard
 
-from src import platform_utils_macos as platform_utils  # Added for context
+from src import platform_utils_macos as platform_utils
 from src.app_config import AppConfig
 from src.application_interface import ApplicationInterface
-from src.engines.context_engine import ContextEngine  # Added
-from src.engines.processing_engine import ProcessingEngine  # Added
+from src.engines.context_engine import ContextEngine
+from src.engines.processing_engine import ProcessingEngine
 from src.handlers.audio_handler import AudioHandler
-from src.handlers.llm_handler import LLMHandler  # Added
+from src.handlers.llm_handler import LLMHandler
 from src.handlers.vosk_processor import VoskProcessor
 
 # Actions for the queue (can be simplified)

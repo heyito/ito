@@ -114,27 +114,27 @@ class OnboardingWindow(QMainWindow):
         # --- Qt Styling ---
         self.setStyleSheet("""
             QMainWindow { 
-                background-color: #E05C5C;
-                font-family: "Inter";
+                background-color: #141538;
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
             QWidget#main_widget { 
                 background-color: transparent;
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
             QLabel { 
                 color: #F2E4D6; 
                 background-color: transparent;
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
             QPushButton {
                 background-color: #F2E4D6;
-                color: #E05C5C;
+                color: #141538;
                 border: none;
                 padding: 8px 20px;
                 border-radius: 6px;
                 font-size: 13px;
                 font-weight: 500;
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
             QPushButton:hover {
                 background-color: rgba(242, 228, 214, 0.8);
@@ -150,7 +150,7 @@ class OnboardingWindow(QMainWindow):
                 background-color: rgba(242, 228, 214, 0.2);
                 max-height: 6px;
                 margin: 0px 2px;
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
             QProgressBar::chunk {
                 background-color: #F2E4D6;
@@ -162,25 +162,25 @@ class OnboardingWindow(QMainWindow):
                 min-height: 60px;
                 padding: 0px;
                 margin: 0px;
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
             QLabel#permission_status {
                 font-size: 13px;
                 font-weight: 500;
                 padding-right: 16px;
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
             QLabel#permission_text {
                 font-size: 15px;
                 color: #F2E4D6;
                 font-weight: 400;
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
             QLabel#permission_icon {
                 font-size: 22px;
                 min-width: 30px;
                 margin-left: 16px;
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
         """)
 
@@ -302,7 +302,7 @@ class OnboardingWindow(QMainWindow):
         start_button.setStyleSheet("""
             QPushButton {
                 background-color: #F2E4D6;
-                color: #E05C5C;
+                color: #141538;
                 border: none;
                 padding: 12px 30px;
                 border-radius: 5px;
@@ -427,7 +427,7 @@ class OnboardingWindow(QMainWindow):
         self.continue_button.setStyleSheet("""
             QPushButton {
                 background-color: #F2E4D6;
-                color: #E05C5C;
+                color: #141538;
                 border: none;
                 padding: 12px 0px;
                 border-radius: 6px;
@@ -551,7 +551,7 @@ class OnboardingWindow(QMainWindow):
         start_button.setStyleSheet("""
             QPushButton {
                 background-color: #F2E4D6;
-                color: #E05C5C;
+                color: #141538;
                 border: none;
                 padding: 12px 30px;
                 border-radius: 5px;

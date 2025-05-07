@@ -129,8 +129,8 @@ class HomeWindow(QMainWindow):
         # Add global stylesheet for macOS-style form elements
         self.setStyleSheet("""
             QMainWindow {
-                background: #E05C5C;
-                font-family: "Inter";
+                background: #141538;
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
             
             /* Base input styles - minimal styling */
@@ -140,7 +140,7 @@ class HomeWindow(QMainWindow):
                 padding: 5px;
                 min-width: 200px;
                 color: #F2E4D6;
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
             
             /* Remove all spin buttons */
@@ -159,7 +159,7 @@ class HomeWindow(QMainWindow):
                 padding: 5px;
                 min-width: 200px;
                 color: #F2E4D6;
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
 
             QComboBox::drop-down {
@@ -176,17 +176,17 @@ class HomeWindow(QMainWindow):
                                       /* Style the dropdown popup frame/container */
             /* This QFrame holds the QAbstractItemView */
             QComboBox QFrame {
-                background-color: #E05C5C;  /* Frame background */
+                background-color: #141538;  /* Frame background */
                 border: 1px solid rgba(242, 228, 214, 0.3);/* Apply border here */
                 margin: 0px;              /* No margin */
                 padding: 0px;             /* No padding */
                 border-image: none;       /* Optional: Uncomment if desperate to reset native look */
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
 
             /* Style the list view *inside* the frame */
             QComboBox QListView {
-                background-color: #E05C5C; /* View background (can be white or transparent if frame bg works) */
+                background-color: #141538; /* View background (can be white or transparent if frame bg works) */
                 color: #F2E4D6;                /* Default text color */
                 selection-background-color: rgba(242, 228, 214, 0.2); /* Selection background */
                 selection-color: #F2E4D6;           /* Selection text color */
@@ -194,27 +194,27 @@ class HomeWindow(QMainWindow):
                 border: none;                       /* View itself has NO border (it's on the QFrame) */
                 padding: 0px;                       /* View itself has NO padding */
                 margin: 0px;                        /* View itself has NO margin */
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
 
             /* Style the viewport *within* the list view - Often needed! */
             QComboBox QListView::viewport {
-                background-color: #E05C5C;  /* Ensure viewport background is white */
+                background-color: #141538;  /* Ensure viewport background is white */
                 border: none;             /* Ensure viewport has no border */
                 margin: 0px;
                 padding: 0px;
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
 
             /* Style individual items */
             QComboBox QListView::item {
-                background-color: #E05C5C; /* Use background-color consistently */
+                background-color: #141538; /* Use background-color consistently */
                 color: #F2E4D6;
                 border: none;
                 padding: 5px;             /* Padding *within* each item text area */
                 margin: 0px;              /* Ensure items don't have margins */
                 min-height: 20px; /* Optional: Ensure items have a minimum height */
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
 
             /* Style selected items */
@@ -227,26 +227,27 @@ class HomeWindow(QMainWindow):
             QCheckBox {
                 spacing: 8px;
                 color: #F2E4D6;
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
             
             /* Menu panel */
             QWidget#menu_panel {
-                background-color: #E05C5C;
-                font-family: "Inter";
+                background-color: #141538;
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
             
             /* Menu buttons - essential styling only */
             QPushButton#settings_button {
-                text-align: left;
+                text-align: center;
                 padding: 16px 24px;
                 border: none;
                 background-color: transparent;
                 color: #F2E4D6;
                 font-size: 18px;
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
                 border-radius: 18px;
-                margin: 8px 16px 8px 8px;
+                margin: 8px 16px 8px 16px;
+                width: 100%;
             }
             
             QPushButton#settings_button:hover {
@@ -270,8 +271,8 @@ class HomeWindow(QMainWindow):
                 padding: 8px 20px;
                 border: none;
                 border-radius: 6px;
-                color: #E05C5C;
-                font-family: "Inter";
+                color: #141538;
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
                 min-width: 120px;
             }
             
@@ -294,7 +295,7 @@ class HomeWindow(QMainWindow):
             /* Form labels */
             QLabel {
                 color: #F2E4D6;
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
 
             /* Section headers */
@@ -304,19 +305,19 @@ class HomeWindow(QMainWindow):
                 color: #F2E4D6;
                 margin-top: 24px;
                 margin-bottom: 8px;
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
 
             /* Scroll area */
             QScrollArea {
                 border: none;
                 background: transparent;
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
 
             QWidget#scroll_content {
                 background: transparent;
-                font-family: "Inter";
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
         """)
 
@@ -611,7 +612,7 @@ class HomeWindow(QMainWindow):
             color: #F2E4D6;
             margin-top: 24px;
             margin-bottom: 8px;
-            font-family: "Inter";
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         """)
         layout.addRow(header)
 

@@ -1,4 +1,4 @@
-from asyncio.log import logger
+import logging
 import threading
 from typing import Literal
 from src.handlers.audio.audio_source_interface import AudioSourceInterface
@@ -8,7 +8,14 @@ import sounddevice as sd
 import asyncio
 import time
 
+logger = logging.getLogger("AudioSourceHandler")
+
 class AudioSourceHandler(AudioSourceInterface):
+    def __init__(self, sample_rate: int, channels: int, device_index: int):
+        super().__init__(sample_rate, channels, device_index)
+        self._last_queue_full_log_time: float = 0.0
+        self._queue_full_log_cooldown_seconds: float = 5.0
+
     def record_audio_stream_with_vad(self, stop_event, audio_queue, vad_config):
         if not webrtcvad:
             print("VAD disabled because webrtcvad is not available.")
@@ -141,63 +148,83 @@ class AudioSourceHandler(AudioSourceInterface):
                                   async_queue: asyncio.Queue,
                                   loop: asyncio.AbstractEventLoop,
                                   output_format: Literal['numpy', 'bytes'] = 'bytes'):
-
-        if output_format not in ['numpy', 'bytes']:
-            logger.error(f"Invalid output_format '{output_format}'. Must be 'numpy' or 'bytes'.")
-            raise ValueError("Invalid output_format")
         
-        dtype = np.int16 # Required for Vosk (PCM16)
-        blocksize_ms = 40
-        blocksize = int(self.sample_rate * blocksize_ms / 1000)
-        logger.info(f"Streaming blocksize: {blocksize} samples ({blocksize_ms}ms)")
-        logger.info(f"Outputting audio chunks as: {output_format}")
+        try: # Ensure the entire operational part of the method is within a try block
+            if output_format not in ['numpy', 'bytes']:
+                print(f"DEBUG AudioSourceHandler: Invalid output_format {output_format}")
+                logger.error(f"Invalid output_format '{output_format}'. Must be 'numpy' or 'bytes'.")
+                raise ValueError("Invalid output_format")
+            
+            dtype = np.int16 # Required for Vosk (PCM16)
+            blocksize_ms = 40
+            # Calculate the desired blocksize in samples based on blocksize_ms
+            calculated_blocksize = int(self.sample_rate * blocksize_ms / 1000)
 
-        def callback(indata: np.ndarray, frames: int, time_info, status: sd.CallbackFlags):
-            """Sounddevice callback: Converts data and puts it into the asyncio Queue."""
-            if status:
-                logger.warning(f"Sounddevice status (streaming): {status}")
+            # ===== DEBUG PRINT: Config =====
+            # print(f"DEBUG AudioSourceHandler: Config - Requested blocksize=0 (auto), output_format={output_format}, requested_latency='low'")
+            # logger.info(f"Streaming with requested blocksize=0 (auto) and latency='low'. Outputting audio as: {output_format}")
+            print(f"DEBUG AudioSourceHandler: Config - Calculated blocksize={calculated_blocksize} samples ({blocksize_ms}ms), output_format={output_format}, requested_latency='low'")
+            logger.info(f"Streaming with calculated_blocksize={calculated_blocksize} samples ({blocksize_ms}ms) and latency='low'. Outputting audio as: {output_format}")
 
-            # --- Convert to desired output format ---
-            try:
-                if output_format == 'bytes':
-                    audio_chunk = indata.tobytes()
-                else: # output_format == 'numpy'
-                    audio_chunk = indata.copy() # Important to copy numpy arrays
-            except Exception as e:
-                 logger.error(f"Error converting audio chunk in callback: {e}")
-                 return # Skip putting data on error
+            def _put_audio_chunk_to_queue(chunk_data):
+                try:
+                    async_queue.put_nowait(chunk_data)
+                except asyncio.QueueFull:
+                    current_time = time.monotonic()
+                    if (current_time - self._last_queue_full_log_time) > self._queue_full_log_cooldown_seconds:
+                        logger.warning("Asyncio audio queue full! Audio data chunk dropped. Logging new occurrences every %.1f sec.", self._queue_full_log_cooldown_seconds, exc_info=False)
+                        self._last_queue_full_log_time = current_time
+                except Exception as e_put_internal: # Catch other errors from put_nowait
+                    logger.error(f"Error in _put_audio_chunk_to_queue: {e_put_internal}", exc_info=True)
 
-            # --- Put data onto queue thread-safely ---
-            try:
-                # Use loop.call_soon_threadsafe to schedule put_nowait in the asyncio loop
-                loop.call_soon_threadsafe(async_queue.put_nowait, audio_chunk)
-            except asyncio.QueueFull:
-                # Consider how critical losing data is. For real-time, dropping might be acceptable.
-                logger.warning("Asyncio audio queue full! Audio data chunk dropped.", exc_info=False) # Reduce log noise
-            except Exception as e:
-                # Log unexpected errors during the queue put operation
-                logger.error(f"Error putting audio chunk onto queue in callback: {e}", exc_info=True)
-                # Potentially set stop_event here if queue errors are fatal?
-                # loop.call_soon_threadsafe(stop_event.set)
+            def callback(indata: np.ndarray, frames: int, time_info, status: sd.CallbackFlags):
+                if status:
+                    logger.warning(f"Sounddevice status (streaming): {status}")
 
+                try:
+                    if output_format == 'bytes':
+                        audio_chunk = indata.tobytes()
+                    else: # output_format == 'numpy'
+                        audio_chunk = indata.copy()
+                except Exception as e_conv:
+                    # ===== DEBUG PRINT: Callback Conversion Error =====
+                    # print(f"DEBUG AudioSourceHandler: Error converting audio chunk in callback: {e_conv}") # Reduced verbosity
+                    logger.error(f"Error converting audio chunk in callback: {e_conv}")
+                    return 
 
-        # --- Stream Execution ---
-        try:
-            logger.info(f"Attempting to open stream (async streaming mode): device={self.device_index}, rate={self.sample_rate}, channels={self.channels}, blocksize={blocksize}")
+                try:
+                    # Schedule the helper function to run in the event loop
+                    loop.call_soon_threadsafe(_put_audio_chunk_to_queue, audio_chunk)
+                except Exception as e_put_schedule: # Error scheduling the call
+                    # ===== DEBUG PRINT: Callback Queue Put Error =====
+                    # print(f"DEBUG AudioSourceHandler: Error putting audio chunk onto queue in callback: {e_put}") # Name change e_put -> e_put_schedule
+                    logger.error(f"Error scheduling put of audio chunk onto queue in callback: {e_put_schedule}", exc_info=True)
+
+            print(f"DEBUG AudioSourceHandler: Attempting to open sd.InputStream at {time.time()}")
+            default_input_device = sd.default.device[0] if isinstance(sd.default.device, (list, tuple)) else sd.default.device
+            actual_device_index = self.device_index if self.device_index is not None else default_input_device
+            logger.info(f"Attempting to open stream (async streaming mode): device={actual_device_index}, rate={self.sample_rate}, channels={self.channels}, blocksize={calculated_blocksize}, latency='low'")
+            stream_open_start_time = time.monotonic()
             with sd.InputStream(samplerate=self.sample_rate,
                             channels=self.channels,
                             dtype=dtype,
-                            blocksize=blocksize,
+                            blocksize=calculated_blocksize, # Use the calculated blocksize
                             device=self.device_index,
-                            callback=callback):
-                logger.info("Audio stream opened (async streaming mode). Streaming...")
-                # Keep the stream alive until stop_event is set externally
-                # Use wait with a timeout to be more responsive if needed,
-                # but simple sleep is often sufficient here.
+                            latency='low',
+                            callback=callback) as stream:
+                stream_open_duration = (time.monotonic() - stream_open_start_time) * 1000
+                actual_latency_ms = stream.latency * 1000
+                actual_blocksize_samples = stream.blocksize
+                actual_block_duration_ms = (actual_blocksize_samples / self.sample_rate) * 1000
+
+                log_msg = (f"Audio stream opened in {stream_open_duration:.2f} ms. "
+                           f"Actual negotiated latency: {actual_latency_ms:.2f} ms. "
+                           f"Actual blocksize: {actual_blocksize_samples} samples ({actual_block_duration_ms:.2f} ms). "
+                           f"Streaming...")
+                logger.info(log_msg)
+                print(f"DEBUG AudioSourceHandler: {log_msg}")
                 while not stop_event.is_set():
-                    # time.sleep(0.1) # Check stop event periodically
-                    # Using wait() is slightly cleaner if timeout isn't strictly needed
-                    stop_event.wait(timeout=0.2) # Wait up to 0.2s for event or timeout
+                    stop_event.wait(timeout=0.2)
 
                 logger.info("Stop event received by async streaming loop.")
 
@@ -207,9 +234,8 @@ class AudioSourceHandler(AudioSourceInterface):
             if not stop_event.is_set(): stop_event.set()
             # If the loop isn't running, we can't put None, but the consumer should handle this
             if loop.is_running(): loop.call_soon_threadsafe(async_queue.put_nowait, None)
-            raise # Re-raise the specific error
-        except ValueError as ve: # Catch specific errors like invalid device/settings
-             logger.error(f"Value Error during stream setup (async): {ve}")
+            raise
+        except ValueError as ve:
              if not stop_event.is_set(): stop_event.set()
              if loop.is_running(): loop.call_soon_threadsafe(async_queue.put_nowait, None)
              raise
@@ -225,7 +251,11 @@ class AudioSourceHandler(AudioSourceInterface):
                  # Check if None might have already been put by an error handler
                  # This is hard to guarantee perfectly without more complex state.
                  # Putting None again is usually harmless if the consumer handles it.
+                 # ===== DEBUG PRINT: Putting None Sentinel =====
+                 print(f"DEBUG AudioSourceHandler: Putting final None sentinel onto queue at {time.time()}")
                  logger.info("Putting final None sentinel onto queue.")
                  loop.call_soon_threadsafe(async_queue.put_nowait, None)
             elif not loop.is_running():
+                 # ===== DEBUG PRINT: Loop Not Running for None =====
+                 print(f"DEBUG AudioSourceHandler: Asyncio loop stopped before None could be reliably put on audio queue at {time.time()}")
                  logger.warning("Asyncio loop stopped before None could be reliably put on audio queue.")

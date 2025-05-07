@@ -13,7 +13,6 @@ except ImportError:
     print("You also need to download a Vosk model: https://alphacephei.com/vosk/models")
     raise
 
-# Configure logging for the processor
 import logging
 
 logger = logging.getLogger("VoskProcessor")
@@ -51,7 +50,7 @@ class VoskProcessor:
             self._model = vosk.Model(model_path)
             self._recognizer = vosk.KaldiRecognizer(self._model, self.sample_rate)
             self._recognizer.SetWords(True) # Enable word timestamps if needed later
-            # self._recognizer.SetPartialWords(True) # Enable partial word results
+            self._recognizer.SetPartialWords(True) # Enable partial word results
             logger.info("Vosk model loaded successfully.")
         except Exception as e:
             logger.error(f"Failed to load Vosk model from '{model_path}': {e}", exc_info=True)
@@ -59,81 +58,50 @@ class VoskProcessor:
 
     def _processing_loop(self):
         """The main loop running in the background thread."""
-        logger.info("Vosk processing thread started.")
-        accumulated_data = bytearray()
-        last_partial_result = ""
 
         while not self.stop_event.is_set():
             loop_start_time = time.monotonic()
             try:
-                # Get audio data from the async queue (blocking call in thread)
-                # Use run_coroutine_threadsafe to interact with the async queue
+                # print("VOSK_DIAG: Attempting to get data from audio_input_queue...") # DIAGNOSTIC PRINT - Removed for clarity
                 get_coro_start_time = time.monotonic()
                 future = asyncio.run_coroutine_threadsafe(self.audio_input_queue.get(), self.loop)
-                # Wait for the result with a timeout to allow checking stop_event
                 wait_start_time = time.monotonic()
+                data = None
                 try:
-                     data = future.result(timeout=0.5) # Timeout allows checking stop_event
-                     wait_duration = (time.monotonic() - wait_start_time) * 1000
+                     data = future.result(timeout=0.1)
                 except TimeoutError:
-                     continue # No data yet, loop again
-                except Exception as e:
-                     logger.error(f"Error getting data from audio queue: {e}")
-                     time.sleep(0.1) # Avoid busy-waiting on error
                      continue
-                get_duration = (time.monotonic() - get_coro_start_time) * 1000
+                except Exception as e:
+                     print(f"VOSK_DIAG: Error getting data from audio queue: {e}") # Kept for critical errors
+                     time.sleep(0.1)
+                     continue
 
-                if data is None:  # End of stream signal
+                if data is None:
                     logger.info("Received None (EOS) from audio queue. Finalizing recognition.")
-                    break # Exit loop
+                    break
 
                 if not isinstance(data, bytes):
-                    logger.warning(f"Received non-bytes data from queue: {type(data)}. Skipping.")
-                    # self.audio_input_queue.task_done() # See note below
+                    print(f"VOSK_DIAG: Received non-bytes data from queue: {type(data)}. Skipping.")
                     continue
 
-                # Feed data to Vosk
                 accept_start_time = time.monotonic()
-                if self._recognizer.AcceptWaveform(data):
-                    accept_duration = (time.monotonic() - accept_start_time) * 1000
-                    # Full result available (Vosk detected end of utterance based on silence)
+                is_final_result_detected = self._recognizer.AcceptWaveform(data)
+                accept_duration = (time.monotonic() - accept_start_time) * 1000
+
+                if is_final_result_detected:
                     result_get_start_time = time.monotonic()
                     final_result_json = self._recognizer.Result()
                     result_get_duration = (time.monotonic() - result_get_start_time) * 1000
                     final_result = json.loads(final_result_json)
                     if final_result.get("text"):
-                        logger.info(f"Vosk Final Result: {final_result['text']}")
-                        logger.info(f"VOSK: AcceptWaveform took {accept_duration:.2f} ms (final: True), Result() took {result_get_duration:.2f} ms.")
+                        print(f"VOSK_DIAG_FINAL: Base AcceptWaveform: {accept_duration:.2f}ms, Result() call: {result_get_duration:.2f}ms. Text: '{final_result['text']}'")
                         result_data = {"text": final_result["text"], "is_final": True}
-                        # Put result back onto the async queue from the thread
                         put_start_time = time.monotonic()
                         asyncio.run_coroutine_threadsafe(self.transcript_output_queue.put(result_data), self.loop)
                         put_duration = (time.monotonic() - put_start_time) * 1000
-                        logger.info(f"VOSK: Put final transcript took {put_duration:.2f} ms.")
-                        last_partial_result = "" # Reset partial after final
-                else:
-                    accept_duration = (time.monotonic() - accept_start_time) * 1000
-                    # Partial result
-                    partial_get_start_time = time.monotonic()
-                    partial_result_json = self._recognizer.PartialResult()
-                    partial_get_duration = (time.monotonic() - partial_get_start_time) * 1000
-                    partial_result = json.loads(partial_result_json)
-                    current_partial_text = partial_result.get("partial", "")
+                        print(f"VOSK_DIAG_FINAL: Put transcript took {put_duration:.2f} ms.")
 
-                    # Only send update if partial text has changed
-                    if current_partial_text and current_partial_text != last_partial_result:
-                        # logger.info(f"Vosk Partial: {current_partial_text}")
-                        logger.info(f"VOSK: AcceptWaveform took {accept_duration:.2f} ms (final: False), PartialResult() took {partial_get_duration:.2f} ms.")
-                        result_data = {"text": current_partial_text, "is_final": False}
-                        put_start_time = time.monotonic()
-                        asyncio.run_coroutine_threadsafe(self.transcript_output_queue.put(result_data), self.loop)
-                        put_duration = (time.monotonic() - put_start_time) * 1000
-                        logger.info(f"VOSK: Put partial transcript took {put_duration:.2f} ms.")
-                        last_partial_result = current_partial_text
-
-                loop_duration = (time.monotonic() - loop_start_time) * 1000
-                # logger.info(f"VOSK: Full processing loop took {loop_duration:.2f} ms.")
-                pass # Avoid calling task_done from wrong thread
+                pass
 
             except queue.Empty:
                 # Queue was empty, wait a bit
@@ -147,8 +115,6 @@ class VoskProcessor:
         # --- Loop finished ---
         logger.info("Processing loop finished. Getting final result.")
         try:
-            # Process any remaining data? Maybe not needed if processing chunk-by-chunk
-            # Get the final result after the loop ends (in case EOS was received)
             final_result_json = self._recognizer.FinalResult()
             final_result = json.loads(final_result_json)
             if final_result.get("text"):
@@ -199,7 +165,6 @@ class VoskProcessor:
         else:
             logger.info("Vosk processor thread joined successfully.")
         self._thread = None
-        # Clear queues? Maybe not necessary if application manages them
 
     def is_active(self) -> bool:
         """Returns True if the processor is running."""

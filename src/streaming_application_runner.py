@@ -92,9 +92,7 @@ class StreamingApplicationRunner(ApplicationInterface):
             # Stop consumer task first
             if self._transcript_consumer_task and not self._transcript_consumer_task.done():
                 self._transcript_consumer_task.cancel()
-                # Optionally wait for cancellation if needed? Usually not required.
             self._transcript_consumer_task = None
-            # Stop audio streamer (stops capture and ASR processor)
             self.audio_streamer.stop_streaming()
             self._update_status("Ready")
         else:
@@ -104,9 +102,10 @@ class StreamingApplicationRunner(ApplicationInterface):
                  return
 
              print(f"[{timestamp}] Streaming Runner: Starting stream...")
-             self.context_manager.fetch_context_async() # Start context fetch
-             # Start audio streamer (starts capture, ASR)
+             # Start audio streamer (starts capture, ASR) first for responsiveness
              if self.audio_streamer.start_streaming():
+                 # Then fetch context in parallel
+                 self.context_manager.fetch_context_async()
                  # Start transcript consumer task *after* streamer confirms start
                  if self.audio_streamer.transcript_queue:
                      self._transcript_consumer_task = asyncio.run_coroutine_threadsafe(
@@ -150,14 +149,12 @@ class StreamingApplicationRunner(ApplicationInterface):
 
                         # 2. Wait for Context
                         logger.info("Waiting for context...")
-                        context_doc_text = self.context_manager.wait_for_context(timeout=5.0)
                         current_context_data = self.context_manager.get_current_context()
                         logger.info(f"Context ready (App: {current_context_data.get('app_name')}).")
 
                         # 3. Process Command
                         logger.info("Initiating command processing...")
                         self.command_processor.process_command(current_context_data, final_transcript)
-                        # Processing now happens, status updates handled by CommandProcessor
 
                         # Since processing started, break the consumer loop.
                         # It will be restarted on the next stream start.

@@ -1,17 +1,17 @@
+import io
 import re
 from typing import Any, Dict, List, Optional
 from groq import Groq, GroqError
 
 from src.utils.timing import time_method
 class GroqClient:
-    def __init__(self, api_key: str, model: str):
+    def __init__(self, api_key: str, user_command_model: str, asr_model: str):
         if not api_key:
             raise ValueError("Groq API key is required.")
-        if not model:
-            raise ValueError("Groq model name is required.")
 
         self._api_key = api_key
-        self._model = model
+        self._user_command_model = user_command_model
+        self._asr_model = asr_model
         self._client = Groq(api_key=self._api_key)
         self._is_valid = True
 
@@ -20,8 +20,12 @@ class GroqClient:
         return "groq_api"
 
     @property
-    def model_name(self) -> str:
-        return self._model
+    def user_command_model_name(self) -> str:
+        return self._user_command_model
+
+    @property
+    def asr_model_name(self) -> str:
+        return self._asr_model
 
     def check_availability(self) -> bool:
         if not self._api_key:
@@ -46,12 +50,15 @@ class GroqClient:
              print("GroqClient ERROR: API key is invalid or missing. Cannot process request.")
              return None
 
+        if not self._user_command_model:
+            raise ValueError("Groq user command model is required.")
+
         actual_tools = tools or [] # Ensure tools is a list
 
         try:
 
             response = self._client.chat.completions.create(
-                model=self._model,
+                model=self._user_command_model,
                 messages=messages_override
                 or [
                     {"role": "system", "content": system_prompt},
@@ -92,3 +99,35 @@ class GroqClient:
             import traceback
             traceback.print_exc()
             return None
+    
+    @time_method
+    def transcribe_audio(self, audio_buffer: io.BytesIO) -> str:
+        """Transcribes audio using the Groq API."""
+        if not self._client:
+             print("Error: Groq client not initialized.")
+             return ""
+        
+        if not self._asr_model:
+            raise ValueError("Groq ASR model is required.")
+
+        try:
+            # The Whisper API needs a filename hint, especially for format detection.
+            audio_buffer.name = "audio.wav"
+
+            transcript_response = self._client.audio.transcriptions.create(
+                model=self._asr_model,
+                file=audio_buffer,
+                response_format="text" # Explicitly request text
+            )
+
+            # Ensure the response is treated as a string
+            transcript = transcript_response if isinstance(transcript_response, str) else ""
+            return transcript.strip()
+
+        except GroqError as e:
+            print(f"Groq API Error during transcription: {e}")
+            return ""
+        except Exception as e:
+            # Catch broader exceptions during the API call
+            print(f"An unexpected error occurred during Groq transcription: {e}")
+            return ""

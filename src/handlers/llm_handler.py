@@ -2,6 +2,7 @@ import time
 from typing import Any, List, Dict, Optional
 
 from src.clients.llm_client_interface import LLMClientInterface
+from src.utils.timing import time_method
 
 # Default System Prompt (can be configured or overridden)
 DEFAULT_LLM_SYSTEM_PROMPT = "You are a helpful AI assistant."
@@ -18,10 +19,11 @@ class LLMHandler:
         self.is_client_available = self.client.check_availability()
 
         if self.is_client_available:
-            print(f"LLMHandler initialized with client: {self.client.source_name}, model: {self.client.model_name}")
+            print(f"LLMHandler initialized with client: {self.client.source_name}, model: {self.client.user_command_model_name}")
         else:
             print(f"LLMHandler WARNING: Client {self.client.source_name} is not available or not configured correctly.")
 
+    @time_method
     def process_text_with_llm(
         self,
         text: str,
@@ -48,11 +50,6 @@ class LLMHandler:
         """
         start_time = time.time()
 
-        print(
-            f"Sending context and command to LLM ({self.client.source_name}, {self.client.model_name})..."
-        )
-        print("Sending to LLM...")
-
         if not text and not messages_override: # If messages_override is present, text might be implicitly handled
             print("LLMHandler: Received empty text for user message and no messages_override.")
             return None
@@ -69,10 +66,6 @@ class LLMHandler:
         if not system_prompt: # Ensure system_prompt is not empty if it's going to be used
             print("LLMHandler Warning: LLM system prompt is empty. Using a default space.")
             system_prompt = " "
-
-        print(
-            f"LLMHandler: Sending request to {self.client.source_name} (model: {self.client.model_name})..."
-        )
 
         try:
             response = self.client.generate_response(
@@ -91,7 +84,7 @@ class LLMHandler:
 
             end_time = time.time()
             print(
-                f"{self.client.source_name} LLM API response time for model {self.client.model_name}: {end_time - start_time:.2f} seconds"
+                f"{self.client.source_name} LLM API response time for model {self.client.user_command_model_name}: {end_time - start_time:.2f} seconds"
             )
             return response
 

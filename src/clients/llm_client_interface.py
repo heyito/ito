@@ -17,9 +17,17 @@ class LLMClientInterface(ABC):
 
     @property
     @abstractmethod
-    def model_name(self) -> str:
+    def user_command_model_name(self) -> str:
         """
         Returns the name of the specific LLM model being used by this client.
+        """
+        pass
+    
+    @property
+    @abstractmethod
+    def asr_model_name(self) -> str:
+        """
+        Returns the name of the specific ASR model being used by this client.
         """
         pass
 

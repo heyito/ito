@@ -427,21 +427,41 @@ class HomeWindow(QMainWindow):
         # ASR Section
         self.add_section_header(form_layout, "Speech Recognition Settings")
         self.asr_source = CustomCombo()
-        self.asr_source.addItems(["openai_api", "faster_whisper"])
-        self.asr_model = CustomCombo()
-        self.asr_model.addItems(["whisper-1"])
-        self.asr_local_model_size = CustomCombo()
-        self.asr_local_model_size.addItems(["tiny", "tiny.en", "base", "base.en", "small", "small.en", 
-                                          "medium", "medium.en", "large-v1", "large-v2", "large-v3"])
+        self.asr_source.addItems(["openai_api", "faster_whisper", "groq_api"])
+        form_layout.addRow("ASR Provider:", self.asr_source)
+
+        # ASR Model Stacking
+        self.asr_model_label = QLabel("ASR Model:")
+        self.asr_model_stacked_widget = QStackedWidget()
+
+        self.openai_asr_model_dropdown = CustomCombo()
+        self.openai_asr_model_dropdown.addItems(["whisper-1"])
+
+        self.faster_whisper_model_dropdown = CustomCombo()
+        self.faster_whisper_model_dropdown.addItems(["tiny", "tiny.en", "base", "base.en", "small", "small.en",
+                                           "medium", "medium.en", "large-v1", "large-v2", "large-v3"])
+
+        self.groq_asr_model_dropdown = CustomCombo()
+        self.groq_asr_model_dropdown.addItems(["distil-whisper-large-v3-en", "whisper-large-v3-turbo", "whisper-large-v3"])
+
+        self.asr_model_stacked_widget.addWidget(self.openai_asr_model_dropdown)
+        self.asr_model_stacked_widget.addWidget(self.faster_whisper_model_dropdown)
+        self.asr_model_stacked_widget.addWidget(self.groq_asr_model_dropdown)
+        form_layout.addRow(self.asr_model_label, self.asr_model_stacked_widget)
+
+        self.asr_device_label = QLabel("Device:")
         self.asr_device = CustomCombo()
         self.asr_device.addItems(["auto"])
+        form_layout.addRow(self.asr_device_label, self.asr_device)
+
+        self.asr_compute_type_label = QLabel("Compute Type:")
         self.asr_compute_type = CustomCombo()
         self.asr_compute_type.addItems(["default"])
-        form_layout.addRow("ASR Provider:", self.asr_source)
-        form_layout.addRow("Model:", self.asr_model)
-        form_layout.addRow("Local Model Size:", self.asr_local_model_size)
-        form_layout.addRow("Device:", self.asr_device)
-        form_layout.addRow("Compute Type:", self.asr_compute_type)
+        form_layout.addRow(self.asr_compute_type_label, self.asr_compute_type)
+
+        # Connect LLM source change to update model field and API key fields
+        self.asr_source.currentTextChanged.connect(self._update_api_key_fields)
+        self.asr_source.currentTextChanged.connect(self._update_asr_provider_fields)
 
         # LLM Section
         self.add_section_header(form_layout, "Language Model Settings")
@@ -453,12 +473,12 @@ class HomeWindow(QMainWindow):
         self.llm_model_label = QLabel("Model:")
         self.llm_model_stacked_widget = QStackedWidget()
         
-        self.llm_model_edit = QLineEdit() # Renamed from self.llm_model
+        self.llm_model_edit = QLineEdit() 
         
         self.openai_model_dropdown = CustomCombo()
         self.openai_model_dropdown.addItems(["gpt-4.1", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"])
         
-        self.groq_model_dropdown = CustomCombo() # Was self.groq_model
+        self.groq_model_dropdown = CustomCombo() 
         self.groq_model_dropdown.addItems(["llama-3.3-70b-versatile", "llama3-70b-8192", "mixtral-8x7b-32768", "gemma-7b-it"])
 
         self.llm_model_stacked_widget.addWidget(self.llm_model_edit)
@@ -469,18 +489,17 @@ class HomeWindow(QMainWindow):
         self.max_tokens = QSpinBox()
         self.max_tokens.setRange(1, 25000)
         self.max_tokens.setValue(2000)
+        form_layout.addRow("Max Tokens:", self.max_tokens)
+        
         self.temperature = QDoubleSpinBox()
         self.temperature.setRange(0.0, 1.0)
         self.temperature.setSingleStep(0.1)
         self.temperature.setValue(0.7)
-        form_layout.addRow("Max Tokens:", self.max_tokens)
         form_layout.addRow("Temperature:", self.temperature)
 
         # Connect LLM source change to update model field and API key fields
         self.llm_source.currentTextChanged.connect(self._update_llm_provider_fields)
         self.llm_source.currentTextChanged.connect(self._update_api_key_fields)
-        # Connect ASR source change to update API key fields
-        self.asr_source.currentTextChanged.connect(self._update_api_key_fields)
 
         # API Keys Section - NEW
         self.add_section_header(form_layout, "API Key Settings")
@@ -715,7 +734,6 @@ class HomeWindow(QMainWindow):
             llm_source_value = self.llm_source.currentText()
             print(f"LLM Source: {llm_source_value}")
             
-            # Determine the correct LLM model based on the source
             current_llm_model_value = ""
             if llm_source_value == "ollama":
                 current_llm_model_value = self.llm_model_edit.text()
@@ -727,30 +745,47 @@ class HomeWindow(QMainWindow):
             vosk_model_path_value = self.vosk_model_path_edit.text()
             is_streaming = self.streaming_mode.isChecked()
             
-            # Basic validation for Vosk path if streaming is enabled
             if is_streaming and not vosk_model_path_value:
                 self.handle_error("Vosk Model Path cannot be empty when Streaming Mode is enabled.")
                 return
-                
-            # Collect settings from UI
+
+            asr_source_value = self.asr_source.currentText()
+            current_asr_provider_model_value = "" 
+            current_asr_local_model_size = self.faster_whisper_model_dropdown.currentText()
+
+            openai_client_asr_model = self.openai_asr_model_dropdown.currentText() # Default for OpenAI client
+            groq_client_asr_model = self.groq_asr_model_dropdown.currentText() # Default for Groq client
+
+            if asr_source_value == "openai_api":
+                current_asr_provider_model_value = self.openai_asr_model_dropdown.currentText()
+                openai_client_asr_model = current_asr_provider_model_value # Sync if OpenAI is ASR provider
+            elif asr_source_value == "groq_api":
+                current_asr_provider_model_value = self.groq_asr_model_dropdown.currentText()
+                groq_client_asr_model = current_asr_provider_model_value # Sync if Groq is ASR provider
+            elif asr_source_value == "faster_whisper":
+                # No change to current_asr_provider_model_value, it remains "" or undefined for ASR/model
+                pass
+            
             new_settings = {
-                'APIKeys': { # New section for API keys
+                'APIKeys': {
                     'openai_api_key': self.openai_api_key_edit.text(),
                     'groq_api_key': self.groq_api_key_edit.text()
                 },
                 'OpenAI': {
-                    'model': self.openai_model_dropdown.currentText() # Always save the current selection for this provider
+                    'user_command_model': self.openai_model_dropdown.currentText(),
+                    'asr_model': openai_client_asr_model 
                 },
                 'Ollama': {
-                    'model': self.llm_model_edit.text() # Always save the current text for this provider
+                    'model': self.llm_model_edit.text() 
                 },
                 'Groq': {
-                    'model': self.groq_model_dropdown.currentText() # Always save the current selection for this provider
+                    'user_command_model': self.groq_model_dropdown.currentText(),
+                    'asr_model': groq_client_asr_model 
                 },
                 'ASR': {
-                    'source': self.asr_source.currentText(),
-                    'model': self.asr_model.currentText(),
-                    'local_model_size': self.asr_local_model_size.currentText(),
+                    'source': asr_source_value,
+                    'model': current_asr_provider_model_value, 
+                    'local_model_size': current_asr_local_model_size, 
                     'device': self.asr_device.currentText(),
                     'compute_type': self.asr_compute_type.currentText()
                 },
@@ -759,7 +794,7 @@ class HomeWindow(QMainWindow):
                 },
                 'LLM': {
                     'source': llm_source_value,
-                    'model': current_llm_model_value, # Use the determined model
+                    'model': current_llm_model_value,
                     'max_tokens': self.max_tokens.value(),
                     'temperature': self.temperature.value(),
                 },
@@ -815,34 +850,39 @@ class HomeWindow(QMainWindow):
         try:
             config = self.app_manager.load_settings()
             
-            # APIKeys settings - NEW
             api_keys_config = config.get('APIKeys', {})
             self.openai_api_key_edit.setText(api_keys_config.get('openai_api_key', ''))
             self.groq_api_key_edit.setText(api_keys_config.get('groq_api_key', ''))
             
-            # Load ASR settings
-            self.asr_source.setCurrentText(config['ASR']['source'])
-            self.asr_model.setCurrentText(config['ASR']['model'])
-            self.asr_local_model_size.setCurrentText(config['ASR']['local_model_size'])
-            self.asr_device.setCurrentText(config['ASR']['device'])
-            self.asr_compute_type.setCurrentText(config['ASR']['compute_type'])
+            asr_config = config.get('ASR', {})
+            self.asr_source.blockSignals(True)
+            self.asr_source.setCurrentText(asr_config.get('source', 'openai_api'))
+            self.asr_source.blockSignals(False)
             
-            # Load LLM settings
+            # Set ASR model values before calling _update_asr_provider_fields
+            # Default to "whisper-1" for OpenAI ASR if not found
+            self.openai_asr_model_dropdown.setCurrentText(config.get('OpenAI', {}).get('asr_model', 'whisper-1'))
+            # Default for Groq ASR from Groq section or a general default
+            self.groq_asr_model_dropdown.setCurrentText(config.get('Groq', {}).get('asr_model', 'distil-whisper-large-v3-en'))
+            # Default for faster_whisper from ASR section
+            self.faster_whisper_model_dropdown.setCurrentText(asr_config.get('local_model_size', 'base.en'))
+
+            self.asr_device.setCurrentText(asr_config.get('device', 'auto'))
+            self.asr_compute_type.setCurrentText(asr_config.get('compute_type', 'default'))
+
+            self._update_asr_provider_fields() # Update visibility and set correct model for current source
+
             self.llm_source.blockSignals(True)
             self.llm_source.setCurrentText(config['LLM']['source'])
             self.llm_source.blockSignals(False)
             
             # Model field is now handled by _update_llm_provider_fields
-            # if config['LLM']['source'] == "ollama":
-            #    self.llm_model_edit.setText(config.get("Ollama", {}).get("model", "llama3.2:latest")) # Was self.llm_model
-            # else: # Default to OpenAI model or specific loaded model if not ollama
-            #    llm_model_to_set = config.get("LLM", {}).get("model", config.get("OpenAI", {}).get("model", "gpt-4.1"))
-            #    if config['LLM']['source'] == "openai_api":
-            #        self.openai_model_dropdown.setCurrentText(llm_model_to_set)
-            #    elif config['LLM']['source'] == "groq_api":
-            #        self.groq_model_dropdown.setCurrentText(llm_model_to_set)
-            #    else: # Fallback for llm_model_edit if source is somehow unexpected but not ollama
-            #        self.llm_model_edit.setText(llm_model_to_set)
+            # We need to ensure _update_llm_provider_fields correctly sets the user_command_model
+            # based on the loaded LLM source and its specific model.
+
+            # OpenAI model (user_command_model) is set by _update_llm_provider_fields if source is openai_api
+            # Groq model (user_command_model) is set by _update_llm_provider_fields if source is groq_api
+            # Ollama model is set by _update_llm_provider_fields if source is ollama
 
             self.max_tokens.setValue(config['LLM']['max_tokens'])
             self.temperature.setValue(config['LLM']['temperature'])
@@ -949,12 +989,16 @@ class HomeWindow(QMainWindow):
             # API Key field visibility and content
             if llm_source == "openai_api":
                 self.llm_model_stacked_widget.setCurrentWidget(self.openai_model_dropdown)
-                model_to_set = llm_config_model if llm_config_model and self.openai_model_dropdown.findText(llm_config_model) != -1 else default_openai_model
+                # Use user_command_model from OpenAI section, then LLM/model, then default
+                openai_specific_model = config.get("OpenAI", {}).get("user_command_model", default_openai_model)
+                model_to_set = llm_config_model if llm_config_model and self.openai_model_dropdown.findText(llm_config_model) != -1 else openai_specific_model
                 self.openai_model_dropdown.setCurrentText(model_to_set)
 
             elif llm_source == "groq_api":
                 self.llm_model_stacked_widget.setCurrentWidget(self.groq_model_dropdown)
-                model_to_set = llm_config_model if llm_config_model and self.groq_model_dropdown.findText(llm_config_model) != -1 else default_groq_model
+                # Use user_command_model from Groq section, then LLM/model, then default
+                groq_specific_model = config.get("Groq", {}).get("user_command_model", default_groq_model)
+                model_to_set = llm_config_model if llm_config_model and self.groq_model_dropdown.findText(llm_config_model) != -1 else groq_specific_model
                 self.groq_model_dropdown.setCurrentText(model_to_set)
 
             elif llm_source == "ollama":
@@ -1024,6 +1068,69 @@ class HomeWindow(QMainWindow):
         self.openai_api_key_edit.setVisible(show_openai_key)
 
         # Determine if Groq key is needed
-        show_groq_key = (llm_source == "groq_api")
+        show_groq_key = (llm_source == "groq_api") or (asr_source == "groq_api")
         self.groq_api_key_label.setVisible(show_groq_key)
         self.groq_api_key_edit.setVisible(show_groq_key)
+
+    def _update_asr_provider_fields(self):
+        """Update ASR model fields based on the selected ASR source."""
+        # Block signals from model widgets during programmatic update
+        self.openai_asr_model_dropdown.blockSignals(True)
+        self.faster_whisper_model_dropdown.blockSignals(True)
+        self.groq_asr_model_dropdown.blockSignals(True)
+
+        try:
+            config = self.app_manager.load_settings() # Get fresh complete settings
+            asr_source = self.asr_source.currentText()
+            asr_config = config.get('ASR', {})
+            
+            # Get the primary ASR model string for OpenAI/Groq from ASR/model setting
+            # This 'model' is what's saved based on the active dropdown during save_settings
+            current_asr_model_setting = asr_config.get('model', '')
+
+            if asr_source == "openai_api":
+                self.asr_model_stacked_widget.setCurrentWidget(self.openai_asr_model_dropdown)
+                # Use ASR/model if available and valid, else OpenAI/asr_model, else default
+                openai_default = config.get("OpenAI", {}).get("asr_model", "whisper-1")
+                model_to_set = current_asr_model_setting if current_asr_model_setting and self.openai_asr_model_dropdown.findText(current_asr_model_setting) != -1 else openai_default
+                self.openai_asr_model_dropdown.setCurrentText(model_to_set)
+                self.asr_model_label.setText("ASR Model (OpenAI):")
+            elif asr_source == "faster_whisper":
+                self.asr_model_stacked_widget.setCurrentWidget(self.faster_whisper_model_dropdown)
+                # For faster_whisper, the model is local_model_size
+                model_to_set = asr_config.get('local_model_size', 'base.en')
+                self.faster_whisper_model_dropdown.setCurrentText(model_to_set)
+                self.asr_model_label.setText("ASR Model (Local Whisper):")
+            elif asr_source == "groq_api":
+                self.asr_model_stacked_widget.setCurrentWidget(self.groq_asr_model_dropdown)
+                # Use ASR/model if available and valid, else Groq/asr_model, else default
+                groq_default = config.get("Groq", {}).get("asr_model", "distil-whisper-large-v3-en")
+                model_to_set = current_asr_model_setting if current_asr_model_setting and self.groq_asr_model_dropdown.findText(current_asr_model_setting) != -1 else groq_default
+                self.groq_asr_model_dropdown.setCurrentText(model_to_set)
+                self.asr_model_label.setText("ASR Model (Groq):")
+            else: # Default or unknown source
+                self.asr_model_stacked_widget.setCurrentWidget(self.openai_asr_model_dropdown) # Default to OpenAI
+                self.openai_asr_model_dropdown.setCurrentText(config.get("OpenAI", {}).get("asr_model", "whisper-1"))
+                self.asr_model_label.setText("ASR Model:")
+            
+            # Show/hide ASR device and compute type which are typically for local models
+            is_local_asr = (asr_source == "faster_whisper")
+            # Find device and compute_type rows to show/hide
+            settings_form_layout = self.settings_page.findChild(QFormLayout)
+            if settings_form_layout:
+                for i in range(settings_form_layout.rowCount()):
+                    label_item = settings_form_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
+                    if label_item and label_item.widget() and isinstance(label_item.widget(), QLabel):
+                        label_widget = label_item.widget()
+                        # Check against the specific labels we created for these fields
+                        if label_widget is self.asr_device_label or label_widget is self.asr_compute_type_label:
+                            field_item = settings_form_layout.itemAt(i, QFormLayout.ItemRole.FieldRole)
+                            label_widget.setVisible(is_local_asr)
+                            if field_item and field_item.widget():
+                                field_item.widget().setVisible(is_local_asr)
+                                
+        finally:
+            # Unblock signals
+            self.openai_asr_model_dropdown.blockSignals(False)
+            self.faster_whisper_model_dropdown.blockSignals(False)
+            self.groq_asr_model_dropdown.blockSignals(False)

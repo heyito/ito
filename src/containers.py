@@ -1,4 +1,3 @@
-# src/containers.py
 import os
 import queue
 import sys
@@ -25,13 +24,14 @@ from src.engines.context_engine import ContextEngine
 from src.engines.intent_engine import IntentEngine
 from src.engines.macos_engine import MacOSEngine
 from src.engines.processing_engine import ProcessingEngine
-from src.handlers.asr_handler_interface import ASRHandlerInterface
+from src.handlers.audio.asr_handler_interface import ASRHandlerInterface
 from src.handlers.audio.audio_recorder import AudioRecorder
 from src.handlers.audio.audio_source_handler import AudioSourceHandler
 from src.handlers.audio.audio_streamer import AudioStreamer
-from src.handlers.faster_whisper_asr_handler import FasterWhisperASRHandler
+from src.handlers.audio.faster_whisper_asr_handler import FasterWhisperASRHandler
+from src.handlers.audio.groq_asr_handler import GroqASRHandler
 from src.handlers.llm_handler import LLMHandler
-from src.handlers.openai_asr_handler import OpenAIASRHandler
+from src.handlers.audio.openai_asr_handler import OpenAIASRHandler
 from src.handlers.vosk_processor import VoskProcessor
 from src.streaming_application_runner import StreamingApplicationRunner
 
@@ -71,13 +71,15 @@ class Container(containers.DeclarativeContainer):
     openai_llm_client_provider = providers.Singleton(
         OpenAIClient,
         api_key=config.APIKeys.openai_api_key,
-        model=config.OpenAI.model  # This should be the currently selected OpenAI model
+        user_command_model=config.OpenAI.user_command_model,  # This should be the currently selected OpenAI model
+        asr_model=config.OpenAI.asr_model
     )
 
     groq_llm_client_provider = providers.Singleton(
         GroqClient,
         api_key=config.APIKeys.groq_api_key,
-        model=config.Groq.model
+        user_command_model=config.Groq.user_command_model,
+        asr_model=config.Groq.asr_model
     )
 
     ollama_llm_client_provider = providers.Singleton(
@@ -93,14 +95,14 @@ class Container(containers.DeclarativeContainer):
         openai_api=openai_llm_client_provider,
         ollama=ollama_llm_client_provider,
         # google_gemini=google_gemini_client_provider, # Future
-        groq_api=groq_llm_client_provider,                   # Future
+        groq_api=groq_llm_client_provider,
     )
 
     # --- Core Handlers/Services ---
 
     llm_handler = providers.Singleton(
         LLMHandler,
-        client=selected_llm_client  # Inject the chosen client
+        client=selected_llm_client
     )
 
     audio_source_handler = providers.Singleton(
@@ -185,18 +187,19 @@ class Container(containers.DeclarativeContainer):
         config.ASR.source,
         openai_api=providers.Singleton(
             OpenAIASRHandler,
-            api_key=config.APIKeys.openai_api_key,
-            model=config.ASR.model,
+            openAIClient=openai_llm_client_provider
+        ),
+        groq_api=providers.Singleton(
+            GroqASRHandler,
+            groqClient=groq_llm_client_provider
         ),
         faster_whisper=providers.Singleton(
             FasterWhisperASRHandler,
-            # Copied from main asr_handler
             local_model_size=config.ASR.local_model_size,
             device=config.ASR.device,
             compute_type=config.ASR.compute_type,
         ),
     )
-
 
     app_config = providers.Singleton(
         AppConfig,

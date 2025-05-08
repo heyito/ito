@@ -11,8 +11,8 @@ from src.app_config import AppConfig
 from src.application_interface import ApplicationInterface
 from src.context_manager import ContextManager
 from src.command_processor import CommandProcessor
+from src.handlers.audio.asr_handler_interface import ASRHandlerInterface
 from src.handlers.audio.audio_recorder import AudioRecorder
-from src.handlers.asr_handler_interface import ASRHandlerInterface
 from src.types.status_messages import StatusMessage
 
 

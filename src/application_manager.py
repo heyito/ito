@@ -73,7 +73,8 @@ class ApplicationManager(QObject):
 
         # OpenAI settings
         config['OpenAI'] = {
-            'model': self.settings.value("OpenAI/model", "gpt-4.1")
+            'user_command_model': self.settings.value("OpenAI/user_command_model", "gpt-4.1"),
+            'asr_model': self.settings.value("OpenAI/asr_model", "whisper-1")
         }
 
         # Ollama settings
@@ -83,7 +84,8 @@ class ApplicationManager(QObject):
 
         # Groq settings
         config['Groq'] = {
-            'model': self.settings.value("Groq/model", "llama-3.3-70b-versatile") # Default from home_window.py
+            'user_command_model': self.settings.value("Groq/user_command_model", "llama-3.3-70b-versatile"),
+            'asr_model': self.settings.value("Groq/asr_model", "whisper-large-v3")
         }
 
         # ASR settings
@@ -422,8 +424,12 @@ class ApplicationManager(QObject):
                     return False, "Groq API key is required when Groq is selected for LLM."
             
             # Check ASR settings
-            if new_settings['ASR']['source'] not in ['openai_api', 'faster_whisper']:
+            if new_settings['ASR']['source'] not in ['openai_api', 'faster_whisper', 'groq_api']:
                 return False, "Invalid ASR source"
+            
+            # If Groq ASR is selected, ensure Groq API key is present
+            if new_settings['ASR']['source'] == 'groq_api' and not groq_api_key:
+                return False, "Groq API key is required when Groq is selected for ASR."
 
             # Check LLM settings
             if new_settings['LLM']['source'] not in ['ollama', 'openai_api', 'groq_api']:

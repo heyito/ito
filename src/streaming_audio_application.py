@@ -194,7 +194,7 @@ class StreamingAudioApplication(ApplicationInterface):
                  # Handle potential complex hotkey strings if needed in the future
                  # For now, log an error if it's not a recognized special key or single char
                  if not hasattr(self, '_logged_invalid_hotkey'): # Log only once
-                     print(f"ERROR: Invalid or unsupported hotkey string in config: '{hotkey_str}'. Only single characters or names from keyboard.Key (e.g., 'f9', 'ctrl_l') are currently directly supported by this check.")
+                     print(f"ERROR: Invalid or unsupported hotkey string in config: '{hotkey_str}'. Only single characters or names from keyboard.Key (e.g., 'fn', 'ctrl_l') are currently directly supported by this check.")
                      self._logged_invalid_hotkey = True # Prevent log flooding
                  return
 

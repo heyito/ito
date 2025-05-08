@@ -134,7 +134,7 @@ class ApplicationManager(QObject):
 
         # Hotkey settings
         config['Hotkeys'] = {
-            'start_recording_hotkey': self.settings.value("Hotkeys/start_recording_hotkey", "f9")
+            'start_recording_hotkey': self.settings.value("Hotkeys/start_recording_hotkey", "fn")
         }
 
         # Mode settings

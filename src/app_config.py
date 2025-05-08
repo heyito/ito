@@ -17,6 +17,11 @@ class AppConfig:
         self.openai_api_key: str = openai_section.get('api_key', '')
         self.openai_model: str = openai_section.get('model', 'gpt-4.1')
 
+        # Groq settings
+        groq_section = config_dict.get('Groq', {})
+        self.groq_api_key: str = groq_section.get('api_key', '')
+        self.groq_model: str = groq_section.get('model', 'llama3-8b-8192')
+
         # Ollama settings
         ollama_section = config_dict.get('Ollama', {})
         self.ollama_model: str = ollama_section.get('model', 'llama3.2:latest')

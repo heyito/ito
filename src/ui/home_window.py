@@ -42,7 +42,6 @@ if sys.platform == 'darwin':
             NSWindow,
             NSWindowTitleHidden,
         )
-        print("PyObjC found. Applying native macOS styling.")
         _objc_available = True
     except ImportError:
         print("PyObjC framework (pyobjc-framework-Cocoa) not found. Cannot apply native macOS styling.")
@@ -430,6 +429,15 @@ class HomeWindow(QMainWindow):
         self.openai_api_key.setEchoMode(QLineEdit.EchoMode.Password)
         form_layout.addRow("API Key:", self.openai_api_key)
 
+        # Groq Section
+        self.add_section_header(form_layout, "Groq Settings")
+        self.groq_api_key = QLineEdit()
+        self.groq_api_key.setEchoMode(QLineEdit.EchoMode.Password)
+        form_layout.addRow("API Key:", self.groq_api_key)
+        self.groq_model = CustomCombo()
+        self.groq_model.addItems(["llama-3.3-70b-versatile", "whisper-large-v3", "whisper-large-v3-turbo"])
+        form_layout.addRow("Model:", self.groq_model)
+
         # ASR Section
         self.add_section_header(form_layout, "Speech Recognition Settings")
         self.asr_source = CustomCombo()
@@ -457,7 +465,7 @@ class HomeWindow(QMainWindow):
         # LLM Section
         self.add_section_header(form_layout, "Language Model Settings")
         self.llm_source = CustomCombo()
-        self.llm_source.addItems(["ollama", "openai_api"])
+        self.llm_source.addItems(["ollama", "openai_api", "groq_api"])
         self.llm_model = QLineEdit()
         self.max_tokens = QSpinBox()
         self.max_tokens.setRange(1, 25000)
@@ -634,6 +642,7 @@ class HomeWindow(QMainWindow):
         """Save all settings to QSettings"""
         try:
             llm_source_value = self.llm_source.currentText()
+            print(f"LLM Source: {llm_source_value}")
             llm_model_value = self.llm_model.text()
             vosk_model_path_value = self.vosk_model_path_edit.text()
             is_streaming = self.streaming_mode.isChecked()
@@ -651,6 +660,10 @@ class HomeWindow(QMainWindow):
                 },
                 'Ollama': {
                     'model': llm_model_value if llm_source_value == "ollama" else self.app_manager.load_settings().get("Ollama", {}).get("model", "llama3.2:latest"),
+                },
+                'Groq': {
+                    'api_key': self.groq_api_key.text(),
+                    'model': self.groq_model.currentText(),
                 },
                 'ASR': {
                     'source': self.asr_source.currentText(),
@@ -722,6 +735,10 @@ class HomeWindow(QMainWindow):
             
             # Load OpenAI settings
             self.openai_api_key.setText(config['OpenAI']['api_key'])
+
+            # Load Groq settings
+            self.groq_api_key.setText(config['Groq']['api_key'])
+            self.groq_model.setCurrentText(config['Groq']['model'])
             
             # Load ASR settings
             self.asr_source.setCurrentText(config['ASR']['source'])

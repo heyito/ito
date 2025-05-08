@@ -1,5 +1,4 @@
 import re
-import time
 from typing import Any, List, Dict, Optional
 
 from openai import OpenAI, OpenAIError
@@ -30,17 +29,6 @@ class OpenAIClient(LLMClientInterface):
             print("OpenAIClient ERROR: API key is missing.")
             self._is_valid = False
             return False
-        # Optionally, you could add a lightweight API call here to truly verify the key,
-        # e.g., listing models, but for now, presence of key is the main check.
-        # For example:
-        # try:
-        #     self._client.models.list()
-        #     self._is_valid = True
-        #     print("OpenAIClient: API key validated successfully.")
-        # except OpenAIError as e:
-        #     print(f"OpenAIClient ERROR: API key validation failed: {e}")
-        #     self._is_valid = False
-        # return self._is_valid
         print("OpenAIClient: API key is present.")
         self._is_valid = True
         return True
@@ -52,7 +40,7 @@ class OpenAIClient(LLMClientInterface):
         system_prompt: str,
         max_tokens: int,
         temperature: float,
-        tools: Optional[List[Dict]] = None,
+        tools: list[dict] = [],
         messages_override: Optional[List[Dict]] = None,
     ) -> Any:
         if not self._is_valid: # Relies on check_availability being called or key presence
@@ -62,8 +50,6 @@ class OpenAIClient(LLMClientInterface):
         actual_tools = tools or [] # Ensure tools is a list
 
         try:
-            print(f"Sending request to OpenAI LLM API (model: {self._model})...")
-            start_time = time.time()
 
             response = self._client.chat.completions.create(
                 model=self._model,
@@ -74,12 +60,8 @@ class OpenAIClient(LLMClientInterface):
                 ],
                 temperature=temperature,
                 max_tokens=max_tokens,
-                tools=actual_tools if actual_tools else None, # Pass None if empty list for OpenAI API
-                tool_choice="required" if actual_tools else "none",
-            )
-            end_time = time.time()
-            print(
-                f"OpenAI LLM API response time: {end_time - start_time:.2f} seconds"
+                tools=tools,
+                tool_choice="required" if len(tools) != 0 else "none",
             )
 
             if not actual_tools: # If no tools were intended, process as text

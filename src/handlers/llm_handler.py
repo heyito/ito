@@ -1,3 +1,4 @@
+import time
 from typing import Any, List, Dict, Optional
 
 from src.clients.llm_client_interface import LLMClientInterface
@@ -45,14 +46,17 @@ class LLMHandler:
             The processed response from the LLM, or None if processing failed.
             This can be a string or an OpenAI response object if tools are used.
         """
+        start_time = time.time()
+
         print(
-            f"Sending context and command to LLM ({self.llm_source}, {self.llm_model})..."
+            f"Sending context and command to LLM ({self.client.source_name}, {self.client.model_name})..."
         )
         print("Sending to LLM...")
 
         if not text and not messages_override: # If messages_override is present, text might be implicitly handled
             print("LLMHandler: Received empty text for user message and no messages_override.")
             return None
+
 
         # Determine the system prompt to use
         # If messages_override is provided, it might already contain a system message.
@@ -69,10 +73,6 @@ class LLMHandler:
         print(
             f"LLMHandler: Sending request to {self.client.source_name} (model: {self.client.model_name})..."
         )
-        # print(f"LLMHandler: Effective System prompt: {system_prompt}") # Debug
-        # print(f"LLMHandler: Input text: {text}") # Debug
-        # print(f"LLMHandler: Tools: {tools}") # Debug
-        # print(f"LLMHandler: Messages Override: {messages_override}") # Debug
 
         try:
             response = self.client.generate_response(
@@ -84,16 +84,15 @@ class LLMHandler:
                 messages_override=messages_override or [], # Pass empty list if None
             )
 
-            # The client is responsible for primary processing.
-            # OpenAIClient returns raw response for tools, string otherwise.
-            # OllamaClient returns string.
-            # No further specific processing needed here unless abstracting tool responses.
             if response is not None:
-                # print(f"LLMHandler: Received response from client: {type(response)}") # Debug
                 pass # Response is already in desired format from client
             else:
                 print(f"LLMHandler: Received no response or an error from {self.client.source_name}.")
 
+            end_time = time.time()
+            print(
+                f"{self.client.source_name} LLM API response time for model {self.client.model_name}: {end_time - start_time:.2f} seconds"
+            )
             return response
 
         except Exception as e:

@@ -13,6 +13,7 @@ from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
 from src.asyncio_loop_manager import AsyncioLoopManager
+from src.clients.groq_client import GroqClient
 from src.clients.llm_client_interface import LLMClientInterface
 from src.clients.ollama_client import OllamaClient
 from src.clients.openai_client import OpenAIClient
@@ -73,6 +74,12 @@ class Container(containers.DeclarativeContainer):
         model=config.OpenAI.model  # This should be the currently selected OpenAI model
     )
 
+    groq_llm_client_provider = providers.Singleton(
+        GroqClient,
+        api_key=config.Groq.api_key,
+        model=config.Groq.model
+    )
+
     ollama_llm_client_provider = providers.Singleton(
         OllamaClient,
         model=config.Ollama.model,
@@ -86,7 +93,7 @@ class Container(containers.DeclarativeContainer):
         openai_api=openai_llm_client_provider,
         ollama=ollama_llm_client_provider,
         # google_gemini=google_gemini_client_provider, # Future
-        # groq=groq_client_provider,                   # Future
+        groq_api=groq_llm_client_provider,                   # Future
     )
 
     # --- Core Handlers/Services ---

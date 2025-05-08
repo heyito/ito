@@ -3,6 +3,7 @@ from typing import Any, List, Dict, Optional
 
 from openai import OpenAI, OpenAIError
 from src.clients.llm_client_interface import LLMClientInterface
+from src.utils.timing import time_method
 
 class OpenAIClient(LLMClientInterface):
     def __init__(self, api_key: str, model: str):
@@ -33,7 +34,7 @@ class OpenAIClient(LLMClientInterface):
         self._is_valid = True
         return True
 
-
+    @time_method
     def generate_response(
         self,
         text: str,

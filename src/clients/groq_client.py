@@ -1,6 +1,8 @@
 import re
 from typing import Any, Dict, List, Optional
 from groq import Groq, GroqError
+
+from src.utils.timing import time_method
 class GroqClient:
     def __init__(self, api_key: str, model: str):
         if not api_key:
@@ -30,6 +32,7 @@ class GroqClient:
         self._is_valid = True
         return True
     
+    @time_method
     def generate_response(
         self,
         text: str,

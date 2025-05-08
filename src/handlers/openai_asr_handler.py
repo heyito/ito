@@ -5,7 +5,7 @@ import time
 from openai import OpenAI, OpenAIError
 
 from src.handlers.asr_handler_interface import ASRHandlerInterface
-
+from src.utils.timing import time_method
 
 class OpenAIASRHandler(ASRHandlerInterface):
     """ASR Handler implementation using the OpenAI API."""
@@ -23,6 +23,7 @@ class OpenAIASRHandler(ASRHandlerInterface):
             raise
         print(f"OpenAIASRHandler Initialized: Model={self.model}")
 
+    @time_method
     def transcribe_audio(self, audio_buffer: io.BytesIO) -> str:
         """Transcribes audio using the OpenAI Whisper API."""
         if not self.client:

@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
 
 from src.application_manager import ApplicationManager
 from src.ui.onboarding import OnboardingWindow
+from src.utils.timing import save_timing_report, clear_timing_data
 
 # --- Platform specific code for macOS ---
 _ns_window = None
@@ -566,6 +567,40 @@ class HomeWindow(QMainWindow):
 
         settings_layout.addWidget(button_container)
 
+        # --- Developer Timing Tools Section (Conditional) ---
+        DEV_MODE = os.getenv('DEV', 'false').lower() == 'true'
+
+        if DEV_MODE:
+            self.add_section_header(form_layout, "Developer Timing Tools")
+
+            # Timing report buttons container (re-using form_layout for consistency)
+            # We'll add a QWidget to the form_layout that then contains the buttons in an QHBoxLayout
+            
+            timing_buttons_widget = QWidget()
+            timing_button_layout = QHBoxLayout(timing_buttons_widget)
+            timing_button_layout.setContentsMargins(0, 0, 0, 0) # No margins for the inner layout
+            timing_button_layout.setSpacing(10)
+
+
+            self.save_timing_report_button = QPushButton("Save Timing Report")
+            self.save_timing_report_button.setObjectName("save_timing_report_button")
+            self.save_timing_report_button.setFixedWidth(160)
+            self.save_timing_report_button.clicked.connect(self.handle_save_timing_report)
+            timing_button_layout.addWidget(self.save_timing_report_button)
+
+            self.clear_timing_data_button = QPushButton("Clear Timing Data")
+            self.clear_timing_data_button.setObjectName("clear_timing_data_button")
+            self.clear_timing_data_button.setFixedWidth(160)
+            self.clear_timing_data_button.clicked.connect(self.handle_clear_timing_data)
+            timing_button_layout.addWidget(self.clear_timing_data_button)
+            
+            timing_button_layout.addStretch() # Push buttons to the left
+
+            # Add the widget containing the buttons to the form layout
+            # We add it without a label, spanning both columns for the buttons
+            form_layout.addRow(timing_buttons_widget)
+
+
         # Add settings page to stacked widget
         self.stacked_widget.addWidget(self.settings_page)
 
@@ -605,6 +640,26 @@ class HomeWindow(QMainWindow):
 
     def show_page(self, index):
         self.stacked_widget.setCurrentIndex(index)
+
+    def handle_save_timing_report(self):
+        """Handles the click of the 'Save Timing Report' button."""
+        try:
+            # You can customize the filepath here if needed, e.g., using a QFileDialog
+            # For now, it uses the default "timing_report.json" in the working directory.
+            save_timing_report() 
+            QMessageBox.information(self, "Timing Report", "Timing report saved successfully.")
+        except Exception as e:
+            QMessageBox.critical(self, "Timing Report Error", f"Failed to save timing report: {str(e)}")
+            print(f"Error saving timing report: {traceback.format_exc()}")
+
+    def handle_clear_timing_data(self):
+        """Handles the click of the 'Clear Timing Data' button."""
+        try:
+            clear_timing_data()
+            QMessageBox.information(self, "Timing Data", "Timing data cleared successfully.")
+        except Exception as e:
+            QMessageBox.critical(self, "Timing Data Error", f"Failed to clear timing data: {str(e)}")
+            print(f"Error clearing timing data: {traceback.format_exc()}")
 
     def reset_all_settings(self):
         """Reset all settings and restart the onboarding process."""

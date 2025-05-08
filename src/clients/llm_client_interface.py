@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import io
 from typing import Any, List, Dict, Optional
 
 class LLMClientInterface(ABC):
@@ -56,5 +57,12 @@ class LLMClientInterface(ABC):
 
         Returns:
             True if the client is ready to be used, False otherwise.
+        """
+        pass
+    
+    @abstractmethod
+    def transcribe_audio(self, audio_buffer: io.BytesIO) -> str:
+        """
+        Transcribes audio from a buffer and returns the text.
         """
         pass

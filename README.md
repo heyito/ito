@@ -47,6 +47,10 @@ This tool listens for voice input via a hotkey, transcribes the speech, processe
     source .venv/bin/activate
     ```
 
+1. **Build the swift binary** 
+    * Will require some degree of xcode setup (TODO: add onboarding steps here, i had xcode already setup)
+    * Run `make swift` 
+
 1.  **Configure the tool:**
     * (Optional) Run `python utils/list_audio_devices.py` to find your microphone's device index.
     * Review other settings like the `hotkey`.

@@ -65,9 +65,14 @@ class ApplicationManager(QObject):
         """Load settings from QSettings and convert to config format"""
         config = {}
 
+        # API Key settings
+        config['APIKeys'] = {
+            'openai_api_key': self.settings.value("APIKeys/openai_api_key", ""),
+            'groq_api_key': self.settings.value("APIKeys/groq_api_key", "")
+        }
+
         # OpenAI settings
         config['OpenAI'] = {
-            'api_key': self.settings.value("OpenAI/api_key", ""),
             'model': self.settings.value("OpenAI/model", "gpt-4.1")
         }
 
@@ -78,7 +83,6 @@ class ApplicationManager(QObject):
 
         # Groq settings
         config['Groq'] = {
-            'api_key': self.settings.value("Groq/api_key", ""),
             'model': self.settings.value("Groq/model", "llama-3.3-70b-versatile") # Default from home_window.py
         }
 
@@ -400,15 +404,22 @@ class ApplicationManager(QObject):
     def validate_settings(self, new_settings: dict[str, Any]) -> tuple[bool, str]:
         """Validate new settings and return (is_valid, error_message)"""
         try:
-            # Check API key requirements based on selected LLM source
+            # Check API key requirements
             llm_source = new_settings.get('LLM', {}).get('source')
+            asr_source = new_settings.get('ASR', {}).get('source')
+            api_keys = new_settings.get('APIKeys', {})
+            openai_api_key = api_keys.get('openai_api_key')
+            groq_api_key = api_keys.get('groq_api_key')
 
-            if llm_source == 'openai_api':
-                if not new_settings.get('OpenAI', {}).get('api_key'):
-                    return False, "OpenAI API key is required when OpenAI is the LLM source."
-            elif llm_source == 'groq_api':
-                if not new_settings.get('Groq', {}).get('api_key'):
-                    return False, "Groq API key is required when Groq is the LLM source."
+            # OpenAI key check
+            if llm_source == 'openai_api' or asr_source == 'openai_api':
+                if not openai_api_key:
+                    return False, "OpenAI API key is required when OpenAI is selected for ASR or LLM."
+
+            # Groq key check
+            if llm_source == 'groq_api': # Assuming Groq is only for LLM for now
+                if not groq_api_key:
+                    return False, "Groq API key is required when Groq is selected for LLM."
             
             # Check ASR settings
             if new_settings['ASR']['source'] not in ['openai_api', 'faster_whisper']:

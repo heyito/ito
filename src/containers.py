@@ -70,13 +70,13 @@ class Container(containers.DeclarativeContainer):
     # --- LLM Clients ---
     openai_llm_client_provider = providers.Singleton(
         OpenAIClient,
-        api_key=config.OpenAI.api_key,
+        api_key=config.APIKeys.openai_api_key,
         model=config.OpenAI.model  # This should be the currently selected OpenAI model
     )
 
     groq_llm_client_provider = providers.Singleton(
         GroqClient,
-        api_key=config.Groq.api_key,
+        api_key=config.APIKeys.groq_api_key,
         model=config.Groq.model
     )
 
@@ -115,7 +115,7 @@ class Container(containers.DeclarativeContainer):
     # --- Clients --- Added section for clients
     openai_webrtc_client = providers.Singleton(
         OpenAIWebRTCClient,
-        api_key=config.OpenAI.api_key
+        api_key=config.APIKeys.openai_api_key
         # The session_url uses the default value in the client's __init__
     )
 
@@ -185,8 +185,7 @@ class Container(containers.DeclarativeContainer):
         config.ASR.source,
         openai_api=providers.Singleton(
             OpenAIASRHandler,
-            # Copied from main asr_handler
-            api_key=config.OpenAI.api_key,
+            api_key=config.APIKeys.openai_api_key,
             model=config.ASR.model,
         ),
         faster_whisper=providers.Singleton(

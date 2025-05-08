@@ -423,21 +423,6 @@ class HomeWindow(QMainWindow):
         form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         form_layout.setFormAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         
-        # OpenAI Section
-        self.add_section_header(form_layout, "OpenAI Settings")
-        self.openai_api_key = QLineEdit()
-        self.openai_api_key.setEchoMode(QLineEdit.EchoMode.Password)
-        form_layout.addRow("API Key:", self.openai_api_key)
-
-        # Groq Section
-        self.add_section_header(form_layout, "Groq Settings")
-        self.groq_api_key = QLineEdit()
-        self.groq_api_key.setEchoMode(QLineEdit.EchoMode.Password)
-        form_layout.addRow("API Key:", self.groq_api_key)
-        self.groq_model = CustomCombo()
-        self.groq_model.addItems(["llama-3.3-70b-versatile", "whisper-large-v3", "whisper-large-v3-turbo"])
-        form_layout.addRow("Model:", self.groq_model)
-
         # ASR Section
         self.add_section_header(form_layout, "Speech Recognition Settings")
         self.asr_source = CustomCombo()
@@ -457,16 +442,29 @@ class HomeWindow(QMainWindow):
         form_layout.addRow("Device:", self.asr_device)
         form_layout.addRow("Compute Type:", self.asr_compute_type)
 
-        # --- NEW: Vosk Section --- 
-        self.add_section_header(form_layout, "Vosk Settings (Streaming Mode)")
-        self.vosk_model_path_edit = QLineEdit()
-        form_layout.addRow("Model Path:", self.vosk_model_path_edit)
-
         # LLM Section
         self.add_section_header(form_layout, "Language Model Settings")
         self.llm_source = CustomCombo()
         self.llm_source.addItems(["ollama", "openai_api", "groq_api"])
-        self.llm_model = QLineEdit()
+        form_layout.addRow("LLM Source:", self.llm_source)
+
+        # New dynamic LLM fields
+        self.llm_model_label = QLabel("Model:")
+        self.llm_model_stacked_widget = QStackedWidget()
+        
+        self.llm_model_edit = QLineEdit() # Renamed from self.llm_model
+        
+        self.openai_model_dropdown = CustomCombo()
+        self.openai_model_dropdown.addItems(["gpt-4.1", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"])
+        
+        self.groq_model_dropdown = CustomCombo() # Was self.groq_model
+        self.groq_model_dropdown.addItems(["llama-3.3-70b-versatile", "llama3-70b-8192", "mixtral-8x7b-32768", "gemma-7b-it"])
+
+        self.llm_model_stacked_widget.addWidget(self.llm_model_edit)
+        self.llm_model_stacked_widget.addWidget(self.openai_model_dropdown)
+        self.llm_model_stacked_widget.addWidget(self.groq_model_dropdown)
+        form_layout.addRow(self.llm_model_label, self.llm_model_stacked_widget)
+        
         self.max_tokens = QSpinBox()
         self.max_tokens.setRange(1, 25000)
         self.max_tokens.setValue(2000)
@@ -474,13 +472,37 @@ class HomeWindow(QMainWindow):
         self.temperature.setRange(0.0, 1.0)
         self.temperature.setSingleStep(0.1)
         self.temperature.setValue(0.7)
-        form_layout.addRow("LLM Source:", self.llm_source)
-        form_layout.addRow("Model:", self.llm_model)
         form_layout.addRow("Max Tokens:", self.max_tokens)
         form_layout.addRow("Temperature:", self.temperature)
 
-        # Connect LLM source change to update model field
-        self.llm_source.currentTextChanged.connect(self.update_llm_model_field)
+        # Connect LLM source change to update model field and API key fields
+        self.llm_source.currentTextChanged.connect(self._update_llm_provider_fields)
+        self.llm_source.currentTextChanged.connect(self._update_api_key_fields)
+        # Connect ASR source change to update API key fields
+        self.asr_source.currentTextChanged.connect(self._update_api_key_fields)
+
+        # API Keys Section - NEW
+        self.add_section_header(form_layout, "API Key Settings")
+        self.openai_api_key_label = QLabel("OpenAI API Key:")
+        self.openai_api_key_edit = QLineEdit()
+        self.openai_api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        self.openai_api_key_row = form_layout.addRow(self.openai_api_key_label, self.openai_api_key_edit)
+
+        self.groq_api_key_label = QLabel("Groq API Key:")
+        self.groq_api_key_edit = QLineEdit()
+        self.groq_api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        self.groq_api_key_row = form_layout.addRow(self.groq_api_key_label, self.groq_api_key_edit)
+
+        # Mode Section
+        self.add_section_header(form_layout, "Application Mode")
+        self.streaming_mode = QCheckBox()
+        self.streaming_mode.stateChanged.connect(self.update_setting_visibility)
+        form_layout.addRow("Streaming Mode (Requires Vosk):", self.streaming_mode)
+
+        # Vosk Section 
+        self.add_section_header(form_layout, "Vosk Settings (Streaming Mode)")
+        self.vosk_model_path_edit = QLineEdit()
+        form_layout.addRow("Model Path:", self.vosk_model_path_edit)
 
         # Audio Section
         self.add_section_header(form_layout, "Audio Settings")
@@ -512,12 +534,6 @@ class HomeWindow(QMainWindow):
         self.output_method = CustomCombo()
         self.output_method.addItems(["typewrite", "clipboard"])
         form_layout.addRow("Output Method:", self.output_method)
-
-        # Mode Section
-        self.add_section_header(form_layout, "Application Mode")
-        self.streaming_mode = QCheckBox()
-        self.streaming_mode.stateChanged.connect(self.update_setting_visibility)
-        form_layout.addRow("Streaming Mode (Requires Vosk):", self.streaming_mode)
 
         # Hotkeys Section
         self.add_section_header(form_layout, "Hotkey Settings")
@@ -643,7 +659,16 @@ class HomeWindow(QMainWindow):
         try:
             llm_source_value = self.llm_source.currentText()
             print(f"LLM Source: {llm_source_value}")
-            llm_model_value = self.llm_model.text()
+            
+            # Determine the correct LLM model based on the source
+            current_llm_model_value = ""
+            if llm_source_value == "ollama":
+                current_llm_model_value = self.llm_model_edit.text()
+            elif llm_source_value == "openai_api":
+                current_llm_model_value = self.openai_model_dropdown.currentText()
+            elif llm_source_value == "groq_api":
+                current_llm_model_value = self.groq_model_dropdown.currentText()
+
             vosk_model_path_value = self.vosk_model_path_edit.text()
             is_streaming = self.streaming_mode.isChecked()
             
@@ -654,16 +679,18 @@ class HomeWindow(QMainWindow):
                 
             # Collect settings from UI
             new_settings = {
+                'APIKeys': { # New section for API keys
+                    'openai_api_key': self.openai_api_key_edit.text(),
+                    'groq_api_key': self.groq_api_key_edit.text()
+                },
                 'OpenAI': {
-                    'api_key': self.openai_api_key.text(),
-                    'model': llm_model_value if llm_source_value == "openai_api" else self.app_manager.load_settings().get("OpenAI", {}).get("model", "gpt-4.1"),
+                    'model': self.openai_model_dropdown.currentText() # Always save the current selection for this provider
                 },
                 'Ollama': {
-                    'model': llm_model_value if llm_source_value == "ollama" else self.app_manager.load_settings().get("Ollama", {}).get("model", "llama3.2:latest"),
+                    'model': self.llm_model_edit.text() # Always save the current text for this provider
                 },
                 'Groq': {
-                    'api_key': self.groq_api_key.text(),
-                    'model': self.groq_model.currentText(),
+                    'model': self.groq_model_dropdown.currentText() # Always save the current selection for this provider
                 },
                 'ASR': {
                     'source': self.asr_source.currentText(),
@@ -677,7 +704,7 @@ class HomeWindow(QMainWindow):
                 },
                 'LLM': {
                     'source': llm_source_value,
-                    'model': llm_model_value,
+                    'model': current_llm_model_value, # Use the determined model
                     'max_tokens': self.max_tokens.value(),
                     'temperature': self.temperature.value(),
                 },
@@ -733,12 +760,10 @@ class HomeWindow(QMainWindow):
         try:
             config = self.app_manager.load_settings()
             
-            # Load OpenAI settings
-            self.openai_api_key.setText(config['OpenAI']['api_key'])
-
-            # Load Groq settings
-            self.groq_api_key.setText(config['Groq']['api_key'])
-            self.groq_model.setCurrentText(config['Groq']['model'])
+            # APIKeys settings - NEW
+            api_keys_config = config.get('APIKeys', {})
+            self.openai_api_key_edit.setText(api_keys_config.get('openai_api_key', ''))
+            self.groq_api_key_edit.setText(api_keys_config.get('groq_api_key', ''))
             
             # Load ASR settings
             self.asr_source.setCurrentText(config['ASR']['source'])
@@ -748,14 +773,27 @@ class HomeWindow(QMainWindow):
             self.asr_compute_type.setCurrentText(config['ASR']['compute_type'])
             
             # Load LLM settings
+            self.llm_source.blockSignals(True)
             self.llm_source.setCurrentText(config['LLM']['source'])
-            # Set model field based on LLM source
-            if config['LLM']['source'] == "ollama":
-                self.llm_model.setText(config.get("Ollama", {}).get("model", "llama3.2:latest"))
-            else:
-                self.llm_model.setText(config.get("OpenAI", {}).get("model", "gpt-4.1"))
+            self.llm_source.blockSignals(False)
+            
+            # Model field is now handled by _update_llm_provider_fields
+            # if config['LLM']['source'] == "ollama":
+            #    self.llm_model_edit.setText(config.get("Ollama", {}).get("model", "llama3.2:latest")) # Was self.llm_model
+            # else: # Default to OpenAI model or specific loaded model if not ollama
+            #    llm_model_to_set = config.get("LLM", {}).get("model", config.get("OpenAI", {}).get("model", "gpt-4.1"))
+            #    if config['LLM']['source'] == "openai_api":
+            #        self.openai_model_dropdown.setCurrentText(llm_model_to_set)
+            #    elif config['LLM']['source'] == "groq_api":
+            #        self.groq_model_dropdown.setCurrentText(llm_model_to_set)
+            #    else: # Fallback for llm_model_edit if source is somehow unexpected but not ollama
+            #        self.llm_model_edit.setText(llm_model_to_set)
+
             self.max_tokens.setValue(config['LLM']['max_tokens'])
             self.temperature.setValue(config['LLM']['temperature'])
+
+            # Call to update dynamic LLM fields
+            self._update_llm_provider_fields()
             
             # Load Audio settings
             self.sample_rate.setValue(config['Audio']['sample_rate'])
@@ -833,14 +871,49 @@ class HomeWindow(QMainWindow):
                         }
                     """)
 
-    def update_llm_model_field(self):
-        """Update the model field based on the selected LLM source."""
-        config = self.app_manager.load_settings()
-        llm_source = self.llm_source.currentText()
-        if llm_source == "ollama":
-            self.llm_model.setText(config.get("Ollama", {}).get("model", "llama3.2:latest"))
-        else:
-            self.llm_model.setText(config.get("OpenAI", {}).get("model", "gpt-4.1"))
+    def _update_llm_provider_fields(self, current_llm_source_text=None):
+        """Update model fields based on the selected LLM source."""
+        # Block signals from model widgets during programmatic update
+        self.llm_model_edit.blockSignals(True)
+        self.openai_model_dropdown.blockSignals(True)
+        self.groq_model_dropdown.blockSignals(True)
+
+        try:
+            config = self.app_manager.load_settings() # Get fresh complete settings
+            llm_source = self.llm_source.currentText()
+
+            # Default values from ApplicationManager for consistency
+            default_openai_model = config.get("OpenAI", {}).get("model", "gpt-4.1")
+            default_groq_model = config.get("Groq", {}).get("model", "llama-3.3-70b-versatile")
+            default_ollama_model = config.get("Ollama", {}).get("model", "llama3.2:latest")
+            
+            # Get the actual model stored for the current source under LLM/model if available,
+            # otherwise use the provider-specific model, then the ultimate default.
+            llm_config_model = config.get("LLM", {}).get("model")
+
+            # API Key field visibility and content
+            if llm_source == "openai_api":
+                self.llm_model_stacked_widget.setCurrentWidget(self.openai_model_dropdown)
+                model_to_set = llm_config_model if llm_config_model and self.openai_model_dropdown.findText(llm_config_model) != -1 else default_openai_model
+                self.openai_model_dropdown.setCurrentText(model_to_set)
+
+            elif llm_source == "groq_api":
+                self.llm_model_stacked_widget.setCurrentWidget(self.groq_model_dropdown)
+                model_to_set = llm_config_model if llm_config_model and self.groq_model_dropdown.findText(llm_config_model) != -1 else default_groq_model
+                self.groq_model_dropdown.setCurrentText(model_to_set)
+
+            elif llm_source == "ollama":
+                self.llm_model_stacked_widget.setCurrentWidget(self.llm_model_edit)
+                self.llm_model_edit.setText(llm_config_model or default_ollama_model)
+            else: # Default or unknown source
+                self.llm_model_stacked_widget.setCurrentWidget(self.llm_model_edit) # Default to text edit
+                self.llm_model_edit.setText(default_ollama_model) # Or a generic placeholder
+
+        finally:
+            # Unblock signals
+            self.llm_model_edit.blockSignals(False)
+            self.openai_model_dropdown.blockSignals(False)
+            self.groq_model_dropdown.blockSignals(False)
 
     def update_setting_visibility(self):
         """Show/hide settings based on other selections (e.g., streaming mode)."""
@@ -884,3 +957,18 @@ class HomeWindow(QMainWindow):
         # You might want to hide/show other settings based on streaming mode too,
         # e.g., maybe disable ASR/LLM sections if streaming only does transcription.
         # Add similar logic here for other fields as needed.
+
+    def _update_api_key_fields(self):
+        """Show/hide API key fields based on ASR and LLM provider selections."""
+        asr_source = self.asr_source.currentText()
+        llm_source = self.llm_source.currentText()
+
+        # Determine if OpenAI key is needed
+        show_openai_key = (asr_source == "openai_api") or (llm_source == "openai_api")
+        self.openai_api_key_label.setVisible(show_openai_key)
+        self.openai_api_key_edit.setVisible(show_openai_key)
+
+        # Determine if Groq key is needed
+        show_groq_key = (llm_source == "groq_api")
+        self.groq_api_key_label.setVisible(show_groq_key)
+        self.groq_api_key_edit.setVisible(show_groq_key)

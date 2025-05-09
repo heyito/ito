@@ -4,8 +4,8 @@ import sys
 import traceback
 
 import sounddevice as sd
-from PyQt6.QtCore import QObject, QPointF, QSettings, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import QObject, QPointF, QSettings, Qt, QTimer, pyqtSignal, QRect, QRectF
+from PyQt6.QtGui import QPixmap, QRegion, QPainterPath
 from PyQt6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -285,6 +285,17 @@ class OnboardingWindow(QMainWindow):
                          if sub_widget is not None:
                               sub_widget.setParent(None)
 
+    def set_rounded_corners(self, radius=8):
+        rect = QRectF(0, 0, self.width(), self.height())
+        path = QPainterPath()
+        path.addRoundedRect(rect, radius, radius)
+        region = QRegion(path.toFillPolygon().toPolygon())
+        self.setMask(region)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.set_rounded_corners(8)
+
     def show_welcome_screen(self):
         self.clear_layout()
 
@@ -309,7 +320,7 @@ class OnboardingWindow(QMainWindow):
         if logo_pixmap and not logo_pixmap.isNull():
             scaled_pixmap = logo_pixmap.scaled(140, 140, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             logo_label.setPixmap(scaled_pixmap)
-            logo_label.setStyleSheet("QLabel { margin-bottom: 8px; filter: drop-shadow(0px 4px 16px rgba(0,0,0,0.10)); }")
+            logo_label.setStyleSheet("QLabel { margin-bottom: 8px; }")
         else:
             logo_label.setText("🎯")
             logo_label.setStyleSheet("font-size: 80px; background-color: transparent; margin-bottom: 8px;")
@@ -354,7 +365,6 @@ class OnboardingWindow(QMainWindow):
                 border-radius: 12px;
                 font-size: 18px;
                 font-weight: 600;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.06);
                 letter-spacing: 0.1px;
             }
             QPushButton:hover {
@@ -368,6 +378,9 @@ class OnboardingWindow(QMainWindow):
         self.layout.addStretch(2)
         self.layout.addLayout(content_layout)
         self.layout.addStretch(3)
+
+        # At the end of show_welcome_screen, ensure corners are rounded
+        self.set_rounded_corners(8)
 
     def show_permission_screen(self):
         self.clear_layout()
@@ -569,54 +582,92 @@ class OnboardingWindow(QMainWindow):
     def show_completion_screen(self):
         self.clear_layout()
 
-        # Success Icon
-        success_icon = QLabel("✅")
-        success_icon.setStyleSheet("font-size: 80px;")
-        success_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.layout.addWidget(success_icon)
+        # --- Centered Layout ---
+        content_layout = QVBoxLayout()
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(28)
+
+        # Centered icon container
+        icon_container = QWidget()
+        icon_layout = QHBoxLayout(icon_container)
+        icon_layout.setContentsMargins(0, 0, 0, 0)
+        icon_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # Minimal, soft checkmark icon in a pastel green circle
+        check_icon = QLabel()
+        check_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        check_icon.setText("✓")
+        check_icon.setFixedSize(56, 56)
+        check_icon.setStyleSheet('''
+            QLabel {
+                background-color: #AEE9C1;
+                color: #2E7D4F;
+                font-size: 32px;
+                border-radius: 28px;
+                margin-bottom: 4px;
+                font-weight: 500;
+                letter-spacing: 1px;
+            }
+        ''')
+        icon_layout.addWidget(check_icon)
+        content_layout.addWidget(icon_container)
+        content_layout.addSpacing(8)
 
         # Title
         title_label = QLabel("Setup Complete!")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_label.setStyleSheet("""
-            font-size: 32px; 
-            font-weight: bold; 
+        title_label.setStyleSheet('''
+            font-size: 28px;
+            font-weight: 600;
             color: #F2E4D6;
-            margin-top: 20px; 
-            margin-bottom: 10px;
-        """)
-        self.layout.addWidget(title_label)
+            margin-top: 0px;
+            margin-bottom: 6px;
+            letter-spacing: -0.3px;
+        ''')
+        content_layout.addWidget(title_label)
 
-        # Description
+        # Subtitle
         desc_label = QLabel("You're all set to start using Inten!")
         desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        desc_label.setStyleSheet("""
-            font-size: 16px; 
-            color: rgba(242, 228, 214, 0.8);
-            margin-bottom: 30px;
-        """)
-        self.layout.addWidget(desc_label)
+        desc_label.setStyleSheet('''
+            font-size: 16px;
+            color: rgba(242, 228, 214, 0.6);
+            font-weight: 400;
+            margin-bottom: 20px;
+            letter-spacing: 0.05px;
+        ''')
+        content_layout.addWidget(desc_label)
+        content_layout.addSpacing(8)
 
         # Start Button
         start_button = QPushButton("Start Using Inten")
         start_button.clicked.connect(self.complete_setup)
-        start_button.setStyleSheet("""
+        start_button.setFixedHeight(38)
+        start_button.setMinimumWidth(140)
+        start_button.setStyleSheet('''
             QPushButton {
                 background-color: #F2E4D6;
                 color: #141538;
                 border: none;
-                padding: 12px 30px;
-                border-radius: 5px;
+                padding: 0 24px;
+                border-radius: 10px;
                 font-size: 16px;
-                font-weight: bold;
+                font-weight: 500;
+                letter-spacing: 0.05px;
             }
             QPushButton:hover {
-                background-color: rgba(242, 228, 214, 0.8);
+                background-color: #e6d7c2;
             }
-        """)
-        self.layout.addWidget(start_button, alignment=Qt.AlignmentFlag.AlignCenter)
+        ''')
+        content_layout.addWidget(start_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        self.layout.addStretch()
+        # --- Center the content in the main layout ---
+        self.layout.addStretch(2)
+        self.layout.addLayout(content_layout)
+        self.layout.addStretch(3)
+
+        # At the end, ensure corners are rounded
+        self.set_rounded_corners(8)
 
     def complete_setup(self):
         """Saves the setup complete flag if needed, then transitions to the home screen."""

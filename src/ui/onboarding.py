@@ -97,18 +97,24 @@ class OnboardingWindow(QMainWindow):
         # --- Qt Styling ---
         self.setStyleSheet("""
             QMainWindow {
-                background: qlineargradient(
-                    x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(0,0,0,0.85),
-                    stop:1 rgba(30,30,30,0.85)
+                background: qradialgradient(
+                    cx:0.4, cy:0.4, radius: 1.0,
+                    fx:0.4, fy:0.4,
+                    stop:0 rgba(60,70,90,0.98),
+                    stop:0.5 rgba(30,32,40,0.96),
+                    stop:0.8 rgba(20,22,30,0.94),
+                    stop:1 rgba(10,10,15,0.92)
                 );
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             }
             QWidget#main_widget {
-                background: qlineargradient(
-                    x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(0,0,0,0.85),
-                    stop:1 rgba(30,30,30,0.85)
+                background: qradialgradient(
+                    cx:0.4, cy:0.4, radius: 1.0,
+                    fx:0.4, fy:0.4,
+                    stop:0 rgba(60,70,90,0.98),
+                    stop:0.5 rgba(30,32,40,0.96),
+                    stop:0.8 rgba(20,22,30,0.94),
+                    stop:1 rgba(10,10,15,0.92)
                 );
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             }
@@ -282,12 +288,17 @@ class OnboardingWindow(QMainWindow):
     def show_welcome_screen(self):
         self.clear_layout()
 
+        # --- Centered Layout ---
+        content_layout = QVBoxLayout()
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(36)
+
         # Logo
         logo_label = QLabel()
-        # Try to load logo from multiple possible locations
+        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         logo_paths = [
-            "inten-logo.png",  # Development path
-            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "inten-logo.png"),  # Production path
+            "inten-logo.png",
+            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "inten-logo.png"),
         ]
         logo_pixmap = None
         for path in logo_paths:
@@ -295,58 +306,68 @@ class OnboardingWindow(QMainWindow):
                 logo_pixmap = QPixmap(path)
                 if not logo_pixmap.isNull():
                     break
-        
         if logo_pixmap and not logo_pixmap.isNull():
-            scaled_pixmap = logo_pixmap.scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            scaled_pixmap = logo_pixmap.scaled(140, 140, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             logo_label.setPixmap(scaled_pixmap)
+            logo_label.setStyleSheet("QLabel { margin-bottom: 8px; filter: drop-shadow(0px 4px 16px rgba(0,0,0,0.10)); }")
         else:
             logo_label.setText("🎯")
-            logo_label.setStyleSheet("font-size: 80px; background-color: transparent;")
-        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.layout.addWidget(logo_label)
+            logo_label.setStyleSheet("font-size: 80px; background-color: transparent; margin-bottom: 8px;")
+        content_layout.addWidget(logo_label)
 
         # Title
         title_label = QLabel("Welcome to Inten")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_label.setStyleSheet("""
-            font-size: 32px; 
-            font-weight: bold; 
+        title_label.setStyleSheet('''
+            font-size: 36px;
+            font-weight: 700;
             color: #F2E4D6;
-            margin-top: 10px; 
-            margin-bottom: 5px;
-        """)
-        self.layout.addWidget(title_label)
+            margin-top: 0px;
+            margin-bottom: 6px;
+            letter-spacing: -0.5px;
+        ''')
+        content_layout.addWidget(title_label)
 
-        # Description
+        # Subtitle
         desc_label = QLabel("Let's set up your permissions to get started.")
         desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        desc_label.setStyleSheet("""
-            font-size: 16px; 
-            color: rgba(242, 228, 214, 0.8);
-            margin-bottom: 30px;
-        """)
-        self.layout.addWidget(desc_label)
+        desc_label.setStyleSheet('''
+            font-size: 18px;
+            color: rgba(242, 228, 214, 0.7);
+            font-weight: 400;
+            margin-bottom: 24px;
+            letter-spacing: 0.1px;
+        ''')
+        content_layout.addWidget(desc_label)
 
-        # Start Button
+        # Get Started Button
         start_button = QPushButton("Get Started")
         start_button.clicked.connect(self.show_permission_screen)
-        start_button.setStyleSheet("""
+        start_button.setFixedHeight(44)
+        start_button.setMinimumWidth(180)
+        start_button.setStyleSheet('''
             QPushButton {
                 background-color: #F2E4D6;
                 color: #141538;
                 border: none;
-                padding: 12px 30px;
-                border-radius: 5px;
-                font-size: 16px;
-                font-weight: bold;
+                padding: 0 32px;
+                border-radius: 12px;
+                font-size: 18px;
+                font-weight: 600;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+                letter-spacing: 0.1px;
             }
             QPushButton:hover {
-                background-color: rgba(242, 228, 214, 0.8);
+                background-color: #e6d7c2;
             }
-        """)
-        self.layout.addWidget(start_button, alignment=Qt.AlignmentFlag.AlignCenter)
+        ''')
+        content_layout.addSpacing(8)
+        content_layout.addWidget(start_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        self.layout.addStretch()
+        # --- Center the content in the main layout ---
+        self.layout.addStretch(2)
+        self.layout.addLayout(content_layout)
+        self.layout.addStretch(3)
 
     def show_permission_screen(self):
         self.clear_layout()

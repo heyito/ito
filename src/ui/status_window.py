@@ -1,9 +1,10 @@
 import sys
 from enum import Enum, auto
-from PyQt6.QtCore import Qt, QPoint, QPropertyAnimation, QEasingCurve, QSize, QTimer, QObject
+from PyQt6.QtCore import Qt, QPoint, QPropertyAnimation, QEasingCurve, QRectF
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QGraphicsOpacityEffect
-from PyQt6.QtGui import QColor, QPalette
+from PyQt6.QtGui import QPainter, QPainterPath, QRegion, QFontMetrics
 from src.types.status_messages import StatusMessage
+from src.ui.components.inten_layout import MacBlur
 
 if sys.platform == 'darwin':
     try:
@@ -50,27 +51,35 @@ class StatusWindow(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        # Container for the label
+        self.container = QWidget(self)
+        self.container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.container.setAutoFillBackground(False)
+        self.container_layout = QVBoxLayout(self.container)
+        self.container_layout.setContentsMargins(0, 0, 0, 0)
+        self.container_layout.setSpacing(0)
 
         self.status_label = QLabel("")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
-        # Add opacity effect
         self.opacity_effect = QGraphicsOpacityEffect(self.status_label)
         self.status_label.setGraphicsEffect(self.opacity_effect)
-        
-        layout.addWidget(self.status_label)
+        self.container_layout.addWidget(self.status_label)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(self.container)
 
         dot_total = self.DOT_SIZE + 2 * self.BORDER_WIDTH
         self.setFixedHeight(dot_total)
+        self.container.setFixedHeight(dot_total)
         self.status_label.setMinimumHeight(dot_total)
         self.status_label.setMaximumHeight(dot_total)
         self._set_label_style(dot_total, 10)
         self._current_state = StatusMessage.READY.value
         self._animation = None
         self._opacity_animation = None
+        self.radius = 3
 
         if _objc_available:
             try:
@@ -108,15 +117,15 @@ class StatusWindow(QWidget):
     def _set_label_style(self, width, border_radius):
         self.status_label.setStyleSheet(f"""
             QLabel {{
-                color: #F2E4D6;
+                color: #FFFFFF;
                 font-size: 13px;
-                background-color: #141538;
                 font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
                 min-width: {width}px;
                 max-width: {width}px;
                 min-height: {self.DOT_SIZE + 2 * self.BORDER_WIDTH}px;
                 max-height: {self.DOT_SIZE + 2 * self.BORDER_WIDTH}px;
                 border-radius: {border_radius}px;
+                margin-left: 0px;
                 padding-left: 0px;
                 padding-right: 0px;
             }}
@@ -138,27 +147,50 @@ class StatusWindow(QWidget):
         dot_total = self.DOT_SIZE + 2 * self.BORDER_WIDTH
         self.status_label.setMinimumWidth(dot_total)
         self.status_label.setMaximumWidth(dot_total)
+        self.status_label.setMinimumHeight(dot_total)
+        self.status_label.setMaximumHeight(dot_total)
         self._set_label_style(dot_total, 10)
+        self.container.setFixedWidth(dot_total)
+        self.container.setFixedHeight(dot_total)
         self.setFixedWidth(dot_total)
+        self.setFixedHeight(dot_total)
         self.opacity_effect.setOpacity(self.DOT_OPACITY)
         self.update_position()
 
+    def _get_text_width(self, text):
+        metrics = QFontMetrics(self.status_label.font())
+        text_width = metrics.horizontalAdvance(text)
+        padding = 60
+        buffer = 4    # Small buffer for safety
+        min_width = 60
+        print(f"Text width: {max(text_width + padding + buffer, min_width)}")
+        return max(text_width + padding + buffer, min_width)
+
     def show_pill(self, text):
         self.status_label.setText(text)
-        pill_total = self.PILL_WIDTH + 2 * self.BORDER_WIDTH
-        self.status_label.setMinimumWidth(pill_total)
-        self.status_label.setMaximumWidth(pill_total)
-        self._set_label_style(pill_total, 10)
-        self.setFixedWidth(pill_total)
+        pill_width = self._get_text_width(text)
+        dot_total = self.DOT_SIZE + 2 * self.BORDER_WIDTH
+        self.status_label.setMinimumWidth(pill_width)
+        self.status_label.setMaximumWidth(pill_width)
+        self.status_label.setMinimumHeight(dot_total)
+        self.status_label.setMaximumHeight(dot_total)
+        self._set_label_style(pill_width, 10)
+        self.container.setFixedWidth(pill_width)
+        self.container.setFixedHeight(dot_total)
+        self.setFixedWidth(pill_width)
+        self.setFixedHeight(dot_total)
         self.opacity_effect.setOpacity(self.PILL_OPACITY)
         self.update_position()
 
     def animate_to_pill(self, text):
         self.status_label.setText(text)
-        self._animate_label(self.DOT_SIZE, self.PILL_WIDTH)
+        end_width = self._get_text_width(text)
+        self._animate_label(self.DOT_SIZE + 2 * 10, end_width)
 
     def animate_to_dot(self):
-        self._animate_label(self.PILL_WIDTH, self.DOT_SIZE, clear_text=True)
+        current_text = self.status_label.text()
+        start_width = self._get_text_width(current_text)
+        self._animate_label(start_width, self.DOT_SIZE + 2 * 10, clear_text=True)
 
     def _animate_label(self, start_width, end_width, clear_text=False):
         if self._animation:
@@ -166,14 +198,12 @@ class StatusWindow(QWidget):
         if self._opacity_animation:
             self._opacity_animation.stop()
 
-        # Width animation
         self._animation = QPropertyAnimation(self.status_label, b"minimumWidth")
         self._animation.setDuration(self.ANIMATION_DURATION)
         self._animation.setStartValue(start_width)
         self._animation.setEndValue(end_width)
         self._animation.setEasingCurve(QEasingCurve.Type.OutCubic)
 
-        # Opacity animation
         self._opacity_animation = QPropertyAnimation(self.opacity_effect, b"opacity")
         self._opacity_animation.setDuration(self.ANIMATION_DURATION)
         if clear_text:  # Going to dot
@@ -186,8 +216,14 @@ class StatusWindow(QWidget):
 
         def on_value_changed():
             width = int(self.status_label.minimumWidth())
+            dot_total = self.DOT_SIZE + 2 * self.BORDER_WIDTH
             self._set_label_style(width, 10)
-            self.setFixedWidth(width + 2 * self.BORDER_WIDTH)
+            self.status_label.setMinimumHeight(dot_total)
+            self.status_label.setMaximumHeight(dot_total)
+            self.container.setFixedWidth(width)
+            self.container.setFixedHeight(dot_total)
+            self.setFixedWidth(width)
+            self.setFixedHeight(dot_total)
             self.update_position()
 
         self._animation.valueChanged.connect(on_value_changed)
@@ -201,7 +237,6 @@ class StatusWindow(QWidget):
 
         self._animation.finished.connect(on_finished)
         
-        # Start both animations
         self._animation.start()
         self._opacity_animation.start()
 
@@ -218,4 +253,43 @@ class StatusWindow(QWidget):
                 self.animate_to_pill(status)
             else:
                 self.show_pill(status)
-        self._current_state = status 
+        self._current_state = status
+
+    def paintEvent(self, event):
+        # Only paint the container, not the main window
+        pass
+
+    def _container_paintEvent(self, event):
+        painter = QPainter(self.container)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        rect = self.container.rect()
+        path = QPainterPath()
+        # print the rect dimension
+        print(f"Rect: {rect.width()}x{rect.height()}")
+        path.addRoundedRect(QRectF(rect), self.radius, self.radius)
+        painter.setClipPath(path)
+        grad = self._make_background_color(rect)
+        painter.fillPath(path, grad)
+        painter.end()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        # Set rounded mask for the window if this is a top-level window
+        if self.isWindow():
+            rect = QRectF(0, 0, self.width(), self.height())
+            print(f"ResizeEvent Rect: {rect.width()}x{rect.height()}")
+            path = QPainterPath()
+            path.addRoundedRect(rect, self.radius, self.radius)
+            region = QRegion(path.toFillPolygon().toPolygon())
+            self.setMask(region)
+            MacBlur(self.container, self.radius)
+        # Also update container size
+        self.container.setFixedSize(self.size())
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.container.update()
+
+    def _make_background_color(self, rect):
+        from PyQt6.QtGui import QColor
+        return QColor(0, 0, 0, 0)

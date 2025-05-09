@@ -26,6 +26,7 @@ if sys.platform == 'darwin':
 
 
 def MacBlur(widget_instance: QWidget, corner_radius: float, Material=None, TitleBar:bool=True):
+    print(f"MacBlur: widget_instance.width(): {widget_instance.width()}, widget_instance.height(): {widget_instance.height()}")
     """
     Applies a native macOS blur effect (NSVisualEffectView) behind the given QWidget.
     Also attempts to round the corners of the native window and the blur view.
@@ -82,6 +83,7 @@ def MacBlur(widget_instance: QWidget, corner_radius: float, Material=None, Title
 
 
     # Define the frame for the visual effect view (same size as the widget)
+    print(f"MacBlur: widget_instance.width(): {widget_instance.width()}, widget_instance.height(): {widget_instance.height()}")
     frame = NSMakeRect(0, 0, widget_instance.width(), widget_instance.height())
 
     # Create and configure the NSVisualEffectView
@@ -253,7 +255,6 @@ class IntenLayout(QWidget):
         path = QPainterPath()
         path.addRoundedRect(QRectF(rect), self.radius, self.radius)
         painter.setClipPath(path)
-        # Draw the radial gradient background
         grad = self._make_background_color(rect)
         painter.fillPath(path, grad)
         painter.end()
@@ -271,8 +272,8 @@ class IntenLayout(QWidget):
     def showEvent(self, event):
         super().showEvent(event)
         if not event.spontaneous(): # Apply on first "real" show
-            MacBlur(self, self.radius) # Call MacBlur here
+            MacBlur(self, self.radius)
 
     def _make_background_color(self, rect):
         from PyQt6.QtGui import QColor
-        return QColor(0, 0, 0, 0)  # Black with ~90% opacity 
+        return QColor(0, 0, 0, 0)

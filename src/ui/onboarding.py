@@ -83,6 +83,8 @@ class OnboardingWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setWindowFlags(self.windowFlags() | Qt.WindowType.FramelessWindowHint)
         self.setWindowTitle("Inten")
         self.setMinimumWidth(900)
         self.setMinimumHeight(600)
@@ -92,39 +94,28 @@ class OnboardingWindow(QMainWindow):
         self._drag_start_position = QPointF()
         self._effective_top_margin = 40
 
-        # --- Apply Native macOS Styling ---
-        if _objc_available:
-            try:
-                view_id_sip = self.winId()
-                view_address = int(view_id_sip)
-                view_ptr = c_void_p(view_address)
-                ns_view = objc.objc_object(c_void_p=view_ptr)
-                global _ns_window
-                _ns_window = ns_view.window()
-
-                if _ns_window:
-                    _ns_window.setTitlebarAppearsTransparent_(True)
-                    _ns_window.setStyleMask_(_ns_window.styleMask() | NSFullSizeContentViewWindowMask)
-                else:
-                    print("Warning: Could not get NSWindow object.")
-            except Exception as e:
-                print(f"Error applying native styling: {e}")
-                traceback.print_exc()
-
         # --- Qt Styling ---
         self.setStyleSheet("""
-            QMainWindow { 
-                background-color: #141538;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            QMainWindow {
+                background: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(0,0,0,0.85),
+                    stop:1 rgba(30,30,30,0.85)
+                );
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             }
-            QWidget#main_widget { 
-                background-color: transparent;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            QWidget#main_widget {
+                background: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(0,0,0,0.85),
+                    stop:1 rgba(30,30,30,0.85)
+                );
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             }
             QLabel { 
                 color: #F2E4D6; 
                 background-color: transparent;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             }
             QPushButton {
                 background-color: #F2E4D6;
@@ -134,7 +125,7 @@ class OnboardingWindow(QMainWindow):
                 border-radius: 6px;
                 font-size: 13px;
                 font-weight: 500;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             }
             QPushButton:hover {
                 background-color: rgba(242, 228, 214, 0.8);
@@ -150,7 +141,7 @@ class OnboardingWindow(QMainWindow):
                 background-color: rgba(242, 228, 214, 0.2);
                 max-height: 6px;
                 margin: 0px 2px;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             }
             QProgressBar::chunk {
                 background-color: #F2E4D6;
@@ -162,25 +153,25 @@ class OnboardingWindow(QMainWindow):
                 min-height: 60px;
                 padding: 0px;
                 margin: 0px;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             }
             QLabel#permission_status {
                 font-size: 13px;
                 font-weight: 500;
                 padding-right: 16px;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             }
             QLabel#permission_text {
                 font-size: 15px;
                 color: #F2E4D6;
                 font-weight: 400;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             }
             QLabel#permission_icon {
                 font-size: 22px;
                 min-width: 30px;
                 margin-left: 16px;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             }
         """)
 
@@ -189,6 +180,30 @@ class OnboardingWindow(QMainWindow):
         main_widget.setObjectName("main_widget")
         self.setCentralWidget(main_widget)
         self.layout = QVBoxLayout(main_widget)
+
+        # --- Custom Close Button (macOS style, flush top left, functional) ---
+        close_button_container = QWidget(main_widget)
+        close_button_container.setGeometry(0, 0, 32, 32)
+        close_button_container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        close_button_layout = QHBoxLayout(close_button_container)
+        close_button_layout.setContentsMargins(8, 8, 0, 0)
+        close_button_layout.setSpacing(0)
+        close_button = QPushButton("")
+        close_button.setFixedSize(16, 16)
+        close_button.setStyleSheet('''
+            QPushButton {
+                background-color: #FF3B30;
+                border: none;
+                border-radius: 8px;
+            }
+            QPushButton:hover {
+                background-color: #FF615C;
+            }
+        ''')
+        close_button.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
+        close_button.clicked.connect(self.close)
+        close_button_layout.addWidget(close_button, alignment=Qt.AlignmentFlag.AlignLeft)
+        close_button_container.raise_()
 
         # --- Adjust Margins ---
         title_bar_offset = 30 if _objc_available and _ns_window and (_ns_window.styleMask() & NSFullSizeContentViewWindowMask) else 0
@@ -229,6 +244,22 @@ class OnboardingWindow(QMainWindow):
             self.show_welcome_screen()
             # Now show the window
             self.show()
+
+        # --- Debug logo path ---
+        logo_paths = [
+            "inten-logo.png",  # Development path
+            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "inten-logo.png"),  # Production path
+        ]
+        logo_pixmap = None
+        for path in logo_paths:
+            print(f"Trying logo path: {path}")
+            if os.path.exists(path):
+                logo_pixmap = QPixmap(path)
+                if not logo_pixmap.isNull():
+                    print(f"Loaded logo from: {path}")
+                    break
+        if not logo_pixmap or logo_pixmap.isNull():
+            print("Logo not found, using fallback emoji.")
 
     def clear_layout(self):
         """Helper function to remove all widgets from the main layout."""

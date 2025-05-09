@@ -10,7 +10,7 @@ a = Analysis(
     ],
     datas=[
         ('inten-logo.png', '.'),
-        ('src/bin/inten_macos_agent', 'Resources'),
+        ('src/bin/inten_macos_agent', '.'),
         ('./.venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/platforms', 'PyQt6/Qt6/plugins/platforms'),
         ('./.venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/styles', 'PyQt6/Qt6/plugins/styles'),
         ('./.venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/imageformats', 'PyQt6/Qt6/plugins/imageformats'),

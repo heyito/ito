@@ -151,7 +151,7 @@ class HomeWindow(QMainWindow):
 
         # Logo container at the top of menu
         logo_container = QWidget()
-        logo_container.setFixedHeight(80)
+        logo_container.setFixedHeight(64)
         logo_layout = QHBoxLayout(logo_container)
         logo_layout.setContentsMargins(0, 0, 0, 0)
 
@@ -185,6 +185,7 @@ class HomeWindow(QMainWindow):
 
         # App name
         app_name = QLabel("Inten")
+        app_name.setStyleSheet("font-size: 24px; font-weight: 600; color: #F2E4D6;")
         center_layout.addWidget(app_name)
 
         # Add the centered container to the main logo layout
@@ -201,21 +202,21 @@ class HomeWindow(QMainWindow):
         # Style the menu button for a soft, modern selection
         self.settings_button.setStyleSheet('''
             QPushButton#settings_button {
-                background: transparent;
-                color: #F2E4D6;
+                background: rgba(242, 228, 214, 0.08) !important;
+                color: #FFFFFF;
                 font-size: 18px;
                 font-weight: 500;
                 border: none;
-                border-radius: 16px;
+                border-radius: 8px;
                 padding: 12px 0px;
                 margin: 8px 16px 8px 16px;
             }
             QPushButton#settings_button:checked {
-                background: rgba(242, 228, 214, 0.32);
-                color: #181A2A;
+                background: rgba(242, 228, 214, 0.15) !important;
+                color: #FFFFFF;
             }
             QPushButton#settings_button:hover {
-                background: rgba(242, 228, 214, 0.18);
+                background: rgba(242, 228, 214, 0.1) !important;
             }
         ''')
 
@@ -226,7 +227,7 @@ class HomeWindow(QMainWindow):
         content_widget = QWidget()
         content_widget.setObjectName("content_widget")
         content_layout = QVBoxLayout(content_widget)
-        content_layout.setContentsMargins(40, 40, 40, 40)
+        content_layout.setContentsMargins(40, 44, 40, 40)
         content_widget.setStyleSheet("background: transparent; border: none;")
 
         # Stacked widget to handle different pages
@@ -255,15 +256,30 @@ class HomeWindow(QMainWindow):
         scroll_content.setObjectName("scroll_content")
         form_layout = QFormLayout(scroll_content)
         form_layout.setSpacing(16)
-        form_layout.setContentsMargins(0, 0, 24, 0)  # Add right margin for scroll bar
-        form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        form_layout.setFormAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        form_layout.setContentsMargins(0, 0, 0, 0)
+        form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
+        form_layout.setFormAlignment(Qt.AlignmentFlag.AlignLeft)
         
         # OpenAI Section
         self.add_section_header(form_layout, "OpenAI Settings")
         self.openai_api_key = QLineEdit()
-        self.openai_api_key.setEchoMode(QLineEdit.EchoMode.Password)
-        form_layout.addRow("API Key:", self.openai_api_key)
+        self.openai_api_key.setMaximumWidth(300)
+        self.openai_api_key.setStyleSheet("""
+            QLineEdit {
+                background-color: rgba(255, 255, 255, 0.07);
+                padding: 8px 12px;
+                border-radius: 8px;
+            }
+        """)
+        openai_api_key_label = QLabel("API Key:")
+        openai_api_key_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        openai_api_key_container = QWidget()
+        openai_api_key_layout = QVBoxLayout(openai_api_key_container)
+        openai_api_key_layout.setContentsMargins(0, 0, 0, 0)
+        openai_api_key_layout.setSpacing(4)
+        openai_api_key_layout.addWidget(openai_api_key_label)
+        openai_api_key_layout.addWidget(self.openai_api_key)
+        form_layout.addRow(openai_api_key_container)
 
         # ASR Section
         self.add_section_header(form_layout, "Speech Recognition Settings")
@@ -287,13 +303,45 @@ class HomeWindow(QMainWindow):
         # --- NEW: Vosk Section --- 
         self.add_section_header(form_layout, "Vosk Settings (Streaming Mode)")
         self.vosk_model_path_edit = QLineEdit()
-        form_layout.addRow("Model Path:", self.vosk_model_path_edit)
+        self.vosk_model_path_edit.setMaximumWidth(300)
+        self.vosk_model_path_edit.setStyleSheet("""
+            QLineEdit {
+                background-color: rgba(255, 255, 255, 0.07);
+                padding: 8px 12px;
+                border-radius: 8px;
+            }
+        """)
+        vosk_model_path_label = QLabel("Model Path:")
+        vosk_model_path_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        vosk_model_path_container = QWidget()
+        vosk_model_path_layout = QVBoxLayout(vosk_model_path_container)
+        vosk_model_path_layout.setContentsMargins(0, 0, 0, 0)
+        vosk_model_path_layout.setSpacing(4)
+        vosk_model_path_layout.addWidget(vosk_model_path_label)
+        vosk_model_path_layout.addWidget(self.vosk_model_path_edit)
+        form_layout.addRow(vosk_model_path_container)
 
         # LLM Section
         self.add_section_header(form_layout, "Language Model Settings")
         self.llm_source = CustomCombo()
         self.llm_source.addItems(["ollama", "openai_api"])
         self.llm_model = QLineEdit()
+        self.llm_model.setMaximumWidth(300)
+        self.llm_model.setStyleSheet("""
+            QLineEdit {
+                background-color: rgba(255, 255, 255, 0.07);
+                padding: 8px 12px;
+                border-radius: 8px;
+            }
+        """)
+        llm_model_label = QLabel("Model:")
+        llm_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        llm_model_container = QWidget()
+        llm_model_layout = QVBoxLayout(llm_model_container)
+        llm_model_layout.setContentsMargins(0, 0, 0, 0)
+        llm_model_layout.setSpacing(4)
+        llm_model_layout.addWidget(llm_model_label)
+        llm_model_layout.addWidget(self.llm_model)
         self.max_tokens = QSpinBox()
         self.max_tokens.setRange(1, 25000)
         self.max_tokens.setValue(2000)
@@ -349,7 +397,23 @@ class HomeWindow(QMainWindow):
         # Hotkeys Section
         self.add_section_header(form_layout, "Hotkey Settings")
         self.start_recording_hotkey = QLineEdit()
-        form_layout.addRow("Start Recording:", self.start_recording_hotkey)
+        self.start_recording_hotkey.setMaximumWidth(300)
+        self.start_recording_hotkey.setStyleSheet("""
+            QLineEdit {
+                background-color: rgba(255, 255, 255, 0.07);
+                padding: 8px 12px;
+                border-radius: 8px;
+            }
+        """)
+        start_recording_hotkey_label = QLabel("Start Recording:")
+        start_recording_hotkey_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        start_recording_hotkey_container = QWidget()
+        start_recording_hotkey_layout = QVBoxLayout(start_recording_hotkey_container)
+        start_recording_hotkey_layout.setContentsMargins(0, 0, 0, 0)
+        start_recording_hotkey_layout.setSpacing(4)
+        start_recording_hotkey_layout.addWidget(start_recording_hotkey_label)
+        start_recording_hotkey_layout.addWidget(self.start_recording_hotkey)
+        form_layout.addRow(start_recording_hotkey_container)
 
         # Set the scroll area widget
         scroll_area.setWidget(scroll_content)
@@ -469,10 +533,10 @@ class HomeWindow(QMainWindow):
             }
             QPushButton#settings_button:checked {
                 background: rgba(242, 228, 214, 0.32);
-                color: #181A2A;
+                color: #FFFFFF;
             }
             QPushButton#settings_button:hover {
-                background: rgba(242, 228, 214, 0.18);
+                background: rgba(242, 228, 214, 0.28);
             }
 
             /* macOS-style scrollbar */

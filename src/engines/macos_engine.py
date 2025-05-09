@@ -107,7 +107,7 @@ class MacOSEngine:
 
             # Write the JSON to a file
             with open(f"context-{uuid.uuid4()}.json", "w") as f:
-                json.dump(window_info, f, indent=4)  # 'indent' for pretty formatting
+                json.dump(window_info, f)  # 'indent' for pretty formatting
 
             return window_info
 

@@ -6,10 +6,30 @@ import Vision
 /**
 TODO:
 Potential trimming on context: 
-- Trim the is_selected, is_focus, is_enabled if they are false in accessibility_elements. Prompt that if they are there, they are true
- Otherwise, they are false
-- Consider providing just one of the pairs of x, center_x, y, center_y
+- The roles need to be used in order to get the associated data from the element, 
+but we can key those roles with shorthand for the llm. I.e. StaticText -> stx,
 **/
+
+
+// --- Keys ---
+let frameKey = "fr"
+let roleKey = "ro"
+let labelsKey = "lab"
+let enabledKey = "en"
+let focusedKey = "foc"
+let selectedKey = "sel"
+let valueKey = "val"
+let checkedKey = "ck"
+let textKey = "txt"
+let boundsKey = "bnd"
+let confidenceKey = "conf"
+let matchedElementIndexKey = "mat_idx"
+let matchDistanceKey = "mat_dist"
+let titleKey = "tit"
+let descriptionKey = "des"
+let helpKey = "hlp"
+let identifierKey = "id"
+let placeholderKey = "plc"
 
 // --- Constants ---
 
@@ -80,11 +100,11 @@ func saveScreenshot(image: CGImage, filename: String = "capture-inten.png") {
 
 func getLabels(for element: AXUIElement) -> [String: String] {
     let attributes = [
-        ("title", kAXTitleAttribute),
-        ("help", kAXHelpAttribute),
-        ("description", kAXDescriptionAttribute),
-        ("identifier", kAXIdentifierAttribute),
-        ("placeholder", kAXPlaceholderValueAttribute)
+        (titleKey, kAXTitleAttribute),
+        (helpKey, kAXHelpAttribute),
+        (descriptionKey, kAXDescriptionAttribute),
+        (identifierKey, kAXIdentifierAttribute),
+        (placeholderKey, kAXPlaceholderValueAttribute)
     ]
 
     var result: [String: String] = [:]
@@ -112,10 +132,10 @@ func getFrame(for element: AXUIElement) -> [String: Int]? {
         return [
             "x": Int(frame.origin.x),
             "y": Int(frame.origin.y),
-            "width": Int(frame.size.width),
-            "height": Int(frame.size.height),
-            "center_x": Int(frame.origin.x + frame.size.width / 2),
-            "center_y": Int(frame.origin.y + frame.size.height / 2)
+            "w": Int(frame.size.width),
+            "h": Int(frame.size.height),
+            // "center_x": Int(frame.origin.x + frame.size.width / 2), LLM derives these now 
+            // "center_y": Int(frame.origin.y + frame.size.height / 2)
         ]
     }
     return nil
@@ -151,13 +171,13 @@ func walkChildren(element: AXUIElement, output: inout [[String: Any]], depth: In
         
         if interestingRoles.contains(role) {
             var elementInfo: [String: Any] = [
-                "role": role.replacingOccurrences(of: "AX", with: ""),
-                "frame": getFrame(for: child) ?? [:]
+                roleKey: role.replacingOccurrences(of: "AX", with: ""),
+                frameKey: getFrame(for: child) ?? [:]
             ]
 
             let labels = getLabels(for: child)
             if !labels.isEmpty {
-                elementInfo["labels"] = labels
+                elementInfo[labelsKey] = labels
             }
 
             var axEnabled: AnyObject?
@@ -168,9 +188,8 @@ func walkChildren(element: AXUIElement, output: inout [[String: Any]], depth: In
                 }
                 // If axEnabled is not a Bool, isEnabled remains true (or handle as error if needed)
             }
-            elementInfo["is_enabled"] = isEnabled
+            elementInfo[enabledKey] = isEnabled
 
-            // is_focused: Default to false
             var axFocused: AnyObject?
             var isFocused = false
             if AXUIElementCopyAttributeValue(child, kAXFocusedAttribute as CFString, &axFocused) == .success {
@@ -178,9 +197,8 @@ func walkChildren(element: AXUIElement, output: inout [[String: Any]], depth: In
                     isFocused = focusedBool
                 }
             }
-            elementInfo["is_focused"] = isFocused
+            elementInfo[focusedKey] = isFocused
 
-            // is_selected: Default to false
             var axSelected: AnyObject?
             var isSelected = false
             if AXUIElementCopyAttributeValue(child, kAXSelectedAttribute as CFString, &axSelected) == .success {
@@ -188,22 +206,21 @@ func walkChildren(element: AXUIElement, output: inout [[String: Any]], depth: In
                     isSelected = selectedBool
                 }
             }
-            elementInfo["is_selected"] = isSelected
+            elementInfo[selectedKey] = isSelected
 
             var axValue: AnyObject?
             if AXUIElementCopyAttributeValue(child, kAXValueAttribute as CFString, &axValue) == .success {
                 if let strValue = axValue as? String {
-                    elementInfo["current_value"] = strValue
+                    elementInfo[valueKey] = strValue
                 } else if let numValue = axValue as? NSNumber {
-                    elementInfo["current_value"] = numValue // Store as original NSNumber (can be Int, Float, Bool)
-                    // Derive is_checked for relevant roles if value is a number (often 0 or 1)
+                    elementInfo[valueKey] = numValue // Store as original NSNumber (can be Int, Float, Bool)
                     if role == kAXCheckBoxRole || role == kAXRadioButtonRole {
-                        elementInfo["is_checked"] = numValue.boolValue // NSNumber.boolValue is (value != 0)
+                        elementInfo[valueKey] = numValue.boolValue // NSNumber.boolValue is (value != 0)
                     }
                 } else if let boolValue = axValue as? Bool { // kAXValue can sometimes directly be a Bool
-                     elementInfo["current_value"] = boolValue
+                     elementInfo[valueKey] = boolValue
                      if role == kAXCheckBoxRole || role == kAXRadioButtonRole { // Or other toggle-like roles
-                        elementInfo["is_checked"] = boolValue
+                        elementInfo[checkedKey] = boolValue
                     }
                 }
                 // Note: kAXValueAttribute can also be other AXValue types (e.g., for ranges, dates).
@@ -211,12 +228,25 @@ func walkChildren(element: AXUIElement, output: inout [[String: Any]], depth: In
                 // If you need to handle other types from kAXValueAttribute, you'd add more checks.
             }
 
-            // Ensure 'is_checked' defaults to false for relevant roles if not set by kAXValueAttribute
-            if (role == kAXCheckBoxRole || role == kAXRadioButtonRole) && elementInfo["is_checked"] == nil {
-                elementInfo["is_checked"] = false
+            if (role == kAXCheckBoxRole || role == kAXRadioButtonRole) && elementInfo[checkedKey] == nil {
+                elementInfo[checkedKey] = false
             }
 
-            if([kAXGroupRole, kAXListRole, kAXOutlineRole, kAXSplitGroupRole].contains(role) && (elementInfo["labels"] as? [String: String])?["title"] == nil) {
+            // Covert boolean values to t/f for JSON 
+            if let boolValue = elementInfo[enabledKey] as? Bool {
+                elementInfo[enabledKey] = boolValue ? "t" : "f"
+            }
+            if let boolValue = elementInfo[focusedKey] as? Bool {
+                elementInfo[focusedKey] = boolValue ? "t" : "f"
+            }
+            if let boolValue = elementInfo[selectedKey] as? Bool {
+                elementInfo[selectedKey] = boolValue ? "t" : "f"
+            }
+            if let boolValue = elementInfo[checkedKey] as? Bool {
+                elementInfo[checkedKey] = boolValue ? "t" : "f"
+            }
+
+            if([kAXGroupRole, kAXListRole, kAXOutlineRole, kAXSplitGroupRole].contains(role) && (elementInfo[labelsKey] as? [String: String])?["title"] == nil) {
                 // Don't add groups without a title
             } else {
                 output.append(elementInfo)
@@ -318,14 +348,14 @@ func captureOCRText(focusedWindow: AXUIElement) -> [[String: Any]] {
         let globalY = Int(windowOrigin.y + localY_points)
 
         result.append([
-            "text": text,
-            "bounds": [
+            textKey: text,
+            boundsKey: [
                 "x": globalX,
                 "y": globalY,
-                "width": Int(localWidth_points),
-                "height": Int(localHeight_points)
+                "w": Int(localWidth_points),
+                "h": Int(localHeight_points)
             ],
-            "confidence": candidate.confidence,
+            confidenceKey: candidate.confidence,
         ])
     }
 
@@ -337,22 +367,22 @@ func enrichOCRTextsInPlace(ocrTexts: inout [[String: Any]], elements: [[String: 
 
     for i in 0..<ocrTexts.count {
         // ocrTexts[i] is the dictionary we want to potentially modify
-        guard let bounds = ocrTexts[i]["bounds"] as? [String: Int],
-              let _ = ocrTexts[i]["text"] as? String else {
+        guard let bounds = ocrTexts[i][boundsKey] as? [String: Int],
+              let _ = ocrTexts[i][textKey] as? String else {
             continue
         }
 
-        let ocrCenterX = bounds["x", default: 0] + bounds["width", default: 0] / 2
-        let ocrCenterY = bounds["y", default: 0] + bounds["height", default: 0] / 2
+        let ocrCenterX = bounds["x", default: 0] + bounds["w", default: 0] / 2
+        let ocrCenterY = bounds["y", default: 0] + bounds["h", default: 0] / 2
 
         var bestDistance = Double.greatestFiniteMagnitude
         var bestElementIndex: Int? = nil
 
         for (elementIndex, elem) in elements.enumerated() {
-            guard let frame = elem["frame"] as? [String: Int] else { continue }
+            guard let frame = elem[frameKey] as? [String: Int] else { continue }
 
-            let elemCenterX = frame["x", default: 0] + frame["width", default: 0] / 2
-            let elemCenterY = frame["y", default: 0] + frame["height", default: 0] / 2
+            let elemCenterX = frame["x", default: 0] + frame["w", default: 0] / 2
+            let elemCenterY = frame["y", default: 0] + frame["h", default: 0] / 2
 
             let dx = Double(ocrCenterX - elemCenterX)
             let dy = Double(ocrCenterY - elemCenterY)
@@ -366,8 +396,10 @@ func enrichOCRTextsInPlace(ocrTexts: inout [[String: Any]], elements: [[String: 
         }
 
         if let foundIndex = bestElementIndex {
-            ocrTexts[i]["matched_element_index"] = foundIndex
-            ocrTexts[i]["match_distance"] = bestDistance
+            ocrTexts[i][matchedElementIndexKey] = foundIndex
+
+            let truncatedDistance = Double(Int(bestDistance * 10)) / 10.0
+            ocrTexts[i][matchDistanceKey] = truncatedDistance
         }
         // If no match, ocrTexts[i] remains unchanged (without the new keys)
     }
@@ -419,12 +451,12 @@ if command == "get-window-info" {
             "accessibility_elements": elements,
             "ocr_texts": ocrResults,
             "screen_dimensions": [
-                "width": Int(NSScreen.main?.frame.width ?? 0),
-                "height": Int(NSScreen.main?.frame.height ?? 0)
+                "w": Int(NSScreen.main?.frame.width ?? 0),
+                "h": Int(NSScreen.main?.frame.height ?? 0)
             ]
         ]
 
-        if let jsonData = try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted]),
+        if let jsonData = try? JSONSerialization.data(withJSONObject: dict, options: []),
            let jsonString = String(data: jsonData, encoding: .utf8) {
             print(jsonString)
         }

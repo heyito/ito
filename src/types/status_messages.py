@@ -17,6 +17,8 @@ class StatusMessage(Enum):
     LISTENING = "Listening for hotkey '{hotkey}'..."
     LISTENER_FAILED = "Hotkey listener failed to start!"
     ERROR = "Application error occurred"
+    RECORDING = "Recording command..."
+    ERROR_RECORDING = "Error processing audio"
     TRANSCRIBING = "Transcribing command..."
     READY_EMPTY = "Ready (empty transcription)"
     TRANSCRIBED = "Transcribed: '{text}'"

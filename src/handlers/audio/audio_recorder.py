@@ -7,6 +7,8 @@ from typing import Optional, Dict, Any
 
 import numpy as np
 
+from src.types.status_messages import StatusMessage
+
 from .audio_source_handler import AudioSourceHandler
 from .convert_wav_to_buffer import save_wav_to_buffer
 
@@ -55,7 +57,7 @@ class AudioRecorder:
                 except queue.Empty: break
 
             print(f"[{timestamp}] AudioRecorder: Starting recording (VAD: {self.vad_config.get('enabled', False)})...")
-            self._update_status("Recording command...")
+            self._update_status(StatusMessage.RECORDING.value)
 
             self._recording_thread = threading.Thread(
                 target=self.audio_handler.record_audio_stream_with_vad,
@@ -74,7 +76,18 @@ class AudioRecorder:
         """Waits for stop signal, collects audio, prepares buffer, and calls callback."""
         timestamp = time.strftime('%H:%M:%S')
         print(f"[{timestamp}] AudioRecorder Monitor: Waiting for stop signal...")
-        self._stop_event.wait() # Wait for VAD or manual stop
+        
+        # Add timeout for no voice activity
+        start_time = time.monotonic()
+        while not self._stop_event.is_set():
+            if time.monotonic() - start_time >= 2.0:  # 2 second timeout
+                print(f"[{timestamp}] AudioRecorder Monitor: No voice activity detected within 2 seconds.")
+                with self._lock:
+                    self._is_recording = False  # Update state under lock
+                self._update_status(StatusMessage.READY.value)
+                return  # Exit without triggering callback
+            time.sleep(0.1)  # Check every 100ms
+            
         print(f"[{timestamp}] AudioRecorder Monitor: Stop signal received.")
 
         callback_to_call = None
@@ -101,11 +114,11 @@ class AudioRecorder:
             except Exception as e:
                 print(f"[{timestamp}] AudioRecorder Monitor: Error preparing buffer: {e}")
                 traceback.print_exc() # Added for more detailed error information
-                self._update_status("Error processing audio")
+                self._update_status(StatusMessage.ERROR_RECORDING.value)
                 audio_buffer = None # Ensure it's None on error
         else:
             print(f"[{timestamp}] AudioRecorder Monitor: No audio collected.")
-            self._update_status("Ready (no audio)")
+            self._update_status(StatusMessage.READY.value)
 
         # --- Trigger Callback ---
         if callback_to_call:
@@ -126,10 +139,9 @@ class AudioRecorder:
             self._stop_event.set()
 
     def _update_status(self, message: str):
-        # Simplified status update logic
         if self.status_queue:
             try: self.status_queue.put_nowait(message)
-            except Exception: pass # Ignore queue errors here
+            except Exception: pass
 
     def cleanup(self):
         print("AudioRecorder: Cleaning up...")

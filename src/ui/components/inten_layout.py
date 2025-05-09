@@ -26,7 +26,6 @@ if sys.platform == 'darwin':
 
 
 def MacBlur(widget_instance: QWidget, corner_radius: float, Material=None, TitleBar:bool=True):
-    print(f"MacBlur: widget_instance.width(): {widget_instance.width()}, widget_instance.height(): {widget_instance.height()}")
     """
     Applies a native macOS blur effect (NSVisualEffectView) behind the given QWidget.
     Also attempts to round the corners of the native window and the blur view.
@@ -83,7 +82,6 @@ def MacBlur(widget_instance: QWidget, corner_radius: float, Material=None, Title
 
 
     # Define the frame for the visual effect view (same size as the widget)
-    print(f"MacBlur: widget_instance.width(): {widget_instance.width()}, widget_instance.height(): {widget_instance.height()}")
     frame = NSMakeRect(0, 0, widget_instance.width(), widget_instance.height())
 
     # Create and configure the NSVisualEffectView
@@ -217,7 +215,7 @@ class IntenLayout(QWidget):
         close_button_container.setGeometry(0, 0, 32, 32)
         close_button_container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         close_button_layout = QHBoxLayout(close_button_container)
-        close_button_layout.setContentsMargins(8, 8, 0, 0)
+        close_button_layout.setContentsMargins(12, 10, 0, 0)
         close_button_layout.setSpacing(0)
         close_button = QPushButton("")
         close_button.setFixedSize(16, 16)

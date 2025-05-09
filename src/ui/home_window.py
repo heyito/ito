@@ -145,7 +145,7 @@ class HomeWindow(QMainWindow):
         # Left menu panel
         menu_panel = QWidget()
         menu_panel.setObjectName("menu_panel")  # Add object name for styling
-        menu_panel.setFixedWidth(220)
+        menu_panel.setFixedWidth(180)
         menu_layout = QVBoxLayout(menu_panel)
         menu_layout.setContentsMargins(0, 0, 0, 0)
         menu_layout.setSpacing(0)
@@ -160,7 +160,7 @@ class HomeWindow(QMainWindow):
         center_container = QWidget()
         center_layout = QHBoxLayout(center_container)
         center_layout.setContentsMargins(0, 0, 0, 0)
-        center_layout.setSpacing(12)
+        center_layout.setSpacing(16)
 
         # Logo
         logo_label = QLabel()
@@ -228,7 +228,7 @@ class HomeWindow(QMainWindow):
         content_widget = QWidget()
         content_widget.setObjectName("content_widget")
         content_layout = QVBoxLayout(content_widget)
-        content_layout.setContentsMargins(40, 44, 40, 40)
+        content_layout.setContentsMargins(36, 20, 8, 8)
         content_widget.setStyleSheet("background: transparent; border: none;")
 
         # Stacked widget to handle different pages
@@ -605,7 +605,7 @@ class HomeWindow(QMainWindow):
         # --- Menu panel and divider container ---
         menu_container = QWidget()
         menu_container_layout = QVBoxLayout(menu_container)
-        menu_container_layout.setContentsMargins(0, 24, 0, 24)  # Add top/bottom margin
+        menu_container_layout.setContentsMargins(0, 0, 0, 0)
         menu_container_layout.setSpacing(0)
         menu_container_layout.addWidget(menu_panel)
         main_layout.addWidget(menu_container)

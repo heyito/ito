@@ -349,6 +349,7 @@ class ApplicationManager(QObject):
             # Pass the status queue to the app instance
             self.app_instance.status_queue = self.status_queue
             self.app_instance.command_processor.status_queue = self.status_queue
+            self.app_instance.audio_recorder.status_queue = self.status_queue
 
             print("Starting AudioApplication.run() in background thread...")
             # Run the application - it has its own event loop that will continue running

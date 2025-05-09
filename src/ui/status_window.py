@@ -1,10 +1,11 @@
 import sys
 from enum import Enum, auto
-from PyQt6.QtCore import Qt, QPoint, QPropertyAnimation, QEasingCurve, QRectF
+from PyQt6.QtCore import Qt, QPoint, QPropertyAnimation, QEasingCurve, QRectF, QTimer
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QGraphicsOpacityEffect
 from PyQt6.QtGui import QPainter, QPainterPath, QRegion, QFontMetrics
 from src.types.status_messages import StatusMessage
 from src.ui.components.inten_layout import MacBlur
+import queue
 
 if sys.platform == 'darwin':
     try:
@@ -34,10 +35,11 @@ else:
 class StatusWindow(QWidget):
     DOT_SIZE = 40
     PILL_WIDTH = 300
-    ANIMATION_DURATION = 750
+    ANIMATION_DURATION = 150
     BORDER_WIDTH = 1
-    DOT_OPACITY = 0  # 30% opacity for dot
+    DOT_OPACITY = 0
     PILL_OPACITY = 1.0  # 100% opacity for pill
+    STATUS_DELAY = 350  # Delay between non-READY status changes in ms
 
     def __init__(self):
         super().__init__()
@@ -81,6 +83,13 @@ class StatusWindow(QWidget):
         self._opacity_animation = None
         self.radius = 3
 
+        # Status queue and timer for delayed updates
+        self._status_queue = queue.Queue()
+        self._pending_status = None
+        self._status_timer = QTimer(self)
+        self._status_timer.timeout.connect(self._process_status_queue)
+        self._status_timer.start(50)  # Check queue every 50ms
+
         if _objc_available:
             try:
                 view_id_sip = self.winId()
@@ -114,6 +123,56 @@ class StatusWindow(QWidget):
         self.update_position()
         self.show_dot()
 
+    def _process_status_queue(self):
+        """Process the status queue with appropriate delays."""
+        try:
+            # If we have a pending status, don't process new ones
+            if self._pending_status is not None:
+                return
+
+            if not self._status_queue.empty():
+                status = self._status_queue.get_nowait()
+                if isinstance(status, StatusMessage):
+                    status = status.value
+                
+                # If current state is READY update immediately
+                if self._current_state == StatusMessage.READY.value:
+                    self._apply_status_update(status)
+                else:
+                    # For non-READY transitions, use a delayed update
+                    self._pending_status = status
+                    QTimer.singleShot(self.STATUS_DELAY, self._apply_pending_status)
+        except queue.Empty:
+            pass
+        except Exception as e:
+            print(f"Error processing status queue: {e}")
+
+    def _apply_pending_status(self):
+        """Apply the pending status update and clear it."""
+        if self._pending_status is not None:
+            self._apply_status_update(self._pending_status)
+            self._pending_status = None
+
+    def _apply_status_update(self, status: str):
+        """Apply the status update to the UI."""
+        if status == StatusMessage.READY.value:
+            if self._current_state != StatusMessage.READY.value:
+                self.animate_to_dot()
+            else:
+                self.show_dot()
+        else:
+            if self._current_state == StatusMessage.READY.value:
+                self.animate_to_pill(status)
+            else:
+                self.show_pill(status)
+        self._current_state = status
+
+    def update_status(self, status: str | StatusMessage, is_error: bool = False):
+        """Queue a status update for processing."""
+        if isinstance(status, StatusMessage):
+            status = status.value
+        self._status_queue.put(status)
+
     def _set_label_style(self, width, border_radius):
         self.status_label.setStyleSheet(f"""
             QLabel {{
@@ -144,7 +203,7 @@ class StatusWindow(QWidget):
 
     def show_dot(self):
         self.status_label.setText("")
-        dot_total = self.DOT_SIZE + 2 * self.BORDER_WIDTH
+        dot_total = 0
         self.status_label.setMinimumWidth(dot_total)
         self.status_label.setMaximumWidth(dot_total)
         self.status_label.setMinimumHeight(dot_total)
@@ -163,7 +222,6 @@ class StatusWindow(QWidget):
         padding = 60
         buffer = 4    # Small buffer for safety
         min_width = 60
-        print(f"Text width: {max(text_width + padding + buffer, min_width)}")
         return max(text_width + padding + buffer, min_width)
 
     def show_pill(self, text):
@@ -240,32 +298,11 @@ class StatusWindow(QWidget):
         self._animation.start()
         self._opacity_animation.start()
 
-    def update_status(self, status: str | StatusMessage, is_error: bool = False):
-        if isinstance(status, StatusMessage):
-            status = status.value
-        if status == StatusMessage.READY.value:
-            if self._current_state != StatusMessage.READY.value:
-                self.animate_to_dot()
-            else:
-                self.show_dot()
-        else:
-            if self._current_state == StatusMessage.READY.value:
-                self.animate_to_pill(status)
-            else:
-                self.show_pill(status)
-        self._current_state = status
-
-    def paintEvent(self, event):
-        # Only paint the container, not the main window
-        pass
-
     def _container_paintEvent(self, event):
         painter = QPainter(self.container)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         rect = self.container.rect()
         path = QPainterPath()
-        # print the rect dimension
-        print(f"Rect: {rect.width()}x{rect.height()}")
         path.addRoundedRect(QRectF(rect), self.radius, self.radius)
         painter.setClipPath(path)
         grad = self._make_background_color(rect)
@@ -277,7 +314,6 @@ class StatusWindow(QWidget):
         # Set rounded mask for the window if this is a top-level window
         if self.isWindow():
             rect = QRectF(0, 0, self.width(), self.height())
-            print(f"ResizeEvent Rect: {rect.width()}x{rect.height()}")
             path = QPainterPath()
             path.addRoundedRect(rect, self.radius, self.radius)
             region = QRegion(path.toFillPolygon().toPolygon())

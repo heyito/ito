@@ -93,41 +93,13 @@ class OnboardingWindow(QMainWindow):
         # --- Manual Dragging Variables ---
         self._dragging = False
         self._drag_start_position = QPointF()
-        self._effective_top_margin = 40
 
         # --- Main widget and layout ---
-        main_widget = IntenLayout(self, radius=8)
+        main_widget = IntenLayout(self, radius=8, show_close_button=True)
         main_widget.setObjectName("main_widget")
         self.setCentralWidget(main_widget)
         self.layout = main_widget.layout
-
-        # --- Custom Close Button (macOS style, flush top left, functional) ---
-        close_button_container = QWidget(main_widget)
-        close_button_container.setGeometry(0, 0, 32, 32)
-        close_button_container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        close_button_layout = QHBoxLayout(close_button_container)
-        close_button_layout.setContentsMargins(8, 8, 0, 0)
-        close_button_layout.setSpacing(0)
-        close_button = QPushButton("")
-        close_button.setFixedSize(16, 16)
-        close_button.setStyleSheet('''
-            QPushButton {
-                background-color: #FF3B30;
-                border: none;
-                border-radius: 8px;
-            }
-            QPushButton:hover {
-                background-color: #FF615C;
-            }
-        ''')
-        close_button.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
-        close_button.clicked.connect(self.close)
-        close_button_layout.addWidget(close_button, alignment=Qt.AlignmentFlag.AlignLeft)
-        close_button_container.raise_()
-
-        # --- Adjust Margins ---
-        title_bar_offset = 30 if _objc_available and _ns_window and (_ns_window.styleMask() & NSFullSizeContentViewWindowMask) else 0
-        self._effective_top_margin = 40 + title_bar_offset
+        self._effective_top_margin = main_widget.get_effective_top_margin()
         self.layout.setContentsMargins(40, self._effective_top_margin, 40, 40)
         self.layout.setSpacing(20)
 
@@ -187,7 +159,7 @@ class OnboardingWindow(QMainWindow):
                 background-color: #F6EBDD;
                 color: #181A2A;
                 border: none;
-                border-radius: 14px;
+                border-radius: 8px;
                 font-size: 16px;
                 font-weight: 600;
                 padding: 0 14px;

@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
 
 from src.application_manager import ApplicationManager
 from src.ui.onboarding import OnboardingWindow
+from src.ui.components.inten_layout import IntenLayout
 
 # --- Platform specific code for macOS ---
 _ns_window = None
@@ -84,6 +85,8 @@ class CustomCombo(QComboBox):
 class HomeWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setWindowFlags(self.windowFlags() | Qt.WindowType.FramelessWindowHint)
         self.setWindowTitle("Inten")
         self.setMinimumWidth(900)
         self.setMinimumHeight(600)
@@ -126,207 +129,17 @@ class HomeWindow(QMainWindow):
             except Exception as e:
                 print(f"Error applying native styling: {e}")
 
-        # Add global stylesheet for macOS-style form elements
-        self.setStyleSheet("""
-            QMainWindow {
-                background: #141538;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            }
-            
-            /* Base input styles - minimal styling */
-            QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
-                border: 1px solid rgba(242, 228, 214, 0.3);
-                background: rgba(242, 228, 214, 0.1);
-                padding: 5px;
-                min-width: 200px;
-                color: #F2E4D6;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            }
-            
-            /* Remove all spin buttons */
-            QSpinBox::up-button, QSpinBox::down-button,
-            QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
-                width: 0;
-                height: 0;
-                border: none;
-                background: transparent;
-            }
-            
-            /* ComboBox styling */
-            QComboBox {
-                border: 1px solid rgba(242, 228, 214, 0.3);
-                background: rgba(242, 228, 214, 0.1);
-                padding: 5px;
-                min-width: 200px;
-                color: #F2E4D6;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            }
-
-            QComboBox::drop-down {
-                border: none;
-                width: 20px;
-            }
-
-            QComboBox::down-arrow {
-                width: 8px;
-                height: 8px;
-                background: #F2E4D6;
-                border-radius: 4px;
-            }
-                                      /* Style the dropdown popup frame/container */
-            /* This QFrame holds the QAbstractItemView */
-            QComboBox QFrame {
-                background-color: #141538;  /* Frame background */
-                border: 1px solid rgba(242, 228, 214, 0.3);/* Apply border here */
-                margin: 0px;              /* No margin */
-                padding: 0px;             /* No padding */
-                border-image: none;       /* Optional: Uncomment if desperate to reset native look */
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            }
-
-            /* Style the list view *inside* the frame */
-            QComboBox QListView {
-                background-color: #141538; /* View background (can be white or transparent if frame bg works) */
-                color: #F2E4D6;                /* Default text color */
-                selection-background-color: rgba(242, 228, 214, 0.2); /* Selection background */
-                selection-color: #F2E4D6;           /* Selection text color */
-                outline: 0px;                       /* No focus outline */
-                border: none;                       /* View itself has NO border (it's on the QFrame) */
-                padding: 0px;                       /* View itself has NO padding */
-                margin: 0px;                        /* View itself has NO margin */
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            }
-
-            /* Style the viewport *within* the list view - Often needed! */
-            QComboBox QListView::viewport {
-                background-color: #141538;  /* Ensure viewport background is white */
-                border: none;             /* Ensure viewport has no border */
-                margin: 0px;
-                padding: 0px;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            }
-
-            /* Style individual items */
-            QComboBox QListView::item {
-                background-color: #141538; /* Use background-color consistently */
-                color: #F2E4D6;
-                border: none;
-                padding: 5px;             /* Padding *within* each item text area */
-                margin: 0px;              /* Ensure items don't have margins */
-                min-height: 20px; /* Optional: Ensure items have a minimum height */
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            }
-
-            /* Style selected items */
-            QComboBox QListView::item:selected {
-                background-color: rgba(242, 228, 214, 0.2);
-                color: #F2E4D6;
-            }
-            
-            /* Checkbox - minimal styling */
-            QCheckBox {
-                spacing: 8px;
-                color: #F2E4D6;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            }
-            
-            /* Menu panel */
-            QWidget#menu_panel {
-                background-color: #141538;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            }
-            
-            /* Menu buttons - essential styling only */
-            QPushButton#settings_button {
-                text-align: center;
-                padding: 16px 24px;
-                border: none;
-                background-color: transparent;
-                color: #F2E4D6;
-                font-size: 18px;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                border-radius: 18px;
-                margin: 8px 16px 8px 16px;
-                width: 100%;
-            }
-            
-            QPushButton#settings_button:hover {
-                background-color: rgba(242, 228, 214, 0.1);
-            }
-            
-            QPushButton#settings_button:checked {
-                background-color: rgba(242, 228, 214, 0.15);
-                color: #F2E4D6;
-                border-radius: 18px;
-                margin-left: 8px;
-                margin-right: 16px;
-            }
-            
-            QPushButton#settings_button:focus {
-                outline: none;
-            }
-            
-            /* Action buttons - minimal styling */
-            QPushButton#save_button, QPushButton#reset_button {
-                padding: 8px 20px;
-                border: none;
-                border-radius: 6px;
-                color: #141538;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                min-width: 120px;
-            }
-            
-            QPushButton#save_button {
-                background-color: #F2E4D6;
-            }
-            
-            QPushButton#save_button:hover {
-                background-color: rgba(242, 228, 214, 0.8);
-            }
-            
-            QPushButton#reset_button {
-                background-color: rgba(242, 228, 214, 0.5);
-            }
-            
-            QPushButton#reset_button:hover {
-                background-color: rgba(242, 228, 214, 0.7);
-            }
-
-            /* Form labels */
-            QLabel {
-                color: #F2E4D6;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            }
-
-            /* Section headers */
-            QLabel[isHeader="true"] {
-                font-size: 15px;
-                font-weight: 600;
-                color: #F2E4D6;
-                margin-top: 24px;
-                margin-bottom: 8px;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            }
-
-            /* Scroll area */
-            QScrollArea {
-                border: none;
-                background: transparent;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            }
-
-            QWidget#scroll_content {
-                background: transparent;
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            }
-        """)
-
         # Main widget and layout
-        main_widget = QWidget()
-        main_layout = QHBoxLayout(main_widget)
+        main_widget = IntenLayout(self, radius=8, show_close_button=True)
+        main_widget.setObjectName("main_widget")
+        self.setCentralWidget(main_widget)
+        main_layout = QHBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
-        self.setCentralWidget(main_widget)
+        main_widget.layout.addLayout(main_layout)
+        self._effective_top_margin = main_widget.get_effective_top_margin()
+        main_widget.layout.setContentsMargins(40, self._effective_top_margin, 40, 40)
+        main_widget.layout.setSpacing(20)
 
         # Left menu panel
         menu_panel = QWidget()
@@ -380,19 +193,41 @@ class HomeWindow(QMainWindow):
 
         # Menu buttons
         self.settings_button = QPushButton("Settings")
-        self.settings_button.setObjectName("settings_button")  # Add object name for styling
+        self.settings_button.setObjectName("settings_button")
         self.settings_button.setCheckable(True)
         self.settings_button.setChecked(True)
         self.settings_button.clicked.connect(lambda: self.show_page(0))
         menu_layout.addWidget(self.settings_button)
+        # Style the menu button for a soft, modern selection
+        self.settings_button.setStyleSheet('''
+            QPushButton#settings_button {
+                background: transparent;
+                color: #F2E4D6;
+                font-size: 18px;
+                font-weight: 500;
+                border: none;
+                border-radius: 16px;
+                padding: 12px 0px;
+                margin: 8px 16px 8px 16px;
+            }
+            QPushButton#settings_button:checked {
+                background: rgba(242, 228, 214, 0.32);
+                color: #181A2A;
+            }
+            QPushButton#settings_button:hover {
+                background: rgba(242, 228, 214, 0.18);
+            }
+        ''')
 
         # Add stretch to push everything up
         menu_layout.addStretch()
 
-        # Content area
+        # Content area (no card background, just a container for layout)
         content_widget = QWidget()
+        content_widget.setObjectName("content_widget")
         content_layout = QVBoxLayout(content_widget)
         content_layout.setContentsMargins(40, 40, 40, 40)
+        content_widget.setStyleSheet("background: transparent; border: none;")
 
         # Stacked widget to handle different pages
         self.stacked_widget = QStackedWidget()
@@ -527,15 +362,47 @@ class HomeWindow(QMainWindow):
 
         # Save button
         save_button = QPushButton("Save Settings")
-        save_button.setObjectName("save_button")  # Add object name for styling
-        save_button.setFixedWidth(120)  # Set fixed width
+        save_button.setObjectName("btn-primary")
+        save_button.setStyleSheet("""
+            QPushButton#btn-primary {
+                background-color: #F6EBDD;
+                color: #181A2A;
+                border: none; /* Crucial for macOS */
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                padding: 0 14px;
+                min-height: 44px; /* You had 32px in styles, 44px in code */
+                min-width: 160px;
+                letter-spacing: 0.2px;
+            }
+            QPushButton#btn-primary:hover {
+                background-color: #f3e2c7;
+            }
+        """)
         save_button.clicked.connect(self.save_settings)
         button_layout.addWidget(save_button)
 
         # Reset button
         reset_button = QPushButton("Reset All")
-        reset_button.setObjectName("reset_button")  # Add object name for styling
-        reset_button.setFixedWidth(120)  # Set fixed width
+        reset_button.setObjectName("btn-primary")
+        reset_button.setStyleSheet("""
+            QPushButton#btn-primary {
+                background-color: #F6EBDD;
+                color: #181A2A;
+                border: none; /* Crucial for macOS */
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                padding: 0 14px;
+                min-height: 44px; /* You had 32px in styles, 44px in code */
+                min-width: 160px;
+                letter-spacing: 0.2px;
+            }
+            QPushButton#btn-primary:hover {
+                background-color: #f3e2c7;
+            }
+        """)
         reset_button.clicked.connect(self.reset_all_settings)
         button_layout.addWidget(reset_button)
         button_layout.addStretch()
@@ -551,18 +418,6 @@ class HomeWindow(QMainWindow):
         menu_container_layout.setContentsMargins(0, 24, 0, 24)  # Add top/bottom margin
         menu_container_layout.setSpacing(0)
         menu_container_layout.addWidget(menu_panel)
-        # Add vertical divider
-        divider = QFrame()
-        divider.setFrameShape(QFrame.Shape.VLine)
-        divider.setFixedWidth(1)
-        divider.setMinimumHeight(100)  # Add minimum height
-        divider.setStyleSheet("""
-            QFrame {
-                background-color: rgba(242, 228, 214, 0.3);
-                border: none;
-            }
-        """)
-        menu_container_layout.addWidget(divider)
         main_layout.addWidget(menu_container)
         main_layout.addWidget(content_widget)
 
@@ -578,6 +433,106 @@ class HomeWindow(QMainWindow):
                 self.app_manager.start_application()
             else:
                 self.handle_error(error_msg)
+
+        # --- Unified Global Styles for Home Window ---
+        self.setStyleSheet(self.styleSheet() + """
+            QPushButton#btn-primary {
+                background-color: #F6EBDD;
+                color: #181A2A;
+                border: none;
+                border-radius: 14px;
+                font-size: 16px;
+                font-weight: 600;
+                padding: 0 14px;
+                min-height: 32px;
+                min-width: 160px;
+                letter-spacing: 0.2px;
+            }
+            QPushButton#btn-primary:hover {
+                background-color: #f3e2c7;
+            }
+            QPushButton#btn-primary:disabled {
+                background-color: #f3e2c7;
+                color: #b0b0b0;
+            }
+
+            /* Menu button highlight (Settings) */
+            QPushButton#settings_button {
+                background: transparent;
+                color: #F2E4D6;
+                font-size: 18px;
+                font-weight: 500;
+                border: none;
+                border-radius: 16px;
+                padding: 12px 0px;
+                margin: 8px 16px 8px 16px;
+            }
+            QPushButton#settings_button:checked {
+                background: rgba(242, 228, 214, 0.32);
+                color: #181A2A;
+            }
+            QPushButton#settings_button:hover {
+                background: rgba(242, 228, 214, 0.18);
+            }
+
+            /* macOS-style scrollbar */
+            QScrollBar:vertical {
+                background: transparent;
+                width: 10px;
+                margin: 8px 2px 8px 2px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:vertical {
+                background: rgba(242, 228, 214, 0.25);
+                min-height: 32px;
+                border-radius: 6px;
+                border: none;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: rgba(242, 228, 214, 0.38);
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+                background: none;
+                border: none;
+            }
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+                background: none;
+            }
+
+            /* QComboBox and popup styling */
+            QComboBox {
+                background: rgba(30, 32, 40, 0.92);
+                color: #F2E4D6;
+                border: 1.5px solid rgba(242, 228, 214, 0.22);
+                border-radius: 8px;
+                padding: 6px 32px 6px 12px;
+                font-size: 16px;
+                min-width: 180px;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            }
+            QComboBox QAbstractItemView {
+                background: rgba(30, 32, 40, 0.98);
+                color: #F2E4D6;
+                border-radius: 10px;
+                font-size: 16px;
+                min-width: 220px;
+                selection-background-color: rgba(242, 228, 214, 0.18);
+                selection-color: #181A2A;
+                outline: none;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 32px;
+                background: transparent;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                width: 0;
+                height: 0;
+                border: none;
+            }
+        """)
 
     def show_page(self, index):
         self.stacked_widget.setCurrentIndex(index)

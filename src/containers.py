@@ -12,6 +12,7 @@ from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
 from src.asyncio_loop_manager import AsyncioLoopManager
+from src.clients.gemini_client import GeminiClient
 from src.clients.groq_client import GroqClient
 from src.clients.llm_client_interface import LLMClientInterface
 from src.clients.ollama_client import OllamaClient
@@ -35,25 +36,33 @@ from src.handlers.audio.openai_asr_handler import OpenAIASRHandler
 from src.handlers.vosk_processor import VoskProcessor
 from src.streaming_application_runner import StreamingApplicationRunner
 
+
 # Helper function for Selector
 def _is_streaming_mode(config_value: Any) -> str:
     """Checks if the config value represents streaming mode. Returns 'true' or 'false'."""
-    print(f"DEBUG: _is_streaming_mode received: {repr(config_value)} (type: {type(config_value)})") # DEBUG
-    bool_result = False # Default
+    print(
+        f"DEBUG: _is_streaming_mode received: {repr(config_value)} (type: {type(config_value)})"
+    )  # DEBUG
+    bool_result = False  # Default
     if isinstance(config_value, bool):
         bool_result = config_value
     elif isinstance(config_value, str):
-        bool_result = config_value.lower() in ('true', '1', 't', 'y', 'yes', 'on')
+        bool_result = config_value.lower() in ("true", "1", "t", "y", "yes", "on")
     elif isinstance(config_value, int):
         bool_result = config_value == 1
     else:
         # Handle unexpected types if necessary, maybe log a warning
-        print(f"DEBUG: _is_streaming_mode received unexpected type: {type(config_value)}")
+        print(
+            f"DEBUG: _is_streaming_mode received unexpected type: {type(config_value)}"
+        )
         bool_result = False
 
-    str_result = str(bool_result).lower() # Convert boolean to lowercase string 'true' or 'false'
-    print(f"DEBUG: _is_streaming_mode returning: {repr(str_result)}") # DEBUG
+    str_result = str(
+        bool_result
+    ).lower()  # Convert boolean to lowercase string 'true' or 'false'
+    print(f"DEBUG: _is_streaming_mode returning: {repr(str_result)}")  # DEBUG
     return str_result
+
 
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
@@ -72,20 +81,27 @@ class Container(containers.DeclarativeContainer):
         OpenAIClient,
         api_key=config.APIKeys.openai_api_key,
         user_command_model=config.OpenAI.user_command_model,  # This should be the currently selected OpenAI model
-        asr_model=config.OpenAI.asr_model
+        asr_model=config.OpenAI.asr_model,
     )
 
     groq_llm_client_provider = providers.Singleton(
         GroqClient,
         api_key=config.APIKeys.groq_api_key,
         user_command_model=config.Groq.user_command_model,
-        asr_model=config.Groq.asr_model
+        asr_model=config.Groq.asr_model,
     )
 
     ollama_llm_client_provider = providers.Singleton(
         OllamaClient,
         model=config.Ollama.model,
-        base_url=config.Ollama.base_url.as_str()
+        base_url=config.Ollama.base_url.as_str(),
+    )
+
+    gemini_llm_client_provider = providers.Singleton(
+        GeminiClient,
+        user_command_model=config.Gemini.user_command_model,
+        asr_model=config.Gemini.asr_model,
+        api_key=config.APIKeys.gemini_api_key,
     )
 
     # Selector for the LLM client instance based on config.LLM.source
@@ -94,16 +110,13 @@ class Container(containers.DeclarativeContainer):
         config.LLM.source,
         openai_api=openai_llm_client_provider,
         ollama=ollama_llm_client_provider,
-        # google_gemini=google_gemini_client_provider, # Future
+        google_gemini=gemini_llm_client_provider,
         groq_api=groq_llm_client_provider,
     )
 
     # --- Core Handlers/Services ---
 
-    llm_handler = providers.Singleton(
-        LLMHandler,
-        client=selected_llm_client
-    )
+    llm_handler = providers.Singleton(LLMHandler, client=selected_llm_client)
 
     audio_source_handler = providers.Singleton(
         AudioSourceHandler,
@@ -111,46 +124,31 @@ class Container(containers.DeclarativeContainer):
         sample_rate=config.Audio.sample_rate.as_int(),
         channels=config.Audio.channels.as_int(),
         # Inject base provider for optional int - handled in __init__
-        device_index=config.Audio.device_index
+        device_index=config.Audio.device_index,
     )
 
     # --- Clients --- Added section for clients
     openai_webrtc_client = providers.Singleton(
         OpenAIWebRTCClient,
-        api_key=config.APIKeys.openai_api_key
+        api_key=config.APIKeys.openai_api_key,
         # The session_url uses the default value in the client's __init__
     )
 
-    intent_engine = providers.Singleton(
-        IntentEngine,
-        llm_handler=llm_handler
-    )
+    intent_engine = providers.Singleton(IntentEngine, llm_handler=llm_handler)
 
-    macos_engine = providers.Singleton(
-        MacOSEngine
-    )
+    macos_engine = providers.Singleton(MacOSEngine)
 
     # --- App-Specific Logic ---
-    browser_app = providers.Singleton(
-        BrowserApp,
-        llm_handler=llm_handler
-    )
+    browser_app = providers.Singleton(BrowserApp, llm_handler=llm_handler)
 
-    text_edit_app = providers.Singleton(
-        TextEditApp,
-        llm_handler=llm_handler
-    )
+    text_edit_app = providers.Singleton(TextEditApp, llm_handler=llm_handler)
 
     notes_app = providers.Singleton(
-        NotesApp,
-        llm_handler=llm_handler,
-        intent_engine=intent_engine
+        NotesApp, llm_handler=llm_handler, intent_engine=intent_engine
     )
 
     macos_app = providers.Singleton(
-        MacOSapp,
-        llm_handler=llm_handler,
-        macos_engine=macos_engine
+        MacOSapp, llm_handler=llm_handler, macos_engine=macos_engine
     )
 
     context_engine = providers.Singleton(
@@ -171,27 +169,20 @@ class Container(containers.DeclarativeContainer):
         macos_app=macos_app,
     )
 
-    context_manager = providers.Singleton(
-        ContextManager,
-        context_engine=context_engine
-    )
+    context_manager = providers.Singleton(ContextManager, context_engine=context_engine)
 
     command_processor = providers.Singleton(
-        CommandProcessor,
-        processing_engine=processing_engine,
-        status_queue=status_queue
+        CommandProcessor, processing_engine=processing_engine, status_queue=status_queue
     )
 
     # --- Discrete Mode Components ---
     discrete_asr_handler: providers.Provider[ASRHandlerInterface] = providers.Selector(
         config.ASR.source,
         openai_api=providers.Singleton(
-            OpenAIASRHandler,
-            openAIClient=openai_llm_client_provider
+            OpenAIASRHandler, openAIClient=openai_llm_client_provider
         ),
         groq_api=providers.Singleton(
-            GroqASRHandler,
-            groqClient=groq_llm_client_provider
+            GroqASRHandler, groqClient=groq_llm_client_provider
         ),
         faster_whisper=providers.Singleton(
             FasterWhisperASRHandler,
@@ -201,24 +192,23 @@ class Container(containers.DeclarativeContainer):
         ),
     )
 
-    app_config = providers.Singleton(
-        AppConfig,
-        config_dict=config
-    )
+    app_config = providers.Singleton(AppConfig, config_dict=config)
 
     # VAD Config provider - using Callable instead of Dict
     vad_config_provider = providers.Dict(
         enabled=providers.AttributeGetter(app_config, "vad_enabled"),
         aggressiveness=providers.AttributeGetter(app_config, "vad_aggressiveness"),
-        silence_duration_ms=providers.AttributeGetter(app_config, "silence_duration_ms"),
-        frame_duration_ms=providers.AttributeGetter(app_config, "frame_duration_ms")
+        silence_duration_ms=providers.AttributeGetter(
+            app_config, "silence_duration_ms"
+        ),
+        frame_duration_ms=providers.AttributeGetter(app_config, "frame_duration_ms"),
     )
 
     audio_recorder = providers.Singleton(
         AudioRecorder,
         audio_handler=audio_source_handler,
         vad_config=vad_config_provider,
-        status_queue=status_queue
+        status_queue=status_queue,
     )
 
     # --- Streaming Mode Components ---
@@ -237,17 +227,19 @@ class Container(containers.DeclarativeContainer):
         audio_handler=audio_source_handler,
         asr_processor_cls=realtime_asr_processor_cls,
         asr_config=vosk_config_provider,
-        loop=asyncio_loop # Inject the loop from the manager
+        loop=asyncio_loop,  # Inject the loop from the manager
     )
 
-    discrete_runner = providers.Factory( # Factory ensures new instance if container reset
-        DiscreteApplicationRunner,
-        config=app_config,
-        context_manager=context_manager,
-        command_processor=command_processor,
-        audio_recorder=audio_recorder,
-        asr_handler=discrete_asr_handler,
-        status_queue=status_queue,
+    discrete_runner = (
+        providers.Factory(  # Factory ensures new instance if container reset
+            DiscreteApplicationRunner,
+            config=app_config,
+            context_manager=context_manager,
+            command_processor=command_processor,
+            audio_recorder=audio_recorder,
+            asr_handler=discrete_asr_handler,
+            status_queue=status_queue,
+        )
     )
 
     streaming_runner = providers.Factory(
@@ -261,17 +253,20 @@ class Container(containers.DeclarativeContainer):
 
     # --- Main Application Selector ---
     application: providers.Provider[ApplicationInterface] = providers.Selector(
-        providers.Callable(_is_streaming_mode, config.Mode.streaming), # Use the helper returning 'true'/'false'
+        providers.Callable(
+            _is_streaming_mode, config.Mode.streaming
+        ),  # Use the helper returning 'true'/'false'
         true=streaming_runner,
         false=discrete_runner,
     )
+
 
 # Optional: Function to get the absolute path, similar to your main.py
 # Ensure sys is imported if using this
 def get_resource_path(relative_path):
     try:
-        base_path = sys._MEIPASS # type: ignore
+        base_path = sys._MEIPASS  # type: ignore
     except Exception:
         # Corrected path finding relative to containers.py
-        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     return os.path.join(base_path, relative_path)

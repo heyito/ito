@@ -31,7 +31,7 @@ from src.utils.timing import save_timing_report, clear_timing_data
 
 # --- Platform specific code for macOS ---
 _ns_window = None
-if sys.platform == 'darwin':
+if sys.platform == "darwin":
     try:
         from ctypes import c_void_p
 
@@ -43,12 +43,16 @@ if sys.platform == 'darwin':
             NSWindow,
             NSWindowTitleHidden,
         )
+
         _objc_available = True
     except ImportError:
-        print("PyObjC framework (pyobjc-framework-Cocoa) not found. Cannot apply native macOS styling.")
+        print(
+            "PyObjC framework (pyobjc-framework-Cocoa) not found. Cannot apply native macOS styling."
+        )
         _objc_available = False
 else:
     _objc_available = False
+
 
 class CustomCombo(QComboBox):
     def __init__(self, *args, **kwargs):
@@ -69,8 +73,8 @@ class CustomCombo(QComboBox):
 
             # zero out margins just in case
             if popup.layout():
-                popup.layout().setContentsMargins(0,0,0,0)
-            popup.setContentsMargins(0,0,0,0)
+                popup.layout().setContentsMargins(0, 0, 0, 0)
+            popup.setContentsMargins(0, 0, 0, 0)
 
             popup.setStyleSheet("""
                 QWidget#comboPopup {
@@ -81,6 +85,7 @@ class CustomCombo(QComboBox):
 
         super().showPopup()
 
+
 class HomeWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -90,19 +95,18 @@ class HomeWindow(QMainWindow):
 
         # Initialize ApplicationManager
         self.app_manager = ApplicationManager(
-            OnboardingWindow.ORGANIZATION_NAME,
-            OnboardingWindow.APPLICATION_NAME
+            OnboardingWindow.ORGANIZATION_NAME, OnboardingWindow.APPLICATION_NAME
         )
-        
+
         # Connect signals
         self.app_manager.error_occurred.connect(self.handle_error)
         self.app_manager.status_changed.connect(self.handle_status_change)
         self.app_manager.settings_changed.connect(self.load_settings)
-        
+
         # Show status window
-        if hasattr(self.app_manager, 'status_window'):
+        if hasattr(self.app_manager, "status_window"):
             self.app_manager.status_window.show()
-        
+
         # Add these variables for dragging functionality
         self._dragging = False
         self._drag_start_position = QPointF()
@@ -120,7 +124,9 @@ class HomeWindow(QMainWindow):
 
                 if _ns_window:
                     _ns_window.setTitlebarAppearsTransparent_(True)
-                    _ns_window.setStyleMask_(_ns_window.styleMask() | NSFullSizeContentViewWindowMask)
+                    _ns_window.setStyleMask_(
+                        _ns_window.styleMask() | NSFullSizeContentViewWindowMask
+                    )
                 else:
                     print("Warning: Could not get NSWindow object.")
             except Exception as e:
@@ -353,7 +359,10 @@ class HomeWindow(QMainWindow):
         # Try to load logo from multiple possible locations
         logo_paths = [
             "inten-logo.png",  # Development path
-            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "inten-logo.png"),  # Production path
+            os.path.join(
+                os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+                "inten-logo.png",
+            ),  # Production path
         ]
         logo_pixmap = None
         for path in logo_paths:
@@ -361,10 +370,14 @@ class HomeWindow(QMainWindow):
                 logo_pixmap = QPixmap(path)
                 if not logo_pixmap.isNull():
                     break
-        
+
         if logo_pixmap and not logo_pixmap.isNull():
-            scaled_pixmap = logo_pixmap.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio, 
-                                             Qt.TransformationMode.SmoothTransformation)
+            scaled_pixmap = logo_pixmap.scaled(
+                32,
+                32,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
             logo_label.setPixmap(scaled_pixmap)
         else:
             logo_label.setText("🎯")
@@ -380,7 +393,9 @@ class HomeWindow(QMainWindow):
 
         # Menu buttons
         self.settings_button = QPushButton("Settings")
-        self.settings_button.setObjectName("settings_button")  # Add object name for styling
+        self.settings_button.setObjectName(
+            "settings_button"
+        )  # Add object name for styling
         self.settings_button.setCheckable(True)
         self.settings_button.setChecked(True)
         self.settings_button.clicked.connect(lambda: self.show_page(0))
@@ -421,13 +436,19 @@ class HomeWindow(QMainWindow):
         form_layout = QFormLayout(scroll_content)
         form_layout.setSpacing(16)
         form_layout.setContentsMargins(0, 0, 24, 0)  # Add right margin for scroll bar
-        form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        form_layout.setFormAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        
+        form_layout.setLabelAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
+        form_layout.setFormAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+
         # ASR Section
         self.add_section_header(form_layout, "Speech Recognition Settings")
         self.asr_source = CustomCombo()
-        self.asr_source.addItems(["openai_api", "faster_whisper", "groq_api"])
+        self.asr_source.addItems(
+            ["openai_api", "faster_whisper", "groq_api", "gemini_api"]
+        )
         form_layout.addRow("ASR Provider:", self.asr_source)
 
         # ASR Model Stacking
@@ -437,16 +458,39 @@ class HomeWindow(QMainWindow):
         self.openai_asr_model_dropdown = CustomCombo()
         self.openai_asr_model_dropdown.addItems(["whisper-1"])
 
+        self.gemini_asr_model_dropdown = CustomCombo()
+        self.gemini_asr_model_dropdown.addItems(
+            [
+                "gemini-2.0-flash",
+            ]
+        )
+
         self.faster_whisper_model_dropdown = CustomCombo()
-        self.faster_whisper_model_dropdown.addItems(["tiny", "tiny.en", "base", "base.en", "small", "small.en",
-                                           "medium", "medium.en", "large-v1", "large-v2", "large-v3"])
+        self.faster_whisper_model_dropdown.addItems(
+            [
+                "tiny",
+                "tiny.en",
+                "base",
+                "base.en",
+                "small",
+                "small.en",
+                "medium",
+                "medium.en",
+                "large-v1",
+                "large-v2",
+                "large-v3",
+            ]
+        )
 
         self.groq_asr_model_dropdown = CustomCombo()
-        self.groq_asr_model_dropdown.addItems(["distil-whisper-large-v3-en", "whisper-large-v3-turbo", "whisper-large-v3"])
+        self.groq_asr_model_dropdown.addItems(
+            ["distil-whisper-large-v3-en", "whisper-large-v3-turbo", "whisper-large-v3"]
+        )
 
         self.asr_model_stacked_widget.addWidget(self.openai_asr_model_dropdown)
         self.asr_model_stacked_widget.addWidget(self.faster_whisper_model_dropdown)
         self.asr_model_stacked_widget.addWidget(self.groq_asr_model_dropdown)
+        self.asr_model_stacked_widget.addWidget(self.gemini_asr_model_dropdown)
         form_layout.addRow(self.asr_model_label, self.asr_model_stacked_widget)
 
         self.asr_device_label = QLabel("Device:")
@@ -466,31 +510,48 @@ class HomeWindow(QMainWindow):
         # LLM Section
         self.add_section_header(form_layout, "Language Model Settings")
         self.llm_source = CustomCombo()
-        self.llm_source.addItems(["ollama", "openai_api", "groq_api"])
+        self.llm_source.addItems(["ollama", "openai_api", "groq_api", "gemini_api"])
         form_layout.addRow("LLM Source:", self.llm_source)
 
         # New dynamic LLM fields
         self.llm_model_label = QLabel("Model:")
         self.llm_model_stacked_widget = QStackedWidget()
-        
-        self.llm_model_edit = QLineEdit() 
-        
+
+        self.llm_model_edit = QLineEdit()
+
         self.openai_model_dropdown = CustomCombo()
-        self.openai_model_dropdown.addItems(["gpt-4.1", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"])
-        
-        self.groq_model_dropdown = CustomCombo() 
-        self.groq_model_dropdown.addItems(["llama-3.3-70b-versatile", "llama3-70b-8192", "mixtral-8x7b-32768", "gemma-7b-it"])
+        self.openai_model_dropdown.addItems(
+            ["gpt-4.1", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]
+        )
+
+        self.gemini_model_dropdown = CustomCombo()
+        self.gemini_model_dropdown.addItems(
+            [
+                "gemini-2.0-flash",
+            ]
+        )
+
+        self.groq_model_dropdown = CustomCombo()
+        self.groq_model_dropdown.addItems(
+            [
+                "llama-3.3-70b-versatile",
+                "llama3-70b-8192",
+                "mixtral-8x7b-32768",
+                "gemma-7b-it",
+            ]
+        )
 
         self.llm_model_stacked_widget.addWidget(self.llm_model_edit)
         self.llm_model_stacked_widget.addWidget(self.openai_model_dropdown)
         self.llm_model_stacked_widget.addWidget(self.groq_model_dropdown)
+        self.llm_model_stacked_widget.addWidget(self.gemini_model_dropdown)
         form_layout.addRow(self.llm_model_label, self.llm_model_stacked_widget)
-        
+
         self.max_tokens = QSpinBox()
         self.max_tokens.setRange(1, 25000)
         self.max_tokens.setValue(2000)
         form_layout.addRow("Max Tokens:", self.max_tokens)
-        
+
         self.temperature = QDoubleSpinBox()
         self.temperature.setRange(0.0, 1.0)
         self.temperature.setSingleStep(0.1)
@@ -506,12 +567,23 @@ class HomeWindow(QMainWindow):
         self.openai_api_key_label = QLabel("OpenAI API Key:")
         self.openai_api_key_edit = QLineEdit()
         self.openai_api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
-        self.openai_api_key_row = form_layout.addRow(self.openai_api_key_label, self.openai_api_key_edit)
+        self.openai_api_key_row = form_layout.addRow(
+            self.openai_api_key_label, self.openai_api_key_edit
+        )
+
+        self.gemini_api_key_label = QLabel("Gemini API Key:")
+        self.gemini_api_key_edit = QLineEdit()
+        self.gemini_api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        self.gemini_api_key_row = form_layout.addRow(
+            self.gemini_api_key_label, self.gemini_api_key_edit
+        )
 
         self.groq_api_key_label = QLabel("Groq API Key:")
         self.groq_api_key_edit = QLineEdit()
         self.groq_api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
-        self.groq_api_key_row = form_layout.addRow(self.groq_api_key_label, self.groq_api_key_edit)
+        self.groq_api_key_row = form_layout.addRow(
+            self.groq_api_key_label, self.groq_api_key_edit
+        )
 
         # Mode Section
         self.add_section_header(form_layout, "Application Mode")
@@ -519,7 +591,7 @@ class HomeWindow(QMainWindow):
         self.streaming_mode.stateChanged.connect(self.update_setting_visibility)
         form_layout.addRow("Streaming Mode (Requires Vosk):", self.streaming_mode)
 
-        # Vosk Section 
+        # Vosk Section
         self.add_section_header(form_layout, "Vosk Settings (Streaming Mode)")
         self.vosk_model_path_edit = QLineEdit()
         form_layout.addRow("Model Path:", self.vosk_model_path_edit)
@@ -587,24 +659,27 @@ class HomeWindow(QMainWindow):
         settings_layout.addWidget(button_container)
 
         # --- Developer Timing Tools Section (Conditional) ---
-        DEV_MODE = os.getenv('DEV', 'false').lower() == 'true'
+        DEV_MODE = os.getenv("DEV", "false").lower() == "true"
 
         if DEV_MODE:
             self.add_section_header(form_layout, "Developer Timing Tools")
 
             # Timing report buttons container (re-using form_layout for consistency)
             # We'll add a QWidget to the form_layout that then contains the buttons in an QHBoxLayout
-            
+
             timing_buttons_widget = QWidget()
             timing_button_layout = QHBoxLayout(timing_buttons_widget)
-            timing_button_layout.setContentsMargins(0, 0, 0, 0) # No margins for the inner layout
+            timing_button_layout.setContentsMargins(
+                0, 0, 0, 0
+            )  # No margins for the inner layout
             timing_button_layout.setSpacing(10)
-
 
             self.save_timing_report_button = QPushButton("Save Timing Report")
             self.save_timing_report_button.setObjectName("save_timing_report_button")
             self.save_timing_report_button.setFixedWidth(160)
-            self.save_timing_report_button.clicked.connect(self.handle_save_timing_report)
+            self.save_timing_report_button.clicked.connect(
+                self.handle_save_timing_report
+            )
             timing_button_layout.addWidget(self.save_timing_report_button)
 
             self.clear_timing_data_button = QPushButton("Clear Timing Data")
@@ -612,13 +687,12 @@ class HomeWindow(QMainWindow):
             self.clear_timing_data_button.setFixedWidth(160)
             self.clear_timing_data_button.clicked.connect(self.handle_clear_timing_data)
             timing_button_layout.addWidget(self.clear_timing_data_button)
-            
-            timing_button_layout.addStretch() # Push buttons to the left
+
+            timing_button_layout.addStretch()  # Push buttons to the left
 
             # Add the widget containing the buttons to the form layout
             # We add it without a label, spanning both columns for the buttons
             form_layout.addRow(timing_buttons_widget)
-
 
         # Add settings page to stacked widget
         self.stacked_widget.addWidget(self.settings_page)
@@ -647,7 +721,7 @@ class HomeWindow(QMainWindow):
         # Load settings after UI is fully initialized
         self.load_settings()
         self.update_setting_visibility()
-        
+
         # Start application if settings are valid
         current_settings = self.app_manager.load_settings()
         if current_settings:  # Only validate if we have settings
@@ -665,32 +739,42 @@ class HomeWindow(QMainWindow):
         try:
             # You can customize the filepath here if needed, e.g., using a QFileDialog
             # For now, it uses the default "timing_report.json" in the working directory.
-            save_timing_report() 
-            QMessageBox.information(self, "Timing Report", "Timing report saved successfully.")
+            save_timing_report()
+            QMessageBox.information(
+                self, "Timing Report", "Timing report saved successfully."
+            )
         except Exception as e:
-            QMessageBox.critical(self, "Timing Report Error", f"Failed to save timing report: {str(e)}")
+            QMessageBox.critical(
+                self, "Timing Report Error", f"Failed to save timing report: {str(e)}"
+            )
             print(f"Error saving timing report: {traceback.format_exc()}")
 
     def handle_clear_timing_data(self):
         """Handles the click of the 'Clear Timing Data' button."""
         try:
             clear_timing_data()
-            QMessageBox.information(self, "Timing Data", "Timing data cleared successfully.")
+            QMessageBox.information(
+                self, "Timing Data", "Timing data cleared successfully."
+            )
         except Exception as e:
-            QMessageBox.critical(self, "Timing Data Error", f"Failed to clear timing data: {str(e)}")
+            QMessageBox.critical(
+                self, "Timing Data Error", f"Failed to clear timing data: {str(e)}"
+            )
             print(f"Error clearing timing data: {traceback.format_exc()}")
 
     def reset_all_settings(self):
         """Reset all settings and restart the onboarding process."""
         # Clear all settings
-        settings = QSettings(OnboardingWindow.ORGANIZATION_NAME, OnboardingWindow.APPLICATION_NAME)
+        settings = QSettings(
+            OnboardingWindow.ORGANIZATION_NAME, OnboardingWindow.APPLICATION_NAME
+        )
         settings.clear()
         settings.sync()  # Ensure settings are saved
-        
+
         # Create and show new onboarding window
         self.onboarding_window = OnboardingWindow()
         self.onboarding_window.show()
-        
+
         # Close the current window
         self.close()
 
@@ -701,7 +785,9 @@ class HomeWindow(QMainWindow):
             divider = QFrame()
             divider.setFrameShape(QFrame.Shape.HLine)
             divider.setFixedHeight(1)
-            divider.setStyleSheet("background: rgba(242, 228, 214, 0.3); border: none; margin-top: 16px; margin-bottom: 16px;")
+            divider.setStyleSheet(
+                "background: rgba(242, 228, 214, 0.3); border: none; margin-top: 16px; margin-bottom: 16px;"
+            )
             layout.addRow(divider)
         header = QLabel(text)
         header.setStyleSheet("""
@@ -719,9 +805,7 @@ class HomeWindow(QMainWindow):
         # Show error in message box if it's a critical error
         if "Failed to start application" in error_msg:
             QMessageBox.critical(
-                self,
-                "Application Error",
-                f"Failed to start application:\n{error_msg}"
+                self, "Application Error", f"Failed to start application:\n{error_msg}"
             )
 
     def handle_status_change(self, status: str) -> None:
@@ -733,7 +817,7 @@ class HomeWindow(QMainWindow):
         try:
             llm_source_value = self.llm_source.currentText()
             print(f"LLM Source: {llm_source_value}")
-            
+
             current_llm_model_value = ""
             if llm_source_value == "ollama":
                 current_llm_model_value = self.llm_model_edit.text()
@@ -741,90 +825,117 @@ class HomeWindow(QMainWindow):
                 current_llm_model_value = self.openai_model_dropdown.currentText()
             elif llm_source_value == "groq_api":
                 current_llm_model_value = self.groq_model_dropdown.currentText()
+            elif llm_source_value == "gemini_api":
+                current_llm_model_value = self.gemini_model_dropdown.currentText()
 
             vosk_model_path_value = self.vosk_model_path_edit.text()
             is_streaming = self.streaming_mode.isChecked()
-            
+
             if is_streaming and not vosk_model_path_value:
-                self.handle_error("Vosk Model Path cannot be empty when Streaming Mode is enabled.")
+                self.handle_error(
+                    "Vosk Model Path cannot be empty when Streaming Mode is enabled."
+                )
                 return
 
             asr_source_value = self.asr_source.currentText()
-            current_asr_provider_model_value = "" 
-            current_asr_local_model_size = self.faster_whisper_model_dropdown.currentText()
+            current_asr_provider_model_value = ""
+            current_asr_local_model_size = (
+                self.faster_whisper_model_dropdown.currentText()
+            )
 
-            openai_client_asr_model = self.openai_asr_model_dropdown.currentText() # Default for OpenAI client
-            groq_client_asr_model = self.groq_asr_model_dropdown.currentText() # Default for Groq client
+            openai_client_asr_model = (
+                self.openai_asr_model_dropdown.currentText()
+            )  # Default for OpenAI client
+            groq_client_asr_model = (
+                self.groq_asr_model_dropdown.currentText()
+            )  # Default for Groq client
+            gemini_client_asr_model = (
+                self.gemini_asr_model_dropdown.currentText()
+            )  # Default for Gemini client
 
             if asr_source_value == "openai_api":
-                current_asr_provider_model_value = self.openai_asr_model_dropdown.currentText()
-                openai_client_asr_model = current_asr_provider_model_value # Sync if OpenAI is ASR provider
+                current_asr_provider_model_value = (
+                    self.openai_asr_model_dropdown.currentText()
+                )
+                openai_client_asr_model = (
+                    current_asr_provider_model_value  # Sync if OpenAI is ASR provider
+                )
+            elif asr_source_value == "gemini_api":
+                current_asr_provider_model_value = (
+                    self.gemini_asr_model_dropdown.currentText()
+                )
+                gemini_client_asr_model = (
+                    current_asr_provider_model_value  # Sync if Gemini is ASR provider
+                )
             elif asr_source_value == "groq_api":
-                current_asr_provider_model_value = self.groq_asr_model_dropdown.currentText()
-                groq_client_asr_model = current_asr_provider_model_value # Sync if Groq is ASR provider
+                current_asr_provider_model_value = (
+                    self.groq_asr_model_dropdown.currentText()
+                )
+                groq_client_asr_model = (
+                    current_asr_provider_model_value  # Sync if Groq is ASR provider
+                )
             elif asr_source_value == "faster_whisper":
                 # No change to current_asr_provider_model_value, it remains "" or undefined for ASR/model
                 pass
-            
+
             new_settings = {
-                'APIKeys': {
-                    'openai_api_key': self.openai_api_key_edit.text(),
-                    'groq_api_key': self.groq_api_key_edit.text()
+                "APIKeys": {
+                    "openai_api_key": self.openai_api_key_edit.text(),
+                    "groq_api_key": self.groq_api_key_edit.text(),
+                    "gemini_api_key": self.gemini_api_key_edit.text(),
                 },
-                'OpenAI': {
-                    'user_command_model': self.openai_model_dropdown.currentText(),
-                    'asr_model': openai_client_asr_model 
+                "OpenAI": {
+                    "user_command_model": self.openai_model_dropdown.currentText(),
+                    "asr_model": openai_client_asr_model,
                 },
-                'Ollama': {
-                    'model': self.llm_model_edit.text() 
+                "Gemini": {
+                    "user_command_model": self.gemini_model_dropdown.currentText(),
+                    "asr_model": gemini_client_asr_model,
                 },
-                'Groq': {
-                    'user_command_model': self.groq_model_dropdown.currentText(),
-                    'asr_model': groq_client_asr_model 
+                "Ollama": {"model": self.llm_model_edit.text()},
+                "Groq": {
+                    "user_command_model": self.groq_model_dropdown.currentText(),
+                    "asr_model": groq_client_asr_model,
                 },
-                'ASR': {
-                    'source': asr_source_value,
-                    'model': current_asr_provider_model_value, 
-                    'local_model_size': current_asr_local_model_size, 
-                    'device': self.asr_device.currentText(),
-                    'compute_type': self.asr_compute_type.currentText()
+                "ASR": {
+                    "source": asr_source_value,
+                    "model": current_asr_provider_model_value,
+                    "local_model_size": current_asr_local_model_size,
+                    "device": self.asr_device.currentText(),
+                    "compute_type": self.asr_compute_type.currentText(),
                 },
-                'Vosk': {
-                    'model_path': vosk_model_path_value
+                "Vosk": {"model_path": vosk_model_path_value},
+                "LLM": {
+                    "source": llm_source_value,
+                    "model": current_llm_model_value,
+                    "max_tokens": self.max_tokens.value(),
+                    "temperature": self.temperature.value(),
                 },
-                'LLM': {
-                    'source': llm_source_value,
-                    'model': current_llm_model_value,
-                    'max_tokens': self.max_tokens.value(),
-                    'temperature': self.temperature.value(),
+                "Audio": {
+                    "sample_rate": self.sample_rate.value(),
+                    "channels": self.channels.value(),
                 },
-                'Audio': {
-                    'sample_rate': self.sample_rate.value(),
-                    'channels': self.channels.value(),
+                "VAD": {
+                    "enabled": self.vad_enabled.isChecked(),
+                    "aggressiveness": self.vad_aggressiveness.value(),
+                    "silence_duration_ms": self.silence_duration.value(),
+                    "frame_duration_ms": int(self.frame_duration.currentText()),
                 },
-                'VAD': {
-                    'enabled': self.vad_enabled.isChecked(),
-                    'aggressiveness': self.vad_aggressiveness.value(),
-                    'silence_duration_ms': self.silence_duration.value(),
-                    'frame_duration_ms': int(self.frame_duration.currentText()),
+                "Output": {
+                    "method": self.output_method.currentText(),
                 },
-                'Output': {
-                    'method': self.output_method.currentText(),
+                "Hotkeys": {
+                    "start_recording_hotkey": self.start_recording_hotkey.text(),
                 },
-                'Hotkeys': {
-                    'start_recording_hotkey': self.start_recording_hotkey.text(),
-                },
-                'Mode': {
-                    'streaming': str(is_streaming).lower()
-                }
+                "Mode": {"streaming": str(is_streaming).lower()},
             }
-            
+
             # Validate new settings
             is_valid, error_msg = self.app_manager.validate_settings(new_settings)
             if not is_valid:
                 self.handle_error(error_msg)
                 return
-                
+
             # Save settings
             if self.app_manager.save_settings(new_settings):
                 # Find the save button and update its text
@@ -834,13 +945,18 @@ class HomeWindow(QMainWindow):
                         # Create a timer to reset the text after 3 seconds
                         QTimer.singleShot(3000, lambda: widget.setText("Save Settings"))
                         break
-                
+
                 # Start application if not running
-                if not self.app_manager.app_thread or not self.app_manager.app_thread.is_alive():
+                if (
+                    not self.app_manager.app_thread
+                    or not self.app_manager.app_thread.is_alive()
+                ):
                     if not self.app_manager.start_application():
-                        self.handle_error("Failed to start application after saving settings")
+                        self.handle_error(
+                            "Failed to start application after saving settings"
+                        )
                         return
-                
+
         except Exception as e:
             self.handle_error(f"Failed to save settings: {str(e)}")
             print(f"Error details: {traceback.format_exc()}")
@@ -849,33 +965,48 @@ class HomeWindow(QMainWindow):
         """Load settings from QSettings"""
         try:
             config = self.app_manager.load_settings()
-            
-            api_keys_config = config.get('APIKeys', {})
-            self.openai_api_key_edit.setText(api_keys_config.get('openai_api_key', ''))
-            self.groq_api_key_edit.setText(api_keys_config.get('groq_api_key', ''))
-            
-            asr_config = config.get('ASR', {})
+
+            api_keys_config = config.get("APIKeys", {})
+            self.openai_api_key_edit.setText(api_keys_config.get("openai_api_key", ""))
+            self.gemini_api_key_edit.setText(api_keys_config.get("gemini_api_key", ""))
+            self.groq_api_key_edit.setText(api_keys_config.get("groq_api_key", ""))
+
+            asr_config = config.get("ASR", {})
             self.asr_source.blockSignals(True)
-            self.asr_source.setCurrentText(asr_config.get('source', 'openai_api'))
+            self.asr_source.setCurrentText(asr_config.get("source", "openai_api"))
             self.asr_source.blockSignals(False)
-            
+
             # Set ASR model values before calling _update_asr_provider_fields
             # Default to "whisper-1" for OpenAI ASR if not found
-            self.openai_asr_model_dropdown.setCurrentText(config.get('OpenAI', {}).get('asr_model', 'whisper-1'))
+            self.openai_asr_model_dropdown.setCurrentText(
+                config.get("OpenAI", {}).get("asr_model", "whisper-1")
+            )
+
+            # Default for Gemini ASR from Gemini section or a general default
+            self.gemini_asr_model_dropdown.setCurrentText(
+                config.get("Gemini", {}).get("asr_model", "gemini-2.0-flash")
+            )
+
             # Default for Groq ASR from Groq section or a general default
-            self.groq_asr_model_dropdown.setCurrentText(config.get('Groq', {}).get('asr_model', 'distil-whisper-large-v3-en'))
+            self.groq_asr_model_dropdown.setCurrentText(
+                config.get("Groq", {}).get("asr_model", "distil-whisper-large-v3-en")
+            )
             # Default for faster_whisper from ASR section
-            self.faster_whisper_model_dropdown.setCurrentText(asr_config.get('local_model_size', 'base.en'))
+            self.faster_whisper_model_dropdown.setCurrentText(
+                asr_config.get("local_model_size", "base.en")
+            )
 
-            self.asr_device.setCurrentText(asr_config.get('device', 'auto'))
-            self.asr_compute_type.setCurrentText(asr_config.get('compute_type', 'default'))
+            self.asr_device.setCurrentText(asr_config.get("device", "auto"))
+            self.asr_compute_type.setCurrentText(
+                asr_config.get("compute_type", "default")
+            )
 
-            self._update_asr_provider_fields() # Update visibility and set correct model for current source
+            self._update_asr_provider_fields()  # Update visibility and set correct model for current source
 
             self.llm_source.blockSignals(True)
-            self.llm_source.setCurrentText(config['LLM']['source'])
+            self.llm_source.setCurrentText(config["LLM"]["source"])
             self.llm_source.blockSignals(False)
-            
+
             # Model field is now handled by _update_llm_provider_fields
             # We need to ensure _update_llm_provider_fields correctly sets the user_command_model
             # based on the loaded LLM source and its specific model.
@@ -884,37 +1015,45 @@ class HomeWindow(QMainWindow):
             # Groq model (user_command_model) is set by _update_llm_provider_fields if source is groq_api
             # Ollama model is set by _update_llm_provider_fields if source is ollama
 
-            self.max_tokens.setValue(config['LLM']['max_tokens'])
-            self.temperature.setValue(config['LLM']['temperature'])
+            self.max_tokens.setValue(config["LLM"]["max_tokens"])
+            self.temperature.setValue(config["LLM"]["temperature"])
 
             # Call to update dynamic LLM fields
             self._update_llm_provider_fields()
-            
+
             # Load Audio settings
-            self.sample_rate.setValue(config['Audio']['sample_rate'])
-            self.channels.setValue(config['Audio']['channels'])
-            
+            self.sample_rate.setValue(config["Audio"]["sample_rate"])
+            self.channels.setValue(config["Audio"]["channels"])
+
             # Load VAD settings
-            self.vad_enabled.setChecked(config['VAD']['enabled'])
-            self.vad_aggressiveness.setValue(config['VAD']['aggressiveness'])
-            self.silence_duration.setValue(config['VAD']['silence_duration_ms'])
-            self.frame_duration.setCurrentText(str(config['VAD']['frame_duration_ms']))
-            
+            self.vad_enabled.setChecked(config["VAD"]["enabled"])
+            self.vad_aggressiveness.setValue(config["VAD"]["aggressiveness"])
+            self.silence_duration.setValue(config["VAD"]["silence_duration_ms"])
+            self.frame_duration.setCurrentText(str(config["VAD"]["frame_duration_ms"]))
+
             # Load Output settings
-            self.output_method.setCurrentText(config['Output']['method'])
-            
+            self.output_method.setCurrentText(config["Output"]["method"])
+
             # Load Hotkey settings
-            self.start_recording_hotkey.setText(config['Hotkeys']['start_recording_hotkey'])
+            self.start_recording_hotkey.setText(
+                config["Hotkeys"]["start_recording_hotkey"]
+            )
 
             # Load Mode settings
-            mode_config = config.get('Mode', {}) 
-            self.streaming_mode.setChecked(mode_config.get('streaming', 'false') == "true")
-            
+            mode_config = config.get("Mode", {})
+            self.streaming_mode.setChecked(
+                mode_config.get("streaming", "false") == "true"
+            )
+
             # Load Vosk settings (Path is now guaranteed by ApplicationManager)
-            vosk_config = config.get('Vosk', {}) 
-            vosk_path_from_config = vosk_config.get('model_path') # Should always have a valid path now
-            self.vosk_model_path_edit.setText(vosk_path_from_config if vosk_path_from_config else "") # Set text, handle potential None just in case
-            
+            vosk_config = config.get("Vosk", {})
+            vosk_path_from_config = vosk_config.get(
+                "model_path"
+            )  # Should always have a valid path now
+            self.vosk_model_path_edit.setText(
+                vosk_path_from_config if vosk_path_from_config else ""
+            )  # Set text, handle potential None just in case
+
         except Exception as e:
             self.handle_error(f"Failed to load settings: {str(e)}")
 
@@ -922,7 +1061,7 @@ class HomeWindow(QMainWindow):
         """Handle window close event"""
         self.app_manager.stop_application()
         # Hide status window
-        if hasattr(self.app_manager, 'status_window'):
+        if hasattr(self.app_manager, "status_window"):
             self.app_manager.status_window.hide()
         super().closeEvent(event)
 
@@ -974,39 +1113,80 @@ class HomeWindow(QMainWindow):
         self.groq_model_dropdown.blockSignals(True)
 
         try:
-            config = self.app_manager.load_settings() # Get fresh complete settings
+            config = self.app_manager.load_settings()  # Get fresh complete settings
             llm_source = self.llm_source.currentText()
 
             # Default values from ApplicationManager for consistency
             default_openai_model = config.get("OpenAI", {}).get("model", "gpt-4.1")
-            default_groq_model = config.get("Groq", {}).get("model", "llama-3.3-70b-versatile")
-            default_ollama_model = config.get("Ollama", {}).get("model", "llama3.2:latest")
-            
+            default_gemini_model = config.get("Gemini", {}).get(
+                "model", "gemini-2.0-flash"
+            )
+            default_groq_model = config.get("Groq", {}).get(
+                "model", "llama-3.3-70b-versatile"
+            )
+            default_ollama_model = config.get("Ollama", {}).get(
+                "model", "llama3.2:latest"
+            )
+
             # Get the actual model stored for the current source under LLM/model if available,
             # otherwise use the provider-specific model, then the ultimate default.
             llm_config_model = config.get("LLM", {}).get("model")
 
             # API Key field visibility and content
             if llm_source == "openai_api":
-                self.llm_model_stacked_widget.setCurrentWidget(self.openai_model_dropdown)
+                self.llm_model_stacked_widget.setCurrentWidget(
+                    self.openai_model_dropdown
+                )
                 # Use user_command_model from OpenAI section, then LLM/model, then default
-                openai_specific_model = config.get("OpenAI", {}).get("user_command_model", default_openai_model)
-                model_to_set = llm_config_model if llm_config_model and self.openai_model_dropdown.findText(llm_config_model) != -1 else openai_specific_model
+                openai_specific_model = config.get("OpenAI", {}).get(
+                    "user_command_model", default_openai_model
+                )
+                model_to_set = (
+                    llm_config_model
+                    if llm_config_model
+                    and self.openai_model_dropdown.findText(llm_config_model) != -1
+                    else openai_specific_model
+                )
                 self.openai_model_dropdown.setCurrentText(model_to_set)
-
+            elif llm_source == "gemini_api":
+                self.llm_model_stacked_widget.setCurrentWidget(
+                    self.gemini_model_dropdown
+                )
+                # Use user_command_model from Gemini section, then LLM/model, then default
+                gemini_specific_model = config.get("Gemini", {}).get(
+                    "user_command_model", default_gemini_model
+                )
+                model_to_set = (
+                    llm_config_model
+                    if llm_config_model
+                    and self.gemini_model_dropdown.findText(llm_config_model) != -1
+                    else gemini_specific_model
+                )
+                self.gemini_model_dropdown.setCurrentText(model_to_set)
             elif llm_source == "groq_api":
                 self.llm_model_stacked_widget.setCurrentWidget(self.groq_model_dropdown)
                 # Use user_command_model from Groq section, then LLM/model, then default
-                groq_specific_model = config.get("Groq", {}).get("user_command_model", default_groq_model)
-                model_to_set = llm_config_model if llm_config_model and self.groq_model_dropdown.findText(llm_config_model) != -1 else groq_specific_model
+                groq_specific_model = config.get("Groq", {}).get(
+                    "user_command_model", default_groq_model
+                )
+                model_to_set = (
+                    llm_config_model
+                    if llm_config_model
+                    and self.groq_model_dropdown.findText(llm_config_model) != -1
+                    else groq_specific_model
+                )
                 self.groq_model_dropdown.setCurrentText(model_to_set)
 
             elif llm_source == "ollama":
                 self.llm_model_stacked_widget.setCurrentWidget(self.llm_model_edit)
                 self.llm_model_edit.setText(llm_config_model or default_ollama_model)
-            else: # Default or unknown source
-                self.llm_model_stacked_widget.setCurrentWidget(self.llm_model_edit) # Default to text edit
-                self.llm_model_edit.setText(default_ollama_model) # Or a generic placeholder
+            else:  # Default or unknown source
+                self.llm_model_stacked_widget.setCurrentWidget(
+                    self.llm_model_edit
+                )  # Default to text edit
+                self.llm_model_edit.setText(
+                    default_ollama_model
+                )  # Or a generic placeholder
 
         finally:
             # Unblock signals
@@ -1017,23 +1197,29 @@ class HomeWindow(QMainWindow):
     def update_setting_visibility(self):
         """Show/hide settings based on other selections (e.g., streaming mode)."""
         is_streaming = self.streaming_mode.isChecked()
-        
+
         # Find the Vosk model path row in the form layout and toggle visibility
         # Now self.settings_page should exist
         settings_form_layout = self.settings_page.findChild(QFormLayout)
         if not settings_form_layout:
-            print("Error: Could not find QFormLayout within settings page in update_setting_visibility")
+            print(
+                "Error: Could not find QFormLayout within settings page in update_setting_visibility"
+            )
             return
 
         vosk_header_label = None
         vosk_path_label = None
         vosk_path_field = None
-        
+
         for i in range(settings_form_layout.rowCount()):
             label_item = settings_form_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
             field_item = settings_form_layout.itemAt(i, QFormLayout.ItemRole.FieldRole)
-            
-            if label_item and label_item.widget() and isinstance(label_item.widget(), QLabel):
+
+            if (
+                label_item
+                and label_item.widget()
+                and isinstance(label_item.widget(), QLabel)
+            ):
                 label_widget = label_item.widget()
                 if "Vosk Settings" in label_widget.text():
                     vosk_header_label = label_widget
@@ -1041,7 +1227,7 @@ class HomeWindow(QMainWindow):
                     vosk_path_label = label_widget
                     if field_item and field_item.widget():
                         vosk_path_field = field_item.widget()
-        
+
         # Toggle visibility of found widgets
         if vosk_header_label:
             vosk_header_label.setVisible(is_streaming)
@@ -1067,6 +1253,11 @@ class HomeWindow(QMainWindow):
         self.openai_api_key_label.setVisible(show_openai_key)
         self.openai_api_key_edit.setVisible(show_openai_key)
 
+        # Determine if Gemini key is needed
+        show_gemini_key = (asr_source == "gemini_api") or (llm_source == "gemini_api")
+        self.gemini_api_key_label.setVisible(show_gemini_key)
+        self.gemini_api_key_edit.setVisible(show_gemini_key)
+
         # Determine if Groq key is needed
         show_groq_key = (llm_source == "groq_api") or (asr_source == "groq_api")
         self.groq_api_key_label.setVisible(show_groq_key)
@@ -1080,55 +1271,111 @@ class HomeWindow(QMainWindow):
         self.groq_asr_model_dropdown.blockSignals(True)
 
         try:
-            config = self.app_manager.load_settings() # Get fresh complete settings
+            config = self.app_manager.load_settings()  # Get fresh complete settings
             asr_source = self.asr_source.currentText()
-            asr_config = config.get('ASR', {})
-            
+            asr_config = config.get("ASR", {})
+
             # Get the primary ASR model string for OpenAI/Groq from ASR/model setting
             # This 'model' is what's saved based on the active dropdown during save_settings
-            current_asr_model_setting = asr_config.get('model', '')
+            current_asr_model_setting = asr_config.get("model", "")
 
             if asr_source == "openai_api":
-                self.asr_model_stacked_widget.setCurrentWidget(self.openai_asr_model_dropdown)
+                self.asr_model_stacked_widget.setCurrentWidget(
+                    self.openai_asr_model_dropdown
+                )
                 # Use ASR/model if available and valid, else OpenAI/asr_model, else default
                 openai_default = config.get("OpenAI", {}).get("asr_model", "whisper-1")
-                model_to_set = current_asr_model_setting if current_asr_model_setting and self.openai_asr_model_dropdown.findText(current_asr_model_setting) != -1 else openai_default
+                model_to_set = (
+                    current_asr_model_setting
+                    if current_asr_model_setting
+                    and self.openai_asr_model_dropdown.findText(
+                        current_asr_model_setting
+                    )
+                    != -1
+                    else openai_default
+                )
                 self.openai_asr_model_dropdown.setCurrentText(model_to_set)
                 self.asr_model_label.setText("ASR Model (OpenAI):")
+            elif asr_source == "gemini_api":
+                self.asr_model_stacked_widget.setCurrentWidget(
+                    self.gemini_asr_model_dropdown
+                )
+                # Use ASR/model if available and valid, else OpenAI/asr_model, else default
+                gemini_default = config.get("Gemini", {}).get(
+                    "asr_model", "gemini-2.0-flash"
+                )
+                model_to_set = (
+                    current_asr_model_setting
+                    if current_asr_model_setting
+                    and self.gemini_asr_model_dropdown.findText(
+                        current_asr_model_setting
+                    )
+                    != -1
+                    else gemini_default
+                )
+                self.gemini_asr_model_dropdown.setCurrentText(model_to_set)
+                self.asr_model_label.setText("ASR Model (Gemini):")
             elif asr_source == "faster_whisper":
-                self.asr_model_stacked_widget.setCurrentWidget(self.faster_whisper_model_dropdown)
+                self.asr_model_stacked_widget.setCurrentWidget(
+                    self.faster_whisper_model_dropdown
+                )
                 # For faster_whisper, the model is local_model_size
-                model_to_set = asr_config.get('local_model_size', 'base.en')
+                model_to_set = asr_config.get("local_model_size", "base.en")
                 self.faster_whisper_model_dropdown.setCurrentText(model_to_set)
                 self.asr_model_label.setText("ASR Model (Local Whisper):")
             elif asr_source == "groq_api":
-                self.asr_model_stacked_widget.setCurrentWidget(self.groq_asr_model_dropdown)
+                self.asr_model_stacked_widget.setCurrentWidget(
+                    self.groq_asr_model_dropdown
+                )
                 # Use ASR/model if available and valid, else Groq/asr_model, else default
-                groq_default = config.get("Groq", {}).get("asr_model", "distil-whisper-large-v3-en")
-                model_to_set = current_asr_model_setting if current_asr_model_setting and self.groq_asr_model_dropdown.findText(current_asr_model_setting) != -1 else groq_default
+                groq_default = config.get("Groq", {}).get(
+                    "asr_model", "distil-whisper-large-v3-en"
+                )
+                model_to_set = (
+                    current_asr_model_setting
+                    if current_asr_model_setting
+                    and self.groq_asr_model_dropdown.findText(current_asr_model_setting)
+                    != -1
+                    else groq_default
+                )
                 self.groq_asr_model_dropdown.setCurrentText(model_to_set)
                 self.asr_model_label.setText("ASR Model (Groq):")
-            else: # Default or unknown source
-                self.asr_model_stacked_widget.setCurrentWidget(self.openai_asr_model_dropdown) # Default to OpenAI
-                self.openai_asr_model_dropdown.setCurrentText(config.get("OpenAI", {}).get("asr_model", "whisper-1"))
+            else:  # Default or unknown source
+                self.asr_model_stacked_widget.setCurrentWidget(
+                    self.openai_asr_model_dropdown
+                )  # Default to OpenAI
+                self.openai_asr_model_dropdown.setCurrentText(
+                    config.get("OpenAI", {}).get("asr_model", "whisper-1")
+                )
                 self.asr_model_label.setText("ASR Model:")
-            
+
             # Show/hide ASR device and compute type which are typically for local models
-            is_local_asr = (asr_source == "faster_whisper")
+            is_local_asr = asr_source == "faster_whisper"
             # Find device and compute_type rows to show/hide
             settings_form_layout = self.settings_page.findChild(QFormLayout)
             if settings_form_layout:
                 for i in range(settings_form_layout.rowCount()):
-                    label_item = settings_form_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
-                    if label_item and label_item.widget() and isinstance(label_item.widget(), QLabel):
+                    label_item = settings_form_layout.itemAt(
+                        i, QFormLayout.ItemRole.LabelRole
+                    )
+                    if (
+                        label_item
+                        and label_item.widget()
+                        and isinstance(label_item.widget(), QLabel)
+                    ):
                         label_widget = label_item.widget()
                         # Check against the specific labels we created for these fields
-                        if label_widget is self.asr_device_label or label_widget is self.asr_compute_type_label:
-                            field_item = settings_form_layout.itemAt(i, QFormLayout.ItemRole.FieldRole)
+                        if (
+                            label_widget is self.asr_device_label
+                            or label_widget is self.asr_compute_type_label
+                        ):
+                            field_item = settings_form_layout.itemAt(
+                                i, QFormLayout.ItemRole.FieldRole
+                            )
                             label_widget.setVisible(is_local_asr)
                             if field_item and field_item.widget():
                                 field_item.widget().setVisible(is_local_asr)
-                                
+
         finally:
             # Unblock signals
             self.openai_asr_model_dropdown.blockSignals(False)

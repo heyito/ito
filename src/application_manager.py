@@ -20,10 +20,11 @@ from src.types.status_messages import StatusMessage
 # --- Add pynput imports ---
 try:
     from pynput import keyboard
+
     _pynput_available = True
 except ImportError:
     _pynput_available = False
-    keyboard = None # Define to avoid NameError later
+    keyboard = None  # Define to avoid NameError later
 # --- End Add pynput imports ---
 
 
@@ -31,8 +32,10 @@ class ApplicationManager(QObject):
     # Signals for UI updates
     error_occurred = pyqtSignal(str)  # Emits error messages
     status_changed = pyqtSignal(str)  # Emits status updates
-    settings_changed = pyqtSignal()   # Emits when settings are updated
-    hotkey_pressed = pyqtSignal(str) # NEW: Signal when hotkey is pressed, passes key string
+    settings_changed = pyqtSignal()  # Emits when settings are updated
+    hotkey_pressed = pyqtSignal(
+        str
+    )  # NEW: Signal when hotkey is pressed, passes key string
 
     def __init__(self, organization_name: str, application_name: str):
         super().__init__()
@@ -56,106 +59,130 @@ class ApplicationManager(QObject):
         # Initialize status window
         self.status_window = StatusWindow()
         self.status_window.show()
-        
+
         # Connect status signals to status window
-        self.status_changed.connect(lambda status: self.status_window.update_status(status))
-        self.error_occurred.connect(lambda error: self.status_window.update_status(error, is_error=True))
+        self.status_changed.connect(
+            lambda status: self.status_window.update_status(status)
+        )
+        self.error_occurred.connect(
+            lambda error: self.status_window.update_status(error, is_error=True)
+        )
 
     def load_settings(self) -> dict[str, Any]:
         """Load settings from QSettings and convert to config format"""
         config = {}
 
         # API Key settings
-        config['APIKeys'] = {
-            'openai_api_key': self.settings.value("APIKeys/openai_api_key", ""),
-            'groq_api_key': self.settings.value("APIKeys/groq_api_key", "")
+        config["APIKeys"] = {
+            "openai_api_key": self.settings.value("APIKeys/openai_api_key", ""),
+            "groq_api_key": self.settings.value("APIKeys/groq_api_key", ""),
+            "gemini_api_key": self.settings.value("APIKeys/gemini_api_key", ""),
         }
 
         # OpenAI settings
-        config['OpenAI'] = {
-            'user_command_model': self.settings.value("OpenAI/user_command_model", "gpt-4.1"),
-            'asr_model': self.settings.value("OpenAI/asr_model", "whisper-1")
+        config["OpenAI"] = {
+            "user_command_model": self.settings.value(
+                "OpenAI/user_command_model", "gpt-4.1"
+            ),
+            "asr_model": self.settings.value("OpenAI/asr_model", "whisper-1"),
+        }
+
+        config["Gemini"] = {
+            "user_command_model": self.settings.value(
+                "Gemini/user_command_model", "gemini-2.0-flash"
+            ),
+            "asr_model": self.settings.value("Gemini/asr_model", "gemini-2.0-flash"),
         }
 
         # Ollama settings
-        config['Ollama'] = {
-            'model': self.settings.value("Ollama/model", "llama3.2:latest")
+        config["Ollama"] = {
+            "model": self.settings.value("Ollama/model", "llama3.2:latest")
         }
 
         # Groq settings
-        config['Groq'] = {
-            'user_command_model': self.settings.value("Groq/user_command_model", "llama-3.3-70b-versatile"),
-            'asr_model': self.settings.value("Groq/asr_model", "whisper-large-v3")
+        config["Groq"] = {
+            "user_command_model": self.settings.value(
+                "Groq/user_command_model", "llama-3.3-70b-versatile"
+            ),
+            "asr_model": self.settings.value("Groq/asr_model", "whisper-large-v3"),
         }
 
         # ASR settings
-        config['ASR'] = {
-            'source': self.settings.value("ASR/source", "openai_api"),
-            'model': self.settings.value("ASR/model", "whisper-1"),
-            'local_model_size': self.settings.value("ASR/local_model_size", "base.en"),
-            'device': self.settings.value("ASR/device", "auto"),
-            'compute_type': self.settings.value("ASR/compute_type", "default")
+        config["ASR"] = {
+            "source": self.settings.value("ASR/source", "openai_api"),
+            "model": self.settings.value("ASR/model", "whisper-1"),
+            "local_model_size": self.settings.value("ASR/local_model_size", "base.en"),
+            "device": self.settings.value("ASR/device", "auto"),
+            "compute_type": self.settings.value("ASR/compute_type", "default"),
         }
 
         # LLM settings
-        config['LLM'] = {
-            'source': self.settings.value("LLM/source", "openai_api"),
-            'model': self.settings.value("LLM/model", "gpt-4.1"),
-            'max_tokens': int(self.settings.value("LLM/max_tokens", 2000)),
-            'temperature': float(self.settings.value("LLM/temperature", 0.7))
+        config["LLM"] = {
+            "source": self.settings.value("LLM/source", "openai_api"),
+            "model": self.settings.value("LLM/model", "gpt-4.1"),
+            "max_tokens": int(self.settings.value("LLM/max_tokens", 2000)),
+            "temperature": float(self.settings.value("LLM/temperature", 0.7)),
         }
 
         # Audio settings
-        config['Audio'] = {
-            'sample_rate': int(self.settings.value("Audio/sample_rate", 16000)),
-            'channels': int(self.settings.value("Audio/channels", 1))
+        config["Audio"] = {
+            "sample_rate": int(self.settings.value("Audio/sample_rate", 16000)),
+            "channels": int(self.settings.value("Audio/channels", 1)),
         }
 
         # VAD settings - Convert string to boolean properly
         vad_enabled = self.settings.value("VAD/enabled", "True")
         if isinstance(vad_enabled, str):
-            vad_enabled = vad_enabled.lower() == 'true'
+            vad_enabled = vad_enabled.lower() == "true"
         else:
             vad_enabled = bool(vad_enabled)
 
-        config['VAD'] = {
-            'enabled': vad_enabled,
-            'aggressiveness': int(self.settings.value("VAD/aggressiveness", 1)),
-            'silence_duration_ms': int(self.settings.value("VAD/silence_duration_ms", 1000)),
-            'frame_duration_ms': int(self.settings.value("VAD/frame_duration_ms", 30))
+        config["VAD"] = {
+            "enabled": vad_enabled,
+            "aggressiveness": int(self.settings.value("VAD/aggressiveness", 1)),
+            "silence_duration_ms": int(
+                self.settings.value("VAD/silence_duration_ms", 1000)
+            ),
+            "frame_duration_ms": int(self.settings.value("VAD/frame_duration_ms", 30)),
         }
 
-        # --- Vosk settings --- 
+        # --- Vosk settings ---
         # Calculate default path inside the method
-        default_vosk_model_dir = "src/models/vosk-model-en-us-0.22-lgraph" # Adjust if needed
+        default_vosk_model_dir = (
+            "src/models/vosk-model-en-us-0.22-lgraph"  # Adjust if needed
+        )
         current_file_path = pathlib.Path(__file__).resolve()
         project_root = current_file_path.parent.parent
         default_vosk_model_path_str = str(project_root / default_vosk_model_dir)
-        
+
         # Read from QSettings, check if empty, apply calculated default if needed
         vosk_path_from_settings = self.settings.value("Vosk/model_path", "")
-        final_vosk_path = vosk_path_from_settings if vosk_path_from_settings else default_vosk_model_path_str
-        config['Vosk'] = {
-            'model_path': final_vosk_path
-        }
+        final_vosk_path = (
+            vosk_path_from_settings
+            if vosk_path_from_settings
+            else default_vosk_model_path_str
+        )
+        config["Vosk"] = {"model_path": final_vosk_path}
 
         # Output settings
-        config['Output'] = {
-            'method': self.settings.value("Output/method", "typewrite")
-        }
+        config["Output"] = {"method": self.settings.value("Output/method", "typewrite")}
 
         # Hotkey settings
-        config['Hotkeys'] = {
-            'start_recording_hotkey': self.settings.value("Hotkeys/start_recording_hotkey", "f9")
+        config["Hotkeys"] = {
+            "start_recording_hotkey": self.settings.value(
+                "Hotkeys/start_recording_hotkey", "f9"
+            )
         }
 
         # Mode settings
-        config['Mode'] = {
-            'streaming': str(self.settings.value("Mode/streaming", "false")).lower()  # Convert to string and lowercase
+        config["Mode"] = {
+            "streaming": str(
+                self.settings.value("Mode/streaming", "false")
+            ).lower()  # Convert to string and lowercase
         }
 
         # Set the hotkey in the keyboard manager
-        self.keyboard_manager.set_hotkey(config['Hotkeys']['start_recording_hotkey'])
+        self.keyboard_manager.set_hotkey(config["Hotkeys"]["start_recording_hotkey"])
 
         return config
 
@@ -171,7 +198,7 @@ class ApplicationManager(QObject):
             self.settings_changed.emit()
 
             # Update hotkey if changed
-            new_hotkey = new_settings.get('Hotkeys', {}).get('start_recording_hotkey')
+            new_hotkey = new_settings.get("Hotkeys", {}).get("start_recording_hotkey")
             if new_hotkey:
                 self.keyboard_manager.set_hotkey(new_hotkey)
 
@@ -216,7 +243,9 @@ class ApplicationManager(QObject):
 
             # Check if keyboard manager has a valid hotkey
             if not self.keyboard_manager._target_hotkey:
-                self.error_occurred.emit("Invalid or unsupported hotkey. Cannot start listener.")
+                self.error_occurred.emit(
+                    "Invalid or unsupported hotkey. Cannot start listener."
+                )
                 return False
 
             # Create a new stop event for the thread
@@ -228,7 +257,7 @@ class ApplicationManager(QObject):
                 target=self._run_application_thread,
                 args=(config, self._stop_app_thread_event),
                 daemon=True,
-                name="DiscreteAppThread"
+                name="DiscreteAppThread",
             )
             self.app_thread.start()
 
@@ -237,10 +266,12 @@ class ApplicationManager(QObject):
 
             # Emit STARTED status
             self.status_changed.emit(StatusMessage.STARTED.value)
-            
+
             # Add a small delay to ensure the application is fully initialized
-            QTimer.singleShot(1000, lambda: self.status_changed.emit(StatusMessage.READY.value))
-            
+            QTimer.singleShot(
+                1000, lambda: self.status_changed.emit(StatusMessage.READY.value)
+            )
+
             return True
 
         except Exception as e:
@@ -255,18 +286,18 @@ class ApplicationManager(QObject):
         """Stop the application background thread."""
         print("Initiating application stop sequence...")
         stopped_thread = False
-        
+
         # Signal and stop the background thread
         if self.app_thread and self.app_thread.is_alive():
             print("Signaling background application thread to stop...")
-            if hasattr(self, '_stop_app_thread_event'):
+            if hasattr(self, "_stop_app_thread_event"):
                 self._stop_app_thread_event.set()
             if self.app_instance:
                 if hasattr(self.app_instance, "stop_recording_event"):
                     self.app_instance.stop_recording_event.set()
                 if hasattr(self.app_instance, "stop_application_event"):
                     self.app_instance.stop_application_event.set()
-            
+
             print("Waiting for background application thread to join...")
             self.app_thread.join(timeout=2.0)  # Increased timeout
             if self.app_thread.is_alive():
@@ -280,9 +311,9 @@ class ApplicationManager(QObject):
             print("No background application thread to stop.")
 
         # Stop asyncio loop if streaming mode might have used it
-        if hasattr(self.container, 'asyncio_loop_manager'):
-             print("Stopping asyncio loop manager...")
-             self.container.asyncio_loop_manager().stop_loop()
+        if hasattr(self.container, "asyncio_loop_manager"):
+            print("Stopping asyncio loop manager...")
+            self.container.asyncio_loop_manager().stop_loop()
 
         # Clear queues
         print("Clearing queues...")
@@ -300,6 +331,7 @@ class ApplicationManager(QObject):
 
         # Multiprocessing cleanup
         import multiprocessing
+
         try:
             print("Cleaning up multiprocessing resources...")
             # Get all active children
@@ -323,7 +355,7 @@ class ApplicationManager(QObject):
     def closeEvent(self, event):
         """Handle window close event"""
         print("ApplicationManager closeEvent: Stopping application...")
-        self.stop_application() # This now stops asyncio loop too
+        self.stop_application()  # This now stops asyncio loop too
         # Clean up keyboard manager
         print("ApplicationManager closeEvent: Cleaning up keyboard manager...")
         self.keyboard_manager.cleanup()
@@ -333,7 +365,7 @@ class ApplicationManager(QObject):
         print("ApplicationManager closeEvent: Calling super...")
         super().closeEvent(event)
         print("ApplicationManager closeEvent: Finished.")
-    
+
     def restart_application(self) -> bool:
         """Restart the application with current settings"""
         self.status_changed.emit(StatusMessage.RESTARTING.value)
@@ -342,7 +374,9 @@ class ApplicationManager(QObject):
         # time.sleep(0.2)
         return self.start_application()
 
-    def _run_application_thread(self, config: dict[str, Any], stop_event: threading.Event) -> None:
+    def _run_application_thread(
+        self, config: dict[str, Any], stop_event: threading.Event
+    ) -> None:
         """
         Internal method executed in the background thread.
         Initializes and runs the AudioApplication.
@@ -369,7 +403,9 @@ class ApplicationManager(QObject):
             print("DEBUG: AudioApplication.run() exited normally.")
 
         except Exception as e:
-            error_msg = f"Background Application Error: {str(e)}\n{traceback.format_exc()}"
+            error_msg = (
+                f"Background Application Error: {str(e)}\n{traceback.format_exc()}"
+            )
             print(error_msg)
             # Use signal to report error back to the main thread's UI
             self.error_occurred.emit(f"Background Thread Error: {str(e)}")
@@ -385,71 +421,107 @@ class ApplicationManager(QObject):
         Checks application state and queues the start recording action
         on the background application's queue.
         """
-        timestamp = time.strftime('%H:%M:%S')
+        timestamp = time.strftime("%H:%M:%S")
         # Check if the background application instance exists and is running
-        if not self.app_instance or not self.app_thread or not self.app_thread.is_alive():
-            print(f"[{timestamp}] Hotkey '{hotkey_name}' detected, but application is not running.")
+        if (
+            not self.app_instance
+            or not self.app_thread
+            or not self.app_thread.is_alive()
+        ):
+            print(
+                f"[{timestamp}] Hotkey '{hotkey_name}' detected, but application is not running."
+            )
             self.status_changed.emit(StatusMessage.HOTKEY_IGNORED.value)
             return
 
-        print(f"[{timestamp}] Hotkey '{hotkey_name}' detected by manager. Queuing action for background app.")
+        print(
+            f"[{timestamp}] Hotkey '{hotkey_name}' detected by manager. Queuing action for background app."
+        )
         # Safely put the action onto the background thread's queue
         try:
-             self.app_instance.trigger_interaction()
-             self.status_changed.emit("Hotkey pressed, initiating command...") # Update UI
+            self.app_instance.trigger_interaction()
+            self.status_changed.emit(
+                "Hotkey pressed, initiating command..."
+            )  # Update UI
         except AttributeError:
-             print(f"[{timestamp}] Error: Cannot queue action, app_instance or action_queue missing.")
+            print(
+                f"[{timestamp}] Error: Cannot queue action, app_instance or action_queue missing."
+            )
         except Exception as e:
-             print(f"[{timestamp}] Error queuing action: {e}")
-             self.error_occurred.emit(f"Error sending action to background app: {e}")
+            print(f"[{timestamp}] Error queuing action: {e}")
+            self.error_occurred.emit(f"Error sending action to background app: {e}")
 
     def validate_settings(self, new_settings: dict[str, Any]) -> tuple[bool, str]:
         """Validate new settings and return (is_valid, error_message)"""
         try:
             # Check API key requirements
-            llm_source = new_settings.get('LLM', {}).get('source')
-            asr_source = new_settings.get('ASR', {}).get('source')
-            api_keys = new_settings.get('APIKeys', {})
-            openai_api_key = api_keys.get('openai_api_key')
-            groq_api_key = api_keys.get('groq_api_key')
+            llm_source = new_settings.get("LLM", {}).get("source")
+            asr_source = new_settings.get("ASR", {}).get("source")
+            api_keys = new_settings.get("APIKeys", {})
+            openai_api_key = api_keys.get("openai_api_key")
+            groq_api_key = api_keys.get("groq_api_key")
+            gemini_api_key = api_keys.get("gemini_api_key")
 
             # OpenAI key check
-            if llm_source == 'openai_api' or asr_source == 'openai_api':
+            if llm_source == "openai_api" or asr_source == "openai_api":
                 if not openai_api_key:
-                    return False, "OpenAI API key is required when OpenAI is selected for ASR or LLM."
+                    return (
+                        False,
+                        "OpenAI API key is required when OpenAI is selected for ASR or LLM.",
+                    )
 
             # Groq key check
-            if llm_source == 'groq_api': # Assuming Groq is only for LLM for now
+            if llm_source == "groq_api":  # Assuming Groq is only for LLM for now
                 if not groq_api_key:
-                    return False, "Groq API key is required when Groq is selected for LLM."
-            
+                    return (
+                        False,
+                        "Groq API key is required when Groq is selected for LLM.",
+                    )
+
+            if llm_source == "gemini_api" or asr_source == "gemini_api":
+                if not gemini_api_key:
+                    return (
+                        False,
+                        "Gemini API key is required when Gemini is selected for LLM.",
+                    )
+
             # Check ASR settings
-            if new_settings['ASR']['source'] not in ['openai_api', 'faster_whisper', 'groq_api']:
+            if new_settings["ASR"]["source"] not in [
+                "openai_api",
+                "faster_whisper",
+                "groq_api",
+                "gemini_api",
+            ]:
                 return False, "Invalid ASR source"
-            
+
             # If Groq ASR is selected, ensure Groq API key is present
-            if new_settings['ASR']['source'] == 'groq_api' and not groq_api_key:
+            if new_settings["ASR"]["source"] == "groq_api" and not groq_api_key:
                 return False, "Groq API key is required when Groq is selected for ASR."
 
             # Check LLM settings
-            if new_settings['LLM']['source'] not in ['ollama', 'openai_api', 'groq_api']:
+            if new_settings["LLM"]["source"] not in [
+                "ollama",
+                "openai_api",
+                "groq_api",
+                "gemini_api",
+            ]:
                 return False, "Invalid LLM source"
 
             # Check Audio settings
-            if not (8000 <= new_settings['Audio']['sample_rate'] <= 48000):
+            if not (8000 <= new_settings["Audio"]["sample_rate"] <= 48000):
                 return False, "Invalid sample rate"
-            if not (1 <= new_settings['Audio']['channels'] <= 2):
+            if not (1 <= new_settings["Audio"]["channels"] <= 2):
                 return False, "Invalid number of channels"
 
             # Check Hotkey settings
-            hotkey = new_settings.get('Hotkeys', {}).get('start_recording_hotkey')
+            hotkey = new_settings.get("Hotkeys", {}).get("start_recording_hotkey")
             if not hotkey:
-                 return False, "Start Recording Hotkey cannot be empty."
+                return False, "Start Recording Hotkey cannot be empty."
 
             return True, ""
 
         except KeyError as e:
-             return False, f"Missing setting section/key: {e}"
+            return False, f"Missing setting section/key: {e}"
         except Exception as e:
             return False, f"Settings validation error: {str(e)}"
 
@@ -469,6 +541,7 @@ class ApplicationManager(QObject):
 
     def _start_status_queue_monitor(self):
         """Start a thread to monitor the status_queue and emit status_changed."""
+
         def monitor():
             while self.app_thread and self.app_thread.is_alive():
                 try:
@@ -479,6 +552,7 @@ class ApplicationManager(QObject):
                 except Exception as e:
                     print(f"Status queue monitor error: {e}")
                     break
+
         t = threading.Thread(target=monitor, daemon=True, name="StatusQueueMonitor")
         t.start()
 
@@ -488,6 +562,6 @@ class ApplicationManager(QObject):
         # Clean up keyboard manager
         self.keyboard_manager.cleanup()
         # Hide status window
-        if hasattr(self, 'status_window'):
+        if hasattr(self, "status_window"):
             self.status_window.hide()
         super().closeEvent(event)

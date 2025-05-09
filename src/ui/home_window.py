@@ -272,7 +272,7 @@ class HomeWindow(QMainWindow):
                 border-radius: 8px;
             }
         """)
-        openai_api_key_label = QLabel("API Key:")
+        openai_api_key_label = QLabel("API Key")
         openai_api_key_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
         openai_api_key_container = QWidget()
         openai_api_key_layout = QVBoxLayout(openai_api_key_container)
@@ -385,7 +385,7 @@ class HomeWindow(QMainWindow):
                 border-radius: 8px;
             }
         """)
-        llm_model_label = QLabel("Model:")
+        llm_model_label = QLabel("Model")
         llm_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
         llm_model_container = QWidget()
         llm_model_layout = QVBoxLayout(llm_model_container)
@@ -393,15 +393,50 @@ class HomeWindow(QMainWindow):
         llm_model_layout.setSpacing(4)
         llm_model_layout.addWidget(llm_model_label)
         llm_model_layout.addWidget(self.llm_model)
+        form_layout.addRow(llm_model_container)
+        
         self.max_tokens = QSpinBox()
         self.max_tokens.setRange(1, 25000)
         self.max_tokens.setValue(2000)
+        self.max_tokens.setMaximumWidth(300)
+        self.max_tokens.setStyleSheet("""
+            QSpinBox {
+                background-color: rgba(255, 255, 255, 0.07);
+                padding: 8px 12px;
+                border-radius: 8px;
+            }
+        """)
+        max_tokens_label = QLabel("Max Tokens")
+        max_tokens_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        max_tokens_container = QWidget()
+        max_tokens_layout = QVBoxLayout(max_tokens_container)
+        max_tokens_layout.setContentsMargins(0, 0, 0, 0)
+        max_tokens_layout.setSpacing(4)
+        max_tokens_layout.addWidget(max_tokens_label)
+        max_tokens_layout.addWidget(self.max_tokens)
+        form_layout.addRow(max_tokens_container)
+
         self.temperature = QDoubleSpinBox()
         self.temperature.setRange(0.0, 1.0)
         self.temperature.setSingleStep(0.1)
         self.temperature.setValue(0.7)
-        form_layout.addRow("Max Tokens:", self.max_tokens)
-        form_layout.addRow("Temperature:", self.temperature)
+        self.temperature.setMaximumWidth(300)
+        self.temperature.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: rgba(255, 255, 255, 0.07);
+                padding: 8px 12px;
+                border-radius: 8px;
+            }
+        """)
+        temperature_label = QLabel("Temperature")
+        temperature_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        temperature_container = QWidget()
+        temperature_layout = QVBoxLayout(temperature_container)
+        temperature_layout.setContentsMargins(0, 0, 0, 0)
+        temperature_layout.setSpacing(4)
+        temperature_layout.addWidget(temperature_label)
+        temperature_layout.addWidget(self.temperature)
+        form_layout.addRow(temperature_container)
 
         # Connect LLM source change to update model field
         self.llm_source.selectionChanged.connect(self.update_llm_model_field)
@@ -779,13 +814,13 @@ class HomeWindow(QMainWindow):
                     'temperature': self.temperature.value(),
                 },
                 'Audio': {
-                    'sample_rate': self.sample_rate.value(),
-                    'channels': self.channels.value(),
+                    'sample_rate': int(self.sample_rate.currentText()),
+                    'channels': int(self.channels.currentText()),
                 },
                 'VAD': {
                     'enabled': self.vad_enabled.isChecked(),
-                    'aggressiveness': self.vad_aggressiveness.value(),
-                    'silence_duration_ms': self.silence_duration.value(),
+                    'aggressiveness': int(self.vad_aggressiveness.currentText()),
+                    'silence_duration_ms': int(self.silence_duration.currentText()),
                     'frame_duration_ms': int(self.frame_duration.currentText()),
                 },
                 'Output': {
@@ -802,6 +837,7 @@ class HomeWindow(QMainWindow):
             # Validate new settings
             is_valid, error_msg = self.app_manager.validate_settings(new_settings)
             if not is_valid:
+                print(f"Error in save_settings: {error_msg}")
                 self.handle_error(error_msg)
                 return
                 

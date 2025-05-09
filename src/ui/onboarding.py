@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from src.ui.components.inten_layout import IntenLayout
 
 # --- Platform specific code for macOS ---
 _ns_window = None
@@ -94,98 +95,11 @@ class OnboardingWindow(QMainWindow):
         self._drag_start_position = QPointF()
         self._effective_top_margin = 40
 
-        # --- Qt Styling ---
-        self.setStyleSheet("""
-            QMainWindow {
-                background: qradialgradient(
-                    cx:0.4, cy:0.4, radius: 1.0,
-                    fx:0.4, fy:0.4,
-                    stop:0 rgba(60,70,90,0.98),
-                    stop:0.5 rgba(30,32,40,0.96),
-                    stop:0.8 rgba(20,22,30,0.94),
-                    stop:1 rgba(10,10,15,0.92)
-                );
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            }
-            QWidget#main_widget {
-                background: qradialgradient(
-                    cx:0.4, cy:0.4, radius: 1.0,
-                    fx:0.4, fy:0.4,
-                    stop:0 rgba(60,70,90,0.98),
-                    stop:0.5 rgba(30,32,40,0.96),
-                    stop:0.8 rgba(20,22,30,0.94),
-                    stop:1 rgba(10,10,15,0.92)
-                );
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            }
-            QLabel { 
-                color: #F2E4D6; 
-                background-color: transparent;
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            }
-            QPushButton {
-                background-color: #F2E4D6;
-                color: #141538;
-                border: none;
-                padding: 8px 20px;
-                border-radius: 6px;
-                font-size: 13px;
-                font-weight: 500;
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            }
-            QPushButton:hover {
-                background-color: rgba(242, 228, 214, 0.8);
-            }
-            QPushButton:disabled {
-                background-color: rgba(242, 228, 214, 0.3);
-                color: rgba(224, 92, 92, 0.5);
-            }
-            QProgressBar {
-                border: none;
-                border-radius: 3px;
-                text-align: center;
-                background-color: rgba(242, 228, 214, 0.2);
-                max-height: 6px;
-                margin: 0px 2px;
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            }
-            QProgressBar::chunk {
-                background-color: #F2E4D6;
-                border-radius: 3px;
-            }
-            QWidget#permission_row {
-                background-color: rgba(242, 228, 214, 0.1);
-                border-radius: 10px;
-                min-height: 60px;
-                padding: 0px;
-                margin: 0px;
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            }
-            QLabel#permission_status {
-                font-size: 13px;
-                font-weight: 500;
-                padding-right: 16px;
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            }
-            QLabel#permission_text {
-                font-size: 15px;
-                color: #F2E4D6;
-                font-weight: 400;
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            }
-            QLabel#permission_icon {
-                font-size: 22px;
-                min-width: 30px;
-                margin-left: 16px;
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            }
-        """)
-
         # --- Main widget and layout ---
-        main_widget = QWidget()
+        main_widget = IntenLayout(self, radius=8)
         main_widget.setObjectName("main_widget")
         self.setCentralWidget(main_widget)
-        self.layout = QVBoxLayout(main_widget)
+        self.layout = main_widget.layout
 
         # --- Custom Close Button (macOS style, flush top left, functional) ---
         close_button_container = QWidget(main_widget)
@@ -267,6 +181,29 @@ class OnboardingWindow(QMainWindow):
         if not logo_pixmap or logo_pixmap.isNull():
             print("Logo not found, using fallback emoji.")
 
+        # --- Onboarding Primary Button Style ---
+        self.setStyleSheet(self.styleSheet() + """
+            QPushButton#onboarding-primary {
+                background-color: #F6EBDD;
+                color: #181A2A;
+                border: none;
+                border-radius: 14px;
+                font-size: 16px;
+                font-weight: 600;
+                padding: 0 14px;
+                min-height: 32px;
+                min-width: 160px;
+                letter-spacing: 0.2px;
+            }
+            QPushButton#onboarding-primary:hover {
+                background-color: #f3e2c7;
+            }
+            QPushButton#onboarding-primary:disabled {
+                background-color: #f3e2c7;
+                color: #b0b0b0;
+            }
+        """)
+
     def clear_layout(self):
         """Helper function to remove all widgets from the main layout."""
         while self.layout.count():
@@ -284,17 +221,6 @@ class OnboardingWindow(QMainWindow):
                          sub_widget = sub_item.widget()
                          if sub_widget is not None:
                               sub_widget.setParent(None)
-
-    def set_rounded_corners(self, radius=8):
-        rect = QRectF(0, 0, self.width(), self.height())
-        path = QPainterPath()
-        path.addRoundedRect(rect, radius, radius)
-        region = QRegion(path.toFillPolygon().toPolygon())
-        self.setMask(region)
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self.set_rounded_corners(8)
 
     def show_welcome_screen(self):
         self.clear_layout()
@@ -353,24 +279,10 @@ class OnboardingWindow(QMainWindow):
 
         # Get Started Button
         start_button = QPushButton("Get Started")
+        start_button.setObjectName("onboarding-primary")
         start_button.clicked.connect(self.show_permission_screen)
         start_button.setFixedHeight(44)
         start_button.setMinimumWidth(180)
-        start_button.setStyleSheet('''
-            QPushButton {
-                background-color: #F2E4D6;
-                color: #141538;
-                border: none;
-                padding: 0 32px;
-                border-radius: 12px;
-                font-size: 18px;
-                font-weight: 600;
-                letter-spacing: 0.1px;
-            }
-            QPushButton:hover {
-                background-color: #e6d7c2;
-            }
-        ''')
         content_layout.addSpacing(8)
         content_layout.addWidget(start_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -378,9 +290,6 @@ class OnboardingWindow(QMainWindow):
         self.layout.addStretch(2)
         self.layout.addLayout(content_layout)
         self.layout.addStretch(3)
-
-        # At the end of show_welcome_screen, ensure corners are rounded
-        self.set_rounded_corners(8)
 
     def show_permission_screen(self):
         self.clear_layout()
@@ -486,6 +395,7 @@ class OnboardingWindow(QMainWindow):
 
         # Continue Button
         self.continue_button = QPushButton("Continue")
+        self.continue_button.setObjectName("onboarding-primary")
         self.continue_button.clicked.connect(self.check_all_permissions_and_proceed)
         self.continue_button.setEnabled(False)
         self.continue_button.setFixedWidth(200)
@@ -496,7 +406,7 @@ class OnboardingWindow(QMainWindow):
                 border: none;
                 padding: 12px 0px;
                 border-radius: 6px;
-                font-size: 15px;
+                font-size: 16px;
                 font-weight: 500;
                 margin-top: 40px;
             }
@@ -641,33 +551,16 @@ class OnboardingWindow(QMainWindow):
 
         # Start Button
         start_button = QPushButton("Start Using Inten")
+        start_button.setObjectName("onboarding-primary")
         start_button.clicked.connect(self.complete_setup)
         start_button.setFixedHeight(38)
         start_button.setMinimumWidth(140)
-        start_button.setStyleSheet('''
-            QPushButton {
-                background-color: #F2E4D6;
-                color: #141538;
-                border: none;
-                padding: 0 24px;
-                border-radius: 10px;
-                font-size: 16px;
-                font-weight: 500;
-                letter-spacing: 0.05px;
-            }
-            QPushButton:hover {
-                background-color: #e6d7c2;
-            }
-        ''')
         content_layout.addWidget(start_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
         # --- Center the content in the main layout ---
         self.layout.addStretch(2)
         self.layout.addLayout(content_layout)
         self.layout.addStretch(3)
-
-        # At the end, ensure corners are rounded
-        self.set_rounded_corners(8)
 
     def complete_setup(self):
         """Saves the setup complete flag if needed, then transitions to the home screen."""

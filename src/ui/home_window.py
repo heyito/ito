@@ -612,7 +612,7 @@ class HomeWindow(QMainWindow):
         main_layout.addWidget(content_widget)
 
         # Load settings after UI is fully initialized
-        self.load_settings()
+        QTimer.singleShot(0, self.load_settings)
         self.update_setting_visibility()
         
         # Start application if settings are valid
@@ -900,6 +900,7 @@ class HomeWindow(QMainWindow):
             self.output_method.setCurrentText(config['Output']['method'])
             
             # Load Hotkey settings
+            print(f"Hotkeys: {config['Hotkeys']}")
             self.start_recording_hotkey.setText(config['Hotkeys']['start_recording_hotkey'])
 
             # Load Mode settings

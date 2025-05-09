@@ -150,5 +150,8 @@ ai.inten.inten
 Replace with your desired bundle identifier.
 
 ## Development
+### Formatting + Linting  
+* If using vscode, install the Ruff extension for the linter our project uses 
+
 ### Dependencies 
 * Use `poetry add <dependency>` to add dep to project

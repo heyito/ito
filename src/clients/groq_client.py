@@ -4,6 +4,8 @@ from typing import Any, Dict, List, Optional
 from groq import Groq, GroqError
 
 from src.utils.timing import time_method
+
+
 class GroqClient:
     def __init__(self, api_key: str, user_command_model: str, asr_model: str):
         if not api_key:
@@ -35,7 +37,7 @@ class GroqClient:
         print("GroqClient: API key is present.")
         self._is_valid = True
         return True
-    
+
     @time_method
     def generate_response(
         self,
@@ -46,14 +48,18 @@ class GroqClient:
         tools: list[dict] = [],
         messages_override: Optional[List[Dict]] = None,
     ) -> Any:
-        if not self._is_valid: # Relies on check_availability being called or key presence
-             print("GroqClient ERROR: API key is invalid or missing. Cannot process request.")
-             return None
+        if (
+            not self._is_valid
+        ):  # Relies on check_availability being called or key presence
+            print(
+                "GroqClient ERROR: API key is invalid or missing. Cannot process request."
+            )
+            return None
 
         if not self._user_command_model:
             raise ValueError("Groq user command model is required.")
 
-        actual_tools = tools or [] # Ensure tools is a list
+        actual_tools = tools or []  # Ensure tools is a list
 
         try:
 
@@ -70,7 +76,7 @@ class GroqClient:
                 tool_choice="required" if len(tools) != 0 else "none",
             )
 
-            if not actual_tools: # If no tools were intended, process as text
+            if not actual_tools:  # If no tools were intended, process as text
                 processed_text = response.choices[0].message.content
                 print(f"OpenAIClient returned processed text: {processed_text}")
                 if processed_text:
@@ -97,16 +103,17 @@ class GroqClient:
         except Exception as e:
             print(f"An unexpected error occurred during Groq LLM processing: {e}")
             import traceback
+
             traceback.print_exc()
             return None
-    
+
     @time_method
     def transcribe_audio(self, audio_buffer: io.BytesIO) -> str:
         """Transcribes audio using the Groq API."""
         if not self._client:
-             print("Error: Groq client not initialized.")
-             return ""
-        
+            print("Error: Groq client not initialized.")
+            return ""
+
         if not self._asr_model:
             raise ValueError("Groq ASR model is required.")
 
@@ -117,11 +124,13 @@ class GroqClient:
             transcript_response = self._client.audio.transcriptions.create(
                 model=self._asr_model,
                 file=audio_buffer,
-                response_format="text" # Explicitly request text
+                response_format="text",  # Explicitly request text
             )
 
             # Ensure the response is treated as a string
-            transcript = transcript_response if isinstance(transcript_response, str) else ""
+            transcript = (
+                transcript_response if isinstance(transcript_response, str) else ""
+            )
             return transcript.strip()
 
         except GroqError as e:

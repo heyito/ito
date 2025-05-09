@@ -106,8 +106,8 @@ class MacOSEngine:
             window_info = json.loads(result.stdout)
 
             # Write the JSON to a file
-            with open(f"context-{uuid.uuid4()}.json", "w") as f:
-                json.dump(window_info, f)  # 'indent' for pretty formatting
+            # with open(f"context-{uuid.uuid4()}.json", "w") as f:
+            #     json.dump(window_info, f)  # 'indent' for pretty formatting
 
             return window_info
 

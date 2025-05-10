@@ -314,6 +314,33 @@ class HomeWindow(QMainWindow):
             }
         ''')
 
+        # Add Streaming button
+        self.streaming_button = QPushButton("Streaming")
+        self.streaming_button.setObjectName("settings_button")
+        self.streaming_button.setCheckable(True)
+        self.streaming_button.setChecked(False)
+        self.streaming_button.clicked.connect(lambda: self.select_menu(4))
+        menu_layout.addWidget(self.streaming_button)
+        self.streaming_button.setStyleSheet('''
+            QPushButton#settings_button {
+                background: transparent;
+                color: #FFFFFF;
+                font-size: 15px;
+                font-weight: 500;
+                border: none;
+                border-radius: 8px;
+                padding: 12px 0px;
+                margin: 8px 16px 8px 16px;
+            }
+            QPushButton#settings_button:checked {
+                background: rgba(242, 228, 214, 0.15) !important;
+                color: #FFFFFF;
+            }
+            QPushButton#settings_button:hover {
+                background: rgba(242, 228, 214, 0.1) !important;
+            }
+        ''')
+
         # Add stretch to push everything up
         menu_layout.addStretch()
 
@@ -357,33 +384,6 @@ class HomeWindow(QMainWindow):
         form_layout.setFormAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
-
-        # Mode Section
-        self.add_section_header(form_layout, "Application Mode")
-        self.streaming_mode = QCheckBox()
-        self.streaming_mode.stateChanged.connect(self.update_setting_visibility)
-        form_layout.addRow("Streaming Mode (Requires Vosk):", self.streaming_mode)
-
-        # Vosk Section
-        self.add_section_header(form_layout, "Vosk Settings (Streaming Mode)")
-        self.vosk_model_path_edit = QLineEdit()
-        self.vosk_model_path_edit.setMaximumWidth(300)
-        self.vosk_model_path_edit.setStyleSheet("""
-            QLineEdit {
-                background-color: rgba(255, 255, 255, 0.07);
-                padding: 8px 12px;
-                border-radius: 8px;
-            }
-        """)
-        vosk_model_path_label = QLabel("Model Path")
-        vosk_model_path_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        vosk_model_path_container = QWidget()
-        vosk_model_path_layout = QVBoxLayout(vosk_model_path_container)
-        vosk_model_path_layout.setContentsMargins(0, 0, 0, 0)
-        vosk_model_path_layout.setSpacing(4)
-        vosk_model_path_layout.addWidget(vosk_model_path_label)
-        vosk_model_path_layout.addWidget(self.vosk_model_path_edit)
-        form_layout.addRow(vosk_model_path_container)
 
         # Audio Section
         self.add_section_header(form_layout, "Audio Settings")
@@ -938,6 +938,56 @@ class HomeWindow(QMainWindow):
         api_keys_layout.addStretch()
         self.stacked_widget.addWidget(self.api_keys_page)
 
+        # --- Streaming PAGE ---
+        self.streaming_page = QWidget()
+        streaming_layout = QVBoxLayout(self.streaming_page)
+        streaming_layout.setContentsMargins(0, 0, 0, 0)
+        streaming_title = QLabel("Streaming")
+        streaming_title.setStyleSheet("""
+            font-size: 24px;
+            font-weight: 600;
+            color: #F2E4D6;
+            margin-bottom: 28px;
+            margin-left: 0px;
+        """)
+        streaming_layout.addWidget(streaming_title, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        # Mode Section (duplicate, do not delete from settings page)
+        mode_label = QLabel("Streaming Mode (Requires Vosk):")
+        mode_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        mode_container = QWidget()
+        mode_layout = QVBoxLayout(mode_container)
+        mode_layout.setContentsMargins(0, 0, 0, 0)
+        mode_layout.setSpacing(4)
+        mode_layout.addWidget(mode_label)
+        self.streaming_mode = QCheckBox()
+        self.streaming_mode.stateChanged.connect(self.update_setting_visibility)
+        mode_layout.addWidget(self.streaming_mode)
+        streaming_layout.addWidget(mode_container)
+
+        # Vosk Section
+        self.vosk_model_path_edit = QLineEdit()
+        self.vosk_model_path_edit.setMaximumWidth(300)
+        self.vosk_model_path_edit.setStyleSheet("""
+            QLineEdit {
+                background-color: rgba(255, 255, 255, 0.07);
+                padding: 8px 12px;
+                border-radius: 8px;
+            }
+        """)
+        vosk_model_path_label = QLabel("Model Path")
+        vosk_model_path_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        vosk_model_path_container = QWidget()
+        vosk_model_path_layout = QVBoxLayout(vosk_model_path_container)
+        vosk_model_path_layout.setContentsMargins(0, 0, 0, 0)
+        vosk_model_path_layout.setSpacing(4)
+        vosk_model_path_layout.addWidget(vosk_model_path_label)
+        vosk_model_path_layout.addWidget(self.vosk_model_path_edit)
+        streaming_layout.addWidget(vosk_model_path_container)
+
+        streaming_layout.addStretch()
+        self.stacked_widget.addWidget(self.streaming_page)
+
         # --- Menu panel and divider container ---
         menu_container = QWidget()
         menu_container_layout = QVBoxLayout(menu_container)
@@ -1066,6 +1116,7 @@ class HomeWindow(QMainWindow):
         self.speech_recognition_button.setChecked(index == 1)
         self.language_model_button.setChecked(index == 2)
         self.api_keys_button.setChecked(index == 3)
+        self.streaming_button.setChecked(index == 4)
 
     def handle_save_timing_report(self):
         """Handles the click of the 'Save Timing Report' button."""

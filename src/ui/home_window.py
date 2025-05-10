@@ -555,7 +555,6 @@ class HomeWindow(QMainWindow):
         asr_compute_type_layout.addWidget(self.asr_compute_type)
         asr_form_layout.addRow(self.asr_compute_type_container)
 
-        self.asr_source.selectionChanged.connect(self._update_api_key_fields)
         self.asr_source.selectionChanged.connect(self._update_asr_provider_fields)
 
         speech_recognition_layout.addWidget(asr_form_content)
@@ -715,7 +714,6 @@ class HomeWindow(QMainWindow):
         llm_form_layout.addRow(temperature_container)
 
         self.llm_source.selectionChanged.connect(self._update_llm_provider_fields)
-        self.llm_source.selectionChanged.connect(self._update_api_key_fields)
 
         language_model_layout.addWidget(llm_form_content)
         language_model_layout.addStretch()
@@ -1751,23 +1749,6 @@ class HomeWindow(QMainWindow):
         is_local_asr = self.asr_source.currentText() == "faster_whisper"
         self.asr_device_container.setVisible(is_local_asr)
         self.asr_compute_type_container.setVisible(is_local_asr)
-
-    def _update_api_key_fields(self):
-        """Show/hide API key fields based on ASR and LLM provider selections."""
-        asr_source = self.asr_source.currentText()
-        llm_source = self.llm_source.currentText()
-
-        # Determine if OpenAI key is needed
-        show_openai_key = (asr_source == "openai_api") or (llm_source == "openai_api")
-        self.openai_api_key_edit.setVisible(show_openai_key)
-
-        # Determine if Gemini key is needed
-        show_gemini_key = (asr_source == "gemini_api") or (llm_source == "gemini_api")
-        self.gemini_api_key_edit.setVisible(show_gemini_key)
-
-        # Determine if Groq key is needed
-        show_groq_key = (llm_source == "groq_api") or (asr_source == "groq_api")
-        self.groq_api_key_edit.setVisible(show_groq_key)
 
     def _update_asr_provider_fields(self):
         """Update ASR model fields based on the selected ASR source."""

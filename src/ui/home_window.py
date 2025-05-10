@@ -260,6 +260,33 @@ class HomeWindow(QMainWindow):
             }
         ''')
 
+        # Add Language Model Settings button
+        self.language_model_button = QPushButton("Language Model")
+        self.language_model_button.setObjectName("settings_button")
+        self.language_model_button.setCheckable(True)
+        self.language_model_button.setChecked(False)
+        self.language_model_button.clicked.connect(lambda: self.select_menu(2))
+        menu_layout.addWidget(self.language_model_button)
+        self.language_model_button.setStyleSheet('''
+            QPushButton#settings_button {
+                background: transparent;
+                color: #FFFFFF;
+                font-size: 15px;
+                font-weight: 500;
+                border: none;
+                border-radius: 8px;
+                padding: 12px 0px;
+                margin: 8px 16px 8px 16px;
+            }
+            QPushButton#settings_button:checked {
+                background: rgba(242, 228, 214, 0.15) !important;
+                color: #FFFFFF;
+            }
+            QPushButton#settings_button:hover {
+                background: rgba(242, 228, 214, 0.1) !important;
+            }
+        ''')
+
         # Add stretch to push everything up
         menu_layout.addStretch()
 
@@ -303,106 +330,6 @@ class HomeWindow(QMainWindow):
         form_layout.setFormAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
-
-        # LLM Section
-        self.add_section_header(form_layout, "Language Model Settings")
-        self.llm_source = SegmentedButtonGroup(["ollama", "openai_api", "groq_api", "gemini_api"])
-        llm_source_label = QLabel("LLM Source")
-        llm_source_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        llm_source_container = QWidget()
-        llm_source_layout = QVBoxLayout(llm_source_container)
-        llm_source_layout.setContentsMargins(0, 0, 0, 0)
-        llm_source_layout.setSpacing(4)
-        llm_source_layout.addWidget(llm_source_label)
-        llm_source_layout.addWidget(self.llm_source)
-        form_layout.addRow(llm_source_container)
-
-        # Create all LLM model containers and their layouts FIRST
-        self.llm_model_edit = QLineEdit()
-        self.llm_model_edit.setMaximumWidth(300)
-        self.llm_model_edit.setStyleSheet("""
-            QLineEdit {
-                background-color: rgba(255, 255, 255, 0.07);
-                padding: 8px 12px;
-                border-radius: 8px;
-            }
-        """)
-        llm_model_edit_label = QLabel("Ollama Model")
-        llm_model_edit_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        self.llm_model_edit_container = QWidget()
-        llm_model_edit_layout = QVBoxLayout(self.llm_model_edit_container)
-        llm_model_edit_layout.setContentsMargins(0, 0, 0, 0)
-        llm_model_edit_layout.setSpacing(4)
-        llm_model_edit_layout.addWidget(llm_model_edit_label)
-        llm_model_edit_layout.addWidget(self.llm_model_edit)
-
-        self.openai_model = SegmentedButtonGroup([
-            "gpt-4.1",
-            "gpt-4-turbo",
-            "gpt-4",
-            "gpt-3.5-turbo"
-        ])
-        openai_model_label = QLabel("OpenAI Model")
-        openai_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        self.openai_model_container = QWidget()
-        openai_model_layout = QVBoxLayout(self.openai_model_container)
-        openai_model_layout.setContentsMargins(0, 0, 0, 0)
-        openai_model_layout.setSpacing(4)
-        openai_model_layout.addWidget(openai_model_label)
-        openai_model_layout.addWidget(self.openai_model)
-
-        self.gemini_model = SegmentedButtonGroup([
-            "gemini-2.0-flash"
-        ])
-        gemini_model_label = QLabel("Gemini Model")
-        gemini_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        self.gemini_model_container = QWidget()
-        gemini_model_layout = QVBoxLayout(self.gemini_model_container)
-        gemini_model_layout.setContentsMargins(0, 0, 0, 0)
-        gemini_model_layout.setSpacing(4)
-        gemini_model_layout.addWidget(gemini_model_label)
-        gemini_model_layout.addWidget(self.gemini_model)
-
-        self.groq_model = SegmentedButtonGroup([
-            "llama-3.3-70b-versatile",
-            "llama3-70b-8192",
-            "mixtral-8x7b-32768",
-            "gemma-7b-it"
-        ])
-        groq_model_label = QLabel("Groq Model")
-        groq_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        self.groq_model_container = QWidget()
-        groq_model_layout = QVBoxLayout(self.groq_model_container)
-        groq_model_layout.setContentsMargins(0, 0, 0, 0)
-        groq_model_layout.setSpacing(4)
-        groq_model_layout.addWidget(groq_model_label)
-        groq_model_layout.addWidget(self.groq_model)
-
-        # Now add them to the form layout
-        form_layout.addRow(self.llm_model_edit_container)
-        form_layout.addRow(self.openai_model_container)
-        form_layout.addRow(self.groq_model_container)
-        form_layout.addRow(self.gemini_model_container)
-        # Hide all but the default
-        self.llm_model_edit_container.show()
-        self.openai_model_container.hide()
-        self.groq_model_container.hide()
-        self.gemini_model_container.hide()
-
-        self.max_tokens = QSpinBox()
-        self.max_tokens.setRange(1, 25000)
-        self.max_tokens.setValue(2000)
-        form_layout.addRow("Max Tokens:", self.max_tokens)
-
-        self.temperature = QDoubleSpinBox()
-        self.temperature.setRange(0.0, 1.0)
-        self.temperature.setSingleStep(0.1)
-        self.temperature.setValue(0.7)
-        form_layout.addRow("Temperature:", self.temperature)
-
-        # Connect LLM source change to update model field and API key fields
-        self.llm_source.selectionChanged.connect(self._update_llm_provider_fields)
-        self.llm_source.selectionChanged.connect(self._update_api_key_fields)
 
         # API Keys Section
         self.add_section_header(form_layout, "API Key Settings")
@@ -811,6 +738,163 @@ class HomeWindow(QMainWindow):
         # Add speech recognition page to stacked widget
         self.stacked_widget.addWidget(self.speech_recognition_page)
 
+        # --- LLM PAGE ---
+        self.language_model_page = QWidget()
+        language_model_layout = QVBoxLayout(self.language_model_page)
+        language_model_layout.setContentsMargins(0, 0, 0, 0)
+        language_model_title = QLabel("Language Model Settings")
+        language_model_title.setStyleSheet("""
+            font-size: 24px;
+            font-weight: 600;
+            color: #F2E4D6;
+            margin-bottom: 28px;
+            margin-left: 0px;
+        """)
+        language_model_layout.addWidget(language_model_title, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        llm_form_content = QWidget()
+        llm_form_layout = QFormLayout(llm_form_content)
+        llm_form_layout.setSpacing(16)
+        llm_form_layout.setContentsMargins(0, 0, 0, 0)
+        llm_form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        llm_form_layout.setFormAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+
+        self.llm_source = SegmentedButtonGroup(["ollama", "openai_api", "groq_api", "gemini_api"])
+        llm_source_label = QLabel("LLM Source")
+        llm_source_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        llm_source_container = QWidget()
+        llm_source_layout = QVBoxLayout(llm_source_container)
+        llm_source_layout.setContentsMargins(0, 0, 0, 0)
+        llm_source_layout.setSpacing(4)
+        llm_source_layout.addWidget(llm_source_label)
+        llm_source_layout.addWidget(self.llm_source)
+        llm_form_layout.addRow(llm_source_container)
+
+        self.llm_model_edit = QLineEdit()
+        self.llm_model_edit.setMaximumWidth(300)
+        self.llm_model_edit.setStyleSheet("""
+            QLineEdit {
+                background-color: rgba(255, 255, 255, 0.07);
+                padding: 8px 12px;
+                border-radius: 8px;
+            }
+        """)
+        llm_model_edit_label = QLabel("Ollama Model")
+        llm_model_edit_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.llm_model_edit_container = QWidget()
+        llm_model_edit_layout = QVBoxLayout(self.llm_model_edit_container)
+        llm_model_edit_layout.setContentsMargins(0, 0, 0, 0)
+        llm_model_edit_layout.setSpacing(4)
+        llm_model_edit_layout.addWidget(llm_model_edit_label)
+        llm_model_edit_layout.addWidget(self.llm_model_edit)
+
+        self.openai_model = SegmentedButtonGroup([
+            "gpt-4.1",
+            "gpt-4-turbo",
+            "gpt-4",
+            "gpt-3.5-turbo"
+        ])
+        openai_model_label = QLabel("OpenAI Model")
+        openai_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.openai_model_container = QWidget()
+        openai_model_layout = QVBoxLayout(self.openai_model_container)
+        openai_model_layout.setContentsMargins(0, 0, 0, 0)
+        openai_model_layout.setSpacing(4)
+        openai_model_layout.addWidget(openai_model_label)
+        openai_model_layout.addWidget(self.openai_model)
+
+        self.gemini_model = SegmentedButtonGroup([
+            "gemini-2.0-flash"
+        ])
+        gemini_model_label = QLabel("Gemini Model")
+        gemini_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.gemini_model_container = QWidget()
+        gemini_model_layout = QVBoxLayout(self.gemini_model_container)
+        gemini_model_layout.setContentsMargins(0, 0, 0, 0)
+        gemini_model_layout.setSpacing(4)
+        gemini_model_layout.addWidget(gemini_model_label)
+        gemini_model_layout.addWidget(self.gemini_model)
+
+        self.groq_model = SegmentedButtonGroup([
+            "llama-3.3-70b-versatile",
+            "llama3-70b-8192",
+            "mixtral-8x7b-32768",
+            "gemma-7b-it"
+        ])
+        groq_model_label = QLabel("Groq Model")
+        groq_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.groq_model_container = QWidget()
+        groq_model_layout = QVBoxLayout(self.groq_model_container)
+        groq_model_layout.setContentsMargins(0, 0, 0, 0)
+        groq_model_layout.setSpacing(4)
+        groq_model_layout.addWidget(groq_model_label)
+        groq_model_layout.addWidget(self.groq_model)
+
+        llm_form_layout.addRow(self.llm_model_edit_container)
+        llm_form_layout.addRow(self.openai_model_container)
+        llm_form_layout.addRow(self.groq_model_container)
+        llm_form_layout.addRow(self.gemini_model_container)
+        self.llm_model_edit_container.show()
+        self.openai_model_container.hide()
+        self.groq_model_container.hide()
+        self.gemini_model_container.hide()
+
+        # Max Tokens (define as self.max_tokens, then use in container)
+        self.max_tokens = QSpinBox()
+        self.max_tokens.setRange(1, 25000)
+        self.max_tokens.setValue(2000)
+        self.max_tokens.setStyleSheet("""
+            QSpinBox {
+                background-color: rgba(255, 255, 255, 0.07);
+                padding: 8px 12px;
+                border-radius: 8px;
+                color: #FFFFFF;
+                font-size: 15px;
+            }
+        """)
+        self.max_tokens.setMaximumWidth(300)
+        max_tokens_label = QLabel("Max Tokens")
+        max_tokens_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        max_tokens_container = QWidget()
+        max_tokens_layout = QVBoxLayout(max_tokens_container)
+        max_tokens_layout.setContentsMargins(0, 0, 0, 0)
+        max_tokens_layout.setSpacing(4)
+        max_tokens_layout.addWidget(max_tokens_label)
+        max_tokens_layout.addWidget(self.max_tokens)
+        llm_form_layout.addRow(max_tokens_container)
+
+        # Temperature (define as self.temperature, then use in container)
+        self.temperature = QDoubleSpinBox()
+        self.temperature.setRange(0.0, 1.0)
+        self.temperature.setSingleStep(0.1)
+        self.temperature.setValue(0.7)
+        self.temperature.setStyleSheet("""
+            QDoubleSpinBox {
+                background-color: rgba(255, 255, 255, 0.07);
+                padding: 8px 12px;
+                border-radius: 8px;
+                color: #FFFFFF;
+                font-size: 15px;
+            }
+        """)
+        self.temperature.setMaximumWidth(300)
+        temperature_label = QLabel("Temperature")
+        temperature_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        temperature_container = QWidget()
+        temperature_layout = QVBoxLayout(temperature_container)
+        temperature_layout.setContentsMargins(0, 0, 0, 0)
+        temperature_layout.setSpacing(4)
+        temperature_layout.addWidget(temperature_label)
+        temperature_layout.addWidget(self.temperature)
+        llm_form_layout.addRow(temperature_container)
+
+        self.llm_source.selectionChanged.connect(self._update_llm_provider_fields)
+        self.llm_source.selectionChanged.connect(self._update_api_key_fields)
+
+        language_model_layout.addWidget(llm_form_content)
+        language_model_layout.addStretch()
+        self.stacked_widget.addWidget(self.language_model_page)
+
         # --- Menu panel and divider container ---
         menu_container = QWidget()
         menu_container_layout = QVBoxLayout(menu_container)
@@ -935,12 +1019,9 @@ class HomeWindow(QMainWindow):
 
     def select_menu(self, index):
         self.stacked_widget.setCurrentIndex(index)
-        if index == 0:
-            self.settings_button.setChecked(True)
-            self.speech_recognition_button.setChecked(False)
-        elif index == 1:
-            self.settings_button.setChecked(False)
-            self.speech_recognition_button.setChecked(True)
+        self.settings_button.setChecked(index == 0)
+        self.speech_recognition_button.setChecked(index == 1)
+        self.language_model_button.setChecked(index == 2)
 
     def handle_save_timing_report(self):
         """Handles the click of the 'Save Timing Report' button."""

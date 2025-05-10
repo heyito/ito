@@ -402,10 +402,7 @@ class HomeWindow(QMainWindow):
         llm_source_layout.addWidget(self.llm_source)
         form_layout.addRow(llm_source_container)
 
-        # New dynamic LLM fields
-        self.llm_model_label = QLabel("Model")
-        self.llm_model_stacked_widget = QStackedWidget()
-
+        # Create all LLM model containers and their layouts FIRST
         self.llm_model_edit = QLineEdit()
         self.llm_model_edit.setMaximumWidth(300)
         self.llm_model_edit.setStyleSheet("""
@@ -466,11 +463,16 @@ class HomeWindow(QMainWindow):
         groq_model_layout.addWidget(groq_model_label)
         groq_model_layout.addWidget(self.groq_model)
 
-        self.llm_model_stacked_widget.addWidget(self.llm_model_edit_container)
-        self.llm_model_stacked_widget.addWidget(self.openai_model_container)
-        self.llm_model_stacked_widget.addWidget(self.groq_model_container)
-        self.llm_model_stacked_widget.addWidget(self.gemini_model_container)
-        form_layout.addRow(self.llm_model_label, self.llm_model_stacked_widget)
+        # Now add them to the form layout
+        form_layout.addRow(self.llm_model_edit_container)
+        form_layout.addRow(self.openai_model_container)
+        form_layout.addRow(self.groq_model_container)
+        form_layout.addRow(self.gemini_model_container)
+        # Hide all but the default
+        self.llm_model_edit_container.show()
+        self.openai_model_container.hide()
+        self.groq_model_container.hide()
+        self.gemini_model_container.hide()
 
         self.max_tokens = QSpinBox()
         self.max_tokens.setRange(1, 25000)
@@ -1269,6 +1271,7 @@ class HomeWindow(QMainWindow):
         self.llm_model_edit.blockSignals(True)
         self.openai_model.blockSignals(True)
         self.groq_model.blockSignals(True)
+        self.gemini_model.blockSignals(True)
 
         try:
             config = self.app_manager.load_settings()  # Get fresh complete settings
@@ -1276,78 +1279,49 @@ class HomeWindow(QMainWindow):
 
             # Default values from ApplicationManager for consistency
             default_openai_model = config.get("OpenAI", {}).get("model", "gpt-4.1")
-            default_gemini_model = config.get("Gemini", {}).get(
-                "model", "gemini-2.0-flash"
-            )
-            default_groq_model = config.get("Groq", {}).get(
-                "model", "llama-3.3-70b-versatile"
-            )
-            default_ollama_model = config.get("Ollama", {}).get(
-                "model", "llama3.2:latest"
-            )
+            default_gemini_model = config.get("Gemini", {}).get("model", "gemini-2.0-flash")
+            default_groq_model = config.get("Groq", {}).get("model", "llama-3.3-70b-versatile")
+            default_ollama_model = config.get("Ollama", {}).get("model", "llama3.2:latest")
 
             # Get the actual model stored for the current source under LLM/model if available,
             # otherwise use the provider-specific model, then the ultimate default.
             llm_config_model = config.get("LLM", {}).get("model")
 
-            # API Key field visibility and content
+            # Hide all containers first
+            self.llm_model_edit_container.hide()
+            self.openai_model_container.hide()
+            self.groq_model_container.hide()
+            self.gemini_model_container.hide()
+
+            # Show appropriate container and set model based on source
             if llm_source == "openai_api":
-                self.llm_model_stacked_widget.setCurrentWidget(
-                    self.openai_model_container
-                )
+                self.openai_model_container.show()
                 # Use user_command_model from OpenAI section, then LLM/model, then default
-                openai_specific_model = config.get("OpenAI", {}).get(
-                    "user_command_model", default_openai_model
-                )
-                model_to_set = (
-                    llm_config_model
-                    if llm_config_model
-                    and llm_config_model in self.openai_model.buttons
-                    else openai_specific_model
-                )
+                openai_specific_model = config.get("OpenAI", {}).get("user_command_model", default_openai_model)
+                model_to_set = llm_config_model if llm_config_model and llm_config_model in self.openai_model.buttons else openai_specific_model
                 self.openai_model.setCurrentText(model_to_set)
             elif llm_source == "gemini_api":
-                self.llm_model_stacked_widget.setCurrentWidget(
-                    self.gemini_model_container
-                )
+                self.gemini_model_container.show()
                 # Use user_command_model from Gemini section, then LLM/model, then default
-                gemini_specific_model = config.get("Gemini", {}).get(
-                    "user_command_model", default_gemini_model
-                )
-                model_to_set = (
-                    llm_config_model
-                    if llm_config_model
-                    and llm_config_model in self.gemini_model.buttons
-                    else gemini_specific_model
-                )
+                gemini_specific_model = config.get("Gemini", {}).get("user_command_model", default_gemini_model)
+                model_to_set = llm_config_model if llm_config_model and llm_config_model in self.gemini_model.buttons else gemini_specific_model
                 self.gemini_model.setCurrentText(model_to_set)
             elif llm_source == "groq_api":
-                self.llm_model_stacked_widget.setCurrentWidget(self.groq_model_container)
+                self.groq_model_container.show()
                 # Use user_command_model from Groq section, then LLM/model, then default
-                groq_specific_model = config.get("Groq", {}).get(
-                    "user_command_model", default_groq_model
-                )
-                model_to_set = (
-                    llm_config_model
-                    if llm_config_model
-                    and llm_config_model in self.groq_model.buttons
-                    else groq_specific_model
-                )
+                groq_specific_model = config.get("Groq", {}).get("user_command_model", default_groq_model)
+                model_to_set = llm_config_model if llm_config_model and llm_config_model in self.groq_model.buttons else groq_specific_model
                 self.groq_model.setCurrentText(model_to_set)
-                self.asr_model_label.setText("ASR Model (Groq)")
-            else:  # Default or unknown source
-                self.llm_model_stacked_widget.setCurrentWidget(
-                    self.llm_model_edit_container
-                )  # Default to text edit
-                self.llm_model_edit.setText(
-                    default_ollama_model
-                )  # Or a generic placeholder
+            else:  # ollama or unknown source
+                self.llm_model_edit_container.show()
+                self.llm_model_edit.setText(llm_config_model if llm_config_model else default_ollama_model)
 
         finally:
             # Unblock signals
             self.llm_model_edit.blockSignals(False)
             self.openai_model.blockSignals(False)
             self.groq_model.blockSignals(False)
+            self.gemini_model.blockSignals(False)
 
     def update_setting_visibility(self):
         """Show/hide settings based on other selections (e.g., streaming mode)."""

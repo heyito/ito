@@ -341,6 +341,33 @@ class HomeWindow(QMainWindow):
             }
         ''')
 
+        # Add Audio button
+        self.audio_button = QPushButton("Audio")
+        self.audio_button.setObjectName("settings_button")
+        self.audio_button.setCheckable(True)
+        self.audio_button.setChecked(False)
+        self.audio_button.clicked.connect(lambda: self.select_menu(5))
+        menu_layout.addWidget(self.audio_button)
+        self.audio_button.setStyleSheet('''
+            QPushButton#settings_button {
+                background: transparent;
+                color: #FFFFFF;
+                font-size: 15px;
+                font-weight: 500;
+                border: none;
+                border-radius: 8px;
+                padding: 12px 0px;
+                margin: 8px 16px 8px 16px;
+            }
+            QPushButton#settings_button:checked {
+                background: rgba(242, 228, 214, 0.15) !important;
+                color: #FFFFFF;
+            }
+            QPushButton#settings_button:hover {
+                background: rgba(242, 228, 214, 0.1) !important;
+            }
+        ''')
+
         # Add stretch to push everything up
         menu_layout.addStretch()
 
@@ -384,30 +411,6 @@ class HomeWindow(QMainWindow):
         form_layout.setFormAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
-
-        # Audio Section
-        self.add_section_header(form_layout, "Audio Settings")
-        self.sample_rate = SegmentedButtonGroup(["8000", "16000", "22050", "44100", "48000"])
-        sample_rate_label = QLabel("Sample Rate")
-        sample_rate_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        sample_rate_container = QWidget()
-        sample_rate_layout = QVBoxLayout(sample_rate_container)
-        sample_rate_layout.setContentsMargins(0, 0, 0, 0)
-        sample_rate_layout.setSpacing(4)
-        sample_rate_layout.addWidget(sample_rate_label)
-        sample_rate_layout.addWidget(self.sample_rate)
-        form_layout.addRow(sample_rate_container)
-
-        self.channels = SegmentedButtonGroup(["1", "2"])
-        channels_label = QLabel("Channels")
-        channels_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        channels_container = QWidget()
-        channels_layout = QVBoxLayout(channels_container)
-        channels_layout.setContentsMargins(0, 0, 0, 0)
-        channels_layout.setSpacing(4)
-        channels_layout.addWidget(channels_label)
-        channels_layout.addWidget(self.channels)
-        form_layout.addRow(channels_container)
 
         # VAD Section
         self.add_section_header(form_layout, "Voice Activity Detection")
@@ -988,6 +991,46 @@ class HomeWindow(QMainWindow):
         streaming_layout.addStretch()
         self.stacked_widget.addWidget(self.streaming_page)
 
+        # --- Audio PAGE ---
+        self.audio_page = QWidget()
+        audio_layout = QVBoxLayout(self.audio_page)
+        audio_layout.setContentsMargins(0, 0, 0, 0)
+        audio_title = QLabel("Audio")
+        audio_title.setStyleSheet("""
+            font-size: 24px;
+            font-weight: 600;
+            color: #F2E4D6;
+            margin-bottom: 28px;
+            margin-left: 0px;
+        """)
+        audio_layout.addWidget(audio_title, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        # Audio Section (migrated from Settings page)
+        self.sample_rate = SegmentedButtonGroup(["8000", "16000", "22050", "44100", "48000"])
+        sample_rate_label = QLabel("Sample Rate")
+        sample_rate_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        sample_rate_container = QWidget()
+        sample_rate_layout = QVBoxLayout(sample_rate_container)
+        sample_rate_layout.setContentsMargins(0, 0, 0, 0)
+        sample_rate_layout.setSpacing(4)
+        sample_rate_layout.addWidget(sample_rate_label)
+        sample_rate_layout.addWidget(self.sample_rate)
+        audio_layout.addWidget(sample_rate_container)
+
+        self.channels = SegmentedButtonGroup(["1", "2"])
+        channels_label = QLabel("Channels")
+        channels_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        channels_container = QWidget()
+        channels_layout = QVBoxLayout(channels_container)
+        channels_layout.setContentsMargins(0, 0, 0, 0)
+        channels_layout.setSpacing(4)
+        channels_layout.addWidget(channels_label)
+        channels_layout.addWidget(self.channels)
+        audio_layout.addWidget(channels_container)
+
+        audio_layout.addStretch()
+        self.stacked_widget.addWidget(self.audio_page)
+
         # --- Menu panel and divider container ---
         menu_container = QWidget()
         menu_container_layout = QVBoxLayout(menu_container)
@@ -1117,6 +1160,7 @@ class HomeWindow(QMainWindow):
         self.language_model_button.setChecked(index == 2)
         self.api_keys_button.setChecked(index == 3)
         self.streaming_button.setChecked(index == 4)
+        self.audio_button.setChecked(index == 5)
 
     def handle_save_timing_report(self):
         """Handles the click of the 'Save Timing Report' button."""

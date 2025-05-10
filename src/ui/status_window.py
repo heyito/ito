@@ -187,9 +187,9 @@ class StatusWindow(QWidget):
     def _set_label_style(self, width, border_radius):
         self.status_label.setStyleSheet(f"""
             QLabel {{
-                color: #F2E4D6;
+                color: #FFFFFF;
                 font-size: 13px;
-                background-color: #000000;
+                background-color: #242322;
                 font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
                 min-width: {width}px;
                 max-width: {width}px;

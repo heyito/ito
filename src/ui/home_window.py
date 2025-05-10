@@ -497,37 +497,6 @@ class HomeWindow(QMainWindow):
         scroll_area.setWidget(scroll_content)
         settings_layout.addWidget(scroll_area)
 
-        # Button container for Save and Reset
-        button_container = QWidget()
-        button_layout = QHBoxLayout(button_container)
-        button_layout.setContentsMargins(0, 20, 0, 0)
-
-        # Save button
-        save_button = QPushButton("Save Settings")
-        save_button.setObjectName("btn-primary")
-        save_button.setStyleSheet("""
-            QPushButton#btn-primary {
-                background-color: #F6EBDD;
-                color: #181A2A;
-                border: none; /* Crucial for macOS */
-                border-radius: 8px;
-                font-size: 16px;
-                font-weight: 600;
-                padding: 0 14px;
-                min-height: 44px; /* You had 32px in styles, 44px in code */
-                min-width: 160px;
-                letter-spacing: 0.2px;
-            }
-            QPushButton#btn-primary:hover {
-                background-color: #f3e2c7;
-            }
-        """)
-        save_button.clicked.connect(self.save_settings)
-        button_layout.addWidget(save_button)
-        button_layout.addStretch()
-
-        settings_layout.addWidget(button_container)
-
         # Add settings page to stacked widget
         self.stacked_widget.addWidget(self.settings_page)
 
@@ -1352,6 +1321,63 @@ class HomeWindow(QMainWindow):
         developer_layout.addStretch()
         self.stacked_widget.addWidget(self.developer_page)
 
+        # Connect signals for auto-save
+        # API Keys
+        self.openai_api_key_edit.textChanged.connect(self.save_settings)
+        self.gemini_api_key_edit.textChanged.connect(self.save_settings)
+        self.groq_api_key_edit.textChanged.connect(self.save_settings)
+
+        # ASR Settings
+        self.asr_source.selectionChanged.connect(self.save_settings)
+        self.openai_asr_model.selectionChanged.connect(self.save_settings)
+        self.gemini_asr_model.selectionChanged.connect(self.save_settings)
+        self.groq_asr_model.selectionChanged.connect(self.save_settings)
+        self.faster_whisper_model.selectionChanged.connect(self.save_settings)
+        self.asr_device.selectionChanged.connect(self.save_settings)
+        self.asr_compute_type.selectionChanged.connect(self.save_settings)
+
+        # LLM Settings
+        self.llm_source.selectionChanged.connect(self.save_settings)
+        self.llm_model_edit.textChanged.connect(self.save_settings)
+        self.openai_model.selectionChanged.connect(self.save_settings)
+        self.groq_model.selectionChanged.connect(self.save_settings)
+        self.gemini_model.selectionChanged.connect(self.save_settings)
+        self.max_tokens.valueChanged.connect(self.save_settings)
+        self.temperature.valueChanged.connect(self.save_settings)
+
+        # Audio Settings
+        self.sample_rate.selectionChanged.connect(self.save_settings)
+        self.channels.selectionChanged.connect(self.save_settings)
+
+        # VAD Settings
+        self.vad_enabled.stateChanged.connect(self.save_settings)
+        self.vad_aggressiveness.selectionChanged.connect(self.save_settings)
+        self.silence_duration.selectionChanged.connect(self.save_settings)
+        self.frame_duration.selectionChanged.connect(self.save_settings)
+
+        # Output Settings
+        self.output_method.selectionChanged.connect(self.save_settings)
+
+        # Hotkey Settings
+        self.start_recording_hotkey.textChanged.connect(self.save_settings)
+
+        # Mode Settings
+        self.streaming_mode.stateChanged.connect(self.save_settings)
+        self.vosk_model_path_edit.textChanged.connect(self.save_settings)
+
+        # Load settings after UI is fully initialized
+        QTimer.singleShot(100, self.load_settings)  # Increased delay to ensure UI is ready
+        self.update_setting_visibility()
+
+        # Start application if settings are valid
+        current_settings = self.app_manager.load_settings()
+        if current_settings:  # Only validate if we have settings
+            is_valid, error_msg = self.app_manager.validate_settings(current_settings)
+            if is_valid:
+                self.app_manager.start_application()
+            else:
+                self.handle_error(error_msg)
+
     def select_menu(self, index):
         self.stacked_widget.setCurrentIndex(index)
         self.settings_button.setChecked(index == 0)
@@ -1444,6 +1470,7 @@ class HomeWindow(QMainWindow):
 
     def save_settings(self):
         """Save all settings to QSettings"""
+        print("[Saving Settings] Starting save process")
         try:
             llm_source_value = self.llm_source.currentText()
             print(f"LLM Source: {llm_source_value}")
@@ -1481,7 +1508,7 @@ class HomeWindow(QMainWindow):
             )  # Default for Groq client
             gemini_client_asr_model = (
                 self.gemini_asr_model.currentText()
-            )  # Default for Gemini client
+            )
 
             if asr_source_value == "openai_api":
                 current_asr_provider_model_value = (
@@ -1542,13 +1569,13 @@ class HomeWindow(QMainWindow):
                     "temperature": self.temperature.value(),
                 },
                 "Audio": {
-                    "sample_rate": self.sample_rate.value(),
-                    "channels": self.channels.value(),
+                    "sample_rate": int(self.sample_rate.currentText()),
+                    "channels": int(self.channels.currentText()),
                 },
                 "VAD": {
                     "enabled": self.vad_enabled.isChecked(),
-                    "aggressiveness": self.vad_aggressiveness.value(),
-                    "silence_duration_ms": self.silence_duration.value(),
+                    "aggressiveness": int(self.vad_aggressiveness.currentText()),
+                    "silence_duration_ms": int(self.silence_duration.currentText()),
                     "frame_duration_ms": int(self.frame_duration.currentText()),
                 },
                 "Output": {
@@ -1562,20 +1589,13 @@ class HomeWindow(QMainWindow):
 
             # Validate new settings
             is_valid, error_msg = self.app_manager.validate_settings(new_settings)
+            print(f"[Saving Settings] Is valid: {is_valid}, Error message: {error_msg}")
             if not is_valid:
                 self.handle_error(error_msg)
                 return
 
             # Save settings
             if self.app_manager.save_settings(new_settings):
-                # Find the save button and update its text
-                for widget in self.findChildren(QPushButton):
-                    if widget.text() == "Save Settings":
-                        widget.setText("Saved")
-                        # Create a timer to reset the text after 3 seconds
-                        QTimer.singleShot(3000, lambda: widget.setText("Save Settings"))
-                        break
-
                 # Start application if not running
                 if (
                     not self.app_manager.app_thread
@@ -1587,6 +1607,7 @@ class HomeWindow(QMainWindow):
                         )
                         return
         except Exception as e:
+            print(f"[Saving Settings] Error: {str(e)}")
             self.handle_error(f"Failed to save settings: {str(e)}")
 
     def load_settings(self):

@@ -287,6 +287,33 @@ class HomeWindow(QMainWindow):
             }
         ''')
 
+        # Add API Keys button
+        self.api_keys_button = QPushButton("API Keys")
+        self.api_keys_button.setObjectName("settings_button")
+        self.api_keys_button.setCheckable(True)
+        self.api_keys_button.setChecked(False)
+        self.api_keys_button.clicked.connect(lambda: self.select_menu(3))
+        menu_layout.addWidget(self.api_keys_button)
+        self.api_keys_button.setStyleSheet('''
+            QPushButton#settings_button {
+                background: transparent;
+                color: #FFFFFF;
+                font-size: 15px;
+                font-weight: 500;
+                border: none;
+                border-radius: 8px;
+                padding: 12px 0px;
+                margin: 8px 16px 8px 16px;
+            }
+            QPushButton#settings_button:checked {
+                background: rgba(242, 228, 214, 0.15) !important;
+                color: #FFFFFF;
+            }
+            QPushButton#settings_button:hover {
+                background: rgba(242, 228, 214, 0.1) !important;
+            }
+        ''')
+
         # Add stretch to push everything up
         menu_layout.addStretch()
 
@@ -330,68 +357,6 @@ class HomeWindow(QMainWindow):
         form_layout.setFormAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
-
-        # API Keys Section
-        self.add_section_header(form_layout, "API Key Settings")
-        self.openai_api_key_edit = QLineEdit()
-        self.openai_api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
-        self.openai_api_key_edit.setMaximumWidth(300)
-        self.openai_api_key_edit.setStyleSheet("""
-            QLineEdit {
-                background-color: rgba(255, 255, 255, 0.07);
-                padding: 8px 12px;
-                border-radius: 8px;
-            }
-        """)
-        openai_api_key_label = QLabel("OpenAI API Key")
-        openai_api_key_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        openai_api_key_container = QWidget()
-        openai_api_key_layout = QVBoxLayout(openai_api_key_container)
-        openai_api_key_layout.setContentsMargins(0, 0, 0, 0)
-        openai_api_key_layout.setSpacing(4)
-        openai_api_key_layout.addWidget(openai_api_key_label)
-        openai_api_key_layout.addWidget(self.openai_api_key_edit)
-        form_layout.addRow(openai_api_key_container)
-
-        self.gemini_api_key_edit = QLineEdit()
-        self.gemini_api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
-        self.gemini_api_key_edit.setMaximumWidth(300)
-        self.gemini_api_key_edit.setStyleSheet("""
-            QLineEdit {
-                background-color: rgba(255, 255, 255, 0.07);
-                padding: 8px 12px;
-                border-radius: 8px;
-            }
-        """)
-        gemini_api_key_label = QLabel("Gemini API Key")
-        gemini_api_key_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        gemini_api_key_container = QWidget()
-        gemini_api_key_layout = QVBoxLayout(gemini_api_key_container)
-        gemini_api_key_layout.setContentsMargins(0, 0, 0, 0)
-        gemini_api_key_layout.setSpacing(4)
-        gemini_api_key_layout.addWidget(gemini_api_key_label)
-        gemini_api_key_layout.addWidget(self.gemini_api_key_edit)
-        form_layout.addRow(gemini_api_key_container)
-
-        self.groq_api_key_edit = QLineEdit()
-        self.groq_api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
-        self.groq_api_key_edit.setMaximumWidth(300)
-        self.groq_api_key_edit.setStyleSheet("""
-            QLineEdit {
-                background-color: rgba(255, 255, 255, 0.07);
-                padding: 8px 12px;
-                border-radius: 8px;
-            }
-        """)
-        groq_api_key_label = QLabel("Groq API Key")
-        groq_api_key_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        groq_api_key_container = QWidget()
-        groq_api_key_layout = QVBoxLayout(groq_api_key_container)
-        groq_api_key_layout.setContentsMargins(0, 0, 0, 0)
-        groq_api_key_layout.setSpacing(4)
-        groq_api_key_layout.addWidget(groq_api_key_label)
-        groq_api_key_layout.addWidget(self.groq_api_key_edit)
-        form_layout.addRow(groq_api_key_container)
 
         # Mode Section
         self.add_section_header(form_layout, "Application Mode")
@@ -895,6 +860,84 @@ class HomeWindow(QMainWindow):
         language_model_layout.addStretch()
         self.stacked_widget.addWidget(self.language_model_page)
 
+        # --- API Keys PAGE ---
+        self.api_keys_page = QWidget()
+        api_keys_layout = QVBoxLayout(self.api_keys_page)
+        api_keys_layout.setContentsMargins(0, 0, 0, 0)
+        api_keys_title = QLabel("API Keys")
+        api_keys_title.setStyleSheet("""
+            font-size: 24px;
+            font-weight: 600;
+            color: #F2E4D6;
+            margin-bottom: 28px;
+            margin-left: 0px;
+        """)
+        api_keys_layout.addWidget(api_keys_title, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        # API Key fields (migrated from Settings page)
+        self.openai_api_key_edit = QLineEdit()
+        self.openai_api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        self.openai_api_key_edit.setMaximumWidth(300)
+        self.openai_api_key_edit.setStyleSheet("""
+            QLineEdit {
+                background-color: rgba(255, 255, 255, 0.07);
+                padding: 8px 12px;
+                border-radius: 8px;
+            }
+        """)
+        openai_api_key_label = QLabel("OpenAI API Key")
+        openai_api_key_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        openai_api_key_container = QWidget()
+        openai_api_key_layout = QVBoxLayout(openai_api_key_container)
+        openai_api_key_layout.setContentsMargins(0, 0, 0, 0)
+        openai_api_key_layout.setSpacing(4)
+        openai_api_key_layout.addWidget(openai_api_key_label)
+        openai_api_key_layout.addWidget(self.openai_api_key_edit)
+        api_keys_layout.addWidget(openai_api_key_container)
+
+        self.gemini_api_key_edit = QLineEdit()
+        self.gemini_api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        self.gemini_api_key_edit.setMaximumWidth(300)
+        self.gemini_api_key_edit.setStyleSheet("""
+            QLineEdit {
+                background-color: rgba(255, 255, 255, 0.07);
+                padding: 8px 12px;
+                border-radius: 8px;
+            }
+        """)
+        gemini_api_key_label = QLabel("Gemini API Key")
+        gemini_api_key_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        gemini_api_key_container = QWidget()
+        gemini_api_key_layout = QVBoxLayout(gemini_api_key_container)
+        gemini_api_key_layout.setContentsMargins(0, 0, 0, 0)
+        gemini_api_key_layout.setSpacing(4)
+        gemini_api_key_layout.addWidget(gemini_api_key_label)
+        gemini_api_key_layout.addWidget(self.gemini_api_key_edit)
+        api_keys_layout.addWidget(gemini_api_key_container)
+
+        self.groq_api_key_edit = QLineEdit()
+        self.groq_api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        self.groq_api_key_edit.setMaximumWidth(300)
+        self.groq_api_key_edit.setStyleSheet("""
+            QLineEdit {
+                background-color: rgba(255, 255, 255, 0.07);
+                padding: 8px 12px;
+                border-radius: 8px;
+            }
+        """)
+        groq_api_key_label = QLabel("Groq API Key")
+        groq_api_key_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        groq_api_key_container = QWidget()
+        groq_api_key_layout = QVBoxLayout(groq_api_key_container)
+        groq_api_key_layout.setContentsMargins(0, 0, 0, 0)
+        groq_api_key_layout.setSpacing(4)
+        groq_api_key_layout.addWidget(groq_api_key_label)
+        groq_api_key_layout.addWidget(self.groq_api_key_edit)
+        api_keys_layout.addWidget(groq_api_key_container)
+
+        api_keys_layout.addStretch()
+        self.stacked_widget.addWidget(self.api_keys_page)
+
         # --- Menu panel and divider container ---
         menu_container = QWidget()
         menu_container_layout = QVBoxLayout(menu_container)
@@ -1022,6 +1065,7 @@ class HomeWindow(QMainWindow):
         self.settings_button.setChecked(index == 0)
         self.speech_recognition_button.setChecked(index == 1)
         self.language_model_button.setChecked(index == 2)
+        self.api_keys_button.setChecked(index == 3)
 
     def handle_save_timing_report(self):
         """Handles the click of the 'Save Timing Report' button."""

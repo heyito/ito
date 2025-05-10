@@ -209,19 +209,42 @@ class HomeWindow(QMainWindow):
 
         # Menu buttons
         self.settings_button = QPushButton("Settings")
-        self.settings_button.setObjectName(
-            "settings_button"
-        )
+        self.settings_button.setObjectName("settings_button")
         self.settings_button.setCheckable(True)
         self.settings_button.setChecked(True)
-        self.settings_button.clicked.connect(lambda: self.show_page(0))
+        self.settings_button.clicked.connect(lambda: self.select_menu(0))
         menu_layout.addWidget(self.settings_button)
-        # Style the menu button for a soft, modern selection
         self.settings_button.setStyleSheet('''
             QPushButton#settings_button {
-                background: rgba(242, 228, 214, 0.08) !important;
+                background: transparent;
                 color: #FFFFFF;
-                font-size: 18px;
+                font-size: 15px;
+                font-weight: 500;
+                border: none;
+                border-radius: 8px;
+                padding: 12px 0px;
+                margin: 8px 16px 8px 16px;
+            }
+            QPushButton#settings_button:checked {
+                background: rgba(242, 228, 214, 0.15) !important;
+                color: #FFFFFF;
+            }
+            QPushButton#settings_button:hover {
+                background: rgba(242, 228, 214, 0.1) !important;
+            }
+        ''')
+
+        self.speech_recognition_button = QPushButton("Speech Recognition")
+        self.speech_recognition_button.setObjectName("settings_button")
+        self.speech_recognition_button.setCheckable(True)
+        self.speech_recognition_button.setChecked(False)
+        self.speech_recognition_button.clicked.connect(lambda: self.select_menu(1))
+        menu_layout.addWidget(self.speech_recognition_button)
+        self.speech_recognition_button.setStyleSheet('''
+            QPushButton#settings_button {
+                background: transparent;
+                color: #FFFFFF;
+                font-size: 15px;
                 font-weight: 500;
                 border: none;
                 border-radius: 8px;
@@ -280,114 +303,6 @@ class HomeWindow(QMainWindow):
         form_layout.setFormAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
-
-        # --- ASR Section ---
-        self.add_section_header(form_layout, "Speech Recognition Settings")
-        self.asr_source = SegmentedButtonGroup(["openai_api", "faster_whisper", "groq_api", "gemini_api"])
-        asr_source_label = QLabel("ASR Provider")
-        asr_source_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        asr_source_container = QWidget()
-        asr_source_layout = QVBoxLayout(asr_source_container)
-        asr_source_layout.setContentsMargins(0, 0, 0, 0)
-        asr_source_layout.setSpacing(4)
-        asr_source_layout.addWidget(asr_source_label)
-        asr_source_layout.addWidget(self.asr_source)
-        form_layout.addRow(asr_source_container)
-
-        self.asr_model_label = QLabel("ASR Model")
-        # Create all ASR model containers and their layouts FIRST
-        self.openai_asr_model = SegmentedButtonGroup(["whisper-1"])
-        openai_asr_model_label = QLabel("OpenAI Model")
-        openai_asr_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        self.openai_asr_model_container = QWidget()
-        openai_asr_model_layout = QVBoxLayout(self.openai_asr_model_container)
-        openai_asr_model_layout.setContentsMargins(0, 0, 0, 0)
-        openai_asr_model_layout.setSpacing(4)
-        openai_asr_model_layout.addWidget(openai_asr_model_label)
-        openai_asr_model_layout.addWidget(self.openai_asr_model)
-
-        self.gemini_asr_model = SegmentedButtonGroup(["gemini-2.0-flash"])
-        gemini_asr_model_label = QLabel("Gemini Model")
-        gemini_asr_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        self.gemini_asr_model_container = QWidget()
-        gemini_asr_model_layout = QVBoxLayout(self.gemini_asr_model_container)
-        gemini_asr_model_layout.setContentsMargins(0, 0, 0, 0)
-        gemini_asr_model_layout.setSpacing(4)
-        gemini_asr_model_layout.addWidget(gemini_asr_model_label)
-        gemini_asr_model_layout.addWidget(self.gemini_asr_model)
-
-        self.faster_whisper_model = SegmentedButtonGroup([
-            "tiny",
-            "tiny.en",
-            "base",
-            "base.en",
-            "small",
-            "small.en",
-            "medium",
-            "medium.en",
-            "large-v1",
-            "large-v2",
-            "large-v3",
-        ])
-        faster_whisper_model_label = QLabel("Local Whisper Model")
-        faster_whisper_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        self.faster_whisper_model_container = QWidget()
-        faster_whisper_model_layout = QVBoxLayout(self.faster_whisper_model_container)
-        faster_whisper_model_layout.setContentsMargins(0, 0, 0, 0)
-        faster_whisper_model_layout.setSpacing(4)
-        faster_whisper_model_layout.addWidget(faster_whisper_model_label)
-        faster_whisper_model_layout.addWidget(self.faster_whisper_model)
-
-        self.groq_asr_model = SegmentedButtonGroup([
-            "distil-whisper-large-v3-en",
-            "whisper-large-v3-turbo",
-            "whisper-large-v3"
-        ])
-        groq_asr_model_label = QLabel("Groq Model")
-        groq_asr_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        self.groq_asr_model_container = QWidget()
-        groq_asr_model_layout = QVBoxLayout(self.groq_asr_model_container)
-        groq_asr_model_layout.setContentsMargins(0, 0, 0, 0)
-        groq_asr_model_layout.setSpacing(4)
-        groq_asr_model_layout.addWidget(groq_asr_model_label)
-        groq_asr_model_layout.addWidget(self.groq_asr_model)
-
-        # Now add them to the form layout
-        form_layout.addRow(self.openai_asr_model_container)
-        form_layout.addRow(self.gemini_asr_model_container)
-        form_layout.addRow(self.faster_whisper_model_container)
-        form_layout.addRow(self.groq_asr_model_container)
-        # Hide all but the default
-        self.openai_asr_model_container.show()
-        self.faster_whisper_model_container.hide()
-        self.groq_asr_model_container.hide()
-        self.gemini_asr_model_container.hide()
-
-        self.asr_device = SegmentedButtonGroup(["auto", "cpu", "cuda"])
-        self.asr_device_label = QLabel("Device")
-        self.asr_device_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        asr_device_container = QWidget()
-        asr_device_layout = QVBoxLayout(asr_device_container)
-        asr_device_layout.setContentsMargins(0, 0, 0, 0)
-        asr_device_layout.setSpacing(4)
-        asr_device_layout.addWidget(self.asr_device_label)
-        asr_device_layout.addWidget(self.asr_device)
-        form_layout.addRow(asr_device_container)
-
-        self.asr_compute_type = SegmentedButtonGroup(["default", "int8", "int8_float16", "float16"])
-        self.asr_compute_type_label = QLabel("Compute Type")
-        self.asr_compute_type_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        asr_compute_type_container = QWidget()
-        asr_compute_type_layout = QVBoxLayout(asr_compute_type_container)
-        asr_compute_type_layout.setContentsMargins(0, 0, 0, 0)
-        asr_compute_type_layout.setSpacing(4)
-        asr_compute_type_layout.addWidget(self.asr_compute_type_label)
-        asr_compute_type_layout.addWidget(self.asr_compute_type)
-        form_layout.addRow(asr_compute_type_container)
-
-        # Connect LLM source change to update model field and API key fields
-        self.asr_source.selectionChanged.connect(self._update_api_key_fields)
-        self.asr_source.selectionChanged.connect(self._update_asr_provider_fields)
 
         # LLM Section
         self.add_section_header(form_layout, "Language Model Settings")
@@ -769,6 +684,133 @@ class HomeWindow(QMainWindow):
         # Add settings page to stacked widget
         self.stacked_widget.addWidget(self.settings_page)
 
+        # --- Speech Recognition Settings page (no scroll area) ---
+        self.speech_recognition_page = QWidget()
+        speech_recognition_layout = QVBoxLayout(self.speech_recognition_page)
+        speech_recognition_layout.setContentsMargins(0, 0, 0, 0)
+
+        speech_recognition_title = QLabel("Speech Recognition")
+        speech_recognition_title.setStyleSheet("""
+            font-size: 24px;
+            font-weight: 600;
+            color: #F2E4D6;
+            margin-bottom: 28px;
+            margin-left: 0px;
+        """)
+        speech_recognition_layout.addWidget(speech_recognition_title, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        # ASR form layout directly in the page (no scroll area)
+        asr_form_content = QWidget()
+        asr_form_layout = QFormLayout(asr_form_content)
+        asr_form_layout.setSpacing(12)
+        asr_form_layout.setContentsMargins(0, 0, 0, 0)
+        asr_form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
+        asr_form_layout.setFormAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+
+        self.asr_source = SegmentedButtonGroup(["openai_api", "faster_whisper", "groq_api", "gemini_api"])
+        asr_source_label = QLabel("ASR Provider")
+        asr_source_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        asr_source_container = QWidget()
+        asr_source_layout = QVBoxLayout(asr_source_container)
+        asr_source_layout.setContentsMargins(0, 0, 0, 0)
+        asr_source_layout.setSpacing(4)
+        asr_source_layout.addWidget(asr_source_label)
+        asr_source_layout.addWidget(self.asr_source)
+        asr_form_layout.addRow(asr_source_container)
+
+        self.asr_model_label = QLabel("ASR Model")
+        self.openai_asr_model = SegmentedButtonGroup(["whisper-1"])
+        openai_asr_model_label = QLabel("OpenAI Model")
+        openai_asr_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.openai_asr_model_container = QWidget()
+        openai_asr_model_layout = QVBoxLayout(self.openai_asr_model_container)
+        openai_asr_model_layout.setContentsMargins(0, 0, 0, 0)
+        openai_asr_model_layout.setSpacing(4)
+        openai_asr_model_layout.addWidget(openai_asr_model_label)
+        openai_asr_model_layout.addWidget(self.openai_asr_model)
+
+        self.gemini_asr_model = SegmentedButtonGroup(["gemini-2.0-flash"])
+        gemini_asr_model_label = QLabel("Gemini Model")
+        gemini_asr_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.gemini_asr_model_container = QWidget()
+        gemini_asr_model_layout = QVBoxLayout(self.gemini_asr_model_container)
+        gemini_asr_model_layout.setContentsMargins(0, 0, 0, 0)
+        gemini_asr_model_layout.setSpacing(4)
+        gemini_asr_model_layout.addWidget(gemini_asr_model_label)
+        gemini_asr_model_layout.addWidget(self.gemini_asr_model)
+
+        self.faster_whisper_model = SegmentedButtonGroup([
+            "tiny",
+            "base",
+            "small",
+            "medium",
+            "large-v1",
+            "large-v2",
+            "large-v3",
+        ])
+        faster_whisper_model_label = QLabel("Local Whisper Model")
+        faster_whisper_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.faster_whisper_model_container = QWidget()
+        faster_whisper_model_layout = QVBoxLayout(self.faster_whisper_model_container)
+        faster_whisper_model_layout.setContentsMargins(0, 0, 0, 0)
+        faster_whisper_model_layout.setSpacing(4)
+        faster_whisper_model_layout.addWidget(faster_whisper_model_label)
+        faster_whisper_model_layout.addWidget(self.faster_whisper_model)
+
+        self.groq_asr_model = SegmentedButtonGroup([
+            "distil-whisper-large-v3-en",
+            "whisper-large-v3-turbo",
+            "whisper-large-v3"
+        ])
+        groq_asr_model_label = QLabel("Groq Model")
+        groq_asr_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.groq_asr_model_container = QWidget()
+        groq_asr_model_layout = QVBoxLayout(self.groq_asr_model_container)
+        groq_asr_model_layout.setContentsMargins(0, 0, 0, 0)
+        groq_asr_model_layout.setSpacing(4)
+        groq_asr_model_layout.addWidget(groq_asr_model_label)
+        groq_asr_model_layout.addWidget(self.groq_asr_model)
+
+        asr_form_layout.addRow(self.openai_asr_model_container)
+        asr_form_layout.addRow(self.gemini_asr_model_container)
+        asr_form_layout.addRow(self.faster_whisper_model_container)
+        asr_form_layout.addRow(self.groq_asr_model_container)
+        self.openai_asr_model_container.show()
+        self.faster_whisper_model_container.hide()
+        self.groq_asr_model_container.hide()
+        self.gemini_asr_model_container.hide()
+
+        self.asr_device = SegmentedButtonGroup(["auto"])
+        self.asr_device_label = QLabel("Device")
+        self.asr_device_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        asr_device_container = QWidget()
+        asr_device_layout = QVBoxLayout(asr_device_container)
+        asr_device_layout.setContentsMargins(0, 0, 0, 0)
+        asr_device_layout.setSpacing(4)
+        asr_device_layout.addWidget(self.asr_device_label)
+        asr_device_layout.addWidget(self.asr_device)
+        asr_form_layout.addRow(asr_device_container)
+
+        self.asr_compute_type = SegmentedButtonGroup(["default", "int8", "int8_float16", "float16"])
+        self.asr_compute_type_label = QLabel("Compute Type")
+        self.asr_compute_type_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        asr_compute_type_container = QWidget()
+        asr_compute_type_layout = QVBoxLayout(asr_compute_type_container)
+        asr_compute_type_layout.setContentsMargins(0, 0, 0, 0)
+        asr_compute_type_layout.setSpacing(4)
+        asr_compute_type_layout.addWidget(self.asr_compute_type_label)
+        asr_compute_type_layout.addWidget(self.asr_compute_type)
+        asr_form_layout.addRow(asr_compute_type_container)
+
+        self.asr_source.selectionChanged.connect(self._update_api_key_fields)
+        self.asr_source.selectionChanged.connect(self._update_asr_provider_fields)
+
+        speech_recognition_layout.addWidget(asr_form_content)
+        speech_recognition_layout.addStretch()
+
+        # Add speech recognition page to stacked widget
+        self.stacked_widget.addWidget(self.speech_recognition_page)
+
         # --- Menu panel and divider container ---
         menu_container = QWidget()
         menu_container_layout = QVBoxLayout(menu_container)
@@ -891,8 +933,14 @@ class HomeWindow(QMainWindow):
             }
         """)
 
-    def show_page(self, index):
+    def select_menu(self, index):
         self.stacked_widget.setCurrentIndex(index)
+        if index == 0:
+            self.settings_button.setChecked(True)
+            self.speech_recognition_button.setChecked(False)
+        elif index == 1:
+            self.settings_button.setChecked(False)
+            self.speech_recognition_button.setChecked(True)
 
     def handle_save_timing_report(self):
         """Handles the click of the 'Save Timing Report' button."""
@@ -1481,3 +1529,4 @@ class HomeWindow(QMainWindow):
             self.openai_asr_model.blockSignals(False)
             self.faster_whisper_model.blockSignals(False)
             self.groq_asr_model.blockSignals(False)
+

@@ -368,6 +368,33 @@ class HomeWindow(QMainWindow):
             }
         ''')
 
+        # Add Voice Detection button
+        self.voice_detection_button = QPushButton("Voice Detection")
+        self.voice_detection_button.setObjectName("settings_button")
+        self.voice_detection_button.setCheckable(True)
+        self.voice_detection_button.setChecked(False)
+        self.voice_detection_button.clicked.connect(lambda: self.select_menu(6))
+        menu_layout.addWidget(self.voice_detection_button)
+        self.voice_detection_button.setStyleSheet('''
+            QPushButton#settings_button {
+                background: transparent;
+                color: #FFFFFF;
+                font-size: 15px;
+                font-weight: 500;
+                border: none;
+                border-radius: 8px;
+                padding: 12px 0px;
+                margin: 8px 16px 8px 16px;
+            }
+            QPushButton#settings_button:checked {
+                background: rgba(242, 228, 214, 0.15) !important;
+                color: #FFFFFF;
+            }
+            QPushButton#settings_button:hover {
+                background: rgba(242, 228, 214, 0.1) !important;
+            }
+        ''')
+
         # Add stretch to push everything up
         menu_layout.addStretch()
 
@@ -411,42 +438,6 @@ class HomeWindow(QMainWindow):
         form_layout.setFormAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
-
-        # VAD Section
-        self.add_section_header(form_layout, "Voice Activity Detection")
-        self.vad_enabled = QCheckBox()
-        self.vad_aggressiveness = SegmentedButtonGroup(["0", "1", "2", "3"])
-        vad_aggressiveness_label = QLabel("Aggressiveness")
-        vad_aggressiveness_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        vad_aggressiveness_container = QWidget()
-        vad_aggressiveness_layout = QVBoxLayout(vad_aggressiveness_container)
-        vad_aggressiveness_layout.setContentsMargins(0, 0, 0, 0)
-        vad_aggressiveness_layout.setSpacing(4)
-        vad_aggressiveness_layout.addWidget(vad_aggressiveness_label)
-        vad_aggressiveness_layout.addWidget(self.vad_aggressiveness)
-        form_layout.addRow(vad_aggressiveness_container)
-
-        self.silence_duration = SegmentedButtonGroup(["100", "500", "1000", "2000", "5000"])
-        silence_duration_label = QLabel("Silence Duration (ms)")
-        silence_duration_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        silence_duration_container = QWidget()
-        silence_duration_layout = QVBoxLayout(silence_duration_container)
-        silence_duration_layout.setContentsMargins(0, 0, 0, 0)
-        silence_duration_layout.setSpacing(4)
-        silence_duration_layout.addWidget(silence_duration_label)
-        silence_duration_layout.addWidget(self.silence_duration)
-        form_layout.addRow(silence_duration_container)
-
-        self.frame_duration = SegmentedButtonGroup(["10", "20", "30"])
-        frame_duration_label = QLabel("Frame Duration (ms)")
-        frame_duration_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        frame_duration_container = QWidget()
-        frame_duration_layout = QVBoxLayout(frame_duration_container)
-        frame_duration_layout.setContentsMargins(0, 0, 0, 0)
-        frame_duration_layout.setSpacing(4)
-        frame_duration_layout.addWidget(frame_duration_label)
-        frame_duration_layout.addWidget(self.frame_duration)
-        form_layout.addRow(frame_duration_container)
 
         # Output Section
         self.add_section_header(form_layout, "Output Settings")
@@ -1153,6 +1144,68 @@ class HomeWindow(QMainWindow):
             }
         """)
 
+        # --- Voice Detection PAGE ---
+        self.voice_detection_page = QWidget()
+        voice_detection_layout = QVBoxLayout(self.voice_detection_page)
+        voice_detection_layout.setContentsMargins(0, 0, 0, 0)
+        voice_detection_title = QLabel("Voice Detection")
+        voice_detection_title.setStyleSheet("""
+            font-size: 24px;
+            font-weight: 600;
+            color: #F2E4D6;
+            margin-bottom: 28px;
+            margin-left: 0px;
+        """)
+        voice_detection_layout.addWidget(voice_detection_title, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        # VAD Section (migrated from Settings page)
+        self.vad_enabled = QCheckBox()
+        vad_enabled_label = QLabel("Enable Voice Activity Detection")
+        vad_enabled_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        vad_enabled_container = QWidget()
+        vad_enabled_layout = QVBoxLayout(vad_enabled_container)
+        vad_enabled_layout.setContentsMargins(0, 0, 0, 0)
+        vad_enabled_layout.setSpacing(4)
+        vad_enabled_layout.addWidget(vad_enabled_label)
+        vad_enabled_layout.addWidget(self.vad_enabled)
+        voice_detection_layout.addWidget(vad_enabled_container)
+
+        self.vad_aggressiveness = SegmentedButtonGroup(["0", "1", "2", "3"])
+        vad_aggressiveness_label = QLabel("Aggressiveness")
+        vad_aggressiveness_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        vad_aggressiveness_container = QWidget()
+        vad_aggressiveness_layout = QVBoxLayout(vad_aggressiveness_container)
+        vad_aggressiveness_layout.setContentsMargins(0, 0, 0, 0)
+        vad_aggressiveness_layout.setSpacing(4)
+        vad_aggressiveness_layout.addWidget(vad_aggressiveness_label)
+        vad_aggressiveness_layout.addWidget(self.vad_aggressiveness)
+        voice_detection_layout.addWidget(vad_aggressiveness_container)
+
+        self.silence_duration = SegmentedButtonGroup(["100", "500", "1000", "2000", "5000"])
+        silence_duration_label = QLabel("Silence Duration (ms)")
+        silence_duration_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        silence_duration_container = QWidget()
+        silence_duration_layout = QVBoxLayout(silence_duration_container)
+        silence_duration_layout.setContentsMargins(0, 0, 0, 0)
+        silence_duration_layout.setSpacing(4)
+        silence_duration_layout.addWidget(silence_duration_label)
+        silence_duration_layout.addWidget(self.silence_duration)
+        voice_detection_layout.addWidget(silence_duration_container)
+
+        self.frame_duration = SegmentedButtonGroup(["10", "20", "30"])
+        frame_duration_label = QLabel("Frame Duration (ms)")
+        frame_duration_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        frame_duration_container = QWidget()
+        frame_duration_layout = QVBoxLayout(frame_duration_container)
+        frame_duration_layout.setContentsMargins(0, 0, 0, 0)
+        frame_duration_layout.setSpacing(4)
+        frame_duration_layout.addWidget(frame_duration_label)
+        frame_duration_layout.addWidget(self.frame_duration)
+        voice_detection_layout.addWidget(frame_duration_container)
+
+        voice_detection_layout.addStretch()
+        self.stacked_widget.addWidget(self.voice_detection_page)
+
     def select_menu(self, index):
         self.stacked_widget.setCurrentIndex(index)
         self.settings_button.setChecked(index == 0)
@@ -1161,6 +1214,7 @@ class HomeWindow(QMainWindow):
         self.api_keys_button.setChecked(index == 3)
         self.streaming_button.setChecked(index == 4)
         self.audio_button.setChecked(index == 5)
+        self.voice_detection_button.setChecked(index == 6)
 
     def handle_save_timing_report(self):
         """Handles the click of the 'Save Timing Report' button."""

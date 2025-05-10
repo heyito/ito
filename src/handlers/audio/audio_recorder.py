@@ -76,18 +76,7 @@ class AudioRecorder:
         """Waits for stop signal, collects audio, prepares buffer, and calls callback."""
         timestamp = time.strftime('%H:%M:%S')
         print(f"[{timestamp}] AudioRecorder Monitor: Waiting for stop signal...")
-        
-        # Add timeout for no voice activity
-        start_time = time.monotonic()
-        while not self._stop_event.is_set():
-            if time.monotonic() - start_time >= 2.0:  # 2 second timeout
-                print(f"[{timestamp}] AudioRecorder Monitor: No voice activity detected within 2 seconds.")
-                with self._lock:
-                    self._is_recording = False  # Update state under lock
-                self._update_status(StatusMessage.READY.value)
-                return  # Exit without triggering callback
-            time.sleep(0.1)  # Check every 100ms
-            
+        self._stop_event.wait() # Wait for VAD or manual stop
         print(f"[{timestamp}] AudioRecorder Monitor: Stop signal received.")
 
         callback_to_call = None

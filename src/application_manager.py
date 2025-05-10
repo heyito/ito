@@ -114,7 +114,6 @@ class ApplicationManager(QObject):
         }
 
         # --- Vosk settings --- 
-        # Calculate default path inside the method
         default_vosk_model_dir = "src/models/vosk-model-en-us-0.22-lgraph" # Adjust if needed
         current_file_path = pathlib.Path(__file__).resolve()
         project_root = current_file_path.parent.parent
@@ -133,8 +132,9 @@ class ApplicationManager(QObject):
         }
 
         # Hotkey settings
+        hotkey_value = self.settings.value("Hotkeys/start_recording_hotkey", "fn")
         config['Hotkeys'] = {
-            'start_recording_hotkey': self.settings.value("Hotkeys/start_recording_hotkey", "fn")
+            'start_recording_hotkey': hotkey_value
         }
 
         # Mode settings

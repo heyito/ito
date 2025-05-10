@@ -6,6 +6,7 @@ from PyQt6.QtGui import QPainter, QPainterPath, QRegion, QFontMetrics
 from src.types.status_messages import StatusMessage
 from src.ui.components.inten_layout import MacBlur
 import queue
+import time
 
 if sys.platform == 'darwin':
     try:
@@ -82,6 +83,7 @@ class StatusWindow(QWidget):
         self._animation = None
         self._opacity_animation = None
         self.radius = 3
+        self._status_start_time = time.time()  # Track when current status started
 
         # Status queue and timer for delayed updates
         self._status_queue = queue.Queue()
@@ -135,13 +137,21 @@ class StatusWindow(QWidget):
                 if isinstance(status, StatusMessage):
                     status = status.value
                 
+                print(f"Current status: {self._current_state}, Status start time: {self._status_start_time}")
                 # If current state is READY update immediately
                 if self._current_state == StatusMessage.READY.value:
                     self._apply_status_update(status)
                 else:
-                    # For non-READY transitions, use a delayed update
-                    self._pending_status = status
-                    QTimer.singleShot(self.STATUS_DELAY, self._apply_pending_status)
+                    # Check if current status has been showing long enough
+                    current_status_duration = (time.time() - self._status_start_time) * 1000  # Convert to ms
+                    if current_status_duration >= self.STATUS_DELAY:
+                        # If status has been showing long enough, update immediately
+                        self._apply_status_update(status)
+                    else:
+                        # For non-READY transitions, use a delayed update
+                        self._pending_status = status
+                        remaining_delay = max(0, self.STATUS_DELAY - current_status_duration)
+                        QTimer.singleShot(int(remaining_delay), self._apply_pending_status)
         except queue.Empty:
             pass
         except Exception as e:
@@ -166,6 +176,7 @@ class StatusWindow(QWidget):
             else:
                 self.show_pill(status)
         self._current_state = status
+        self._status_start_time = time.time()  # Update the start time for the new status
 
     def update_status(self, status: str | StatusMessage, is_error: bool = False):
         """Queue a status update for processing."""

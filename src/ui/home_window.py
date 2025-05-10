@@ -612,7 +612,7 @@ class HomeWindow(QMainWindow):
         main_layout.addWidget(content_widget)
 
         # Load settings after UI is fully initialized
-        QTimer.singleShot(0, self.load_settings)
+        QTimer.singleShot(100, self.load_settings)  # Increased delay to ensure UI is ready
         self.update_setting_visibility()
         
         # Start application if settings are valid
@@ -837,7 +837,6 @@ class HomeWindow(QMainWindow):
             # Validate new settings
             is_valid, error_msg = self.app_manager.validate_settings(new_settings)
             if not is_valid:
-                print(f"Error in save_settings: {error_msg}")
                 self.handle_error(error_msg)
                 return
                 
@@ -856,10 +855,11 @@ class HomeWindow(QMainWindow):
                     if not self.app_manager.start_application():
                         self.handle_error("Failed to start application after saving settings")
                         return
+            else:
+                self.handle_error("Failed to save settings")
                 
         except Exception as e:
             self.handle_error(f"Failed to save settings: {str(e)}")
-            print(f"Error details: {traceback.format_exc()}")
 
     def load_settings(self):
         """Load settings from QSettings"""
@@ -887,20 +887,19 @@ class HomeWindow(QMainWindow):
             self.temperature.setValue(config['LLM']['temperature'])
             
             # Load Audio settings
-            self.sample_rate.setValue(config['Audio']['sample_rate'])
-            self.channels.setValue(config['Audio']['channels'])
+            self.sample_rate.setCurrentText(str(config['Audio']['sample_rate']))
+            self.channels.setCurrentText(str(config['Audio']['channels']))
             
             # Load VAD settings
             self.vad_enabled.setChecked(config['VAD']['enabled'])
-            self.vad_aggressiveness.setValue(config['VAD']['aggressiveness'])
-            self.silence_duration.setValue(config['VAD']['silence_duration_ms'])
+            self.vad_aggressiveness.setCurrentText(str(config['VAD']['aggressiveness']))
+            self.silence_duration.setCurrentText(str(config['VAD']['silence_duration_ms']))
             self.frame_duration.setCurrentText(str(config['VAD']['frame_duration_ms']))
             
             # Load Output settings
             self.output_method.setCurrentText(config['Output']['method'])
             
             # Load Hotkey settings
-            print(f"Hotkeys: {config['Hotkeys']}")
             self.start_recording_hotkey.setText(config['Hotkeys']['start_recording_hotkey'])
 
             # Load Mode settings
@@ -913,6 +912,8 @@ class HomeWindow(QMainWindow):
             self.vosk_model_path_edit.setText(vosk_path_from_config if vosk_path_from_config else "") # Set text, handle potential None just in case
             
         except Exception as e:
+            print(f"Error in load_settings: {str(e)}")
+            print(f"Error details: {traceback.format_exc()}")
             self.handle_error(f"Failed to load settings: {str(e)}")
 
     def closeEvent(self, event):

@@ -395,6 +395,33 @@ class HomeWindow(QMainWindow):
             }
         ''')
 
+        # Add Keyboard button
+        self.keyboard_button = QPushButton("Keyboard")
+        self.keyboard_button.setObjectName("settings_button")
+        self.keyboard_button.setCheckable(True)
+        self.keyboard_button.setChecked(False)
+        self.keyboard_button.clicked.connect(lambda: self.select_menu(7))
+        menu_layout.addWidget(self.keyboard_button)
+        self.keyboard_button.setStyleSheet('''
+            QPushButton#settings_button {
+                background: transparent;
+                color: #FFFFFF;
+                font-size: 15px;
+                font-weight: 500;
+                border: none;
+                border-radius: 8px;
+                padding: 12px 0px;
+                margin: 8px 16px 8px 16px;
+            }
+            QPushButton#settings_button:checked {
+                background: rgba(242, 228, 214, 0.15) !important;
+                color: #FFFFFF;
+            }
+            QPushButton#settings_button:hover {
+                background: rgba(242, 228, 214, 0.1) !important;
+            }
+        ''')
+
         # Add stretch to push everything up
         menu_layout.addStretch()
 
@@ -438,40 +465,6 @@ class HomeWindow(QMainWindow):
         form_layout.setFormAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
-
-        # Output Section
-        self.add_section_header(form_layout, "Output Settings")
-        self.output_method = SegmentedButtonGroup(["typewrite", "clipboard"])
-        output_method_label = QLabel("Output Method")
-        output_method_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        output_method_container = QWidget()
-        output_method_layout = QVBoxLayout(output_method_container)
-        output_method_layout.setContentsMargins(0, 0, 0, 0)
-        output_method_layout.setSpacing(4)
-        output_method_layout.addWidget(output_method_label)
-        output_method_layout.addWidget(self.output_method)
-        form_layout.addRow(output_method_container)
-
-        # Hotkeys Section
-        self.add_section_header(form_layout, "Hotkey Settings")
-        self.start_recording_hotkey = QLineEdit()
-        self.start_recording_hotkey.setMaximumWidth(300)
-        self.start_recording_hotkey.setStyleSheet("""
-            QLineEdit {
-                background-color: rgba(255, 255, 255, 0.07);
-                padding: 8px 12px;
-                border-radius: 8px;
-            }
-        """)
-        start_recording_hotkey_label = QLabel("Start Recording")
-        start_recording_hotkey_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        start_recording_hotkey_container = QWidget()
-        start_recording_hotkey_layout = QVBoxLayout(start_recording_hotkey_container)
-        start_recording_hotkey_layout.setContentsMargins(0, 0, 0, 0)
-        start_recording_hotkey_layout.setSpacing(4)
-        start_recording_hotkey_layout.addWidget(start_recording_hotkey_label)
-        start_recording_hotkey_layout.addWidget(self.start_recording_hotkey)
-        form_layout.addRow(start_recording_hotkey_container)
 
         # Set the scroll area widget
         scroll_area.setWidget(scroll_content)
@@ -996,7 +989,7 @@ class HomeWindow(QMainWindow):
         """)
         audio_layout.addWidget(audio_title, alignment=Qt.AlignmentFlag.AlignLeft)
 
-        # Audio Section (migrated from Settings page)
+        # Audio Section
         self.sample_rate = SegmentedButtonGroup(["8000", "16000", "22050", "44100", "48000"])
         sample_rate_label = QLabel("Sample Rate")
         sample_rate_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
@@ -1206,6 +1199,69 @@ class HomeWindow(QMainWindow):
         voice_detection_layout.addStretch()
         self.stacked_widget.addWidget(self.voice_detection_page)
 
+        # --- Keyboard PAGE ---
+        self.keyboard_page = QWidget()
+        keyboard_layout = QVBoxLayout(self.keyboard_page)
+        keyboard_layout.setContentsMargins(0, 0, 0, 0)
+        keyboard_title = QLabel("Keyboard")
+        keyboard_title.setStyleSheet("""
+            font-size: 24px;
+            font-weight: 600;
+            color: #F2E4D6;
+            margin-bottom: 28px;
+            margin-left: 0px;
+        """)
+        keyboard_layout.addWidget(keyboard_title, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        # Create form layout directly in the keyboard page
+        keyboard_form_layout = QFormLayout()
+        keyboard_form_layout.setSpacing(16)
+        keyboard_form_layout.setContentsMargins(0, 0, 0, 0)
+        keyboard_form_layout.setLabelAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
+        keyboard_form_layout.setFormAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+
+        # Output Section
+        self.add_section_header(keyboard_form_layout, "Output Settings")
+        self.output_method = SegmentedButtonGroup(["typewrite"])
+        output_method_label = QLabel("Output Method")
+        output_method_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        output_method_container = QWidget()
+        output_method_layout = QVBoxLayout(output_method_container)
+        output_method_layout.setContentsMargins(0, 0, 0, 0)
+        output_method_layout.setSpacing(4)
+        output_method_layout.addWidget(output_method_label)
+        output_method_layout.addWidget(self.output_method)
+        keyboard_form_layout.addRow(output_method_container)
+
+        # Hotkeys Section
+        self.add_section_header(keyboard_form_layout, "Hotkey Settings")
+        self.start_recording_hotkey = QLineEdit()
+        self.start_recording_hotkey.setMaximumWidth(300)
+        self.start_recording_hotkey.setStyleSheet("""
+            QLineEdit {
+                background-color: rgba(255, 255, 255, 0.07);
+                padding: 8px 12px;
+                border-radius: 8px;
+            }
+        """)
+        start_recording_hotkey_label = QLabel("Start Recording")
+        start_recording_hotkey_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        start_recording_hotkey_container = QWidget()
+        start_recording_hotkey_layout = QVBoxLayout(start_recording_hotkey_container)
+        start_recording_hotkey_layout.setContentsMargins(0, 0, 0, 0)
+        start_recording_hotkey_layout.setSpacing(4)
+        start_recording_hotkey_layout.addWidget(start_recording_hotkey_label)
+        start_recording_hotkey_layout.addWidget(self.start_recording_hotkey)
+        keyboard_form_layout.addRow(start_recording_hotkey_container)
+
+        keyboard_layout.addLayout(keyboard_form_layout)
+        keyboard_layout.addStretch()
+        self.stacked_widget.addWidget(self.keyboard_page)
+
     def select_menu(self, index):
         self.stacked_widget.setCurrentIndex(index)
         self.settings_button.setChecked(index == 0)
@@ -1215,6 +1271,7 @@ class HomeWindow(QMainWindow):
         self.streaming_button.setChecked(index == 4)
         self.audio_button.setChecked(index == 5)
         self.voice_detection_button.setChecked(index == 6)
+        self.keyboard_button.setChecked(index == 7)
 
     def handle_save_timing_report(self):
         """Handles the click of the 'Save Timing Report' button."""

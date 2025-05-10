@@ -208,37 +208,11 @@ class HomeWindow(QMainWindow):
         menu_layout.addWidget(logo_container)
 
         # Menu buttons
-        self.settings_button = QPushButton("Settings")
-        self.settings_button.setObjectName("settings_button")
-        self.settings_button.setCheckable(True)
-        self.settings_button.setChecked(True)
-        self.settings_button.clicked.connect(lambda: self.select_menu(0))
-        menu_layout.addWidget(self.settings_button)
-        self.settings_button.setStyleSheet('''
-            QPushButton#settings_button {
-                background: transparent;
-                color: #FFFFFF;
-                font-size: 15px;
-                font-weight: 500;
-                border: none;
-                border-radius: 8px;
-                padding: 12px 0px;
-                margin: 8px 16px 8px 16px;
-            }
-            QPushButton#settings_button:checked {
-                background: rgba(242, 228, 214, 0.15) !important;
-                color: #FFFFFF;
-            }
-            QPushButton#settings_button:hover {
-                background: rgba(242, 228, 214, 0.1) !important;
-            }
-        ''')
-
         self.speech_recognition_button = QPushButton("Speech Recognition")
         self.speech_recognition_button.setObjectName("settings_button")
         self.speech_recognition_button.setCheckable(True)
-        self.speech_recognition_button.setChecked(False)
-        self.speech_recognition_button.clicked.connect(lambda: self.select_menu(1))
+        self.speech_recognition_button.setChecked(True)
+        self.speech_recognition_button.clicked.connect(lambda: self.select_menu(0))
         menu_layout.addWidget(self.speech_recognition_button)
         self.speech_recognition_button.setStyleSheet('''
             QPushButton#settings_button {
@@ -265,7 +239,7 @@ class HomeWindow(QMainWindow):
         self.language_model_button.setObjectName("settings_button")
         self.language_model_button.setCheckable(True)
         self.language_model_button.setChecked(False)
-        self.language_model_button.clicked.connect(lambda: self.select_menu(2))
+        self.language_model_button.clicked.connect(lambda: self.select_menu(1))
         menu_layout.addWidget(self.language_model_button)
         self.language_model_button.setStyleSheet('''
             QPushButton#settings_button {
@@ -292,7 +266,7 @@ class HomeWindow(QMainWindow):
         self.api_keys_button.setObjectName("settings_button")
         self.api_keys_button.setCheckable(True)
         self.api_keys_button.setChecked(False)
-        self.api_keys_button.clicked.connect(lambda: self.select_menu(3))
+        self.api_keys_button.clicked.connect(lambda: self.select_menu(2))
         menu_layout.addWidget(self.api_keys_button)
         self.api_keys_button.setStyleSheet('''
             QPushButton#settings_button {
@@ -319,7 +293,7 @@ class HomeWindow(QMainWindow):
         self.streaming_button.setObjectName("settings_button")
         self.streaming_button.setCheckable(True)
         self.streaming_button.setChecked(False)
-        self.streaming_button.clicked.connect(lambda: self.select_menu(4))
+        self.streaming_button.clicked.connect(lambda: self.select_menu(3))
         menu_layout.addWidget(self.streaming_button)
         self.streaming_button.setStyleSheet('''
             QPushButton#settings_button {
@@ -346,7 +320,7 @@ class HomeWindow(QMainWindow):
         self.audio_button.setObjectName("settings_button")
         self.audio_button.setCheckable(True)
         self.audio_button.setChecked(False)
-        self.audio_button.clicked.connect(lambda: self.select_menu(5))
+        self.audio_button.clicked.connect(lambda: self.select_menu(4))
         menu_layout.addWidget(self.audio_button)
         self.audio_button.setStyleSheet('''
             QPushButton#settings_button {
@@ -373,7 +347,7 @@ class HomeWindow(QMainWindow):
         self.voice_detection_button.setObjectName("settings_button")
         self.voice_detection_button.setCheckable(True)
         self.voice_detection_button.setChecked(False)
-        self.voice_detection_button.clicked.connect(lambda: self.select_menu(6))
+        self.voice_detection_button.clicked.connect(lambda: self.select_menu(5))
         menu_layout.addWidget(self.voice_detection_button)
         self.voice_detection_button.setStyleSheet('''
             QPushButton#settings_button {
@@ -400,7 +374,7 @@ class HomeWindow(QMainWindow):
         self.keyboard_button.setObjectName("settings_button")
         self.keyboard_button.setCheckable(True)
         self.keyboard_button.setChecked(False)
-        self.keyboard_button.clicked.connect(lambda: self.select_menu(7))
+        self.keyboard_button.clicked.connect(lambda: self.select_menu(6))
         menu_layout.addWidget(self.keyboard_button)
         self.keyboard_button.setStyleSheet('''
             QPushButton#settings_button {
@@ -427,7 +401,7 @@ class HomeWindow(QMainWindow):
         self.developer_button.setObjectName("settings_button")
         self.developer_button.setCheckable(True)
         self.developer_button.setChecked(False)
-        self.developer_button.clicked.connect(lambda: self.select_menu(8))
+        self.developer_button.clicked.connect(lambda: self.select_menu(7))
         menu_layout.addWidget(self.developer_button)
         self.developer_button.setStyleSheet('''
             QPushButton#settings_button {
@@ -462,43 +436,6 @@ class HomeWindow(QMainWindow):
         # Stacked widget to handle different pages
         self.stacked_widget = QStackedWidget()
         content_layout.addWidget(self.stacked_widget)
-
-        # Settings page
-        self.settings_page = QWidget()
-        settings_layout = QVBoxLayout(self.settings_page)
-        settings_layout.setContentsMargins(0, 0, 0, 0)
-        settings_title = QLabel("Settings")
-        settings_title.setStyleSheet("""
-            font-size: 24px;
-            font-weight: 600;
-            color: #F2E4D6;
-            margin-bottom: 20px;
-            border: none;
-        """)
-        settings_layout.addWidget(settings_title)
-
-        # Create a scroll area for the settings form
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-
-        scroll_content = QWidget()
-        scroll_content.setObjectName("scroll_content")
-        form_layout = QFormLayout(scroll_content)
-        form_layout.setSpacing(16)
-        form_layout.setContentsMargins(0, 0, 24, 0)  # Add right margin for scroll bar
-        form_layout.setLabelAlignment(
-            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
-        )
-        form_layout.setFormAlignment(
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
-        )
-
-        # Set the scroll area widget
-        scroll_area.setWidget(scroll_content)
-        settings_layout.addWidget(scroll_area)
-
-        # Add settings page to stacked widget
-        self.stacked_widget.addWidget(self.settings_page)
 
         # --- Speech Recognition Settings page (no scroll area) ---
         self.speech_recognition_page = QWidget()
@@ -599,24 +536,24 @@ class HomeWindow(QMainWindow):
         self.asr_device = SegmentedButtonGroup(["auto"])
         self.asr_device_label = QLabel("Device")
         self.asr_device_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        asr_device_container = QWidget()
-        asr_device_layout = QVBoxLayout(asr_device_container)
+        self.asr_device_container = QWidget()
+        asr_device_layout = QVBoxLayout(self.asr_device_container)
         asr_device_layout.setContentsMargins(0, 0, 0, 0)
         asr_device_layout.setSpacing(4)
         asr_device_layout.addWidget(self.asr_device_label)
         asr_device_layout.addWidget(self.asr_device)
-        asr_form_layout.addRow(asr_device_container)
+        asr_form_layout.addRow(self.asr_device_container)
 
         self.asr_compute_type = SegmentedButtonGroup(["default", "int8", "int8_float16", "float16"])
         self.asr_compute_type_label = QLabel("Compute Type")
         self.asr_compute_type_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
-        asr_compute_type_container = QWidget()
-        asr_compute_type_layout = QVBoxLayout(asr_compute_type_container)
+        self.asr_compute_type_container = QWidget()
+        asr_compute_type_layout = QVBoxLayout(self.asr_compute_type_container)
         asr_compute_type_layout.setContentsMargins(0, 0, 0, 0)
         asr_compute_type_layout.setSpacing(4)
         asr_compute_type_layout.addWidget(self.asr_compute_type_label)
         asr_compute_type_layout.addWidget(self.asr_compute_type)
-        asr_form_layout.addRow(asr_compute_type_container)
+        asr_form_layout.addRow(self.asr_compute_type_container)
 
         self.asr_source.selectionChanged.connect(self._update_api_key_fields)
         self.asr_source.selectionChanged.connect(self._update_asr_provider_fields)
@@ -885,7 +822,6 @@ class HomeWindow(QMainWindow):
         mode_layout.setSpacing(4)
         mode_layout.addWidget(mode_label)
         self.streaming_mode = QCheckBox()
-        self.streaming_mode.stateChanged.connect(self.update_setting_visibility)
         mode_layout.addWidget(self.streaming_mode)
         streaming_layout.addWidget(mode_container)
 
@@ -960,10 +896,6 @@ class HomeWindow(QMainWindow):
         menu_container_layout.addWidget(menu_panel)
         main_layout.addWidget(menu_container)
         main_layout.addWidget(content_widget)
-
-        # Load settings after UI is fully initialized
-        QTimer.singleShot(100, self.load_settings)  # Increased delay to ensure UI is ready
-        self.update_setting_visibility()
 
         # Start application if settings are valid
         current_settings = self.app_manager.load_settings()
@@ -1329,6 +1261,7 @@ class HomeWindow(QMainWindow):
 
         # ASR Settings
         self.asr_source.selectionChanged.connect(self.save_settings)
+        self.asr_source.selectionChanged.connect(self.update_setting_visibility)
         self.openai_asr_model.selectionChanged.connect(self.save_settings)
         self.gemini_asr_model.selectionChanged.connect(self.save_settings)
         self.groq_asr_model.selectionChanged.connect(self.save_settings)
@@ -1366,8 +1299,8 @@ class HomeWindow(QMainWindow):
         self.vosk_model_path_edit.textChanged.connect(self.save_settings)
 
         # Load settings after UI is fully initialized
-        QTimer.singleShot(100, self.load_settings)  # Increased delay to ensure UI is ready
-        self.update_setting_visibility()
+        QTimer.singleShot(100, self.load_settings)
+        QTimer.singleShot(200, self.update_setting_visibility)
 
         # Start application if settings are valid
         current_settings = self.app_manager.load_settings()
@@ -1380,15 +1313,14 @@ class HomeWindow(QMainWindow):
 
     def select_menu(self, index):
         self.stacked_widget.setCurrentIndex(index)
-        self.settings_button.setChecked(index == 0)
-        self.speech_recognition_button.setChecked(index == 1)
-        self.language_model_button.setChecked(index == 2)
-        self.api_keys_button.setChecked(index == 3)
-        self.streaming_button.setChecked(index == 4)
-        self.audio_button.setChecked(index == 5)
-        self.voice_detection_button.setChecked(index == 6)
-        self.keyboard_button.setChecked(index == 7)
-        self.developer_button.setChecked(index == 8)
+        self.speech_recognition_button.setChecked(index == 0)
+        self.language_model_button.setChecked(index == 1)
+        self.api_keys_button.setChecked(index == 2)
+        self.streaming_button.setChecked(index == 3)
+        self.audio_button.setChecked(index == 4)
+        self.voice_detection_button.setChecked(index == 5)
+        self.keyboard_button.setChecked(index == 6)
+        self.developer_button.setChecked(index == 7)
 
     def handle_save_timing_report(self):
         """Handles the click of the 'Save Timing Report' button."""
@@ -1815,53 +1747,10 @@ class HomeWindow(QMainWindow):
             self.gemini_model.blockSignals(False)
 
     def update_setting_visibility(self):
-        """Show/hide settings based on other selections (e.g., streaming mode)."""
-        is_streaming = self.streaming_mode.isChecked()
-
-        # Find the Vosk model path row in the form layout and toggle visibility
-        # Now self.settings_page should exist
-        settings_form_layout = self.settings_page.findChild(QFormLayout)
-        if not settings_form_layout:
-            print(
-                "Error: Could not find QFormLayout within settings page in update_setting_visibility"
-            )
-            return
-
-        vosk_header_label = None
-        vosk_path_label = None
-        vosk_path_field = None
-
-        for i in range(settings_form_layout.rowCount()):
-            label_item = settings_form_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
-            field_item = settings_form_layout.itemAt(i, QFormLayout.ItemRole.FieldRole)
-
-            if (
-                label_item
-                and label_item.widget()
-                and isinstance(label_item.widget(), QLabel)
-            ):
-                label_widget = label_item.widget()
-                if "Vosk Settings" in label_widget.text():
-                    vosk_header_label = label_widget
-                elif label_widget.text() == "Model Path:":
-                    vosk_path_label = label_widget
-                    if field_item and field_item.widget():
-                        vosk_path_field = field_item.widget()
-
-        # Toggle visibility of found widgets
-        if vosk_header_label:
-            vosk_header_label.setVisible(is_streaming)
-        if vosk_path_label:
-            vosk_path_label.setVisible(is_streaming)
-        if vosk_path_field:
-            vosk_path_field.setVisible(is_streaming)
-
-        # Example: Hide ASR/LLM sections if streaming
-        # You would need to find their labels/widgets similarly and call setVisible(not is_streaming)
-
-        # You might want to hide/show other settings based on streaming mode too,
-        # e.g., maybe disable ASR/LLM sections if streaming only does transcription.
-        # Add similar logic here for other fields as needed.
+        # Show/hide ASR device and compute type which are typically for local models
+        is_local_asr = self.asr_source.currentText() == "faster_whisper"
+        self.asr_device_container.setVisible(is_local_asr)
+        self.asr_compute_type_container.setVisible(is_local_asr)
 
     def _update_api_key_fields(self):
         """Show/hide API key fields based on ASR and LLM provider selections."""
@@ -1942,34 +1831,7 @@ class HomeWindow(QMainWindow):
                     config.get("OpenAI", {}).get("asr_model", "whisper-1")
                 )
                 self.asr_model_label.setText("ASR Model:")
-
-            # Show/hide ASR device and compute type which are typically for local models
-            is_local_asr = asr_source == "faster_whisper"
-            settings_form_layout = self.settings_page.findChild(QFormLayout)
-            if settings_form_layout:
-                for i in range(settings_form_layout.rowCount()):
-                    label_item = settings_form_layout.itemAt(
-                        i, QFormLayout.ItemRole.LabelRole
-                    )
-                    if (
-                        label_item
-                        and label_item.widget()
-                        and isinstance(label_item.widget(), QLabel)
-                    ):
-                        label_widget = label_item.widget()
-                        if (
-                            label_widget is self.asr_device_label
-                            or label_widget is self.asr_compute_type_label
-                        ):
-                            field_item = settings_form_layout.itemAt(
-                                i, QFormLayout.ItemRole.FieldRole
-                            )
-                            label_widget.setVisible(is_local_asr)
-                            if field_item and field_item.widget():
-                                field_item.widget().setVisible(is_local_asr)
-
         finally:
             self.openai_asr_model.blockSignals(False)
             self.faster_whisper_model.blockSignals(False)
             self.groq_asr_model.blockSignals(False)
-

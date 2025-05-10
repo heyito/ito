@@ -422,6 +422,33 @@ class HomeWindow(QMainWindow):
             }
         ''')
 
+        # Add Developer button
+        self.developer_button = QPushButton("Developer")
+        self.developer_button.setObjectName("settings_button")
+        self.developer_button.setCheckable(True)
+        self.developer_button.setChecked(False)
+        self.developer_button.clicked.connect(lambda: self.select_menu(8))
+        menu_layout.addWidget(self.developer_button)
+        self.developer_button.setStyleSheet('''
+            QPushButton#settings_button {
+                background: transparent;
+                color: #FFFFFF;
+                font-size: 15px;
+                font-weight: 500;
+                border: none;
+                border-radius: 8px;
+                padding: 12px 0px;
+                margin: 8px 16px 8px 16px;
+            }
+            QPushButton#settings_button:checked {
+                background: rgba(242, 228, 214, 0.15) !important;
+                color: #FFFFFF;
+            }
+            QPushButton#settings_button:hover {
+                background: rgba(242, 228, 214, 0.1) !important;
+            }
+        ''')
+
         # Add stretch to push everything up
         menu_layout.addStretch()
 
@@ -523,42 +550,6 @@ class HomeWindow(QMainWindow):
         button_layout.addStretch()
 
         settings_layout.addWidget(button_container)
-
-        # --- Developer Timing Tools Section (Conditional) ---
-        DEV_MODE = os.getenv("DEV", "false").lower() == "true"
-
-        if DEV_MODE:
-            self.add_section_header(form_layout, "Developer Timing Tools")
-
-            # Timing report buttons container (re-using form_layout for consistency)
-            # We'll add a QWidget to the form_layout that then contains the buttons in an QHBoxLayout
-
-            timing_buttons_widget = QWidget()
-            timing_button_layout = QHBoxLayout(timing_buttons_widget)
-            timing_button_layout.setContentsMargins(
-                0, 0, 0, 0
-            )  # No margins for the inner layout
-            timing_button_layout.setSpacing(10)
-
-            self.save_timing_report_button = QPushButton("Save Timing Report")
-            self.save_timing_report_button.setObjectName("save_timing_report_button")
-            self.save_timing_report_button.setFixedWidth(160)
-            self.save_timing_report_button.clicked.connect(
-                self.handle_save_timing_report
-            )
-            timing_button_layout.addWidget(self.save_timing_report_button)
-
-            self.clear_timing_data_button = QPushButton("Clear Timing Data")
-            self.clear_timing_data_button.setObjectName("clear_timing_data_button")
-            self.clear_timing_data_button.setFixedWidth(160)
-            self.clear_timing_data_button.clicked.connect(self.handle_clear_timing_data)
-            timing_button_layout.addWidget(self.clear_timing_data_button)
-
-            timing_button_layout.addStretch()  # Push buttons to the left
-
-            # Add the widget containing the buttons to the form layout
-            # We add it without a label, spanning both columns for the buttons
-            form_layout.addRow(timing_buttons_widget)
 
         # Add settings page to stacked widget
         self.stacked_widget.addWidget(self.settings_page)
@@ -1262,6 +1253,61 @@ class HomeWindow(QMainWindow):
         keyboard_layout.addStretch()
         self.stacked_widget.addWidget(self.keyboard_page)
 
+        # --- Developer PAGE ---
+        self.developer_page = QWidget()
+        developer_layout = QVBoxLayout(self.developer_page)
+        developer_layout.setContentsMargins(0, 0, 0, 0)
+        developer_title = QLabel("Developer")
+        developer_title.setStyleSheet("""
+            font-size: 24px;
+            font-weight: 600;
+            color: #F2E4D6;
+            margin-bottom: 28px;
+            margin-left: 0px;
+        """)
+        developer_layout.addWidget(developer_title, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        # Create form layout directly in the developer page
+        developer_form_layout = QFormLayout()
+        developer_form_layout.setSpacing(16)
+        developer_form_layout.setContentsMargins(0, 0, 0, 0)
+        developer_form_layout.setLabelAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
+        developer_form_layout.setFormAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+
+        # Developer Timing Tools Section
+        self.add_section_header(developer_form_layout, "Developer Timing Tools")
+
+        # Timing report buttons container
+        timing_buttons_widget = QWidget()
+        timing_button_layout = QHBoxLayout(timing_buttons_widget)
+        timing_button_layout.setContentsMargins(0, 0, 0, 0)
+        timing_button_layout.setSpacing(10)
+
+        self.save_timing_report_button = QPushButton("Save Timing Report")
+        self.save_timing_report_button.setObjectName("save_timing_report_button")
+        self.save_timing_report_button.setFixedWidth(160)
+        self.save_timing_report_button.clicked.connect(self.handle_save_timing_report)
+        timing_button_layout.addWidget(self.save_timing_report_button)
+
+        self.clear_timing_data_button = QPushButton("Clear Timing Data")
+        self.clear_timing_data_button.setObjectName("clear_timing_data_button")
+        self.clear_timing_data_button.setFixedWidth(160)
+        self.clear_timing_data_button.clicked.connect(self.handle_clear_timing_data)
+        timing_button_layout.addWidget(self.clear_timing_data_button)
+
+        timing_button_layout.addStretch()  # Push buttons to the left
+
+        # Add the widget containing the buttons to the form layout
+        developer_form_layout.addRow(timing_buttons_widget)
+
+        developer_layout.addLayout(developer_form_layout)
+        developer_layout.addStretch()
+        self.stacked_widget.addWidget(self.developer_page)
+
     def select_menu(self, index):
         self.stacked_widget.setCurrentIndex(index)
         self.settings_button.setChecked(index == 0)
@@ -1272,6 +1318,7 @@ class HomeWindow(QMainWindow):
         self.audio_button.setChecked(index == 5)
         self.voice_detection_button.setChecked(index == 6)
         self.keyboard_button.setChecked(index == 7)
+        self.developer_button.setChecked(index == 8)
 
     def handle_save_timing_report(self):
         """Handles the click of the 'Save Timing Report' button."""

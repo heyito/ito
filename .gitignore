@@ -44,3 +44,4 @@ dmg-layout.applescript
 .build/
 capture-*.png
 src/bin
+timing_report.json

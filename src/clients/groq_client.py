@@ -1,25 +1,25 @@
 import io
 import re
-from typing import Any, List, Dict, Optional
+from typing import Any, Dict, List, Optional
+from groq import Groq, GroqError
 
-from openai import OpenAI, OpenAIError
-from src.clients.llm_client_interface import LLMClientInterface
 from src.utils.timing import time_method
 
-class OpenAIClient(LLMClientInterface):
+
+class GroqClient:
     def __init__(self, api_key: str, user_command_model: str, asr_model: str):
         if not api_key:
-            raise ValueError("OpenAI API key is required.")
+            raise ValueError("Groq API key is required.")
 
         self._api_key = api_key
         self._user_command_model = user_command_model
         self._asr_model = asr_model
-        self._client = OpenAI(api_key=self._api_key)
-        self._is_valid = True # Assume valid if key is provided, check_availability can do more
+        self._client = Groq(api_key=self._api_key)
+        self._is_valid = True
 
     @property
     def source_name(self) -> str:
-        return "openai_api"
+        return "groq_api"
 
     @property
     def user_command_model_name(self) -> str:
@@ -31,10 +31,10 @@ class OpenAIClient(LLMClientInterface):
 
     def check_availability(self) -> bool:
         if not self._api_key:
-            print("OpenAIClient ERROR: API key is missing.")
+            print("GroqClient ERROR: API key is missing.")
             self._is_valid = False
             return False
-        print("OpenAIClient: API key is present.")
+        print("GroqClient: API key is present.")
         self._is_valid = True
         return True
 
@@ -48,14 +48,18 @@ class OpenAIClient(LLMClientInterface):
         tools: list[dict] = [],
         messages_override: Optional[List[Dict]] = None,
     ) -> Any:
-        if not self._is_valid: # Relies on check_availability being called or key presence
-             print("OpenAIClient ERROR: API key is invalid or missing. Cannot process request.")
-             return None
-        
-        if not self._user_command_model:
-            raise ValueError("OpenAI user command model is required.")
+        if (
+            not self._is_valid
+        ):  # Relies on check_availability being called or key presence
+            print(
+                "GroqClient ERROR: API key is invalid or missing. Cannot process request."
+            )
+            return None
 
-        actual_tools = tools or [] # Ensure tools is a list
+        if not self._user_command_model:
+            raise ValueError("Groq user command model is required.")
+
+        actual_tools = tools or []  # Ensure tools is a list
 
         try:
 
@@ -72,7 +76,7 @@ class OpenAIClient(LLMClientInterface):
                 tool_choice="required" if len(tools) != 0 else "none",
             )
 
-            if not actual_tools: # If no tools were intended, process as text
+            if not actual_tools:  # If no tools were intended, process as text
                 processed_text = response.choices[0].message.content
                 print(f"OpenAIClient returned processed text: {processed_text}")
                 if processed_text:
@@ -88,29 +92,30 @@ class OpenAIClient(LLMClientInterface):
             else:
                 # If tools were used, return the full response object
                 # The caller (LLMHandler or its user) will handle this.
-                print("OpenAIClient returned tool call response object.")
+                print("GroqClient returned tool call response object.")
                 return response
 
-        except OpenAIError as e:
-            print(f"OpenAI API Error during LLM processing: {e}")
+        except GroqError as e:
+            print(f"Groq API Error during LLM processing: {e}")
             if hasattr(e, "body") and e.body:
                 print(f"Error Body: {e.body}")
             return None
         except Exception as e:
-            print(f"An unexpected error occurred during OpenAI LLM processing: {e}")
+            print(f"An unexpected error occurred during Groq LLM processing: {e}")
             import traceback
+
             traceback.print_exc()
             return None
-        
+
     @time_method
     def transcribe_audio(self, audio_buffer: io.BytesIO) -> str:
-        """Transcribes audio using the OpenAI Whisper API."""
+        """Transcribes audio using the Groq API."""
         if not self._client:
-             print("Error: OpenAI client not initialized.")
-             return ""
-        
+            print("Error: Groq client not initialized.")
+            return ""
+
         if not self._asr_model:
-            raise ValueError("OpenAI ASR model is required.")
+            raise ValueError("Groq ASR model is required.")
 
         try:
             # The Whisper API needs a filename hint, especially for format detection.
@@ -119,17 +124,19 @@ class OpenAIClient(LLMClientInterface):
             transcript_response = self._client.audio.transcriptions.create(
                 model=self._asr_model,
                 file=audio_buffer,
-                response_format="text" # Explicitly request text
+                response_format="text",  # Explicitly request text
             )
 
             # Ensure the response is treated as a string
-            transcript = transcript_response if isinstance(transcript_response, str) else ""
+            transcript = (
+                transcript_response if isinstance(transcript_response, str) else ""
+            )
             return transcript.strip()
 
-        except OpenAIError as e:
-            print(f"OpenAI API Error during transcription: {e}")
-            return "" # Return empty string on specific API errors
+        except GroqError as e:
+            print(f"Groq API Error during transcription: {e}")
+            return ""
         except Exception as e:
             # Catch broader exceptions during the API call
-            print(f"An unexpected error occurred during OpenAI transcription: {e}")
-            return "" # Return empty string on unexpected errors 
+            print(f"An unexpected error occurred during Groq transcription: {e}")
+            return ""

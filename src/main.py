@@ -18,7 +18,6 @@ multiprocessing.freeze_support()
 if platform.system() == "Darwin":
     try:
         from src import platform_utils_macos as platform_utils
-        print("macOS detected. Loading macOS platform utilities.")
     except ImportError:
         print("WARNING: Running on macOS but failed to import 'platform_utils_macos'. OS interaction will fail.")
         class PlatformUtilsDummy:

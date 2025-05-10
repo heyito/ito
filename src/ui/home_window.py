@@ -524,29 +524,6 @@ class HomeWindow(QMainWindow):
         """)
         save_button.clicked.connect(self.save_settings)
         button_layout.addWidget(save_button)
-
-        # Reset button
-        reset_button = QPushButton("Reset All")
-        reset_button.setObjectName("btn-primary")
-        reset_button.setStyleSheet("""
-            QPushButton#btn-primary {
-                background-color: #F6EBDD;
-                color: #181A2A;
-                border: none; /* Crucial for macOS */
-                border-radius: 8px;
-                font-size: 16px;
-                font-weight: 600;
-                padding: 0 14px;
-                min-height: 44px; /* You had 32px in styles, 44px in code */
-                min-width: 160px;
-                letter-spacing: 0.2px;
-            }
-            QPushButton#btn-primary:hover {
-                background-color: #f3e2c7;
-            }
-        """)
-        reset_button.clicked.connect(self.reset_all_settings)
-        button_layout.addWidget(reset_button)
         button_layout.addStretch()
 
         settings_layout.addWidget(button_container)
@@ -1288,14 +1265,46 @@ class HomeWindow(QMainWindow):
         timing_button_layout.setSpacing(10)
 
         self.save_timing_report_button = QPushButton("Save Timing Report")
-        self.save_timing_report_button.setObjectName("save_timing_report_button")
-        self.save_timing_report_button.setFixedWidth(160)
+        self.save_timing_report_button.setObjectName("btn-primary")
+        self.save_timing_report_button.setStyleSheet("""
+            QPushButton#btn-primary {
+                background-color: #F6EBDD;
+                color: #181A2A;
+                border: none;
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 0 14px;
+                min-height: 44px;
+                min-width: 160px;
+                letter-spacing: 0.2px;
+            }
+            QPushButton#btn-primary:hover {
+                background-color: #f3e2c7;
+            }
+        """)
         self.save_timing_report_button.clicked.connect(self.handle_save_timing_report)
         timing_button_layout.addWidget(self.save_timing_report_button)
 
         self.clear_timing_data_button = QPushButton("Clear Timing Data")
-        self.clear_timing_data_button.setObjectName("clear_timing_data_button")
-        self.clear_timing_data_button.setFixedWidth(160)
+        self.clear_timing_data_button.setObjectName("btn-primary")
+        self.clear_timing_data_button.setStyleSheet("""
+            QPushButton#btn-primary {
+                background-color: #F6EBDD;
+                color: #181A2A;
+                border: none;
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 0 14px;
+                min-height: 44px;
+                min-width: 160px;
+                letter-spacing: 0.2px;
+            }
+            QPushButton#btn-primary:hover {
+                background-color: #f3e2c7;
+            }
+        """)
         self.clear_timing_data_button.clicked.connect(self.handle_clear_timing_data)
         timing_button_layout.addWidget(self.clear_timing_data_button)
 
@@ -1303,6 +1312,41 @@ class HomeWindow(QMainWindow):
 
         # Add the widget containing the buttons to the form layout
         developer_form_layout.addRow(timing_buttons_widget)
+
+        # Reset All Section
+        self.add_section_header(developer_form_layout, "Reset Settings")
+
+        # Reset All button container
+        reset_button_widget = QWidget()
+        reset_button_layout = QHBoxLayout(reset_button_widget)
+        reset_button_layout.setContentsMargins(0, 0, 0, 0)
+        reset_button_layout.setSpacing(10)
+
+        reset_button = QPushButton("Reset All")
+        reset_button.setObjectName("btn-primary")
+        reset_button.setStyleSheet("""
+            QPushButton#btn-primary {
+                background-color: #F6EBDD;
+                color: #181A2A;
+                border: none;
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 0 14px;
+                min-height: 44px;
+                min-width: 160px;
+                letter-spacing: 0.2px;
+            }
+            QPushButton#btn-primary:hover {
+                background-color: #f3e2c7;
+            }
+        """)
+        reset_button.clicked.connect(self.reset_all_settings)
+        reset_button_layout.addWidget(reset_button)
+        reset_button_layout.addStretch()  # Push button to the left
+
+        # Add the reset button widget to the form layout
+        developer_form_layout.addRow(reset_button_widget)
 
         developer_layout.addLayout(developer_form_layout)
         developer_layout.addStretch()

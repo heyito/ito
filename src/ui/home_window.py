@@ -98,6 +98,11 @@ class HomeWindow(QMainWindow):
         self.setMinimumWidth(900)
         self.setMinimumHeight(600)
 
+        # Add debounce timer for settings
+        self.save_settings_timer = QTimer()
+        self.save_settings_timer.setSingleShot(True)
+        self.save_settings_timer.timeout.connect(self._save_settings_impl)
+
         # Initialize ApplicationManager
         self.app_manager = ApplicationManager(
             OnboardingWindow.ORGANIZATION_NAME, OnboardingWindow.APPLICATION_NAME
@@ -1399,7 +1404,11 @@ class HomeWindow(QMainWindow):
         pass  # Status is now handled by StatusWindow
 
     def save_settings(self):
-        """Save all settings to QSettings"""
+        """Debounced version of save_settings that waits for user to stop typing"""
+        self.save_settings_timer.start(500)  # 500ms delay
+
+    def _save_settings_impl(self):
+        """Actual implementation of save_settings"""
         print("[Saving Settings] Starting save process")
         try:
             llm_source_value = self.llm_source.currentText()

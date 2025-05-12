@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
 from PyQt6.QtCore import Qt, QRectF
-from PyQt6.QtGui import QPainter, QPainterPath, QRegion
+from PyQt6.QtGui import QPainter, QPainterPath, QRegion, QColor
 import sys
 from src.ui.theme.manager import ThemeManager
 # Conditionally import macOS-specific libraries at the module level
@@ -129,6 +129,7 @@ class IntenLayout(QWidget):
             ):
         super().__init__(parent)
         self.theme_manager = theme_manager
+        self.theme_manager.theme_changed.connect(self._update_theme)
         self.radius = radius
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAutoFillBackground(False)
@@ -158,65 +159,81 @@ class IntenLayout(QWidget):
         self._effective_top_margin = 40 + self._mac_titlebar_offset
         if show_close_button:
             self._add_close_button()
-        self.setStyleSheet("""
-            QWidget, QMainWindow {
+        self.setStyleSheet(self._generate_stylesheet())
+
+    def _update_theme(self):
+        self.setStyleSheet(self._generate_stylesheet())
+        self.update()
+
+    def _generate_stylesheet(self):
+        """Generate stylesheet using theme colors"""
+        # Get colors from theme manager
+        text_primary = self.theme_manager.get_color('text_primary')
+        text_secondary = self.theme_manager.get_color('text_secondary')
+        button_bg = self.theme_manager.get_color('button.background')
+        button_text = self.theme_manager.get_color('button.text')
+        button_hover = self.theme_manager.get_color('button.hover')
+        button_pressed = self.theme_manager.get_color('button.pressed')
+        
+        return f"""
+            QWidget, QMainWindow {{
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            }
-            QLabel { 
-                color: #F2E4D6; 
+            }}
+            QLabel {{ 
+                color: {text_primary.name()}; 
                 background-color: transparent;
-            }
-            QPushButton {
-                background-color: #F2E4D6;
-                color: #141538;
+            }}
+            QPushButton {{
+                background-color: {button_bg.name()};
+                color: {button_text.name()};
                 border: none;
                 padding: 8px 20px;
                 border-radius: 6px;
                 font-size: 13px;
                 font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: rgba(242, 228, 214, 0.8);
-            }
-            QPushButton:disabled {
-                background-color: rgba(242, 228, 214, 0.3);
-                color: rgba(224, 92, 92, 0.5);
-            }
-            QProgressBar {
+            }}
+            QPushButton:hover {{
+                background-color: {button_hover.name()};
+            }}
+            QPushButton:disabled {{
+                background-color: {button_bg.name()};
+                color: {text_secondary.name()};
+            }}
+            QProgressBar {{
                 border: none;
                 border-radius: 3px;
                 text-align: center;
-                background-color: rgba(242, 228, 214, 0.2);
+                background-color: {text_secondary.name()};
                 max-height: 6px;
                 margin: 0px 2px;
-            }
-            QProgressBar::chunk {
-                background-color: #F2E4D6;
+            }}
+            QProgressBar::chunk {{
+                background-color: {button_bg.name()};
                 border-radius: 3px;
-            }
-            QWidget#permission_row {
-                background-color: rgba(242, 228, 214, 0.1);
+            }}
+            QWidget#permission_row {{
+                background-color: {text_secondary.name()};
                 border-radius: 10px;
                 min-height: 60px;
                 padding: 0px;
                 margin: 0px;
-            }
-            QLabel#permission_status {
+            }}
+            QLabel#permission_status {{
                 font-size: 13px;
                 font-weight: 500;
                 padding-right: 16px;
-            }
-            QLabel#permission_text {
+            }}
+            QLabel#permission_text {{
                 font-size: 15px;
-                color: #F2E4D6;
+                color: {text_secondary.name()};
                 font-weight: 400;
-            }
-            QLabel#permission_icon {
+            }}
+            QLabel#permission_icon {{
                 font-size: 22px;
                 min-width: 30px;
                 margin-left: 16px;
-            }
-        """)
+            }}
+        """
 
     def _add_close_button(self):
         close_button_container = QWidget(self)
@@ -227,16 +244,27 @@ class IntenLayout(QWidget):
         close_button_layout.setSpacing(0)
         close_button = QPushButton("")
         close_button.setFixedSize(16, 16)
-        close_button.setStyleSheet('''
-            QPushButton {
-                background-color: #FF3B30;
+        
+        # Use error color from theme for close button
+        error_color = self.theme_manager.get_color('error')
+        error_color_hover = QColor(
+            min(error_color.red() + 30, 255),
+            min(error_color.green() + 30, 255),
+            min(error_color.blue() + 30, 255),
+            error_color.alpha()
+        )
+        
+        close_button.setStyleSheet(f'''
+            QPushButton {{
+                background-color: {error_color.name()};
                 border: none;
                 border-radius: 8px;
-            }
-            QPushButton:hover {
-                background-color: #FF615C;
-            }
+            }}
+            QPushButton:hover {{
+                background-color: {error_color_hover.name()};
+            }}
         ''')
+        
         close_button.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         if self._close_callback:
             close_button.clicked.connect(self._close_callback)

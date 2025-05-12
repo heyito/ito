@@ -1,6 +1,6 @@
 import objc
 import sys
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import pyqtSignal, QObject
 from src.ui.theme.theme import THEME
 
 def is_dark_mode():
@@ -20,7 +20,7 @@ def is_dark_mode():
         print(f"Error detecting dark mode: {e}")
         return False
 
-class ThemeManager:
+class ThemeManager(QObject):
     _instance = None
     theme_changed = pyqtSignal(str)
     
@@ -31,39 +31,33 @@ class ThemeManager:
         return cls._instance
     
     def _initialize(self):
+        super().__init__()  # Initialize QObject
         self._current_theme = "dark"  # Default to dark theme
         self._setup_appearance_observer()
 
     def _setup_appearance_observer(self):
-        from AppKit import NSWorkspace
-        # Create a notification observer for appearance changes
-        workspace = NSWorkspace.sharedWorkspace()
-        notification_center = workspace.notificationCenter()
-        
-        # Define the callback function
-        def appearance_changed(notification):
-            self._update_theme()
-        
-        # Add observer for appearance changes
-        notification_center.addObserver_selector_name_object_(
+        # Listen on the distributed center for the system Dark/Light toggle
+        from AppKit import NSDistributedNotificationCenter
+        nc = NSDistributedNotificationCenter.defaultCenter()
+        nc.addObserver_selector_name_object_(
             self,
-            'appearance_changed:',
-            'NSWorkspaceDidChangeNotification',
+            'appearanceChanged:',
+            'AppleInterfaceThemeChangedNotification',
             None
         )
 
+    def appearanceChanged_(self, notification):
+        """Called whenever the user switches Light ↔ Dark in System Settings."""
+        self._update_theme()
+
     def _update_theme(self):
         """Update the theme based on the current appearance"""
-        if not _objc_available:
-            return
-            
-        # Get the current appearance
+        from AppKit import NSAppearance, NSAppearanceNameDarkAqua
         appearance = NSAppearance.currentAppearance()
         if appearance:
             appearance_name = appearance.name()
             new_theme = "dark" if appearance_name == NSAppearanceNameDarkAqua else "light"
             if new_theme != self._current_theme:
-                print(f"Theme changed to: {new_theme} from {self._current_theme}")
                 self._current_theme = new_theme
                 self.theme_changed.emit(new_theme)
     
@@ -77,6 +71,11 @@ class ThemeManager:
         value = THEME[self._current_theme]
         for part in parts:
             value = value[part]
+        
+        # print an error if the color is not found
+        if value is None:
+            print(f"Color not found: {path}")
+            
         return value
     
     def set_theme(self, theme_name):

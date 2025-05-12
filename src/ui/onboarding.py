@@ -92,6 +92,9 @@ class OnboardingWindow(QMainWindow):
         self.setMinimumWidth(900)
         self.setMinimumHeight(600)
 
+        # Connect theme changes
+        self.theme_manager.theme_changed.connect(self.update_styles)
+
         # --- Manual Dragging Variables ---
         self._dragging = False
         self._drag_start_position = QPointF()
@@ -155,11 +158,16 @@ class OnboardingWindow(QMainWindow):
         if not logo_pixmap or logo_pixmap.isNull():
             print("Logo not found, using fallback emoji.")
 
-        # --- Onboarding Primary Button Style ---
-        self.setStyleSheet(self.styleSheet() + """
-            QPushButton#onboarding-primary {
-                background-color: #F6EBDD;
-                color: #181A2A;
+        # Apply initial styles
+        self.update_styles()
+
+    def update_styles(self):
+        """Update all styles based on current theme"""
+        # Update primary button style
+        self.setStyleSheet(f"""
+            QPushButton#onboarding-primary {{
+                background-color: {self.theme_manager.get_color('onboarding.button.background').name()};
+                color: {self.theme_manager.get_color('onboarding.button.text').name()};
                 border: none;
                 border-radius: 8px;
                 font-size: 16px;
@@ -168,15 +176,75 @@ class OnboardingWindow(QMainWindow):
                 min-height: 32px;
                 min-width: 160px;
                 letter-spacing: 0.2px;
-            }
-            QPushButton#onboarding-primary:hover {
-                background-color: #f3e2c7;
-            }
-            QPushButton#onboarding-primary:disabled {
-                background-color: #f3e2c7;
-                color: #b0b0b0;
-            }
+            }}
+            QPushButton#onboarding-primary:hover {{
+                background-color: {self.theme_manager.get_color('onboarding.button.hover').name()};
+            }}
+            QPushButton#onboarding-primary:disabled {{
+                background-color: {self.theme_manager.get_color('onboarding.button.disabled').name()};
+                color: {self.theme_manager.get_color('onboarding.button.disabled_text').name()};
+            }}
         """)
+
+        # Update current screen styles
+        self.update_current_screen_styles()
+
+    def update_current_screen_styles(self):
+        """Update styles for the current screen"""
+        # Find all QLabels and update their styles
+        for widget in self.findChildren(QLabel):
+            if widget.objectName() == "permission_text":
+                widget.setStyleSheet(f"color: {self.theme_manager.get_color('text_primary').name()};")
+            elif widget.objectName() == "permission_status":
+                # Check if this is a status label that should be updated
+                if hasattr(self, 'mic_status') and widget == self.mic_status:
+                    is_granted = self.permission_states.get('microphone', False)
+                    widget.setStyleSheet(f"color: {self.theme_manager.get_color('text_primary').name()};" if is_granted else f"color: {self.theme_manager.get_color('text_secondary').name()};")
+                elif hasattr(self, 'acc_status') and widget == self.acc_status:
+                    is_granted = self.permission_states.get('accessibility', False)
+                    widget.setStyleSheet(f"color: {self.theme_manager.get_color('text_primary').name()};" if is_granted else f"color: {self.theme_manager.get_color('text_secondary').name()};")
+
+        # Update any error messages
+        for widget in self.findChildren(QLabel):
+            if widget.text() == "Please grant all required permissions to continue":
+                widget.setStyleSheet(f"color: {self.theme_manager.get_color('error').name()};")
+
+        # Update completion screen checkmark if it exists
+        for widget in self.findChildren(QLabel):
+            if widget.text() == "✓":
+                widget.setStyleSheet(f'''
+                    QLabel {{
+                        background-color: {self.theme_manager.get_color('onboarding.success.background').name()};
+                        color: {self.theme_manager.get_color('onboarding.success.text').name()};
+                        font-size: 32px;
+                        border-radius: 28px;
+                        margin-bottom: 4px;
+                        font-weight: 500;
+                        letter-spacing: 1px;
+                    }}
+                ''')
+
+        # Update title and subtitle labels
+        for widget in self.findChildren(QLabel):
+            if widget.text() in ["Welcome to Inten", "Required Permissions", "Setup Complete!"]:
+                widget.setStyleSheet(f'''
+                    font-size: {28 if widget.text() != "Welcome to Inten" else 36}px;
+                    font-weight: {600 if widget.text() != "Welcome to Inten" else 700};
+                    color: {self.theme_manager.get_color('text_primary').name()};
+                    margin-top: 0px;
+                    margin-bottom: 6px;
+                    letter-spacing: -0.5px;
+                ''')
+            elif widget.text() in ["Let's set up your permissions to get started.", 
+                                 "Inten needs a few permissions to help you be more productive",
+                                 "You're all set to start using Inten!"]:
+                widget.setStyleSheet(f'''
+                    font-size: {15 if widget.text() == "Inten needs a few permissions to help you be more productive" else 18}px;
+                    color: {self.theme_manager.get_color('text_secondary').name()};
+                    font-weight: 400;
+                    margin-bottom: {40 if widget.text() == "Inten needs a few permissions to help you be more productive" else 24}px;
+                    letter-spacing: 0.1px;
+                ''')
 
     def clear_layout(self):
         """Helper function to remove all widgets from the main layout."""
@@ -229,10 +297,10 @@ class OnboardingWindow(QMainWindow):
         # Title
         title_label = QLabel("Welcome to Inten")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_label.setStyleSheet('''
+        title_label.setStyleSheet(f'''
             font-size: 36px;
             font-weight: 700;
-            color: #F2E4D6;
+            color: {self.theme_manager.get_color('text_primary').name()};
             margin-top: 0px;
             margin-bottom: 6px;
             letter-spacing: -0.5px;
@@ -242,9 +310,9 @@ class OnboardingWindow(QMainWindow):
         # Subtitle
         desc_label = QLabel("Let's set up your permissions to get started.")
         desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        desc_label.setStyleSheet('''
+        desc_label.setStyleSheet(f'''
             font-size: 18px;
-            color: rgba(242, 228, 214, 0.7);
+            color: {self.theme_manager.get_color('text_secondary').name()};
             font-weight: 400;
             margin-bottom: 24px;
             letter-spacing: 0.1px;
@@ -271,10 +339,10 @@ class OnboardingWindow(QMainWindow):
         # Title
         title_label = QLabel("Required Permissions")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_label.setStyleSheet("""
+        title_label.setStyleSheet(f"""
             font-size: 28px; 
             font-weight: 600; 
-            color: #F2E4D6;
+            color: {self.theme_manager.get_color('text_primary').name()};
             margin-top: 40px; 
             margin-bottom: 8px;
             letter-spacing: -0.5px;
@@ -284,9 +352,9 @@ class OnboardingWindow(QMainWindow):
         # Description
         desc_label = QLabel("Inten needs a few permissions to help you be more productive")
         desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        desc_label.setStyleSheet("""
+        desc_label.setStyleSheet(f"""
             font-size: 15px; 
-            color: rgba(242, 228, 214, 0.8);
+            color: {self.theme_manager.get_color('text_secondary').name()};
             margin-bottom: 40px;
         """)
         self.layout.addWidget(desc_label)
@@ -320,6 +388,7 @@ class OnboardingWindow(QMainWindow):
         
         mic_text = QLabel("Microphone Access")
         mic_text.setObjectName("permission_text")
+        mic_text.setStyleSheet(f"color: {self.theme_manager.get_color('text_primary').name()};")
         mic_layout.addWidget(mic_text)
         
         mic_layout.addStretch()
@@ -327,10 +396,11 @@ class OnboardingWindow(QMainWindow):
         # Start status as "Checking..."
         self.mic_status = QLabel("Checking...")
         self.mic_status.setObjectName("permission_status")
-        self.mic_status.setStyleSheet("color: rgba(242, 228, 214, 0.5);")
+        self.mic_status.setStyleSheet(f"color: {self.theme_manager.get_color('text_secondary').name()};")
         mic_layout.addWidget(self.mic_status)
         
         mic_button = QPushButton("Grant Access")
+        mic_button.setObjectName("onboarding-primary")
         mic_button.clicked.connect(self.request_microphone_permission)
         mic_layout.addWidget(mic_button)
         
@@ -348,6 +418,7 @@ class OnboardingWindow(QMainWindow):
         
         acc_text = QLabel("Accessibility Access")
         acc_text.setObjectName("permission_text")
+        acc_text.setStyleSheet(f"color: {self.theme_manager.get_color('text_primary').name()};")
         acc_layout.addWidget(acc_text)
         
         acc_layout.addStretch()
@@ -355,10 +426,11 @@ class OnboardingWindow(QMainWindow):
         # Start status as "Checking..."
         self.acc_status = QLabel("Checking...")
         self.acc_status.setObjectName("permission_status")
-        self.acc_status.setStyleSheet("color: rgba(242, 228, 214, 0.5);")
+        self.acc_status.setStyleSheet(f"color: {self.theme_manager.get_color('text_secondary').name()};")
         acc_layout.addWidget(self.acc_status)
         
         acc_button = QPushButton("Grant Access")
+        acc_button.setObjectName("onboarding-primary")
         acc_button.clicked.connect(self.request_accessibility_permission)
         acc_layout.addWidget(acc_button)
         
@@ -373,25 +445,6 @@ class OnboardingWindow(QMainWindow):
         self.continue_button.clicked.connect(self.check_all_permissions_and_proceed)
         self.continue_button.setEnabled(False)
         self.continue_button.setFixedWidth(200)
-        self.continue_button.setStyleSheet("""
-            QPushButton {
-                background-color: #F2E4D6;
-                color: #141538;
-                border: none;
-                padding: 12px 0px;
-                border-radius: 6px;
-                font-size: 16px;
-                font-weight: 500;
-                margin-top: 40px;
-            }
-            QPushButton:hover {
-                background-color: rgba(242, 228, 214, 0.8);
-            }
-            QPushButton:disabled {
-                background-color: rgba(242, 228, 214, 0.3);
-                color: rgba(224, 92, 92, 0.5);
-            }
-        """)
         self.layout.addWidget(self.continue_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
         self.layout.addStretch()
@@ -405,24 +458,12 @@ class OnboardingWindow(QMainWindow):
         print(f"Permission check result - {permission}: {is_granted}")
         self.permission_states[permission] = is_granted
 
-        status_label = None
-        grant_button = None
-        
         if permission == 'microphone':
             self.mic_status.setText("Granted" if is_granted else "Not Granted")
-            self.mic_status.setStyleSheet("color: #F2E4D6;" if is_granted else "color: rgba(242, 228, 214, 0.5);")
+            self.mic_status.setStyleSheet(f"color: {self.theme_manager.get_color('text_primary').name()};" if is_granted else f"color: {self.theme_manager.get_color('text_secondary').name()};")
         elif permission == 'accessibility':
             self.acc_status.setText("Granted" if is_granted else "Not Granted")
-            self.acc_status.setStyleSheet("color: #F2E4D6;" if is_granted else "color: rgba(242, 228, 214, 0.5);")
-
-        if status_label:
-            status_label.setText("Granted" if is_granted else "Not Granted")
-            status_label.setStyleSheet("color: #F2E4D6;" if is_granted else "color: rgba(242, 228, 214, 0.5);")
-
-        if grant_button:
-            # Optionally disable/hide grant button if permission is granted
-            grant_button.setVisible(not is_granted)
-            # grant_button.setEnabled(not is_granted) # Or just disable
+            self.acc_status.setStyleSheet(f"color: {self.theme_manager.get_color('text_primary').name()};" if is_granted else f"color: {self.theme_manager.get_color('text_secondary').name()};")
         
         self.update_progress()
         
@@ -460,7 +501,7 @@ class OnboardingWindow(QMainWindow):
         else:
             # Show error message
             error_label = QLabel("Please grant all required permissions to continue")
-            error_label.setStyleSheet("color: #e74c3c;")
+            error_label.setStyleSheet(f"color: {self.theme_manager.get_color('error').name()};")
             self.layout.addWidget(error_label)
 
     def show_completion_screen(self):
@@ -482,16 +523,16 @@ class OnboardingWindow(QMainWindow):
         check_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         check_icon.setText("✓")
         check_icon.setFixedSize(56, 56)
-        check_icon.setStyleSheet('''
-            QLabel {
-                background-color: #AEE9C1;
-                color: #2E7D4F;
+        check_icon.setStyleSheet(f'''
+            QLabel {{
+                background-color: {self.theme_manager.get_color('onboarding.success.background').name()};
+                color: {self.theme_manager.get_color('onboarding.success.text').name()};
                 font-size: 32px;
                 border-radius: 28px;
                 margin-bottom: 4px;
                 font-weight: 500;
                 letter-spacing: 1px;
-            }
+            }}
         ''')
         icon_layout.addWidget(check_icon)
         content_layout.addWidget(icon_container)
@@ -500,10 +541,10 @@ class OnboardingWindow(QMainWindow):
         # Title
         title_label = QLabel("Setup Complete!")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_label.setStyleSheet('''
+        title_label.setStyleSheet(f'''
             font-size: 28px;
             font-weight: 600;
-            color: #F2E4D6;
+            color: {self.theme_manager.get_color('text_primary').name()};
             margin-top: 0px;
             margin-bottom: 6px;
             letter-spacing: -0.3px;
@@ -513,9 +554,9 @@ class OnboardingWindow(QMainWindow):
         # Subtitle
         desc_label = QLabel("You're all set to start using Inten!")
         desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        desc_label.setStyleSheet('''
+        desc_label.setStyleSheet(f'''
             font-size: 16px;
-            color: rgba(242, 228, 214, 0.6);
+            color: {self.theme_manager.get_color('text_secondary').name()};
             font-weight: 400;
             margin-bottom: 20px;
             letter-spacing: 0.05px;
@@ -546,7 +587,7 @@ class OnboardingWindow(QMainWindow):
         from src.ui.home_window import HomeWindow
         
         # Create home window but don't show it yet
-        self.home_window = HomeWindow()
+        self.home_window = HomeWindow(theme_manager=self.theme_manager)
         # Hide this window before showing the home window
         self.hide()
         # Show the home window
@@ -584,6 +625,7 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     QApplication.setOrganizationName(OnboardingWindow.ORGANIZATION_NAME)
     QApplication.setApplicationName(OnboardingWindow.APPLICATION_NAME)
-    onboarding_window = OnboardingWindow()
+    theme_manager = ThemeManager()
+    onboarding_window = OnboardingWindow(theme_manager=theme_manager)
     onboarding_window.show()
     sys.exit(app.exec())

@@ -48,6 +48,7 @@ class KeyboardManager(QObject):
         }
 
     def initialize_listener(self) -> bool:
+        print("Initializing keyboard listener")
         """Initialize the keyboard listener once. This should only be called once when the application starts."""
         if self._listener_started:
             print("Keyboard listener already initialized")
@@ -177,7 +178,9 @@ class KeyboardManager(QObject):
 
     def _on_keyboard_press(self, key):
         """Internal callback for keyboard events (non-macOS)"""
+        print(f"Keyboard pressed: {key}")
         if key == self._target_hotkey:
+            print(f"Hotkey pressed: {self._hotkey_str}")
             self.hotkey_pressed.emit(self._hotkey_str)
             return False
         return True 

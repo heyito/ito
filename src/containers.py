@@ -35,7 +35,7 @@ from src.handlers.llm_handler import LLMHandler
 from src.handlers.audio.openai_asr_handler import OpenAIASRHandler
 from src.handlers.vosk_processor import VoskProcessor
 from src.streaming_application_runner import StreamingApplicationRunner
-
+from src.ui.theme.manager import ThemeManager
 
 # Helper function for Selector
 def _is_streaming_mode(config_value: Any) -> str:
@@ -70,6 +70,9 @@ class Container(containers.DeclarativeContainer):
     # --- Shared UI Queue ---
     # Provide a single queue instance for status updates
     status_queue = providers.Singleton(queue.Queue)
+
+    # --- Theme Manager ---
+    theme_manager = providers.Singleton(ThemeManager)
 
     # --- Asyncio Loop Manager (Singleton) ---
     asyncio_loop_manager = providers.Singleton(AsyncioLoopManager)

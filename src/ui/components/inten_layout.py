@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
 from PyQt6.QtCore import Qt, QRectF
 from PyQt6.QtGui import QPainter, QPainterPath, QRegion
 import sys
-
+from src.ui.theme.manager import ThemeManager
 # Conditionally import macOS-specific libraries at the module level
 MAC_LIBS_AVAILABLE = False
 NSVisualEffectMaterialPopover = None # Placeholder for AppKit constant
@@ -119,8 +119,16 @@ def MacBlur(widget_instance: QWidget, corner_radius: float, Material=None, Title
         window_native_view.setStyleMask_(window_native_view.styleMask() | NSFullSizeContentViewWindowMask)
 
 class IntenLayout(QWidget):
-    def __init__(self, parent=None, radius=8, show_close_button=False, close_callback=None):
+    def __init__(
+            self,
+            parent=None,
+            radius=8,
+            show_close_button=False,
+            close_callback=None,
+            theme_manager: ThemeManager=None
+            ):
         super().__init__(parent)
+        self.theme_manager = theme_manager
         self.radius = radius
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAutoFillBackground(False)
@@ -274,4 +282,4 @@ class IntenLayout(QWidget):
 
     def _make_background_color(self, rect):
         from PyQt6.QtGui import QColor
-        return QColor(0, 0, 0, 0)
+        return self.theme_manager.get_color('background')

@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 from src.ui.components.inten_layout import IntenLayout
+from src.ui.theme.manager import ThemeManager
 
 # --- Platform specific code for macOS ---
 _ns_window = None
@@ -82,8 +83,9 @@ class OnboardingWindow(QMainWindow):
     ORGANIZATION_NAME = "Inten" # CHANGE THIS
     APPLICATION_NAME = "Inten"
 
-    def __init__(self):
+    def __init__(self, theme_manager: ThemeManager):
         super().__init__()
+        self.theme_manager = theme_manager
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setWindowFlags(self.windowFlags() | Qt.WindowType.FramelessWindowHint)
         self.setWindowTitle("Inten")
@@ -95,7 +97,7 @@ class OnboardingWindow(QMainWindow):
         self._drag_start_position = QPointF()
 
         # --- Main widget and layout ---
-        main_widget = IntenLayout(self, radius=8, show_close_button=True)
+        main_widget = IntenLayout(self, radius=8, show_close_button=True, theme_manager=self.theme_manager)
         main_widget.setObjectName("main_widget")
         self.setCentralWidget(main_widget)
         self.layout = main_widget.layout
@@ -123,7 +125,7 @@ class OnboardingWindow(QMainWindow):
             # Import here to avoid circular imports
             from src.ui.home_window import HomeWindow
             # Create home window but don't show it yet
-            self.home_window = HomeWindow()
+            self.home_window = HomeWindow(theme_manager=self.theme_manager)
             # Hide this window before showing the home window
             self.hide()
             # Show the home window

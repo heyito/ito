@@ -17,6 +17,7 @@ from src.engines.processing_engine import ProcessingEngine  # Added
 from src.handlers.audio.audio_source_handler import AudioSourceHandler
 from src.handlers.llm_handler import LLMHandler  # Added
 from src.handlers.vosk_processor import VoskProcessor
+from src.types.status_messages import StatusMessage
 
 # Actions for the queue (can be simplified)
 _ACTION_TOGGLE_STREAMING = "TOGGLE_STREAMING"
@@ -596,9 +597,8 @@ class StreamingAudioApplication(ApplicationInterface):
             self.processing_lock.release()
             print(f"[{timestamp}] --- LLM Processing Pipeline Finished ---")
             print(f"[{timestamp}] Ready for next command (streaming or discrete).")
-            # Optionally, update UI status queue if you integrate one later
-            # if self.status_queue:
-            #     self.status_queue.put("Ready")
+            if self.status_queue:
+                self.status_queue.put(StatusMessage.READY)
 
     def _process_transcript(self) -> None:
         """

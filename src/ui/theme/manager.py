@@ -1,4 +1,7 @@
+import objc
 import sys
+from PyQt6.QtCore import pyqtSignal
+from src.ui.theme.theme import THEME
 
 def is_dark_mode():
     """Check if macOS is in dark mode."""
@@ -6,7 +9,6 @@ def is_dark_mode():
         return False
         
     try:
-        import objc
         from AppKit import NSAppearance, NSAppearanceNameDarkAqua
         
         appearance = NSAppearance.currentAppearance()
@@ -33,9 +35,7 @@ class ThemeManager:
         self._setup_appearance_observer()
 
     def _setup_appearance_observer(self):
-        if not _objc_available:
-            return
-            
+        from AppKit import NSWorkspace
         # Create a notification observer for appearance changes
         workspace = NSWorkspace.sharedWorkspace()
         notification_center = workspace.notificationCenter()
@@ -74,14 +74,14 @@ class ThemeManager:
     def get_color(self, path):
         """Get a color from the theme using dot notation (e.g., 'button.background')"""
         parts = path.split('.')
-        value = self._theme_data[self._current_theme]
+        value = THEME[self._current_theme]
         for part in parts:
             value = value[part]
         return value
     
     def set_theme(self, theme_name):
         """Manually set the theme"""
-        if theme_name in self._theme_data:
+        if theme_name in THEME:
             self._current_theme = theme_name
             return True
         return False

@@ -16,14 +16,12 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
-    QScrollArea,
     QScrollBar,
     QSpinBox,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
     QFrame,
-    QSizePolicy,
 )
 
 from src.application_manager import ApplicationManager
@@ -31,6 +29,7 @@ from src.ui.onboarding import OnboardingWindow
 from src.ui.components.inten_layout import IntenLayout
 from src.ui.components.segmented_button_group import SegmentedButtonGroup
 from src.ui.components.menu_button import MenuButton
+from src.ui.theme.manager import ThemeManager
 from src.utils.timing import save_timing_report, clear_timing_data
 
 # --- Platform specific code for macOS ---
@@ -57,42 +56,10 @@ if sys.platform == "darwin":
 else:
     _objc_available = False
 
-
-class CustomCombo(QComboBox):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # use a pure-Qt list view so CSS works end-to-end
-        view = QListView(self)
-        view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setView(view)
-
-    def showPopup(self):
-        # grab the popup window (a QFrame in its own NSWindow)
-        popup = self.view().window()
-        if popup:
-            # find & hide any scrollbars Cocoa might have injected
-            for sb in popup.findChildren(QScrollBar):
-                sb.hide()
-
-            # zero out margins just in case
-            if popup.layout():
-                popup.layout().setContentsMargins(0, 0, 0, 0)
-            popup.setContentsMargins(0, 0, 0, 0)
-
-            popup.setStyleSheet("""
-                QWidget#comboPopup {
-                    background-color: white;
-                    border: 1px solid #E5E5EA;
-                }
-            """)
-
-        super().showPopup()
-
-
 class HomeWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, theme_manager: ThemeManager):
         super().__init__()
+        self.theme_manager = theme_manager
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setWindowFlags(self.windowFlags() | Qt.WindowType.FramelessWindowHint)
         self.setWindowTitle("Inten")
@@ -144,7 +111,7 @@ class HomeWindow(QMainWindow):
                 print(f"Error applying native styling: {e}")
 
         # Main widget and layout
-        main_widget = IntenLayout(self, radius=8, show_close_button=True)
+        main_widget = IntenLayout(self, radius=8, show_close_button=True, theme_manager=self.theme_manager)
         main_widget.setObjectName("main_widget")
         self.setCentralWidget(main_widget)
         main_layout = QHBoxLayout()
@@ -1189,7 +1156,7 @@ class HomeWindow(QMainWindow):
         settings.sync()  # Ensure settings are saved
 
         # Create and show new onboarding window
-        self.onboarding_window = OnboardingWindow()
+        self.onboarding_window = OnboardingWindow(theme_manager=self.theme_manager)
         self.onboarding_window.show()
 
         # Close the current window

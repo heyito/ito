@@ -2,7 +2,6 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
 from PyQt6.QtCore import Qt, QRectF
 from PyQt6.QtGui import QPainter, QPainterPath, QRegion
 import sys
-from src.ui.theme import is_dark_mode
 
 # Conditionally import macOS-specific libraries at the module level
 MAC_LIBS_AVAILABLE = False
@@ -134,7 +133,6 @@ class IntenLayout(QWidget):
         self._close_callback = close_callback
         self._show_close_button = show_close_button
         self._mac_titlebar_offset = 0
-        self._is_dark_mode = is_dark_mode()
         # macOS titlebar offset logic
         if sys.platform == 'darwin':
             try:

@@ -30,6 +30,7 @@ from src.application_manager import ApplicationManager
 from src.ui.onboarding import OnboardingWindow
 from src.ui.components.inten_layout import IntenLayout
 from src.ui.components.segmented_button_group import SegmentedButtonGroup
+from src.ui.components.menu_button import MenuButton
 from src.utils.timing import save_timing_report, clear_timing_data
 
 # --- Platform specific code for macOS ---
@@ -213,220 +214,45 @@ class HomeWindow(QMainWindow):
         menu_layout.addWidget(logo_container)
 
         # Menu buttons
-        self.speech_recognition_button = QPushButton("Speech Recognition")
-        self.speech_recognition_button.setObjectName("settings_button")
-        self.speech_recognition_button.setCheckable(True)
+        self.speech_recognition_button = MenuButton("Speech Recognition", 0)
         self.speech_recognition_button.setChecked(True)
         self.speech_recognition_button.clicked.connect(lambda: self.select_menu(0))
         menu_layout.addWidget(self.speech_recognition_button)
-        self.speech_recognition_button.setStyleSheet('''
-            QPushButton#settings_button {
-                background: transparent;
-                color: #FFFFFF;
-                font-size: 15px;
-                font-weight: 500;
-                border: none;
-                border-radius: 8px;
-                padding: 12px 0px;
-                margin: 8px 16px 8px 16px;
-            }
-            QPushButton#settings_button:checked {
-                background: rgba(242, 228, 214, 0.15) !important;
-                color: #FFFFFF;
-            }
-            QPushButton#settings_button:hover {
-                background: rgba(242, 228, 214, 0.1) !important;
-            }
-        ''')
 
         # Add Language Model Settings button
-        self.language_model_button = QPushButton("Language Model")
-        self.language_model_button.setObjectName("settings_button")
-        self.language_model_button.setCheckable(True)
-        self.language_model_button.setChecked(False)
+        self.language_model_button = MenuButton("Language Model", 1)
         self.language_model_button.clicked.connect(lambda: self.select_menu(1))
         menu_layout.addWidget(self.language_model_button)
-        self.language_model_button.setStyleSheet('''
-            QPushButton#settings_button {
-                background: transparent;
-                color: #FFFFFF;
-                font-size: 15px;
-                font-weight: 500;
-                border: none;
-                border-radius: 8px;
-                padding: 12px 0px;
-                margin: 8px 16px 8px 16px;
-            }
-            QPushButton#settings_button:checked {
-                background: rgba(242, 228, 214, 0.15) !important;
-                color: #FFFFFF;
-            }
-            QPushButton#settings_button:hover {
-                background: rgba(242, 228, 214, 0.1) !important;
-            }
-        ''')
 
         # Add API Keys button
-        self.api_keys_button = QPushButton("API Keys")
-        self.api_keys_button.setObjectName("settings_button")
-        self.api_keys_button.setCheckable(True)
-        self.api_keys_button.setChecked(False)
+        self.api_keys_button = MenuButton("API Keys", 2)
         self.api_keys_button.clicked.connect(lambda: self.select_menu(2))
         menu_layout.addWidget(self.api_keys_button)
-        self.api_keys_button.setStyleSheet('''
-            QPushButton#settings_button {
-                background: transparent;
-                color: #FFFFFF;
-                font-size: 15px;
-                font-weight: 500;
-                border: none;
-                border-radius: 8px;
-                padding: 12px 0px;
-                margin: 8px 16px 8px 16px;
-            }
-            QPushButton#settings_button:checked {
-                background: rgba(242, 228, 214, 0.15) !important;
-                color: #FFFFFF;
-            }
-            QPushButton#settings_button:hover {
-                background: rgba(242, 228, 214, 0.1) !important;
-            }
-        ''')
 
         # Add Streaming button
-        self.streaming_button = QPushButton("Streaming")
-        self.streaming_button.setObjectName("settings_button")
-        self.streaming_button.setCheckable(True)
-        self.streaming_button.setChecked(False)
+        self.streaming_button = MenuButton("Streaming", 3)
         self.streaming_button.clicked.connect(lambda: self.select_menu(3))
         menu_layout.addWidget(self.streaming_button)
-        self.streaming_button.setStyleSheet('''
-            QPushButton#settings_button {
-                background: transparent;
-                color: #FFFFFF;
-                font-size: 15px;
-                font-weight: 500;
-                border: none;
-                border-radius: 8px;
-                padding: 12px 0px;
-                margin: 8px 16px 8px 16px;
-            }
-            QPushButton#settings_button:checked {
-                background: rgba(242, 228, 214, 0.15) !important;
-                color: #FFFFFF;
-            }
-            QPushButton#settings_button:hover {
-                background: rgba(242, 228, 214, 0.1) !important;
-            }
-        ''')
 
         # Add Audio button
-        self.audio_button = QPushButton("Audio")
-        self.audio_button.setObjectName("settings_button")
-        self.audio_button.setCheckable(True)
-        self.audio_button.setChecked(False)
+        self.audio_button = MenuButton("Audio", 4)
         self.audio_button.clicked.connect(lambda: self.select_menu(4))
         menu_layout.addWidget(self.audio_button)
-        self.audio_button.setStyleSheet('''
-            QPushButton#settings_button {
-                background: transparent;
-                color: #FFFFFF;
-                font-size: 15px;
-                font-weight: 500;
-                border: none;
-                border-radius: 8px;
-                padding: 12px 0px;
-                margin: 8px 16px 8px 16px;
-            }
-            QPushButton#settings_button:checked {
-                background: rgba(242, 228, 214, 0.15) !important;
-                color: #FFFFFF;
-            }
-            QPushButton#settings_button:hover {
-                background: rgba(242, 228, 214, 0.1) !important;
-            }
-        ''')
 
         # Add Voice Detection button
-        self.voice_detection_button = QPushButton("Voice Detection")
-        self.voice_detection_button.setObjectName("settings_button")
-        self.voice_detection_button.setCheckable(True)
-        self.voice_detection_button.setChecked(False)
+        self.voice_detection_button = MenuButton("Voice Detection", 5)
         self.voice_detection_button.clicked.connect(lambda: self.select_menu(5))
         menu_layout.addWidget(self.voice_detection_button)
-        self.voice_detection_button.setStyleSheet('''
-            QPushButton#settings_button {
-                background: transparent;
-                color: #FFFFFF;
-                font-size: 15px;
-                font-weight: 500;
-                border: none;
-                border-radius: 8px;
-                padding: 12px 0px;
-                margin: 8px 16px 8px 16px;
-            }
-            QPushButton#settings_button:checked {
-                background: rgba(242, 228, 214, 0.15) !important;
-                color: #FFFFFF;
-            }
-            QPushButton#settings_button:hover {
-                background: rgba(242, 228, 214, 0.1) !important;
-            }
-        ''')
 
         # Add Keyboard button
-        self.keyboard_button = QPushButton("Keyboard")
-        self.keyboard_button.setObjectName("settings_button")
-        self.keyboard_button.setCheckable(True)
-        self.keyboard_button.setChecked(False)
+        self.keyboard_button = MenuButton("Keyboard", 6)
         self.keyboard_button.clicked.connect(lambda: self.select_menu(6))
         menu_layout.addWidget(self.keyboard_button)
-        self.keyboard_button.setStyleSheet('''
-            QPushButton#settings_button {
-                background: transparent;
-                color: #FFFFFF;
-                font-size: 15px;
-                font-weight: 500;
-                border: none;
-                border-radius: 8px;
-                padding: 12px 0px;
-                margin: 8px 16px 8px 16px;
-            }
-            QPushButton#settings_button:checked {
-                background: rgba(242, 228, 214, 0.15) !important;
-                color: #FFFFFF;
-            }
-            QPushButton#settings_button:hover {
-                background: rgba(242, 228, 214, 0.1) !important;
-            }
-        ''')
 
         # Add Developer button
-        self.developer_button = QPushButton("Developer")
-        self.developer_button.setObjectName("settings_button")
-        self.developer_button.setCheckable(True)
-        self.developer_button.setChecked(False)
+        self.developer_button = MenuButton("Developer", 7)
         self.developer_button.clicked.connect(lambda: self.select_menu(7))
         menu_layout.addWidget(self.developer_button)
-        self.developer_button.setStyleSheet('''
-            QPushButton#settings_button {
-                background: transparent;
-                color: #FFFFFF;
-                font-size: 15px;
-                font-weight: 500;
-                border: none;
-                border-radius: 8px;
-                padding: 12px 0px;
-                margin: 8px 16px 8px 16px;
-            }
-            QPushButton#settings_button:checked {
-                background: rgba(242, 228, 214, 0.15) !important;
-                color: #FFFFFF;
-            }
-            QPushButton#settings_button:hover {
-                background: rgba(242, 228, 214, 0.1) !important;
-            }
-        ''')
 
         # Add stretch to push everything up
         menu_layout.addStretch()

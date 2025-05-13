@@ -106,6 +106,18 @@ class GroqClient:
 
             traceback.print_exc()
             return None
+        
+    def generate_response_with_audio(
+        self,
+        audio_buffer: bytes,
+        text: str,
+        system_prompt: str,
+        max_tokens: int,
+        temperature: float,
+        tools: list[dict] = [],
+        messages_override: Optional[List[Dict]] = None,
+    ) -> Any:
+        raise NotImplementedError("Groq client does not support multi modal responses.")
 
     @time_method
     def transcribe_audio(self, audio_buffer: io.BytesIO) -> str:

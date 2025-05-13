@@ -5,6 +5,7 @@ from typing import Any, List, Dict, Optional
 import requests
 
 from src.clients.llm_client_interface import LLMClientInterface
+from src.utils.timing import time_method
 
 class OllamaClient(LLMClientInterface):
     def __init__(self, model: str, base_url: str = "http://localhost:11434"):
@@ -75,7 +76,7 @@ class OllamaClient(LLMClientInterface):
             self._is_running = False # Can't confirm model
             return False
 
-
+    @time_method
     def generate_response(
         self,
         text: str,
@@ -194,3 +195,15 @@ class OllamaClient(LLMClientInterface):
             import traceback
             traceback.print_exc()
             return None
+        
+    def generate_response_with_audio(
+        self,
+        audio_buffer: bytes,
+        text: str,
+        system_prompt: str,
+        max_tokens: int,
+        temperature: float,
+        tools: list[dict] = [],
+        messages_override: Optional[List[Dict]] = None,
+    ) -> Any:
+        raise NotImplementedError("Ollama client does not support multi modal responses.")

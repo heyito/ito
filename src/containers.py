@@ -165,7 +165,7 @@ class Container(containers.DeclarativeContainer):
             compute_type=config.ASR.compute_type,
         ),
         gemini_api=providers.Singleton(
-            GeminiASRHandler, geminiClient=gemini_llm_client_provider
+            GeminiASRHandler, gemini_client=gemini_llm_client_provider
         ),
     )
 

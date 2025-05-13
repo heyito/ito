@@ -152,17 +152,13 @@ class GeminiClient(LLMClientInterface):
 
             transcript_response = self._client.models.generate_content(
                 model=self._asr_model,
-                content=[
-                    "Transcribe this audio",
+                contents=[
+                    "Generate a transcript of the audio.",
                     types.Part.from_bytes(data=audio_data_bytes, mime_type="audio/wav"),
                 ],
             )
 
-            # Ensure the response is treated as a string
-            transcript = (
-                transcript_response.text if isinstance(transcript_response, str) else ""
-            )
-            return transcript.strip()
+            return transcript_response.text
 
         except Exception as e:
             # Catch broader exceptions during the API call

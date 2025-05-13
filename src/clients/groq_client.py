@@ -1,12 +1,14 @@
 import io
+import json
 import re
 from typing import Any, Dict, List, Optional
 from groq import Groq, GroqError
 
+from src.clients.llm_client_interface import LLMClientInterface
 from src.utils.timing import time_method
 
 
-class GroqClient:
+class GroqClient(LLMClientInterface):
     def __init__(self, api_key: str, user_command_model: str, asr_model: str):
         if not api_key:
             raise ValueError("Groq API key is required.")
@@ -45,7 +47,7 @@ class GroqClient:
         system_prompt: str,
         max_tokens: int,
         temperature: float,
-        tools: list[dict] = [],
+        tool_functions: Optional[List[dict]] = None,
         messages_override: Optional[List[Dict]] = None,
     ) -> Any:
         if (
@@ -59,10 +61,9 @@ class GroqClient:
         if not self._user_command_model:
             raise ValueError("Groq user command model is required.")
 
-        actual_tools = tools or []  # Ensure tools is a list
+        actual_tools = self.tool_functions_to_openai_format(tool_functions)
 
         try:
-
             response = self._client.chat.completions.create(
                 model=self._user_command_model,
                 messages=messages_override
@@ -72,8 +73,8 @@ class GroqClient:
                 ],
                 temperature=temperature,
                 max_tokens=max_tokens,
-                tools=tools,
-                tool_choice="required" if len(tools) != 0 else "none",
+                tools=actual_tools,
+                tool_choice="required" if len(tool_functions) != 0 else "none",
             )
 
             if not actual_tools:  # If no tools were intended, process as text
@@ -152,3 +153,23 @@ class GroqClient:
             # Catch broader exceptions during the API call
             print(f"An unexpected error occurred during Groq transcription: {e}")
             return ""
+
+    def format_messages(self, system_prompt: str, user_prompt: str) -> List[Dict]:
+        """
+        Formats the messages for the Groq API.
+        """
+        return [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+
+    def format_tool_message(id: str, name: str, result: str):
+        return {
+            "role": "tool",
+            "tool_call_id": id,
+            "name": name,
+            "content": json.dumps({"result": result}),
+        }
+
+    def format_user_message(content):
+        return {"role": "user", "content": json.dumps(content)}

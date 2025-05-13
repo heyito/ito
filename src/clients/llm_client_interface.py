@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import io
 from typing import Any, List, Dict, Optional
 
+
 class LLMClientInterface(ABC):
     """
     Interface for LLM client implementations.
@@ -22,7 +23,7 @@ class LLMClientInterface(ABC):
         Returns the name of the specific LLM model being used by this client.
         """
         pass
-    
+
     @property
     @abstractmethod
     def asr_model_name(self) -> str:
@@ -38,9 +39,13 @@ class LLMClientInterface(ABC):
         system_prompt: str,
         max_tokens: int,
         temperature: float,
-        tools: Optional[List[Dict]] = None, # Changed to Optional[List[Dict]] and default to None
-        messages_override: Optional[List[Dict]] = None, # Changed to Optional[List[Dict]] and default to None
-    ) -> Any: # Return type can be a string or a provider-specific object (e.g., OpenAI's response for tools)
+        tool_functions: Optional[
+            List[Dict]
+        ] = None,  # Changed to Optional[List[Dict]] and default to None
+        messages_override: Optional[
+            List[Dict]
+        ] = None,  # Changed to Optional[List[Dict]] and default to None
+    ) -> Any:  # Return type can be a string or a provider-specific object (e.g., OpenAI's response for tools)
         """
         Processes the input text and generates a response from the LLM.
 
@@ -83,10 +88,55 @@ class LLMClientInterface(ABC):
             True if the client is ready to be used, False otherwise.
         """
         pass
-    
+
     @abstractmethod
     def transcribe_audio(self, audio_buffer: io.BytesIO) -> str:
         """
         Transcribes audio from a buffer and returns the text.
         """
         pass
+
+    @abstractmethod
+    def format_messages(self, system_prompt: str, user_prompt: str) -> List[Any]:
+        """
+        Formats the system prompt and user text into a list of messages.
+
+        Args:
+            system_prompt: The system prompt to include.
+            text: The user's message content.
+
+        Returns:
+            A list of dictionaries representing the formatted messages.
+        """
+        pass
+
+    @abstractmethod
+    def format_tool_message(id: str, name: str, result: str) -> Any:
+        pass
+
+    @abstractmethod
+    def format_user_message(content: str) -> Any:
+        pass
+
+    @staticmethod
+    def tool_functions_to_openai_format(
+        tool_functions: Optional[List[Dict]],
+    ) -> List[Dict]:
+        """
+        Converts tool functions to OpenAI's expected format.
+
+        Also supported by Groq
+
+        Args:
+            tool_functions: List of tool functions to convert.
+
+        Returns:
+            List of dictionaries in OpenAI's function format.
+        """
+        if not tool_functions:
+            return []
+
+        result = []
+        for tool in tool_functions:
+            result.append({"type": "function", "function": tool})
+        return result

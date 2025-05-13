@@ -48,7 +48,7 @@ class GeminiClient(LLMClientInterface):
         system_prompt: str,
         max_tokens: int,
         temperature: float,
-        tools: list[dict] = [],
+        tool_functions: Optional[List[dict]] = None,
         messages_override: Optional[List[Dict]] = None,
     ) -> Any:
         if (
@@ -62,24 +62,32 @@ class GeminiClient(LLMClientInterface):
         if not self._user_command_model:
             raise ValueError("Gemini user command model is required.")
 
-        if tools or messages_override:
-            print(
-                "Inten hasn't implemented tool support or messages_override for GeminiClient."
-            )
+        if messages_override:
+            print("Inten hasn't implemented messages_override for GeminiClient.")
             return None
+
+        tools = types.Tool(function_declarations=tool_functions)
+        contents = self.format_messages(system_prompt, text)
 
         try:
             response = self._client.models.generate_content(
                 model=self._user_command_model,
-                contents=system_prompt + text,
+                contents=contents,
+                generation_config=types.GenerationConfig(
+                    temperature=temperature, max_output_tokens=max_tokens
+                ),
+                config=types.GenerateContentConfig(tools=[tools]),
             )
 
-            return response.text
+            if tool_functions:
+                return response
+            else:
+                return response.text
         except Exception as e:
             # Catch broader exceptions during the API call
             print(f"An unexpected error occurred during Gemini transcription: {e}")
             return ""  # Return empty string on unexpected errors
-        
+
     @time_method
     def generate_response_with_audio(
         self,
@@ -120,12 +128,20 @@ class GeminiClient(LLMClientInterface):
                 processed_audio_data = audio_buffer
             else:
                 # Log error for unexpected type and return
-                print(f"GeminiClient ERROR: audio_buffer has unexpected type {type(audio_buffer)}. Expected bytes or io.BytesIO.")
+                print(
+                    f"GeminiClient ERROR: audio_buffer has unexpected type {type(audio_buffer)}. Expected bytes or io.BytesIO."
+                )
                 return None
 
             response = self._client.models.generate_content(
                 model=self._user_command_model,
-                contents=[system_prompt, text, types.Part.from_bytes(data=processed_audio_data, mime_type="audio/wav")],
+                contents=[
+                    system_prompt,
+                    text,
+                    types.Part.from_bytes(
+                        data=processed_audio_data, mime_type="audio/wav"
+                    ),
+                ],
             )
 
             print(f"GeminiClient: Response: {response}")
@@ -164,3 +180,20 @@ class GeminiClient(LLMClientInterface):
             # Catch broader exceptions during the API call
             print(f"An unexpected error occurred during Gemini transcription: {e}")
             return ""  # Return empty string on unexpected errors
+
+    def format_messages(self, system_prompt, user_prompt):
+        return [
+            types.Content(role="user", parts=[types.Part(text=user_prompt)]),
+            types.Content(role="system", parts=[types.Part(text=system_prompt)]),
+        ]
+
+    def format_tool_message(self, id, name, result):
+        return types.Content(
+            role="model",
+            parts=types.Part.from_function_response(
+                name=name, id=id, response={"result": result}
+            ),
+        )
+
+    def format_user_message(content):
+        return types.Content(role="user", parts=[types.Part(text=content)])

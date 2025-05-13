@@ -7,13 +7,14 @@ import requests
 from src.clients.llm_client_interface import LLMClientInterface
 from src.utils.timing import time_method
 
+
 class OllamaClient(LLMClientInterface):
     def __init__(self, model: str, base_url: str = "http://localhost:11434"):
         if not model:
             raise ValueError("Ollama model name is required.")
         self._model = model
-        self._base_url = base_url.rstrip('/')
-        self._is_running = False # Checked by check_availability
+        self._base_url = base_url.rstrip("/")
+        self._is_running = False  # Checked by check_availability
 
     @property
     def source_name(self) -> str:
@@ -23,7 +24,9 @@ class OllamaClient(LLMClientInterface):
     def model_name(self) -> str:
         return self._model
 
-    def _check_ollama_service(self, max_retries: int = 1, retry_delay: float = 1.0) -> bool:
+    def _check_ollama_service(
+        self, max_retries: int = 1, retry_delay: float = 1.0
+    ) -> bool:
         """
         Low-level check if the Ollama service endpoint is responsive.
         """
@@ -45,35 +48,41 @@ class OllamaClient(LLMClientInterface):
         return False
 
     def check_availability(self) -> bool:
-        print(f"OllamaClient: Checking availability for model '{self._model}' at {self._base_url}...")
+        print(
+            f"OllamaClient: Checking availability for model '{self._model}' at {self._base_url}..."
+        )
         if not self._check_ollama_service():
-            print(f"OllamaClient ERROR: Ollama service is not running or not accessible at {self._base_url}.")
+            print(
+                f"OllamaClient ERROR: Ollama service is not running or not accessible at {self._base_url}."
+            )
             self._is_running = False
             return False
 
         # Optionally, check if the specific model is available
         try:
             response = requests.post(
-                f"{self._base_url}/api/show",
-                json={"name": self._model},
-                timeout=10
+                f"{self._base_url}/api/show", json={"name": self._model}, timeout=10
             )
             if response.status_code == 200:
                 print(f"OllamaClient: Model '{self._model}' is available.")
                 self._is_running = True
                 return True
             elif response.status_code == 404:
-                print(f"OllamaClient ERROR: Model '{self._model}' not found in Ollama. Please pull it first.")
+                print(
+                    f"OllamaClient ERROR: Model '{self._model}' not found in Ollama. Please pull it first."
+                )
                 self._is_running = False
                 return False
             else:
-                print(f"OllamaClient WARNING: Received unexpected status {response.status_code} when checking for model '{self._model}'.")
+                print(
+                    f"OllamaClient WARNING: Received unexpected status {response.status_code} when checking for model '{self._model}'."
+                )
                 # Assuming service is running but model status is uncertain, proceed cautiously
-                self._is_running = True # Service is up, but model might fail later
-                return True # Or False, depending on how strict you want to be
+                self._is_running = True  # Service is up, but model might fail later
+                return True  # Or False, depending on how strict you want to be
         except requests.exceptions.RequestException as e:
             print(f"OllamaClient: Error while checking model '{self._model}': {e}")
-            self._is_running = False # Can't confirm model
+            self._is_running = False  # Can't confirm model
             return False
 
     @time_method
@@ -83,15 +92,21 @@ class OllamaClient(LLMClientInterface):
         system_prompt: str,
         max_tokens: int,
         temperature: float,
-        tools: Optional[List[Dict]] = None, # Ollama doesn't directly support OpenAI tools this way
+        tool_functions: Optional[
+            List[Dict]
+        ] = None,  # Ollama doesn't directly support OpenAI tools this way
         messages_override: Optional[List[Dict]] = None,
     ) -> Optional[str]:
-        if not self._is_running: # Relies on check_availability being called
-            print("OllamaClient ERROR: Ollama is not running or model not available. Cannot process request.")
+        if not self._is_running:  # Relies on check_availability being called
+            print(
+                "OllamaClient ERROR: Ollama is not running or model not available. Cannot process request."
+            )
             return None
 
-        if tools and len(tools) > 0:
-            print("OllamaClient WARNING: 'tools' parameter is provided, but Ollama client does not natively support OpenAI-style tools. Ignoring tools.")
+        if tool_functions and len(tool_functions) > 0:
+            print(
+                "OllamaClient WARNING: 'tool_functions' parameter is provided, but Ollama client does not natively support OpenAI-style tools. Ignoring tools."
+            )
 
         print(f"Sending request to Ollama (model: {self._model})...")
         start_time = time.time()
@@ -108,13 +123,17 @@ class OllamaClient(LLMClientInterface):
             # This example assumes /api/chat endpoint for messages, or /api/generate for prompt
             # The user's current code uses /api/generate with a formatted prompt. We'll stick to that.
             # If you switch Ollama to use /api/chat, this part would change.
-            print("OllamaClient: Using messages_override. Formatting for Ollama prompt.")
+            print(
+                "OllamaClient: Using messages_override. Formatting for Ollama prompt."
+            )
             formatted_messages = ""
             for msg in messages_override:
                 role = msg.get("role", "user")
                 content = msg.get("content", "")
                 if role == "system":
-                    formatted_messages += f"{content}\n\n" # System prompt at the beginning
+                    formatted_messages += (
+                        f"{content}\n\n"  # System prompt at the beginning
+                    )
                 else:
                     formatted_messages += f"{role.capitalize()}: {content}\n"
             # The 'text' parameter might be the latest user message, append it if not already in messages_override
@@ -129,22 +148,28 @@ class OllamaClient(LLMClientInterface):
 
             final_prompt_str = ""
             # Find system prompt in messages_override, if any
-            system_msg_content = system_prompt # Default
+            system_msg_content = system_prompt  # Default
             user_msgs_formatted = []
 
-            temp_messages = [m for m in messages_override] # Create a mutable copy
+            temp_messages = [m for m in messages_override]  # Create a mutable copy
 
             # Extract system prompt if present
             for i, msg in enumerate(temp_messages):
                 if msg.get("role") == "system":
                     system_msg_content = msg.get("content", system_prompt)
-                    temp_messages.pop(i) # Remove it so it's not duplicated
+                    temp_messages.pop(i)  # Remove it so it's not duplicated
                     break
 
             for msg in temp_messages:
-                user_msgs_formatted.append(f"{msg.get('role', 'user').capitalize()}: {msg.get('content', '')}")
+                user_msgs_formatted.append(
+                    f"{msg.get('role', 'user').capitalize()}: {msg.get('content', '')}"
+                )
 
-            full_prompt = f"{system_msg_content}\n\n" + "\n".join(user_msgs_formatted) + "\nAssistant:"
+            full_prompt = (
+                f"{system_msg_content}\n\n"
+                + "\n".join(user_msgs_formatted)
+                + "\nAssistant:"
+            )
 
         else:
             full_prompt = f"{system_prompt}\n\nUser: {text}\nAssistant:"
@@ -157,28 +182,28 @@ class OllamaClient(LLMClientInterface):
                     "prompt": full_prompt,
                     "options": {
                         "temperature": temperature,
-                        "num_predict": max_tokens, # Ollama uses num_predict
+                        "num_predict": max_tokens,  # Ollama uses num_predict
                     },
-                    "stream": True, # Ollama generate API is often streamed
+                    "stream": True,  # Ollama generate API is often streamed
                 },
                 stream=True,
-                timeout=120, # seconds
+                timeout=120,  # seconds
             )
-            response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
+            response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
 
             full_response_content = ""
             for line in response.iter_lines():
                 if line:
                     try:
-                        chunk = json.loads(line.decode('utf-8'))
+                        chunk = json.loads(line.decode("utf-8"))
                         if "response" in chunk:
                             full_response_content += chunk["response"]
                         if chunk.get("done") and chunk.get("error"):
                             print(f"OllamaClient ERROR in stream: {chunk['error']}")
-                            return None # Or raise an exception
+                            return None  # Or raise an exception
                     except json.JSONDecodeError:
                         print(f"OllamaClient: Could not decode JSON line: {line}")
-                        continue # Skip malformed lines
+                        continue  # Skip malformed lines
 
             end_time = time.time()
             print(f"Ollama response time: {end_time - start_time:.2f} seconds")
@@ -188,14 +213,16 @@ class OllamaClient(LLMClientInterface):
         except requests.exceptions.RequestException as e:
             print(f"Error during Ollama LLM processing: {e}")
             import traceback
+
             traceback.print_exc()
             return None
-        except Exception as e: # Catch other potential errors
+        except Exception as e:  # Catch other potential errors
             print(f"An unexpected error occurred during Ollama LLM processing: {e}")
             import traceback
+
             traceback.print_exc()
             return None
-        
+
     def generate_response_with_audio(
         self,
         audio_buffer: bytes,
@@ -206,4 +233,15 @@ class OllamaClient(LLMClientInterface):
         tools: list[dict] = [],
         messages_override: Optional[List[Dict]] = None,
     ) -> Any:
-        raise NotImplementedError("Ollama client does not support multi modal responses.")
+        raise NotImplementedError(
+            "Ollama client does not support multi modal responses."
+        )
+
+    def format_messages(self, system_prompt: str, user_prompt: str):
+        raise ValueError("OllamaClient does not support message formatting.")
+
+    def format_tool_message(id, name, result):
+        raise ValueError("OllamaClient does not support tools")
+
+    def format_user_message(content: str):
+        raise ValueError("OllamaClient does not support user message formatting.")

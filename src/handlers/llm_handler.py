@@ -1,11 +1,15 @@
+import json
 import time
 from typing import Any, List, Dict, Optional
 
 from src.clients.llm_client_interface import LLMClientInterface
 from src.utils.timing import time_method
 
+from google.genai import types
+
 # Default System Prompt (can be configured or overridden)
 DEFAULT_LLM_SYSTEM_PROMPT = "You are a helpful AI assistant."
+
 
 class LLMHandler:
     def __init__(self, client: LLMClientInterface):
@@ -19,9 +23,13 @@ class LLMHandler:
         self.is_client_available = self.client.check_availability()
 
         if self.is_client_available:
-            print(f"LLMHandler initialized with client: {self.client.source_name}, model: {self.client.user_command_model_name}")
+            print(
+                f"LLMHandler initialized with client: {self.client.source_name}, model: {self.client.user_command_model_name}"
+            )
         else:
-            print(f"LLMHandler WARNING: Client {self.client.source_name} is not available or not configured correctly.")
+            print(
+                f"LLMHandler WARNING: Client {self.client.source_name} is not available or not configured correctly."
+            )
 
     @time_method
     # text and audio are optional, but at least one must be provided
@@ -29,12 +37,12 @@ class LLMHandler:
         self,
         text: str,
         audio_buffer: bytes,
-        system_prompt_override: Optional[str] = None, # Use Optional
+        system_prompt_override: Optional[str] = None,  # Use Optional
         max_tokens: int = 4096,
         temperature: float = 0.7,
-        tools: Optional[List[Dict]] = None, # Use Optional
-        messages_override: Optional[List[Dict]] = None, # Use Optional
-    ) -> Any: # Return type depends on client (string or OpenAI response object)
+        tool_functions: Optional[List[Dict]] = None,  # Use Optional
+        messages_override: Optional[List[Dict]] = None,  # Use Optional
+    ) -> Any:  # Return type depends on client (string or OpenAI response object)
         """
         Processes text using the configured LLM client.
 
@@ -53,7 +61,9 @@ class LLMHandler:
         start_time = time.time()
 
         if not text and not messages_override and not audio_buffer:
-            print("LLMHandler: Received empty text for user message and no messages_override and no audio_buffer.")
+            print(
+                "LLMHandler: Received empty text for user message and no messages_override and no audio_buffer."
+            )
             return None
 
         # Determine the system prompt to use
@@ -64,8 +74,12 @@ class LLMHandler:
             if system_prompt_override
             else DEFAULT_LLM_SYSTEM_PROMPT
         )
-        if not system_prompt: # Ensure system_prompt is not empty if it's going to be used
-            print("LLMHandler Warning: LLM system prompt is empty. Using a default space.")
+        if (
+            not system_prompt
+        ):  # Ensure system_prompt is not empty if it's going to be used
+            print(
+                "LLMHandler Warning: LLM system prompt is empty. Using a default space."
+            )
             system_prompt = " "
 
         try:
@@ -77,8 +91,9 @@ class LLMHandler:
                     system_prompt=system_prompt,
                     max_tokens=max_tokens,
                     temperature=temperature,
-                    tools=tools or [], # Pass empty list if None
-                    messages_override=messages_override or [], # Pass empty list if None
+                    tools=tool_functions or [],  # Pass empty list if None
+                    messages_override=messages_override
+                    or [],  # Pass empty list if None
                 )
             else:
                 response = self.client.generate_response(
@@ -86,14 +101,17 @@ class LLMHandler:
                     system_prompt=system_prompt,
                     max_tokens=max_tokens,
                     temperature=temperature,
-                    tools=tools or [], # Pass empty list if None
-                    messages_override=messages_override or [], # Pass empty list if None
+                    tools=tool_functions or [],  # Pass empty list if None
+                    messages_override=messages_override
+                    or [],  # Pass empty list if None
                 )
 
             if response is not None:
-                pass # Response is already in desired format from client
+                pass  # Response is already in desired format from client
             else:
-                print(f"LLMHandler: Received no response or an error from {self.client.source_name}.")
+                print(
+                    f"LLMHandler: Received no response or an error from {self.client.source_name}."
+                )
 
             end_time = time.time()
             print(
@@ -102,7 +120,91 @@ class LLMHandler:
             return response
 
         except Exception as e:
-            print(f"LLMHandler: An unexpected error occurred while calling client's generate_response: {e}")
+            print(
+                f"LLMHandler: An unexpected error occurred while calling client's generate_response: {e}"
+            )
             import traceback
+
             traceback.print_exc()
+            return None
+
+    def run_tool_call_process(
+        self,
+        tool_name_resolver,
+        run_after_step,
+        tool_functions: List[Dict],
+        system_prompt: str,
+        user_prompt: str,
+        max_steps: int = 5,
+        state: Optional[Dict] = None,
+    ):
+        """
+        tool_name_resolver: Function that takes a tool name as an argument with kwargs
+        """
+        messages = self.client.format_messages(
+            system_prompt=system_prompt, user_prompt=user_prompt
+        )
+
+        steps = 0
+        while steps < max_steps:
+            resp = self.client.generate_response(
+                tool_functions=tool_functions,
+                messages_override=messages,
+            )
+            # TODO: Make this on the client as well
+            tool_call = self.extract_tool_call(resp)
+            tool_name = tool_call.name
+            tool_call_id = tool_call.id
+            args = json.loads(tool_call.arguments)
+
+            result = tool_name_resolver(tool_name, **args)
+            if result is None:
+                break
+
+            messages.append(
+                self.client.format_tool_message(
+                    id=tool_call_id, name=tool_name, result=result
+                )
+            )
+            steps += 1
+
+            user_info = run_after_step(state)
+            if user_info:
+                messages.append(self.client.format_user_message(content=user_info))
+
+    def extract_tool_call(
+        self,
+        response: Any,
+    ) -> Optional[List[Dict]]:
+        """
+        Extracts tool calls from the LLM response.
+
+        Args:
+            response: The response object from the LLM.
+
+        Returns:
+            A list of tool calls if present, otherwise None.
+        """
+        # TODO: Consider instead doing this from the client i.e.
+        # if self.client.source_name == "openai" or "gemini"
+
+        # OpenAI-style response
+        if hasattr(response, "choices") and len(response.choices) > 0:
+            tool_call = response.choices[0].message.tool_calls[0]
+            return {
+                "name": tool_call.function.name,
+                "arguments": tool_call.function.arguments,
+                "id": tool_call.id,
+            }
+
+        # Gemini-style response
+        elif hasattr(response, "candidates"):
+            # Other LLM response format
+            function_call = response.candidates[0].content.function_call
+            return {
+                "name": function_call.name,
+                "arguments": function_call.args,
+                "id": function_call.id,
+            }
+        else:
             return None

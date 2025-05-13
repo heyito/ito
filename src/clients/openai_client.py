@@ -1,10 +1,12 @@
 import io
+import json
 import re
 from typing import Any, List, Dict, Optional
 
 from openai import OpenAI, OpenAIError
 from src.clients.llm_client_interface import LLMClientInterface
 from src.utils.timing import time_method
+
 
 class OpenAIClient(LLMClientInterface):
     def __init__(self, api_key: str, user_command_model: str, asr_model: str):
@@ -15,7 +17,9 @@ class OpenAIClient(LLMClientInterface):
         self._user_command_model = user_command_model
         self._asr_model = asr_model
         self._client = OpenAI(api_key=self._api_key)
-        self._is_valid = True # Assume valid if key is provided, check_availability can do more
+        self._is_valid = (
+            True  # Assume valid if key is provided, check_availability can do more
+        )
 
     @property
     def source_name(self) -> str:
@@ -45,17 +49,21 @@ class OpenAIClient(LLMClientInterface):
         system_prompt: str,
         max_tokens: int,
         temperature: float,
-        tools: list[dict] = [],
+        tool_functions: Optional[List[dict]] = None,
         messages_override: Optional[List[Dict]] = None,
     ) -> Any:
-        if not self._is_valid: # Relies on check_availability being called or key presence
-             print("OpenAIClient ERROR: API key is invalid or missing. Cannot process request.")
-             return None
-        
+        if (
+            not self._is_valid
+        ):  # Relies on check_availability being called or key presence
+            print(
+                "OpenAIClient ERROR: API key is invalid or missing. Cannot process request."
+            )
+            return None
+
         if not self._user_command_model:
             raise ValueError("OpenAI user command model is required.")
 
-        actual_tools = tools or [] # Ensure tools is a list
+        actual_tools = self.tool_functions_to_openai_format(tool_functions)
 
         try:
             response = self._client.chat.completions.create(
@@ -67,11 +75,11 @@ class OpenAIClient(LLMClientInterface):
                 ],
                 temperature=temperature,
                 max_tokens=max_tokens,
-                tools=tools,
-                tool_choice="required" if len(tools) != 0 else "none",
+                tools=actual_tools,
+                tool_choice="required" if len(actual_tools) != 0 else "none",
             )
 
-            if not actual_tools: # If no tools were intended, process as text
+            if not actual_tools:  # If no tools were intended, process as text
                 processed_text = response.choices[0].message.content
                 print(f"OpenAIClient returned processed text: {processed_text}")
                 if processed_text:
@@ -98,9 +106,10 @@ class OpenAIClient(LLMClientInterface):
         except Exception as e:
             print(f"An unexpected error occurred during OpenAI LLM processing: {e}")
             import traceback
+
             traceback.print_exc()
             return None
-        
+
     def generate_response_with_audio(
         self,
         audio_buffer: bytes,
@@ -111,15 +120,17 @@ class OpenAIClient(LLMClientInterface):
         tools: list[dict] = [],
         messages_override: Optional[List[Dict]] = None,
     ) -> Any:
-        raise NotImplementedError("OpenAI client does not support multi modal responses.")
-        
+        raise NotImplementedError(
+            "OpenAI client does not support multi modal responses."
+        )
+
     @time_method
     def transcribe_audio(self, audio_buffer: io.BytesIO) -> str:
         """Transcribes audio using the OpenAI Whisper API."""
         if not self._client:
-             print("Error: OpenAI client not initialized.")
-             return ""
-        
+            print("Error: OpenAI client not initialized.")
+            return ""
+
         if not self._asr_model:
             raise ValueError("OpenAI ASR model is required.")
 
@@ -130,17 +141,36 @@ class OpenAIClient(LLMClientInterface):
             transcript_response = self._client.audio.transcriptions.create(
                 model=self._asr_model,
                 file=audio_buffer,
-                response_format="text" # Explicitly request text
+                response_format="text",  # Explicitly request text
             )
 
             # Ensure the response is treated as a string
-            transcript = transcript_response if isinstance(transcript_response, str) else ""
+            transcript = (
+                transcript_response if isinstance(transcript_response, str) else ""
+            )
             return transcript.strip()
 
         except OpenAIError as e:
             print(f"OpenAI API Error during transcription: {e}")
-            return "" # Return empty string on specific API errors
+            return ""  # Return empty string on specific API errors
         except Exception as e:
             # Catch broader exceptions during the API call
             print(f"An unexpected error occurred during OpenAI transcription: {e}")
-            return "" # Return empty string on unexpected errors 
+            return ""  # Return empty string on unexpected errors
+
+    def format_messages(self, system_prompt, user_prompt):
+        return [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+
+    def format_tool_message(id, name, result):
+        return {
+            "role": "tool",
+            "tool_call_id": id,
+            "name": name,
+            "content": json.dumps({"result": result}),
+        }
+
+    def format_user_message(content):
+        return {"role": "user", "content": json.dumps(content)}

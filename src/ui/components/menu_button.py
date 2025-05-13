@@ -1,31 +1,52 @@
 from PyQt6.QtWidgets import QPushButton
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSlot
+from src.ui.theme.manager import ThemeManager
 
 class MenuButton(QPushButton):
-    def __init__(self, text: str, menu_index: int, parent=None):
+    def __init__(self, text: str, menu_index: int, parent=None, theme_manager: ThemeManager=None):
         super().__init__(text, parent)
         self.setObjectName("settings_button")
         self.setCheckable(True)
         self.setChecked(False)
         self.menu_index = menu_index
         
-        # Set the common styling
-        self.setStyleSheet('''
-            QPushButton#settings_button {
+        # Get theme manager instance
+        self.theme_manager = theme_manager or ThemeManager.instance()
+        
+        # Connect to theme changes
+        self.theme_manager.theme_changed.connect(self._on_theme_changed, Qt.ConnectionType.QueuedConnection)
+        
+        # Set initial style
+        self._update_style()
+    
+    @pyqtSlot(str)
+    def _on_theme_changed(self, new_theme):
+        """Handle theme change signal"""
+        self._update_style()
+    
+    def _update_style(self):
+        """Update the button style based on current theme"""
+        text_color = self.theme_manager.get_color('text_primary')
+        button_text_color = self.theme_manager.get_color('button.text')
+        hover_bg = self.theme_manager.get_color('button.hover')
+        checked_bg = self.theme_manager.get_color('button.pressed')
+        
+        self.setStyleSheet(f'''
+            QPushButton#settings_button {{
                 background: transparent;
-                color: #FFFFFF;
+                color: {text_color};
                 font-size: 15px;
                 font-weight: 500;
-                border: none;
                 border-radius: 8px;
                 padding: 12px 0px;
                 margin: 8px 16px 8px 16px;
-            }
-            QPushButton#settings_button:checked {
-                background: rgba(242, 228, 214, 0.15) !important;
-                color: #FFFFFF;
-            }
-            QPushButton#settings_button:hover {
-                background: rgba(242, 228, 214, 0.1) !important;
-            }
+            }}
+            QPushButton#settings_button:checked {{
+                background: {checked_bg};
+                color: {button_text_color};
+            }}
+            QPushButton#settings_button:hover {{
+                background: {hover_bg};
+                color: {button_text_color};
+            }}
         ''') 

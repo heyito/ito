@@ -4,7 +4,7 @@ import sys
 import traceback
 
 import sounddevice as sd
-from PyQt6.QtCore import QObject, QPointF, QSettings, Qt, QTimer, pyqtSignal, QRect, QRectF
+from PyQt6.QtCore import QObject, QPointF, QSettings, Qt, QTimer, pyqtSignal, QRect, QRectF, QThread
 from PyQt6.QtGui import QPixmap, QRegion, QPainterPath
 from PyQt6.QtWidgets import (
     QApplication,
@@ -85,6 +85,9 @@ class OnboardingWindow(QMainWindow):
 
     def __init__(self, theme_manager: ThemeManager):
         super().__init__()
+        print(f"Onboarding instance '{self}' is on thread: {self.thread()}")
+        print(f"Onboarding QApplication.instance().thread() is: {QApplication.instance().thread()}")
+        print(f"Current execution thread in Onboarding.__init__ is: {QThread.currentThread()}")
         self.theme_manager = theme_manager
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setWindowFlags(self.windowFlags() | Qt.WindowType.FramelessWindowHint)
@@ -152,11 +155,10 @@ class OnboardingWindow(QMainWindow):
             print("Logo not found, using fallback emoji.")
 
         # Apply initial styles
-        self.update_styles()
+        self.update_styles(self.theme_manager.current_theme)
 
-    def update_styles(self):
+    def update_styles(self, new_theme):
         """Update all styles based on current theme"""
-        print('updating styles for onboarding window, ', self.theme_manager.current_theme)
         # Update primary button style
         self.setStyleSheet(f"""
             QPushButton#onboarding-primary {{
@@ -625,7 +627,7 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     QApplication.setOrganizationName(OnboardingWindow.ORGANIZATION_NAME)
     QApplication.setApplicationName(OnboardingWindow.APPLICATION_NAME)
-    theme_manager = ThemeManager()
+    theme_manager = ThemeManager.instance()
     onboarding_window = OnboardingWindow(theme_manager=theme_manager)
     onboarding_window.show()
     sys.exit(app.exec())

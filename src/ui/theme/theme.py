@@ -57,7 +57,7 @@ THEME = {
     },
     "light": {
         # Base colors
-        "background": QColor(255, 255, 255, 20),
+        "background": QColor(255, 255, 255, 50),
         "surface": QColor(245, 245, 245, 255),
         "primary": QColor(98, 0, 238, 255),
         "secondary": QColor(3, 218, 197, 255),
@@ -81,10 +81,10 @@ THEME = {
         
         # Component-specific colors
         "button": {
-            "background": QColor(98, 0, 238, 255),
+            "background": QColor(118, 20, 255, 255),  # Lighter purple
             "text": QColor(255, 255, 255, 255),
-            "hover": QColor(118, 20, 255, 255),
-            "pressed": QColor(78, 0, 218, 255),
+            "hover": QColor(138, 40, 255, 255),  # Even lighter on hover
+            "pressed": QColor(98, 0, 238, 255),  # Original color when pressed
         },
         "input": {
             "background": QColor(255, 255, 255, 255),

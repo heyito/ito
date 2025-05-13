@@ -9,7 +9,7 @@ class SegmentedButtonGroup(QWidget):
     def __init__(self, options, parent=None, theme_manager: ThemeManager = None):
         super().__init__(parent)
         self.options = options
-        self.theme_manager = theme_manager or ThemeManager()
+        self.theme_manager = theme_manager or ThemeManager.instance()
         self.selected = None
         self.buttons = []
         self.layout = QFlowLayout(self)

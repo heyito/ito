@@ -71,9 +71,6 @@ class Container(containers.DeclarativeContainer):
     # Provide a single queue instance for status updates
     status_queue = providers.Singleton(queue.Queue)
 
-    # --- Theme Manager ---
-    theme_manager = providers.Singleton(ThemeManager)
-
     # --- Asyncio Loop Manager (Singleton) ---
     asyncio_loop_manager = providers.Singleton(AsyncioLoopManager)
     # Provide the loop instance itself via the manager

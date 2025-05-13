@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import QApplication
 
 from src.containers import Container
 from src.ui.keyboard_manager import KeyboardManager
+from src.ui.theme.manager import ThemeManager
 from src.ui.onboarding import OnboardingWindow
 
 multiprocessing.freeze_support()
@@ -141,8 +142,7 @@ if __name__ == "__main__":
         keyboard_manager.initialize_listener()
         
         # Initialize theme manager from the containers
-        container = Container()
-        theme_manager = container.theme_manager()
+        theme_manager = ThemeManager.instance()
         
         # Create and show the OnboardingWindow
         onboarding_window = OnboardingWindow(

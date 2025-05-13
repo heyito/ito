@@ -5,36 +5,24 @@ from PyQt6.QtCore import pyqtSignal, QObject
 from PyQt6.QtGui import QColor
 from src.ui.theme.theme import THEME
 
-def is_dark_mode():
-    """Check if macOS is in dark mode."""
-    if sys.platform != 'darwin':
-        return False
-        
-    try:
-        from AppKit import NSAppearance, NSAppearanceNameDarkAqua
-        
-        appearance = NSAppearance.currentAppearance()
-        return appearance.name() == NSAppearanceNameDarkAqua
-    except ImportError:
-        print("Warning: Could not import AppKit. Dark mode detection will be disabled.")
-        return False
-    except Exception as e:
-        print(f"Error detecting dark mode: {e}")
-        return False
-
 class ThemeManager(QObject):
     _instance = None
+
+    # Signal for when the theme changes
     theme_changed = pyqtSignal(str)
     
-    def __new__(cls):
+    @classmethod
+    def instance(cls):
         if cls._instance is None:
-            cls._instance = super(ThemeManager, cls).__new__(cls)
-            cls._instance._initialize()
+            cls._instance = ThemeManager()
         return cls._instance
     
-    def _initialize(self):
+    def __init__(self):
+        if ThemeManager._instance is not None:
+            raise Exception("ThemeManager is a singleton! Use ThemeManager.instance()")
         super().__init__()
         self._current_theme = "dark" if self._get_appearance() else "light"
+        self.theme_changed.emit(self._current_theme)
         self._setup_appearance_observer()
 
     def _get_appearance(self):

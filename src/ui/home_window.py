@@ -22,6 +22,8 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QFrame,
+    QGraphicsOpacityEffect,
+    QApplication
 )
 
 from src.application_manager import ApplicationManager
@@ -60,6 +62,7 @@ class HomeWindow(QMainWindow):
     def __init__(self, theme_manager: ThemeManager):
         super().__init__()
         self.theme_manager = theme_manager
+        self.theme_manager.theme_changed.connect(self.update_styles)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setWindowFlags(self.windowFlags() | Qt.WindowType.FramelessWindowHint)
         self.setWindowTitle("Inten")
@@ -119,13 +122,13 @@ class HomeWindow(QMainWindow):
         main_layout.setSpacing(0)
         main_widget.layout.addLayout(main_layout)
         self._effective_top_margin = main_widget.get_effective_top_margin()
-        main_widget.layout.setContentsMargins(40, self._effective_top_margin, 40, 40)
+        main_widget.layout.setContentsMargins(20, self._effective_top_margin, 20, 20)
         main_widget.layout.setSpacing(20)
 
         # Left menu panel
         menu_panel = QWidget()
         menu_panel.setObjectName("menu_panel")  # Add object name for styling
-        menu_panel.setFixedWidth(180)
+        menu_panel.setFixedWidth(200)
         menu_layout = QVBoxLayout(menu_panel)
         menu_layout.setContentsMargins(0, 0, 0, 0)
         menu_layout.setSpacing(0)
@@ -143,38 +146,35 @@ class HomeWindow(QMainWindow):
         center_layout.setSpacing(16)
 
         # Logo
-        logo_label = QLabel()
-        # Try to load logo from multiple possible locations
-        logo_paths = [
-            "inten-logo.png",  # Development path
-            os.path.join(
-                os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-                "inten-logo.png",
-            ),  # Production path
-        ]
+        self.logo_label = QLabel()
+        # Use theme manager to get the correct logo path
+        logo_path = self.theme_manager.get_logo_path()
         logo_pixmap = None
-        for path in logo_paths:
-            if os.path.exists(path):
-                logo_pixmap = QPixmap(path)
-                if not logo_pixmap.isNull():
-                    break
-
-        if logo_pixmap and not logo_pixmap.isNull():
-            scaled_pixmap = logo_pixmap.scaled(
-                32,
-                32,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-            logo_label.setPixmap(scaled_pixmap)
+        if logo_path:
+            logo_pixmap = QPixmap(logo_path)
+            if not logo_pixmap.isNull():
+                scaled_pixmap = logo_pixmap.scaled(
+                    32,
+                    32,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                self.logo_label.setPixmap(scaled_pixmap)
+                self.logo_label.setText("")
+            else:
+                self.logo_label.setText("🎯")
         else:
-            logo_label.setText("🎯")
-        center_layout.addWidget(logo_label)
+            self.logo_label.setText("🎯")
+        center_layout.addWidget(self.logo_label)
 
         # App name
-        app_name = QLabel("Inten")
-        app_name.setStyleSheet("font-size: 24px; font-weight: 600; color: #F2E4D6;")
-        center_layout.addWidget(app_name)
+        self.app_name = QLabel("Inten")
+        self.app_name.setStyleSheet(f"""
+            font-size: 24px; 
+            font-weight: 600; 
+            color: {self.theme_manager.get_color('text_primary')};
+        """)
+        center_layout.addWidget(self.app_name)
 
         # Add the centered container to the main logo layout
         logo_layout.addWidget(center_container, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -240,15 +240,9 @@ class HomeWindow(QMainWindow):
         speech_recognition_layout = QVBoxLayout(self.speech_recognition_page)
         speech_recognition_layout.setContentsMargins(0, 0, 0, 0)
 
-        speech_recognition_title = QLabel("Speech Recognition")
-        speech_recognition_title.setStyleSheet("""
-            font-size: 24px;
-            font-weight: 600;
-            color: #F2E4D6;
-            margin-bottom: 28px;
-            margin-left: 0px;
-        """)
-        speech_recognition_layout.addWidget(speech_recognition_title, alignment=Qt.AlignmentFlag.AlignLeft)
+        self.speech_recognition_title = QLabel("Speech Recognition")
+        self.set_page_title_style(self.speech_recognition_title)
+        speech_recognition_layout.addWidget(self.speech_recognition_title, alignment=Qt.AlignmentFlag.AlignLeft)
 
         # ASR form layout directly in the page (no scroll area)
         asr_form_content = QWidget()
@@ -365,15 +359,9 @@ class HomeWindow(QMainWindow):
         self.language_model_page = QWidget()
         language_model_layout = QVBoxLayout(self.language_model_page)
         language_model_layout.setContentsMargins(0, 0, 0, 0)
-        language_model_title = QLabel("Language Model Settings")
-        language_model_title.setStyleSheet("""
-            font-size: 24px;
-            font-weight: 600;
-            color: #F2E4D6;
-            margin-bottom: 28px;
-            margin-left: 0px;
-        """)
-        language_model_layout.addWidget(language_model_title, alignment=Qt.AlignmentFlag.AlignLeft)
+        self.language_model_title = QLabel("Language Model Settings")
+        self.set_page_title_style(self.language_model_title)
+        language_model_layout.addWidget(self.language_model_title, alignment=Qt.AlignmentFlag.AlignLeft)
 
         llm_form_content = QWidget()
         llm_form_layout = QFormLayout(llm_form_content)
@@ -395,13 +383,7 @@ class HomeWindow(QMainWindow):
 
         self.llm_model_edit = QLineEdit()
         self.llm_model_edit.setMaximumWidth(300)
-        self.llm_model_edit.setStyleSheet("""
-            QLineEdit {
-                background-color: rgba(255, 255, 255, 0.07);
-                padding: 8px 12px;
-                border-radius: 8px;
-            }
-        """)
+        self.set_line_edit_style(self.llm_model_edit)
         llm_model_edit_label = QLabel("Ollama Model")
         llm_model_edit_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
         self.llm_model_edit_container = QWidget()
@@ -521,27 +503,15 @@ class HomeWindow(QMainWindow):
         self.api_keys_page = QWidget()
         api_keys_layout = QVBoxLayout(self.api_keys_page)
         api_keys_layout.setContentsMargins(0, 0, 0, 0)
-        api_keys_title = QLabel("API Keys")
-        api_keys_title.setStyleSheet("""
-            font-size: 24px;
-            font-weight: 600;
-            color: #F2E4D6;
-            margin-bottom: 28px;
-            margin-left: 0px;
-        """)
-        api_keys_layout.addWidget(api_keys_title, alignment=Qt.AlignmentFlag.AlignLeft)
+        self.api_keys_title = QLabel("API Keys")
+        self.set_page_title_style(self.api_keys_title)
+        api_keys_layout.addWidget(self.api_keys_title, alignment=Qt.AlignmentFlag.AlignLeft)
 
         # API Key fields (migrated from Settings page)
         self.openai_api_key_edit = QLineEdit()
         self.openai_api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.openai_api_key_edit.setMaximumWidth(300)
-        self.openai_api_key_edit.setStyleSheet("""
-            QLineEdit {
-                background-color: rgba(255, 255, 255, 0.07);
-                padding: 8px 12px;
-                border-radius: 8px;
-            }
-        """)
+        self.set_line_edit_style(self.openai_api_key_edit)
         openai_api_key_label = QLabel("OpenAI API Key")
         openai_api_key_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
         openai_api_key_container = QWidget()
@@ -555,13 +525,7 @@ class HomeWindow(QMainWindow):
         self.gemini_api_key_edit = QLineEdit()
         self.gemini_api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.gemini_api_key_edit.setMaximumWidth(300)
-        self.gemini_api_key_edit.setStyleSheet("""
-            QLineEdit {
-                background-color: rgba(255, 255, 255, 0.07);
-                padding: 8px 12px;
-                border-radius: 8px;
-            }
-        """)
+        self.set_line_edit_style(self.gemini_api_key_edit)
         gemini_api_key_label = QLabel("Gemini API Key")
         gemini_api_key_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
         gemini_api_key_container = QWidget()
@@ -575,13 +539,7 @@ class HomeWindow(QMainWindow):
         self.groq_api_key_edit = QLineEdit()
         self.groq_api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.groq_api_key_edit.setMaximumWidth(300)
-        self.groq_api_key_edit.setStyleSheet("""
-            QLineEdit {
-                background-color: rgba(255, 255, 255, 0.07);
-                padding: 8px 12px;
-                border-radius: 8px;
-            }
-        """)
+        self.set_line_edit_style(self.groq_api_key_edit)
         groq_api_key_label = QLabel("Groq API Key")
         groq_api_key_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
         groq_api_key_container = QWidget()
@@ -599,15 +557,9 @@ class HomeWindow(QMainWindow):
         self.streaming_page = QWidget()
         streaming_layout = QVBoxLayout(self.streaming_page)
         streaming_layout.setContentsMargins(0, 0, 0, 0)
-        streaming_title = QLabel("Streaming")
-        streaming_title.setStyleSheet("""
-            font-size: 24px;
-            font-weight: 600;
-            color: #F2E4D6;
-            margin-bottom: 28px;
-            margin-left: 0px;
-        """)
-        streaming_layout.addWidget(streaming_title, alignment=Qt.AlignmentFlag.AlignLeft)
+        self.streaming_title = QLabel("Streaming")
+        self.set_page_title_style(self.streaming_title)
+        streaming_layout.addWidget(self.streaming_title, alignment=Qt.AlignmentFlag.AlignLeft)
 
         # Mode Section (duplicate, do not delete from settings page)
         mode_label = QLabel("Streaming Mode (Requires Vosk):")
@@ -624,13 +576,7 @@ class HomeWindow(QMainWindow):
         # Vosk Section
         self.vosk_model_path_edit = QLineEdit()
         self.vosk_model_path_edit.setMaximumWidth(300)
-        self.vosk_model_path_edit.setStyleSheet("""
-            QLineEdit {
-                background-color: rgba(255, 255, 255, 0.07);
-                padding: 8px 12px;
-                border-radius: 8px;
-            }
-        """)
+        self.set_line_edit_style(self.vosk_model_path_edit)
         vosk_model_path_label = QLabel("Model Path")
         vosk_model_path_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
         vosk_model_path_container = QWidget()
@@ -648,15 +594,9 @@ class HomeWindow(QMainWindow):
         self.audio_page = QWidget()
         audio_layout = QVBoxLayout(self.audio_page)
         audio_layout.setContentsMargins(0, 0, 0, 0)
-        audio_title = QLabel("Audio")
-        audio_title.setStyleSheet("""
-            font-size: 24px;
-            font-weight: 600;
-            color: #F2E4D6;
-            margin-bottom: 28px;
-            margin-left: 0px;
-        """)
-        audio_layout.addWidget(audio_title, alignment=Qt.AlignmentFlag.AlignLeft)
+        self.audio_title = QLabel("Audio")
+        self.set_page_title_style(self.audio_title)
+        audio_layout.addWidget(self.audio_title, alignment=Qt.AlignmentFlag.AlignLeft)
 
         # Audio Section
         self.sample_rate = SegmentedButtonGroup(["8000", "16000", "22050", "44100", "48000"])
@@ -723,98 +663,15 @@ class HomeWindow(QMainWindow):
                 background-color: #f3e2c7;
                 color: #b0b0b0;
             }
-
-            /* Menu button highlight (Settings) */
-            QPushButton#settings_button {
-                background: transparent;
-                color: #F2E4D6;
-                font-size: 18px;
-                font-weight: 500;
-                border: none;
-                border-radius: 16px;
-                padding: 12px 0px;
-                margin: 8px 16px 8px 16px;
-            }
-            QPushButton#settings_button:checked {
-                background: rgba(242, 228, 214, 0.32);
-                color: #FFFFFF;
-            }
-            QPushButton#settings_button:hover {
-                background: rgba(242, 228, 214, 0.28);
-            }
-
-            /* macOS-style scrollbar */
-            QScrollBar:vertical {
-                background: transparent;
-                width: 10px;
-                margin: 8px 2px 8px 2px;
-                border-radius: 6px;
-            }
-            QScrollBar::handle:vertical {
-                background: rgba(242, 228, 214, 0.25);
-                min-height: 32px;
-                border-radius: 6px;
-                border: none;
-            }
-            QScrollBar::handle:vertical:hover {
-                background: rgba(242, 228, 214, 0.38);
-            }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                height: 0px;
-                background: none;
-                border: none;
-            }
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
-                background: none;
-            }
-
-            /* QComboBox and popup styling */
-            QComboBox {
-                background: rgba(30, 32, 40, 0.92);
-                color: #F2E4D6;
-                border: 1.5px solid rgba(242, 228, 214, 0.22);
-                border-radius: 8px;
-                padding: 6px 32px 6px 12px;
-                font-size: 16px;
-                min-width: 180px;
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            }
-            QComboBox QAbstractItemView {
-                background: rgba(30, 32, 40, 0.98);
-                color: #F2E4D6;
-                border-radius: 10px;
-                font-size: 16px;
-                min-width: 220px;
-                selection-background-color: rgba(242, 228, 214, 0.18);
-                selection-color: #181A2A;
-                outline: none;
-            }
-            QComboBox::drop-down {
-                border: none;
-                width: 32px;
-                background: transparent;
-            }
-            QComboBox::down-arrow {
-                image: none;
-                width: 0;
-                height: 0;
-                border: none;
-            }
         """)
 
         # --- Voice Detection PAGE ---
         self.voice_detection_page = QWidget()
         voice_detection_layout = QVBoxLayout(self.voice_detection_page)
         voice_detection_layout.setContentsMargins(0, 0, 0, 0)
-        voice_detection_title = QLabel("Voice Detection")
-        voice_detection_title.setStyleSheet("""
-            font-size: 24px;
-            font-weight: 600;
-            color: #F2E4D6;
-            margin-bottom: 28px;
-            margin-left: 0px;
-        """)
-        voice_detection_layout.addWidget(voice_detection_title, alignment=Qt.AlignmentFlag.AlignLeft)
+        self.voice_detection_title = QLabel("Voice Detection")
+        self.set_page_title_style(self.voice_detection_title)
+        voice_detection_layout.addWidget(self.voice_detection_title, alignment=Qt.AlignmentFlag.AlignLeft)
 
         # VAD Section (migrated from Settings page)
         self.vad_enabled = QCheckBox()
@@ -868,15 +725,9 @@ class HomeWindow(QMainWindow):
         self.keyboard_page = QWidget()
         keyboard_layout = QVBoxLayout(self.keyboard_page)
         keyboard_layout.setContentsMargins(0, 0, 0, 0)
-        keyboard_title = QLabel("Keyboard")
-        keyboard_title.setStyleSheet("""
-            font-size: 24px;
-            font-weight: 600;
-            color: #F2E4D6;
-            margin-bottom: 28px;
-            margin-left: 0px;
-        """)
-        keyboard_layout.addWidget(keyboard_title, alignment=Qt.AlignmentFlag.AlignLeft)
+        self.keyboard_title = QLabel("Keyboard")
+        self.set_page_title_style(self.keyboard_title)
+        keyboard_layout.addWidget(self.keyboard_title, alignment=Qt.AlignmentFlag.AlignLeft)
 
         # Create form layout directly in the keyboard page
         keyboard_form_layout = QFormLayout()
@@ -906,13 +757,7 @@ class HomeWindow(QMainWindow):
         self.add_section_header(keyboard_form_layout, "Hotkey Settings")
         self.start_recording_hotkey = QLineEdit()
         self.start_recording_hotkey.setMaximumWidth(300)
-        self.start_recording_hotkey.setStyleSheet("""
-            QLineEdit {
-                background-color: rgba(255, 255, 255, 0.07);
-                padding: 8px 12px;
-                border-radius: 8px;
-            }
-        """)
+        self.set_line_edit_style(self.start_recording_hotkey)
         start_recording_hotkey_label = QLabel("Start Recording")
         start_recording_hotkey_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
         start_recording_hotkey_container = QWidget()
@@ -931,15 +776,9 @@ class HomeWindow(QMainWindow):
         self.developer_page = QWidget()
         developer_layout = QVBoxLayout(self.developer_page)
         developer_layout.setContentsMargins(0, 0, 0, 0)
-        developer_title = QLabel("Developer")
-        developer_title.setStyleSheet("""
-            font-size: 24px;
-            font-weight: 600;
-            color: #F2E4D6;
-            margin-bottom: 28px;
-            margin-left: 0px;
-        """)
-        developer_layout.addWidget(developer_title, alignment=Qt.AlignmentFlag.AlignLeft)
+        self.developer_title = QLabel("Developer")
+        self.set_page_title_style(self.developer_title)
+        developer_layout.addWidget(self.developer_title, alignment=Qt.AlignmentFlag.AlignLeft)
 
         # Create form layout directly in the developer page
         developer_form_layout = QFormLayout()
@@ -1106,6 +945,48 @@ class HomeWindow(QMainWindow):
                 self.app_manager.start_application()
             else:
                 self.handle_error(error_msg)
+
+    def update_styles(self, new_theme):
+        """Update the styles of the window"""
+        # Update logo
+        logo_path = self.theme_manager.get_logo_path()
+        if logo_path:
+            logo_pixmap = QPixmap(logo_path)
+            if not logo_pixmap.isNull():
+                scaled_pixmap = logo_pixmap.scaled(
+                    32,
+                    32,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                self.logo_label.setPixmap(scaled_pixmap)
+                self.logo_label.setText("")
+            else:
+                self.logo_label.setPixmap(QPixmap())
+                self.logo_label.setText("🎯")
+        else:
+            self.logo_label.setPixmap(QPixmap())
+            self.logo_label.setText("🎯")
+
+        # Update app name color
+        self.app_name.setStyleSheet(f"""
+            font-size: 24px; 
+            font-weight: 600; 
+            color: {self.theme_manager.get_color('text_primary')};
+        """)
+
+        # Update all page title colors using the helper
+        for label in [
+            self.speech_recognition_title,
+            self.language_model_title,
+            self.api_keys_title,
+            self.streaming_title,
+            self.audio_title,
+            self.voice_detection_title,
+            self.keyboard_title,
+            self.developer_title,
+        ]:
+            self.set_page_title_style(label)
 
     def select_menu(self, index):
         self.stacked_widget.setCurrentIndex(index)
@@ -1547,10 +1428,9 @@ class HomeWindow(QMainWindow):
             self.gemini_model.blockSignals(False)
 
     def update_setting_visibility(self):
-        # Show/hide ASR device and compute type which are typically for local models
         is_local_asr = self.asr_source.currentText() == "faster_whisper"
-        self.asr_device_container.setVisible(is_local_asr)
-        self.asr_compute_type_container.setVisible(is_local_asr)
+        set_widget_hidden_but_take_space(self.asr_device_container, not is_local_asr)
+        set_widget_hidden_but_take_space(self.asr_compute_type_container, not is_local_asr)
 
     def _update_asr_provider_fields(self):
         """Update ASR model fields based on the selected ASR source."""
@@ -1618,3 +1498,33 @@ class HomeWindow(QMainWindow):
             self.openai_asr_model.blockSignals(False)
             self.faster_whisper_model.blockSignals(False)
             self.groq_asr_model.blockSignals(False)
+
+    def set_page_title_style(self, label):
+        label.setStyleSheet(f"""
+            font-size: 24px;
+            font-weight: 600;
+            color: {self.theme_manager.get_color('text_primary')};
+            margin-bottom: 28px;
+            margin-left: 0px;
+        """)
+
+    def set_line_edit_style(self, line_edit):
+        line_edit.setStyleSheet("""
+            QLineEdit {
+                background-color: rgba(255, 255, 255, 0.15);
+                padding: 8px 12px;
+                border-radius: 8px;
+            }
+        """)
+
+def set_widget_hidden_but_take_space(widget: QWidget, hidden: bool):
+    if hidden:
+        opacity_effect = QGraphicsOpacityEffect()
+        opacity_effect.setOpacity(0.0)
+        widget.setGraphicsEffect(opacity_effect)
+        widget.setDisabled(True)
+        widget.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+    else:
+        widget.setGraphicsEffect(None)
+        widget.setDisabled(False)
+        widget.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)

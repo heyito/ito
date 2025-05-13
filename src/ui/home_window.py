@@ -254,7 +254,7 @@ class HomeWindow(QMainWindow):
 
         self.asr_source = SegmentedButtonGroup(["openai_api", "faster_whisper", "groq_api", "gemini_api"])
         asr_source_label = QLabel("ASR Provider")
-        asr_source_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(asr_source_label)
         asr_source_container = QWidget()
         asr_source_layout = QVBoxLayout(asr_source_container)
         asr_source_layout.setContentsMargins(0, 0, 0, 0)
@@ -266,7 +266,7 @@ class HomeWindow(QMainWindow):
         self.asr_model_label = QLabel("ASR Model")
         self.openai_asr_model = SegmentedButtonGroup(["whisper-1"])
         openai_asr_model_label = QLabel("OpenAI Model")
-        openai_asr_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(openai_asr_model_label)
         self.openai_asr_model_container = QWidget()
         openai_asr_model_layout = QVBoxLayout(self.openai_asr_model_container)
         openai_asr_model_layout.setContentsMargins(0, 0, 0, 0)
@@ -276,7 +276,7 @@ class HomeWindow(QMainWindow):
 
         self.gemini_asr_model = SegmentedButtonGroup(["gemini-2.0-flash"])
         gemini_asr_model_label = QLabel("Gemini Model")
-        gemini_asr_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(gemini_asr_model_label)
         self.gemini_asr_model_container = QWidget()
         gemini_asr_model_layout = QVBoxLayout(self.gemini_asr_model_container)
         gemini_asr_model_layout.setContentsMargins(0, 0, 0, 0)
@@ -294,7 +294,7 @@ class HomeWindow(QMainWindow):
             "large-v3",
         ])
         faster_whisper_model_label = QLabel("Local Whisper Model")
-        faster_whisper_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(faster_whisper_model_label)
         self.faster_whisper_model_container = QWidget()
         faster_whisper_model_layout = QVBoxLayout(self.faster_whisper_model_container)
         faster_whisper_model_layout.setContentsMargins(0, 0, 0, 0)
@@ -308,7 +308,7 @@ class HomeWindow(QMainWindow):
             "whisper-large-v3"
         ])
         groq_asr_model_label = QLabel("Groq Model")
-        groq_asr_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(groq_asr_model_label)
         self.groq_asr_model_container = QWidget()
         groq_asr_model_layout = QVBoxLayout(self.groq_asr_model_container)
         groq_asr_model_layout.setContentsMargins(0, 0, 0, 0)
@@ -327,7 +327,7 @@ class HomeWindow(QMainWindow):
 
         self.asr_device = SegmentedButtonGroup(["auto"])
         self.asr_device_label = QLabel("Device")
-        self.asr_device_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(self.asr_device_label)
         self.asr_device_container = QWidget()
         asr_device_layout = QVBoxLayout(self.asr_device_container)
         asr_device_layout.setContentsMargins(0, 0, 0, 0)
@@ -338,7 +338,7 @@ class HomeWindow(QMainWindow):
 
         self.asr_compute_type = SegmentedButtonGroup(["default", "int8", "int8_float16", "float16"])
         self.asr_compute_type_label = QLabel("Compute Type")
-        self.asr_compute_type_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(self.asr_compute_type_label)
         self.asr_compute_type_container = QWidget()
         asr_compute_type_layout = QVBoxLayout(self.asr_compute_type_container)
         asr_compute_type_layout.setContentsMargins(0, 0, 0, 0)
@@ -372,7 +372,7 @@ class HomeWindow(QMainWindow):
 
         self.llm_source = SegmentedButtonGroup(["ollama", "openai_api", "groq_api", "gemini_api"])
         llm_source_label = QLabel("LLM Source")
-        llm_source_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(llm_source_label)
         llm_source_container = QWidget()
         llm_source_layout = QVBoxLayout(llm_source_container)
         llm_source_layout.setContentsMargins(0, 0, 0, 0)
@@ -385,7 +385,7 @@ class HomeWindow(QMainWindow):
         self.llm_model_edit.setMaximumWidth(300)
         self.set_line_edit_style(self.llm_model_edit)
         llm_model_edit_label = QLabel("Ollama Model")
-        llm_model_edit_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(llm_model_edit_label)
         self.llm_model_edit_container = QWidget()
         llm_model_edit_layout = QVBoxLayout(self.llm_model_edit_container)
         llm_model_edit_layout.setContentsMargins(0, 0, 0, 0)
@@ -400,7 +400,7 @@ class HomeWindow(QMainWindow):
             "gpt-3.5-turbo"
         ])
         openai_model_label = QLabel("OpenAI Model")
-        openai_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(openai_model_label)
         self.openai_model_container = QWidget()
         openai_model_layout = QVBoxLayout(self.openai_model_container)
         openai_model_layout.setContentsMargins(0, 0, 0, 0)
@@ -412,7 +412,7 @@ class HomeWindow(QMainWindow):
             "gemini-2.0-flash"
         ])
         gemini_model_label = QLabel("Gemini Model")
-        gemini_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(gemini_model_label)
         self.gemini_model_container = QWidget()
         gemini_model_layout = QVBoxLayout(self.gemini_model_container)
         gemini_model_layout.setContentsMargins(0, 0, 0, 0)
@@ -427,7 +427,7 @@ class HomeWindow(QMainWindow):
             "gemma-7b-it"
         ])
         groq_model_label = QLabel("Groq Model")
-        groq_model_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(groq_model_label)
         self.groq_model_container = QWidget()
         groq_model_layout = QVBoxLayout(self.groq_model_container)
         groq_model_layout.setContentsMargins(0, 0, 0, 0)
@@ -459,7 +459,7 @@ class HomeWindow(QMainWindow):
         """)
         self.max_tokens.setMaximumWidth(300)
         max_tokens_label = QLabel("Max Tokens")
-        max_tokens_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(max_tokens_label)
         max_tokens_container = QWidget()
         max_tokens_layout = QVBoxLayout(max_tokens_container)
         max_tokens_layout.setContentsMargins(0, 0, 0, 0)
@@ -484,7 +484,7 @@ class HomeWindow(QMainWindow):
         """)
         self.temperature.setMaximumWidth(300)
         temperature_label = QLabel("Temperature")
-        temperature_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(temperature_label)
         temperature_container = QWidget()
         temperature_layout = QVBoxLayout(temperature_container)
         temperature_layout.setContentsMargins(0, 0, 0, 0)
@@ -513,7 +513,7 @@ class HomeWindow(QMainWindow):
         self.openai_api_key_edit.setMaximumWidth(300)
         self.set_line_edit_style(self.openai_api_key_edit)
         openai_api_key_label = QLabel("OpenAI API Key")
-        openai_api_key_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(openai_api_key_label)
         openai_api_key_container = QWidget()
         openai_api_key_layout = QVBoxLayout(openai_api_key_container)
         openai_api_key_layout.setContentsMargins(0, 0, 0, 0)
@@ -527,7 +527,7 @@ class HomeWindow(QMainWindow):
         self.gemini_api_key_edit.setMaximumWidth(300)
         self.set_line_edit_style(self.gemini_api_key_edit)
         gemini_api_key_label = QLabel("Gemini API Key")
-        gemini_api_key_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(gemini_api_key_label)
         gemini_api_key_container = QWidget()
         gemini_api_key_layout = QVBoxLayout(gemini_api_key_container)
         gemini_api_key_layout.setContentsMargins(0, 0, 0, 0)
@@ -541,7 +541,7 @@ class HomeWindow(QMainWindow):
         self.groq_api_key_edit.setMaximumWidth(300)
         self.set_line_edit_style(self.groq_api_key_edit)
         groq_api_key_label = QLabel("Groq API Key")
-        groq_api_key_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(groq_api_key_label)
         groq_api_key_container = QWidget()
         groq_api_key_layout = QVBoxLayout(groq_api_key_container)
         groq_api_key_layout.setContentsMargins(0, 0, 0, 0)
@@ -563,7 +563,7 @@ class HomeWindow(QMainWindow):
 
         # Mode Section (duplicate, do not delete from settings page)
         mode_label = QLabel("Streaming Mode (Requires Vosk):")
-        mode_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(mode_label)
         mode_container = QWidget()
         mode_layout = QVBoxLayout(mode_container)
         mode_layout.setContentsMargins(0, 0, 0, 0)
@@ -578,7 +578,7 @@ class HomeWindow(QMainWindow):
         self.vosk_model_path_edit.setMaximumWidth(300)
         self.set_line_edit_style(self.vosk_model_path_edit)
         vosk_model_path_label = QLabel("Model Path")
-        vosk_model_path_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(vosk_model_path_label)
         vosk_model_path_container = QWidget()
         vosk_model_path_layout = QVBoxLayout(vosk_model_path_container)
         vosk_model_path_layout.setContentsMargins(0, 0, 0, 0)
@@ -601,7 +601,7 @@ class HomeWindow(QMainWindow):
         # Audio Section
         self.sample_rate = SegmentedButtonGroup(["8000", "16000", "22050", "44100", "48000"])
         sample_rate_label = QLabel("Sample Rate")
-        sample_rate_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(sample_rate_label)
         sample_rate_container = QWidget()
         sample_rate_layout = QVBoxLayout(sample_rate_container)
         sample_rate_layout.setContentsMargins(0, 0, 0, 0)
@@ -612,7 +612,7 @@ class HomeWindow(QMainWindow):
 
         self.channels = SegmentedButtonGroup(["1", "2"])
         channels_label = QLabel("Channels")
-        channels_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(channels_label)
         channels_container = QWidget()
         channels_layout = QVBoxLayout(channels_container)
         channels_layout.setContentsMargins(0, 0, 0, 0)
@@ -676,7 +676,7 @@ class HomeWindow(QMainWindow):
         # VAD Section (migrated from Settings page)
         self.vad_enabled = QCheckBox()
         vad_enabled_label = QLabel("Enable Voice Activity Detection")
-        vad_enabled_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(vad_enabled_label)
         vad_enabled_container = QWidget()
         vad_enabled_layout = QVBoxLayout(vad_enabled_container)
         vad_enabled_layout.setContentsMargins(0, 0, 0, 0)
@@ -687,7 +687,7 @@ class HomeWindow(QMainWindow):
 
         self.vad_aggressiveness = SegmentedButtonGroup(["0", "1", "2", "3"])
         vad_aggressiveness_label = QLabel("Aggressiveness")
-        vad_aggressiveness_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(vad_aggressiveness_label)
         vad_aggressiveness_container = QWidget()
         vad_aggressiveness_layout = QVBoxLayout(vad_aggressiveness_container)
         vad_aggressiveness_layout.setContentsMargins(0, 0, 0, 0)
@@ -698,7 +698,7 @@ class HomeWindow(QMainWindow):
 
         self.silence_duration = SegmentedButtonGroup(["100", "500", "1000", "2000", "5000"])
         silence_duration_label = QLabel("Silence Duration (ms)")
-        silence_duration_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(silence_duration_label)
         silence_duration_container = QWidget()
         silence_duration_layout = QVBoxLayout(silence_duration_container)
         silence_duration_layout.setContentsMargins(0, 0, 0, 0)
@@ -709,7 +709,7 @@ class HomeWindow(QMainWindow):
 
         self.frame_duration = SegmentedButtonGroup(["10", "20", "30"])
         frame_duration_label = QLabel("Frame Duration (ms)")
-        frame_duration_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(frame_duration_label)
         frame_duration_container = QWidget()
         frame_duration_layout = QVBoxLayout(frame_duration_container)
         frame_duration_layout.setContentsMargins(0, 0, 0, 0)
@@ -741,10 +741,9 @@ class HomeWindow(QMainWindow):
         )
 
         # Output Section
-        self.add_section_header(keyboard_form_layout, "Output Settings")
         self.output_method = SegmentedButtonGroup(["typewrite"])
         output_method_label = QLabel("Output Method")
-        output_method_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        self.set_label_style(output_method_label)
         output_method_container = QWidget()
         output_method_layout = QVBoxLayout(output_method_container)
         output_method_layout.setContentsMargins(0, 0, 0, 0)
@@ -754,12 +753,11 @@ class HomeWindow(QMainWindow):
         keyboard_form_layout.addRow(output_method_container)
 
         # Hotkeys Section
-        self.add_section_header(keyboard_form_layout, "Hotkey Settings")
         self.start_recording_hotkey = QLineEdit()
         self.start_recording_hotkey.setMaximumWidth(300)
         self.set_line_edit_style(self.start_recording_hotkey)
-        start_recording_hotkey_label = QLabel("Start Recording")
-        start_recording_hotkey_label.setStyleSheet("font-size: 13px; color: #FFFFFF; padding: 8px 0px;")
+        start_recording_hotkey_label = QLabel("Start Recording Hotkey")
+        self.set_label_style(start_recording_hotkey_label)
         start_recording_hotkey_container = QWidget()
         start_recording_hotkey_layout = QVBoxLayout(start_recording_hotkey_container)
         start_recording_hotkey_layout.setContentsMargins(0, 0, 0, 0)
@@ -792,7 +790,7 @@ class HomeWindow(QMainWindow):
         )
 
         # Developer Timing Tools Section
-        self.add_section_header(developer_form_layout, "Developer Timing Tools")
+        self.add_section_header(developer_form_layout, "Developer Timing Tools", color=self.theme_manager.get_color('text_primary'))
 
         # Timing report buttons container
         timing_buttons_widget = QWidget()
@@ -801,46 +799,12 @@ class HomeWindow(QMainWindow):
         timing_button_layout.setSpacing(10)
 
         self.save_timing_report_button = QPushButton("Save Timing Report")
-        self.save_timing_report_button.setObjectName("btn-primary")
-        self.save_timing_report_button.setStyleSheet("""
-            QPushButton#btn-primary {
-                background-color: #F6EBDD;
-                color: #181A2A;
-                border: none;
-                border-radius: 8px;
-                font-size: 12px;
-                font-weight: 600;
-                padding: 0 14px;
-                min-height: 44px;
-                min-width: 160px;
-                letter-spacing: 0.2px;
-            }
-            QPushButton#btn-primary:hover {
-                background-color: #f3e2c7;
-            }
-        """)
+        self.set_primary_button_style(self.save_timing_report_button)
         self.save_timing_report_button.clicked.connect(self.handle_save_timing_report)
         timing_button_layout.addWidget(self.save_timing_report_button)
 
         self.clear_timing_data_button = QPushButton("Clear Timing Data")
-        self.clear_timing_data_button.setObjectName("btn-primary")
-        self.clear_timing_data_button.setStyleSheet("""
-            QPushButton#btn-primary {
-                background-color: #F6EBDD;
-                color: #181A2A;
-                border: none;
-                border-radius: 8px;
-                font-size: 12px;
-                font-weight: 600;
-                padding: 0 14px;
-                min-height: 44px;
-                min-width: 160px;
-                letter-spacing: 0.2px;
-            }
-            QPushButton#btn-primary:hover {
-                background-color: #f3e2c7;
-            }
-        """)
+        self.set_primary_button_style(self.clear_timing_data_button)
         self.clear_timing_data_button.clicked.connect(self.handle_clear_timing_data)
         timing_button_layout.addWidget(self.clear_timing_data_button)
 
@@ -850,7 +814,7 @@ class HomeWindow(QMainWindow):
         developer_form_layout.addRow(timing_buttons_widget)
 
         # Reset All Section
-        self.add_section_header(developer_form_layout, "Reset Settings")
+        self.add_section_header(developer_form_layout, "Reset Settings", color=self.theme_manager.get_color('text_primary'))
 
         # Reset All button container
         reset_button_widget = QWidget()
@@ -859,24 +823,7 @@ class HomeWindow(QMainWindow):
         reset_button_layout.setSpacing(10)
 
         reset_button = QPushButton("Reset All")
-        reset_button.setObjectName("btn-primary")
-        reset_button.setStyleSheet("""
-            QPushButton#btn-primary {
-                background-color: #F6EBDD;
-                color: #181A2A;
-                border: none;
-                border-radius: 8px;
-                font-size: 12px;
-                font-weight: 600;
-                padding: 0 14px;
-                min-height: 44px;
-                min-width: 160px;
-                letter-spacing: 0.2px;
-            }
-            QPushButton#btn-primary:hover {
-                background-color: #f3e2c7;
-            }
-        """)
+        self.set_primary_button_style(reset_button)
         reset_button.clicked.connect(self.reset_all_settings)
         reset_button_layout.addWidget(reset_button)
         reset_button_layout.addStretch()  # Push button to the left
@@ -988,6 +935,33 @@ class HomeWindow(QMainWindow):
         ]:
             self.set_page_title_style(label)
 
+        # Update all themed labels
+        if hasattr(self, '_themed_labels'):
+            for label in self._themed_labels:
+                self.set_label_style(label)
+
+        # Update all primary buttons in developer page
+        for button in [
+            self.save_timing_report_button,
+            self.clear_timing_data_button,
+        ]:
+            self.set_primary_button_style(button)
+        # Find and update the reset button in the developer page
+        for widget in self.developer_page.findChildren(QPushButton):
+            if widget.text() == "Reset All":
+                self.set_primary_button_style(widget)
+
+        # Update all section headers to use the current theme color
+        for layout in [
+            # Add all layouts where section headers are used
+            getattr(self, 'developer_page', None),
+            getattr(self, 'keyboard_page', None),
+        ]:
+            if layout:
+                for widget in layout.findChildren(QLabel):
+                    if widget.text() in ["Developer Timing Tools", "Reset Settings", "Output Settings", "Hotkey Settings"]:
+                        self.set_label_style(widget, color=self.theme_manager.get_color('text_primary'), font_size=15, font_weight=600)
+
     def select_menu(self, index):
         self.stacked_widget.setCurrentIndex(index)
         self.speech_recognition_button.setChecked(index == 0)
@@ -1043,7 +1017,7 @@ class HomeWindow(QMainWindow):
         # Close the current window
         self.close()
 
-    def add_section_header(self, layout, text):
+    def add_section_header(self, layout, text, color=None):
         """Helper method to add styled section headers and a horizontal divider to the form"""
         # Add horizontal divider before each section except the first
         if layout.rowCount() > 0:
@@ -1051,14 +1025,14 @@ class HomeWindow(QMainWindow):
             divider.setFrameShape(QFrame.Shape.HLine)
             divider.setFixedHeight(1)
             divider.setStyleSheet(
-                "background: rgba(242, 228, 214, 0.3); border: none; margin-top: 16px; margin-bottom: 16px;"
+                f"background: rgba(242, 228, 214, 0.3); border: none; margin-top: 16px; margin-bottom: 16px; color: {color or self.theme_manager.get_color('text_primary')};"
             )
             layout.addRow(divider)
         header = QLabel(text)
-        header.setStyleSheet("""
+        header.setStyleSheet(f"""
             font-size: 15px;
             font-weight: 600;
-            color: #F2E4D6;
+            color: {color or self.theme_manager.get_color('text_primary')};
             margin-top: 24px;
             margin-bottom: 8px;
             font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -1515,6 +1489,42 @@ class HomeWindow(QMainWindow):
                 padding: 8px 12px;
                 border-radius: 8px;
             }
+        """)
+
+    def set_label_style(self, label, *, color=None, font_size=13, padding='8px 0px', font_weight=None):
+        if not hasattr(self, '_themed_labels'):
+            self._themed_labels = []
+        if label not in self._themed_labels:
+            self._themed_labels.append(label)
+        label_color = color or self.theme_manager.get_color('text_primary')
+        weight = f'font-weight: {font_weight};' if font_weight else ''
+        label.setStyleSheet(f"""
+            font-size: {font_size}px;
+            color: {label_color};
+            padding: {padding};
+            {weight}
+        """)
+
+    def set_primary_button_style(self, button):
+        background = self.theme_manager.get_color('button.background')
+        text = self.theme_manager.get_color('button.text')
+        button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {background};
+                color: {text};
+                border: none;
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 0 14px;
+                min-height: 44px;
+                min-width: 160px;
+                letter-spacing: 0.2px;
+            }}
+            QPushButton:hover {{
+                background-color: {background};
+                opacity: 0.9;
+            }}
         """)
 
 def set_widget_hidden_but_take_space(widget: QWidget, hidden: bool):

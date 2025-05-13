@@ -4,8 +4,8 @@ import sys
 import traceback
 
 import sounddevice as sd
-from PyQt6.QtCore import QObject, QPointF, QSettings, Qt, QTimer, pyqtSignal, QRect, QRectF, QThread
-from PyQt6.QtGui import QPixmap, QRegion, QPainterPath
+from PyQt6.QtCore import QObject, QPointF, QSettings, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -85,9 +85,6 @@ class OnboardingWindow(QMainWindow):
 
     def __init__(self, theme_manager: ThemeManager):
         super().__init__()
-        print(f"Onboarding instance '{self}' is on thread: {self.thread()}")
-        print(f"Onboarding QApplication.instance().thread() is: {QApplication.instance().thread()}")
-        print(f"Current execution thread in Onboarding.__init__ is: {QThread.currentThread()}")
         self.theme_manager = theme_manager
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setWindowFlags(self.windowFlags() | Qt.WindowType.FramelessWindowHint)

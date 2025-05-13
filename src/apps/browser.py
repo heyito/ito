@@ -2,6 +2,7 @@ import json
 import queue
 import socket
 import threading
+from typing import Optional
 
 from src import platform_utils_macos as platform_utils
 from src import prompt_templates
@@ -15,7 +16,7 @@ class BrowserApp:
     def __init__(self, llm_handler: LLMHandler):
         self.llm_handler = llm_handler
 
-    def process_command(self, processing_text: str, user_command: str):
+    def process_command(self, processing_text: str, user_text_command: str, user_command_audio: Optional[bytes] = None):
         # Parse the text as JSON if it's from Browser
         full_llm_input = ""
         try:
@@ -30,7 +31,7 @@ class BrowserApp:
                 url=browser_context.get('url', ''),
                 title=browser_context.get('title', ''),
                 content=content,
-                command=user_command,
+                command=user_text_command,
                 selected_text=browser_context.get('selectedText')
             )
         except json.JSONDecodeError:
@@ -40,12 +41,13 @@ class BrowserApp:
                 [END CURRENT DOCUMENT CONTENT]
 
                 [USER COMMAND]
-                {user_command}
+                {user_text_command}
             """
 
         # 2. Process with LLM
-        new_doc_text = self.llm_handler.process_text_with_llm(
+        new_doc_text = self.llm_handler.process_input_with_llm(
             text=full_llm_input, # Pass combined context+command as user message content
+            audio_buffer=user_command_audio,
             system_prompt_override=self.system_prompt, # Pass the system prompt from config
             # Note: llm_handler needs modification if it doesn't support system_prompt_override
             # Or adjust here to send a single combined prompt string if handler only takes 'text'

@@ -126,11 +126,4 @@ class AppConfig:
 
         # Mode settings
         mode_section = config_dict.get("Mode", {})
-        streaming = mode_section.get(
-            "streaming", "false"
-        )  # Default to false if missing
-        # Handle both boolean and string representations
-        if isinstance(streaming, bool):
-            self.streaming_mode: bool = streaming
-        else:
-            self.streaming_mode: bool = str(streaming).lower() == "true"
+        self.application_mode: str = mode_section.get('application_mode', 'discrete').lower()

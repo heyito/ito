@@ -59,6 +59,22 @@ class LLMClientInterface(ABC):
         pass
 
     @abstractmethod
+    def generate_response_with_audio(
+        self,
+        audio_buffer: bytes,
+        text: str,
+        system_prompt: str,
+        max_tokens: int,
+        temperature: float,
+        tools: Optional[List[Dict]] = None, # Changed to Optional[List[Dict]] and default to None
+        messages_override: Optional[List[Dict]] = None, # Changed to Optional[List[Dict]] and default to None
+    ) -> Any:
+        """
+        Processes audio and text using the configured LLM client.
+        """
+        pass
+
+    @abstractmethod
     def check_availability(self) -> bool:
         """
         Checks if the LLM provider is available and configured correctly.

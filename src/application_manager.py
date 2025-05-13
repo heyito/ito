@@ -174,11 +174,8 @@ class ApplicationManager(QObject):
             )
         }
 
-        # Mode settings
-        config["Mode"] = {
-            "streaming": str(
-                self.settings.value("Mode/streaming", "false")
-            ).lower()  # Convert to string and lowercase
+        config['Mode'] = {
+            'application_mode': self.settings.value("Mode/application_mode", "discrete").lower()
         }
 
         # Set the hotkey in the keyboard manager

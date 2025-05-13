@@ -24,9 +24,11 @@ class LLMHandler:
             print(f"LLMHandler WARNING: Client {self.client.source_name} is not available or not configured correctly.")
 
     @time_method
-    def process_text_with_llm(
+    # text and audio are optional, but at least one must be provided
+    def process_input_with_llm(
         self,
         text: str,
+        audio_buffer: bytes,
         system_prompt_override: Optional[str] = None, # Use Optional
         max_tokens: int = 4096,
         temperature: float = 0.7,
@@ -50,10 +52,9 @@ class LLMHandler:
         """
         start_time = time.time()
 
-        if not text and not messages_override: # If messages_override is present, text might be implicitly handled
-            print("LLMHandler: Received empty text for user message and no messages_override.")
+        if not text and not messages_override and not audio_buffer:
+            print("LLMHandler: Received empty text for user message and no messages_override and no audio_buffer.")
             return None
-
 
         # Determine the system prompt to use
         # If messages_override is provided, it might already contain a system message.
@@ -68,14 +69,26 @@ class LLMHandler:
             system_prompt = " "
 
         try:
-            response = self.client.generate_response(
-                text=text,
-                system_prompt=system_prompt,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                tools=tools or [], # Pass empty list if None
-                messages_override=messages_override or [], # Pass empty list if None
-            )
+            if audio_buffer:
+                print(f"LLMHandler: Generating response with audio.")
+                response = self.client.generate_response_with_audio(
+                    audio_buffer=audio_buffer,
+                    text=text,
+                    system_prompt=system_prompt,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    tools=tools or [], # Pass empty list if None
+                    messages_override=messages_override or [], # Pass empty list if None
+                )
+            else:
+                response = self.client.generate_response(
+                    text=text,
+                    system_prompt=system_prompt,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    tools=tools or [], # Pass empty list if None
+                    messages_override=messages_override or [], # Pass empty list if None
+                )
 
             if response is not None:
                 pass # Response is already in desired format from client

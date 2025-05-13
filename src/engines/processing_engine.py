@@ -1,4 +1,5 @@
 
+from typing import Optional
 from src.apps.browser import BrowserApp
 from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
@@ -14,8 +15,8 @@ class ProcessingEngine:
         self.notes_app = notes_app
         self.macos_app = macos_app
         
-    def process(self, current_context: dict, processing_text: str, user_command: str):
-        print(f"\033[1m\033[34mProcessing command: '{user_command}'\033[0m")
+    def process(self, current_context: dict, processing_text: str, user_text_command: str, user_command_audio: Optional[bytes] = None):
+        print(f"\033[1m\033[34mProcessing command: '{user_text_command}'\033[0m")
         print(f"On document context (length: {len(processing_text)} chars)")
 
         # 1. Construct LLM Prompt
@@ -25,8 +26,8 @@ class ProcessingEngine:
         print(f"Current app: {repr(current_app)}")
         if current_app == IntenApp.CHROME or current_app == IntenApp.BRAVE:
             print("Processing command with Browser app...")
-            self.browser_app.process_command(processing_text, user_command)
+            self.browser_app.process_command(processing_text, user_text_command, user_command_audio)
         elif current_app == IntenApp.TEXTEDIT:
-            self.text_edit_app.process_command(processing_text, user_command)
+            self.text_edit_app.process_command(processing_text, user_text_command, user_command_audio)
         else:
-            self.macos_app.process_command(current_app, processing_text, user_command)
+            self.macos_app.process_command(current_app, processing_text, user_text_command, user_command_audio)

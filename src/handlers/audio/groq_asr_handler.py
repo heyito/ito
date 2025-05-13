@@ -12,3 +12,4 @@ class GroqASRHandler(ASRHandlerInterface):
     @time_method
     def transcribe_audio(self, audio_buffer: io.BytesIO) -> str:
         return self._client.transcribe_audio(audio_buffer)
+    

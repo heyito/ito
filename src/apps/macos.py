@@ -1,5 +1,6 @@
 import json
 import time
+from typing import Optional
 
 from deepdiff import DeepDiff, Delta
 
@@ -194,12 +195,12 @@ class MacOSapp:
     args:
         app_name: str - The name of the application to process the command for
         processing_text: str - The json representation of the context from above
-        user_command: str - The command to process
+        user_text_command: str - The command to process
     """
 
-    def process_command(self, app_name: str, processing_text: str, user_command: str):
+    def process_command(self, app_name: str, processing_text: str, user_text_command: str, user_command_audio: Optional[bytes] = None):
         full_llm_input = prompt_templates.create_macos_ax_ocr_prompt(
-            context=processing_text, command=user_command
+            context=processing_text, command=user_text_command
         )
 
         messages = [
@@ -216,8 +217,9 @@ class MacOSapp:
         old_context = processing_text
 
         while steps < self.MAX_STEPS:
-            resp = self.llm_handler.process_text_with_llm(
+            resp = self.llm_handler.process_input_with_llm(
                 text=full_llm_input,  # Pass combined context+command as user message content
+                audio_buffer=user_command_audio,
                 system_prompt_override=self.system_prompt,  # Pass the system prompt from config
                 tools=llm_tools,
                 messages_override=messages,
@@ -268,7 +270,7 @@ class MacOSapp:
                     "content": json.dumps(
                         {
                             "ui_delta": delta,
-                            "user_command": user_command,
+                            "user_text_command": user_text_command,
                         }
                     ),
                 }

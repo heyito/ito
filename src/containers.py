@@ -30,39 +30,13 @@ from src.handlers.audio.audio_recorder import AudioRecorder
 from src.handlers.audio.audio_source_handler import AudioSourceHandler
 from src.handlers.audio.audio_streamer import AudioStreamer
 from src.handlers.audio.faster_whisper_asr_handler import FasterWhisperASRHandler
+from src.handlers.audio.gemini_asr_handler import GeminiASRHandler
 from src.handlers.audio.groq_asr_handler import GroqASRHandler
 from src.handlers.llm_handler import LLMHandler
 from src.handlers.audio.openai_asr_handler import OpenAIASRHandler
 from src.handlers.vosk_processor import VoskProcessor
+from src.one_shot_application_runner import OneShotApplicationRunner
 from src.streaming_application_runner import StreamingApplicationRunner
-from src.ui.theme.manager import ThemeManager
-
-# Helper function for Selector
-def _is_streaming_mode(config_value: Any) -> str:
-    """Checks if the config value represents streaming mode. Returns 'true' or 'false'."""
-    print(
-        f"DEBUG: _is_streaming_mode received: {repr(config_value)} (type: {type(config_value)})"
-    )  # DEBUG
-    bool_result = False  # Default
-    if isinstance(config_value, bool):
-        bool_result = config_value
-    elif isinstance(config_value, str):
-        bool_result = config_value.lower() in ("true", "1", "t", "y", "yes", "on")
-    elif isinstance(config_value, int):
-        bool_result = config_value == 1
-    else:
-        # Handle unexpected types if necessary, maybe log a warning
-        print(
-            f"DEBUG: _is_streaming_mode received unexpected type: {type(config_value)}"
-        )
-        bool_result = False
-
-    str_result = str(
-        bool_result
-    ).lower()  # Convert boolean to lowercase string 'true' or 'false'
-    print(f"DEBUG: _is_streaming_mode returning: {repr(str_result)}")  # DEBUG
-    return str_result
-
 
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
@@ -80,7 +54,7 @@ class Container(containers.DeclarativeContainer):
     openai_llm_client_provider = providers.Singleton(
         OpenAIClient,
         api_key=config.APIKeys.openai_api_key,
-        user_command_model=config.OpenAI.user_command_model,  # This should be the currently selected OpenAI model
+        user_command_model=config.OpenAI.user_command_model,
         asr_model=config.OpenAI.asr_model,
     )
 
@@ -110,7 +84,7 @@ class Container(containers.DeclarativeContainer):
         config.LLM.source,
         openai_api=openai_llm_client_provider,
         ollama=ollama_llm_client_provider,
-        google_gemini=gemini_llm_client_provider,
+        gemini_api=gemini_llm_client_provider,
         groq_api=groq_llm_client_provider,
     )
 
@@ -190,9 +164,12 @@ class Container(containers.DeclarativeContainer):
             device=config.ASR.device,
             compute_type=config.ASR.compute_type,
         ),
+        gemini_api=providers.Singleton(
+            GeminiASRHandler, geminiClient=gemini_llm_client_provider
+        ),
     )
 
-    app_config = providers.Singleton(AppConfig, config_dict=config)
+    app_config = providers.Factory(AppConfig, config_dict=config)
 
     # VAD Config provider - using Callable instead of Dict
     vad_config_provider = providers.Dict(
@@ -251,22 +228,19 @@ class Container(containers.DeclarativeContainer):
         status_queue=status_queue,
     )
 
-    # --- Main Application Selector ---
-    application: providers.Provider[ApplicationInterface] = providers.Selector(
-        providers.Callable(
-            _is_streaming_mode, config.Mode.streaming
-        ),  # Use the helper returning 'true'/'false'
-        true=streaming_runner,
-        false=discrete_runner,
+    one_shot_runner = providers.Factory(
+        OneShotApplicationRunner,
+        config=app_config,
+        context_manager=context_manager,
+        command_processor=command_processor,
+        audio_recorder=audio_recorder,
+        status_queue=status_queue,
     )
 
-
-# Optional: Function to get the absolute path, similar to your main.py
-# Ensure sys is imported if using this
-def get_resource_path(relative_path):
-    try:
-        base_path = sys._MEIPASS  # type: ignore
-    except Exception:
-        # Corrected path finding relative to containers.py
-        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    return os.path.join(base_path, relative_path)
+    # --- Main Application Selector ---
+    application: providers.Provider[ApplicationInterface] = providers.Selector(
+        config.Mode.application_mode,  # Use the helper returning 'true'/'false'
+        streaming=streaming_runner,
+        discrete=discrete_runner,
+        oneshot=one_shot_runner,
+    )

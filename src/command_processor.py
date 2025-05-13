@@ -27,7 +27,7 @@ class CommandProcessor:
                  self._is_processing = False # Auto-correct state
             return self._is_processing
 
-    def process_command(self, context_data: Dict[str, Optional[str]], user_command: str) -> bool:
+    def process_command(self, context_data: Dict[str, Optional[str]], user_text_command: str, user_command_audio: Optional[bytes] = None) -> bool:
         """
         Starts the processing pipeline in a background thread if not already processing.
 
@@ -35,14 +35,14 @@ class CommandProcessor:
             bool: True if processing was initiated, False otherwise (e.g., busy).
         """
         timestamp = time.strftime('%H:%M:%S')
-        if not user_command or not user_command.strip():
+        if (not user_text_command or not user_text_command.strip()) and not user_command_audio:
             print(f"[{timestamp}] CommandProcessor: Skipping empty command.")
             self._update_status("Ready (empty command)")
             return False
 
         # Make copies of data outside the lock to minimize lock holding time
         context_copy = context_data.copy()
-        command_copy = user_command
+        command_copy = user_text_command
         doc_text_copy = context_copy.get("doc_text") # Extract doc_text for processing engine
 
         with self._lock:
@@ -55,7 +55,7 @@ class CommandProcessor:
             self._is_processing = True
             self._processing_thread = threading.Thread(
                 target=self._processing_thread_target,
-                args=(context_copy, doc_text_copy, command_copy),
+                args=(context_copy, doc_text_copy, command_copy, user_command_audio),
                 daemon=True,
                 name="ProcessingThread"
             )
@@ -68,7 +68,8 @@ class CommandProcessor:
     def _processing_thread_target(self,
                                   current_context: Dict[str, Optional[str]],
                                   processing_text: Optional[str],
-                                  user_command: str) -> None:
+                                  user_text_command: str,
+                                  user_command_audio: Optional[bytes] = None) -> None:
         """Target for the processing thread."""
         timestamp = time.strftime('%H:%M:%S')
         success = False
@@ -77,12 +78,13 @@ class CommandProcessor:
             app_name_for_log = current_context.get('app_name', 'N/A')
             print(f"[{timestamp}] --- Starting Processing Pipeline ---")
             print(f"[{timestamp}] Context App: {app_name_for_log}")
-            print(f"[{timestamp}] User Command: '{user_command}'")
+            print(f"[{timestamp}] User Command: '{user_text_command}'")
 
             self.processing_engine.process(
                 current_context=current_context,
                 processing_text=processing_text,
-                user_command=user_command
+                user_text_command=user_text_command,
+                user_command_audio=user_command_audio
             )
             print(f"[{timestamp}] Processing engine finished successfully.")
             success = True

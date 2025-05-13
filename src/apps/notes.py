@@ -1,3 +1,4 @@
+from typing import Optional
 import src.platform_utils_macos as platform_utils
 from src import prompt_templates
 from src.engines.intent_engine import IntentEngine
@@ -16,17 +17,18 @@ class NotesApp:
         content = platform_utils.get_notes_content()
         return content
     
-    def process_command(self, processing_text: str, user_command: str):
-        intent = self.intent_engine.get_intent(user_command)
+    def process_command(self, processing_text: str, user_text_command: str, user_command_audio: Optional[bytes] = None):
+        intent = self.intent_engine.get_intent(user_text_command)
         print(f"NotesApp: Intent: {intent}")
         
         full_llm_input = prompt_templates.create_notes_prompt(
             content=processing_text,
-            command=user_command
+            command=user_text_command
         )
 
-        new_doc_text = self.llm_handler.process_text_with_llm(
+        new_doc_text = self.llm_handler.process_input_with_llm(
             text=full_llm_input, # Pass combined context+command as user message content
+            audio_buffer=user_command_audio,
             system_prompt_override=self.system_prompt, # Pass the system prompt from config
         )
 

@@ -72,11 +72,64 @@ class GeminiClient(LLMClientInterface):
             response = self._client.models.generate_content(
                 model=self._user_command_model,
                 contents=system_prompt + text,
-                generation_config=types.GenerationConfig(
-                    temperature=temperature,
-                    max_output_tokens=max_tokens,
-                ),
             )
+
+            return response.text
+        except Exception as e:
+            # Catch broader exceptions during the API call
+            print(f"An unexpected error occurred during Gemini transcription: {e}")
+            return ""  # Return empty string on unexpected errors
+        
+    @time_method
+    def generate_response_with_audio(
+        self,
+        audio_buffer: bytes,
+        text: str,
+        system_prompt: str,
+        max_tokens: int,
+        temperature: float,
+        tools: list[dict] = [],
+        messages_override: Optional[List[Dict]] = None,
+    ) -> Any:
+        print(f"GeminiClient: Audio buffer type: {type(audio_buffer)}")
+        print(f"GeminiClient: Audio buffer content: {audio_buffer}")
+        if (
+            not self._is_valid
+        ):  # Relies on check_availability being called or key presence
+            print(
+                "GeminClient ERROR: API key is invalid or missing. Cannot process request."
+            )
+            return None
+
+        if not self._user_command_model:
+            raise ValueError("Gemini user command model is required.")
+
+        if tools or messages_override:
+            print(
+                "Inten hasn't implemented tool support or messages_override for GeminiClient."
+            )
+            return None
+
+        try:
+            processed_audio_data: bytes
+            if isinstance(audio_buffer, io.BytesIO):
+                # If it's BytesIO, get its value as bytes
+                processed_audio_data = audio_buffer.getvalue()
+            elif isinstance(audio_buffer, bytes):
+                # If it's already bytes, use it directly
+                processed_audio_data = audio_buffer
+            else:
+                # Log error for unexpected type and return
+                print(f"GeminiClient ERROR: audio_buffer has unexpected type {type(audio_buffer)}. Expected bytes or io.BytesIO.")
+                return None
+
+            response = self._client.models.generate_content(
+                model=self._user_command_model,
+                contents=[system_prompt, text, types.Part.from_bytes(data=processed_audio_data, mime_type="audio/wav")],
+            )
+
+            print(f"GeminiClient: Response: {response}")
+            print(f"GeminiClient: Response text: {response.text}")
 
             return response.text
         except Exception as e:
@@ -95,13 +148,13 @@ class GeminiClient(LLMClientInterface):
             raise ValueError("Gemini ASR model is required.")
 
         try:
-            audio_buffer.name = "audio.wav"
+            audio_data_bytes = audio_buffer.getvalue()
 
             transcript_response = self._client.models.generate_content(
                 model=self._asr_model,
                 content=[
                     "Transcribe this audio",
-                    types.Part.from_bytes(data=audio_buffer, mime_tytpe="audio/wav"),
+                    types.Part.from_bytes(data=audio_data_bytes, mime_type="audio/wav"),
                 ],
             )
 

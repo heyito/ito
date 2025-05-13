@@ -584,7 +584,7 @@ class StreamingAudioApplication(ApplicationInterface):
             self.processing_engine.process(
                 current_context=self.current_context_data, # Pass the dict (contains app_name)
                 processing_text=original_doc_context,      # Pass the fetched text separately
-                user_command=final_transcript
+                user_text_command=final_transcript
             )
             print(f"[{timestamp}] Processing engine finished successfully.")
 

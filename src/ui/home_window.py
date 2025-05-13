@@ -196,10 +196,9 @@ class HomeWindow(QMainWindow):
         self.api_keys_button.clicked.connect(lambda: self.select_menu(2))
         menu_layout.addWidget(self.api_keys_button)
 
-        # Add Streaming button
-        self.streaming_button = MenuButton("Streaming", 3)
-        self.streaming_button.clicked.connect(lambda: self.select_menu(3))
-        menu_layout.addWidget(self.streaming_button)
+        self.mode_button = MenuButton("Mode", 3)
+        self.mode_button.clicked.connect(lambda: self.select_menu(3))
+        menu_layout.addWidget(self.mode_button)
 
         # Add Audio button
         self.audio_button = MenuButton("Audio", 4)
@@ -553,25 +552,24 @@ class HomeWindow(QMainWindow):
         api_keys_layout.addStretch()
         self.stacked_widget.addWidget(self.api_keys_page)
 
-        # --- Streaming PAGE ---
-        self.streaming_page = QWidget()
-        streaming_layout = QVBoxLayout(self.streaming_page)
-        streaming_layout.setContentsMargins(0, 0, 0, 0)
-        self.streaming_title = QLabel("Streaming")
-        self.set_page_title_style(self.streaming_title)
-        streaming_layout.addWidget(self.streaming_title, alignment=Qt.AlignmentFlag.AlignLeft)
-
-        # Mode Section (duplicate, do not delete from settings page)
-        mode_label = QLabel("Streaming Mode (Requires Vosk):")
-        self.set_label_style(mode_label)
-        mode_container = QWidget()
-        mode_layout = QVBoxLayout(mode_container)
+        self.mode_page = QWidget()
+        mode_layout = QVBoxLayout(self.mode_page)
         mode_layout.setContentsMargins(0, 0, 0, 0)
-        mode_layout.setSpacing(4)
-        mode_layout.addWidget(mode_label)
-        self.streaming_mode = QCheckBox()
-        mode_layout.addWidget(self.streaming_mode)
-        streaming_layout.addWidget(mode_container)
+        self.mode_title = QLabel("Mode")
+        self.set_page_title_style(self.mode_title)
+        mode_layout.addWidget(self.mode_title, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        # Mode Section
+        application_mode_label = QLabel("Application Mode:")
+        self.set_label_style(application_mode_label)
+        application_mode_container = QWidget()
+        application_mode_layout = QVBoxLayout(application_mode_container)
+        application_mode_layout.setContentsMargins(0, 0, 0, 0)
+        application_mode_layout.setSpacing(4)
+        application_mode_layout.addWidget(application_mode_label)
+        self.application_mode_selector = SegmentedButtonGroup(["discrete", "streaming", "oneshot"])
+        application_mode_layout.addWidget(self.application_mode_selector)
+        mode_layout.addWidget(application_mode_container)
 
         # Vosk Section
         self.vosk_model_path_edit = QLineEdit()
@@ -585,10 +583,10 @@ class HomeWindow(QMainWindow):
         vosk_model_path_layout.setSpacing(4)
         vosk_model_path_layout.addWidget(vosk_model_path_label)
         vosk_model_path_layout.addWidget(self.vosk_model_path_edit)
-        streaming_layout.addWidget(vosk_model_path_container)
+        mode_layout.addWidget(vosk_model_path_container)
 
-        streaming_layout.addStretch()
-        self.stacked_widget.addWidget(self.streaming_page)
+        mode_layout.addStretch()
+        self.stacked_widget.addWidget(self.mode_page)
 
         # --- Audio PAGE ---
         self.audio_page = QWidget()
@@ -877,7 +875,7 @@ class HomeWindow(QMainWindow):
         self.start_recording_hotkey.textChanged.connect(self.save_settings)
 
         # Mode Settings
-        self.streaming_mode.stateChanged.connect(self.save_settings)
+        self.application_mode_selector.selectionChanged.connect(self.save_settings)
         self.vosk_model_path_edit.textChanged.connect(self.save_settings)
 
         # Load settings after UI is fully initialized
@@ -927,7 +925,7 @@ class HomeWindow(QMainWindow):
             self.speech_recognition_title,
             self.language_model_title,
             self.api_keys_title,
-            self.streaming_title,
+            self.mode_title,
             self.audio_title,
             self.voice_detection_title,
             self.keyboard_title,
@@ -967,7 +965,7 @@ class HomeWindow(QMainWindow):
         self.speech_recognition_button.setChecked(index == 0)
         self.language_model_button.setChecked(index == 1)
         self.api_keys_button.setChecked(index == 2)
-        self.streaming_button.setChecked(index == 3)
+        self.mode_button.setChecked(index == 3)
         self.audio_button.setChecked(index == 4)
         self.voice_detection_button.setChecked(index == 5)
         self.keyboard_button.setChecked(index == 6)
@@ -1073,9 +1071,9 @@ class HomeWindow(QMainWindow):
                 current_llm_model_value = self.gemini_model.currentText()
 
             vosk_model_path_value = self.vosk_model_path_edit.text()
-            is_streaming = self.streaming_mode.isChecked()
+            selected_application_mode = self.application_mode_selector.currentText()
 
-            if is_streaming and not vosk_model_path_value:
+            if selected_application_mode == "streaming" and not vosk_model_path_value:
                 self.handle_error(
                     "Vosk Model Path cannot be empty when Streaming Mode is enabled."
                 )
@@ -1171,7 +1169,7 @@ class HomeWindow(QMainWindow):
                 "Hotkeys": {
                     "start_recording_hotkey": self.start_recording_hotkey.text(),
                 },
-                "Mode": {"streaming": str(is_streaming).lower()},
+                "Mode": {"application_mode": selected_application_mode},
             }
 
             # Validate new settings
@@ -1277,8 +1275,8 @@ class HomeWindow(QMainWindow):
 
             # Load Mode settings
             mode_config = config.get("Mode", {})
-            self.streaming_mode.setChecked(
-                mode_config.get("streaming", "false") == "true"
+            self.application_mode_selector.setCurrentText(
+                mode_config.get("application_mode", "discrete")
             )
 
             # Load Vosk settings (Path is now guaranteed by ApplicationManager)

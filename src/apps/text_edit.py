@@ -1,3 +1,4 @@
+from typing import Optional
 from src import platform_utils_macos as platform_utils
 from src import prompt_templates
 from src.handlers.llm_handler import LLMHandler
@@ -9,15 +10,16 @@ class TextEditApp:
     def __init__(self, llm_handler: LLMHandler):
         self.llm_handler = llm_handler
     
-    def process_command(self, processing_text: str, user_command: str):
+    def process_command(self, processing_text: str, user_text_command: str, user_command_audio: Optional[bytes] = None):
         full_llm_input = prompt_templates.create_general_document_body_prompt(
             application="TextEdit",
             content=processing_text,
-            command=user_command
+            command=user_text_command
         )
 
-        new_doc_text = self.llm_handler.process_text_with_llm(
+        new_doc_text = self.llm_handler.process_input_with_llm(
             text=full_llm_input, # Pass combined context+command as user message content
+            audio_buffer=user_command_audio,
             system_prompt_override=self.system_prompt, # Pass the system prompt from config
         )
 

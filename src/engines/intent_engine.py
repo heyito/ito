@@ -1,4 +1,5 @@
 from enum import StrEnum
+from typing import Optional
 
 from src.handlers.llm_handler import LLMHandler
 
@@ -36,8 +37,8 @@ class IntentEngine:
         self.llm_handler = llm_handler
         self.intent = None
 
-    def get_intent(self, user_command: str) -> IntentTypes:
-        response = self.llm_handler.process_text_with_llm(system_prompt_override=system_prompt, text=user_command)
+    def get_intent(self, user_text_command: str, user_command_audio: Optional[bytes] = None) -> IntentTypes:
+        response = self.llm_handler.process_input_with_llm(system_prompt_override=system_prompt, text=user_text_command, audio_buffer=user_command_audio)
         try:
             intent = IntentTypes.from_string(response)
         except KeyError:

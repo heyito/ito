@@ -1,6 +1,8 @@
+import os
 import objc
 import sys
 from PyQt6.QtCore import pyqtSignal, QObject
+from PyQt6.QtGui import QColor
 from src.ui.theme.theme import THEME
 
 def is_dark_mode():
@@ -31,9 +33,15 @@ class ThemeManager(QObject):
         return cls._instance
     
     def _initialize(self):
-        super().__init__()  # Initialize QObject
-        self._current_theme = "dark"  # Default to dark theme
+        super().__init__()
+        self._current_theme = "dark" if self._get_appearance() else "light"
         self._setup_appearance_observer()
+
+    def _get_appearance(self):
+        """Get the current appearance"""
+        from AppKit import NSAppearance, NSAppearanceNameDarkAqua
+        appearance = NSAppearance.currentAppearance()
+        return appearance.name() == NSAppearanceNameDarkAqua
 
     def _setup_appearance_observer(self):
         # Listen on the distributed center for the system Dark/Light toggle
@@ -65,16 +73,28 @@ class ThemeManager(QObject):
     def current_theme(self):
         return self._current_theme
     
-    def get_color(self, path):
+    def get_qcolor(self, path):
         """Get a color from the theme using dot notation (e.g., 'button.background')"""
         parts = path.split('.')
         value = THEME[self._current_theme]
         for part in parts:
             value = value[part]
-        
+
         # print an error if the color is not found
         if value is None:
             print(f"Color not found: {path}")
+            return None
+
+        return value
+    
+    def get_color(self, path):
+        """Get a color from the theme using dot notation (e.g., 'button.background')"""
+        value = self.get_qcolor(path)
+            
+        # If the value is a QColor, return it in rgba format
+        if isinstance(value, QColor):
+            # Format RGB as integers and alpha as a decimal between 0 and 1
+            return f"rgba({int(value.red())}, {int(value.green())}, {int(value.blue())}, {value.alpha()/255:.2f})"
             
         return value
     
@@ -89,3 +109,23 @@ class ThemeManager(QObject):
         """Toggle between light and dark themes"""
         self._current_theme = "light" if self._current_theme == "dark" else "dark"
         return self._current_theme
+
+    def get_logo_path(self):
+        """
+        Returns the correct logo path for the current theme.
+        """
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        if self.current_theme == "light":
+            candidates = [
+                "inten-logo-dark.png",
+                os.path.join(base_dir, "inten-logo-dark.png"),
+            ]
+        else:
+            candidates = [
+                "inten-logo.png",
+                os.path.join(base_dir, "inten-logo.png"),
+            ]
+        for path in candidates:
+            if os.path.exists(path):
+                return path
+        return None  # Fallback if not found

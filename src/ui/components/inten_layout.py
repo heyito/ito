@@ -174,18 +174,18 @@ class IntenLayout(QWidget):
         button_text = self.theme_manager.get_color('button.text')
         button_hover = self.theme_manager.get_color('button.hover')
         button_pressed = self.theme_manager.get_color('button.pressed')
-        
+        surface = self.theme_manager.get_color('surface')
         return f"""
             QWidget, QMainWindow {{
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             }}
             QLabel {{ 
-                color: {text_primary.name()}; 
+                color: {text_primary}; 
                 background-color: transparent;
             }}
             QPushButton {{
-                background-color: {button_bg.name()};
-                color: {button_text.name()};
+                background-color: {button_bg};
+                color: {button_text};
                 border: none;
                 padding: 8px 20px;
                 border-radius: 6px;
@@ -193,26 +193,26 @@ class IntenLayout(QWidget):
                 font-weight: 500;
             }}
             QPushButton:hover {{
-                background-color: {button_hover.name()};
+                background-color: {button_hover};
             }}
             QPushButton:disabled {{
-                background-color: {button_bg.name()};
-                color: {text_secondary.name()};
+                background-color: {button_bg};
+                color: {text_secondary};
             }}
             QProgressBar {{
                 border: none;
                 border-radius: 3px;
                 text-align: center;
-                background-color: {text_secondary.name()};
+                background-color: {text_secondary};
                 max-height: 6px;
                 margin: 0px 2px;
             }}
             QProgressBar::chunk {{
-                background-color: {button_bg.name()};
+                background-color: {button_bg};
                 border-radius: 3px;
             }}
             QWidget#permission_row {{
-                background-color: {text_secondary.name()};
+                background-color: {surface};
                 border-radius: 10px;
                 min-height: 60px;
                 padding: 0px;
@@ -225,7 +225,7 @@ class IntenLayout(QWidget):
             }}
             QLabel#permission_text {{
                 font-size: 15px;
-                color: {text_secondary.name()};
+                color: {text_secondary};
                 font-weight: 400;
             }}
             QLabel#permission_icon {{
@@ -247,21 +247,16 @@ class IntenLayout(QWidget):
         
         # Use error color from theme for close button
         error_color = self.theme_manager.get_color('error')
-        error_color_hover = QColor(
-            min(error_color.red() + 30, 255),
-            min(error_color.green() + 30, 255),
-            min(error_color.blue() + 30, 255),
-            error_color.alpha()
-        )
-        
+        error_color_hover = self.theme_manager.get_color('error_hover')
+
         close_button.setStyleSheet(f'''
             QPushButton {{
-                background-color: {error_color.name()};
+                background-color: {error_color};
                 border: none;
                 border-radius: 8px;
             }}
             QPushButton:hover {{
-                background-color: {error_color_hover.name()};
+                background-color: {error_color_hover};
             }}
         ''')
         
@@ -310,4 +305,4 @@ class IntenLayout(QWidget):
 
     def _make_background_color(self, rect):
         from PyQt6.QtGui import QColor
-        return self.theme_manager.get_color('background')
+        return self.theme_manager.get_qcolor('background')

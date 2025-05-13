@@ -119,7 +119,6 @@ class KeyboardManager(QObject):
                 if hotkey_str in self._function_key_codes:
                     self._hotkey_str = hotkey_str
                     self._target_hotkey = self._function_key_codes[hotkey_str]
-                    print(f"Hotkey updated to: {hotkey_str}")
                     return True
                 else:
                     print(f"Unsupported hotkey for macOS: {hotkey_str}")

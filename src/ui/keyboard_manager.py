@@ -3,7 +3,7 @@ import platform
 import Quartz
 
 from pynput import keyboard
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 
 class KeyboardManager(QObject):
@@ -11,8 +11,8 @@ class KeyboardManager(QObject):
     _instance = None
 
     # Signal when hotkey is pressed
-    hotkey_pressed = pyqtSignal(str)
-
+    hotkey_pressed = Signal(str)
+    
     @classmethod
     def instance(cls):
         if cls._instance is None:

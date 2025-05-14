@@ -4,12 +4,9 @@ import queue
 import threading
 import time
 import traceback
-import os
-import sys
 from typing import Any, Dict, Optional, Tuple
 
-from PyQt6.QtCore import QObject, QSettings, pyqtSignal, pyqtSlot, QTimer
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QObject, Signal, QSettings, QTimer
 
 from src.application_interface import ApplicationInterface
 from src.containers import Container
@@ -30,10 +27,10 @@ except ImportError:
 
 class ApplicationManager(QObject):
     # Signals for UI updates
-    error_occurred = pyqtSignal(str)  # Emits error messages
-    status_changed = pyqtSignal(str)  # Emits status updates
-    settings_changed = pyqtSignal()  # Emits when settings are updated
-    hotkey_pressed = pyqtSignal(
+    error_occurred = Signal(str)  # Emits error messages
+    status_changed = Signal(str)  # Emits status updates
+    settings_changed = Signal()  # Emits when settings are updated
+    hotkey_pressed = Signal(
         str
     )  # NEW: Signal when hotkey is pressed, passes key string
 

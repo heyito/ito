@@ -1,10 +1,11 @@
-from PyQt6.QtWidgets import QWidget, QPushButton, QSizePolicy
-from PyQt6.QtCore import pyqtSignal, Qt
+from PySide6.QtCore import QObject, Signal, Qt
+from PySide6.QtWidgets import QWidget, QPushButton, QSizePolicy, QHBoxLayout, QButtonGroup
+from PySide6.QtGui import QFontMetrics
 from src.ui.components.flow_layout import QFlowLayout
 from src.ui.theme.manager import ThemeManager
 
 class SegmentedButtonGroup(QWidget):
-    selectionChanged = pyqtSignal(str)
+    selectionChanged = Signal(str)
 
     def __init__(self, options, parent=None, theme_manager: ThemeManager = None):
         super().__init__(parent)

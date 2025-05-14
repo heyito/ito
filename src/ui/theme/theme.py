@@ -1,4 +1,4 @@
-from PyQt6.QtGui import QColor
+from PySide6.QtGui import QColor
     
 THEME = {
     "dark": {

@@ -1,5 +1,5 @@
-from PyQt6.QtWidgets import QPushButton
-from PyQt6.QtCore import Qt, pyqtSlot
+from PySide6.QtWidgets import QPushButton
+from PySide6.QtCore import Qt, Slot
 from src.ui.theme.manager import ThemeManager
 
 class MenuButton(QPushButton):
@@ -19,7 +19,7 @@ class MenuButton(QPushButton):
         # Set initial style
         self._update_style()
     
-    @pyqtSlot(str)
+    @Slot(str)
     def _on_theme_changed(self, new_theme):
         """Handle theme change signal"""
         self._update_style()

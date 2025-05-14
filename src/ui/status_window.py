@@ -1,8 +1,8 @@
 import sys
 from enum import Enum, auto
-from PyQt6.QtCore import Qt, QPoint, QPropertyAnimation, QEasingCurve, QRectF, QTimer
-from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QGraphicsOpacityEffect
-from PyQt6.QtGui import QPainter, QPainterPath, QRegion, QFontMetrics
+from PySide6.QtCore import Qt, QPoint, QPropertyAnimation, QEasingCurve, QRectF, QTimer
+from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QGraphicsOpacityEffect
+from PySide6.QtGui import QPainter, QPainterPath, QRegion, QFontMetrics, QColor, QPen
 from src.types.status_messages import StatusMessage
 from src.ui.components.inten_layout import MacBlur
 import queue

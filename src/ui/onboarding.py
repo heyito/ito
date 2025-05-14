@@ -4,9 +4,9 @@ import sys
 import traceback
 
 import sounddevice as sd
-from PyQt6.QtCore import QObject, QPointF, QSettings, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QObject, Signal, Slot, Qt, QSettings, QSize, QPoint, QRect, QTimer
+from PySide6.QtGui import QPixmap, QPainter, QColor, QFont, QIcon, QScreen, QPainterPath, QPen, QBrush
+from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
     QLabel,
@@ -43,7 +43,7 @@ else:
     _objc_available = False
 
 class PermissionChecker(QObject):
-    permission_checked = pyqtSignal(str, bool)  # permission_name, is_granted
+    permission_checked = Signal(str, bool)  # permission_name, is_granted
 
     def check_microphone(self):
         try:
@@ -97,7 +97,7 @@ class OnboardingWindow(QMainWindow):
 
         # --- Manual Dragging Variables ---
         self._dragging = False
-        self._drag_start_position = QPointF()
+        self._drag_start_position = QPoint()
 
         # --- Main widget and layout ---
         main_widget = IntenLayout(self, radius=8, show_close_button=True, theme_manager=self.theme_manager)

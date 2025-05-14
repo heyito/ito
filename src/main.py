@@ -8,7 +8,7 @@ import sys
 import traceback
 
 import sounddevice as sd
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from src.containers import Container
 from src.ui.keyboard_manager import KeyboardManager

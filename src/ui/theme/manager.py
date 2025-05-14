@@ -1,15 +1,13 @@
 import os
-import objc
-import sys
-from PyQt6.QtCore import pyqtSignal, QObject
-from PyQt6.QtGui import QColor
+from PySide6.QtCore import Signal, QObject
+from PySide6.QtGui import QColor
 from src.ui.theme.theme import THEME
 
 class ThemeManager(QObject):
     _instance = None
 
     # Signal for when the theme changes
-    theme_changed = pyqtSignal(str)
+    theme_changed = Signal(str)
     
     @classmethod
     def instance(cls):

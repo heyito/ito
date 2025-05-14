@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
-from PyQt6.QtCore import Qt, QRectF
-from PyQt6.QtGui import QPainter, QPainterPath, QRegion, QColor
+from PySide6.QtCore import Qt, QPoint, QRect, QSize, QTimer, QPropertyAnimation, QEasingCurve, QRectF
+from PySide6.QtGui import QColor, QPainter, QPainterPath, QRegion, QWindow, QImage, QPixmap, QIcon
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QGraphicsEffect, QGraphicsDropShadowEffect, QGraphicsBlurEffect, QGraphicsColorizeEffect, QSizePolicy
 import sys
 from src.ui.theme.manager import ThemeManager
 # Conditionally import macOS-specific libraries at the module level
@@ -304,5 +304,5 @@ class IntenLayout(QWidget):
             MacBlur(self, self.radius)
 
     def _make_background_color(self, rect):
-        from PyQt6.QtGui import QColor
+        from PySide6.QtGui import QColor
         return self.theme_manager.get_qcolor('background')

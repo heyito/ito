@@ -7,8 +7,7 @@ readme = "README.md"
 package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.12"
-PyQt6 = "6.9.0"
+python = ">=3.12,<3.14"
 numpy = "2.2.4"
 pynput = "1.8.1"
 sounddevice = "0.5.1"
@@ -36,6 +35,7 @@ dependency-injector = "^4.46.0"
 deepdiff = "^8.4.2"
 groq = "^0.24.0"
 google-genai = "^1.14.0"
+pyside6 = "^6.9.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

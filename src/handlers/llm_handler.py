@@ -102,7 +102,7 @@ class LLMHandler:
                     system_prompt=system_prompt,
                     max_tokens=max_tokens,
                     temperature=temperature,
-                    tools=tool_functions or [],  # Pass empty list if None
+                    tool_functions=tool_functions or [],  # Pass empty list if None
                     messages_override=messages_override
                     or [],  # Pass empty list if None
                 )

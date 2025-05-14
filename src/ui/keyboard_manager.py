@@ -31,9 +31,9 @@ class KeyboardManager(QObject):
         self._listener_started = False
         self._tap = None
 
-        # self._is_macos = platform.system() == 'Darwin'
+        self._is_macos = platform.system() == 'Darwin'
         # TODO: THIS IS FALSE JUST FOR DEV TESTING WITH EXTERNAL KEYBOARD
-        self._is_macos = False
+        # self._is_macos = False
 
         # Map of function key names to their Quartz keycodes
         self._function_key_codes = {

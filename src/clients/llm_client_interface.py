@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 import io
 from typing import Any, List, Dict, Optional
 
+from src.clients.types import ToolCallDict
+
 
 class LLMClientInterface(ABC):
     """
@@ -97,7 +99,9 @@ class LLMClientInterface(ABC):
         pass
 
     @abstractmethod
-    def format_messages(self, system_prompt: str, user_prompt: str) -> List[Any]:
+    def format_system_user_messages(
+        self, system_prompt: str, user_prompt: str
+    ) -> List[Any]:
         """
         Formats the system prompt and user text into a list of messages.
 
@@ -111,11 +115,30 @@ class LLMClientInterface(ABC):
         pass
 
     @abstractmethod
-    def format_tool_message(id: str, name: str, result: str) -> Any:
+    def format_tool_result_messages(
+        self,
+        id: str,
+        name: str,
+        args: dict,
+        result: str,
+    ) -> List[Any]:
         pass
 
     @abstractmethod
-    def format_user_message(content: str) -> Any:
+    def format_user_message(self, content: str) -> Any:
+        pass
+
+    @abstractmethod
+    def extract_tool_calls(self, response: Any) -> List[ToolCallDict] | None:
+        """
+        Extracts tool calls from the LLM response.
+
+        Args:
+            response: The response object from the LLM.
+
+        Returns:
+            A list of tool calls if present, otherwise None.
+        """
         pass
 
     @staticmethod
@@ -123,6 +146,7 @@ class LLMClientInterface(ABC):
         tool_functions: Optional[List[Dict]],
     ) -> List[Dict]:
         """
+
         Converts tool functions to OpenAI's expected format.
 
         Also supported by Groq

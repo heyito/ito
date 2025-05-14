@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from groq import Groq, GroqError
 
 from src.clients.llm_client_interface import LLMClientInterface
+from src.clients.types import ToolCallDict
 from src.utils.timing import time_method
 
 
@@ -154,7 +155,9 @@ class GroqClient(LLMClientInterface):
             print(f"An unexpected error occurred during Groq transcription: {e}")
             return ""
 
-    def format_messages(self, system_prompt: str, user_prompt: str) -> List[Dict]:
+    def format_system_user_messages(
+        self, system_prompt: str, user_prompt: str
+    ) -> List[Dict]:
         """
         Formats the messages for the Groq API.
         """
@@ -163,13 +166,30 @@ class GroqClient(LLMClientInterface):
             {"role": "user", "content": user_prompt},
         ]
 
-    def format_tool_message(id: str, name: str, result: str):
-        return {
-            "role": "tool",
-            "tool_call_id": id,
-            "name": name,
-            "content": json.dumps({"result": result}),
-        }
+    def format_tool_result_messages(self, id: str, name: str, args: dict, result: str):
+        return [
+            {
+                "role": "tool",
+                "tool_call_id": id,
+                "name": name,
+                "content": json.dumps({"result": result}),
+            }
+        ]
 
-    def format_user_message(content):
+    def format_user_message(self, content: str):
         return {"role": "user", "content": json.dumps(content)}
+
+    def extract_tool_calls(self, response: Any) -> List[ToolCallDict] | None:
+        tool_calls = response.choices[0].message.tool_calls
+        result = []
+        for tool_call in tool_calls:
+            result.append(
+                {
+                    "name": tool_call.function.name,
+                    "arguments": tool_call.function.arguments,
+                    "id": tool_call.id,
+                }
+            )
+
+        return result
+    

@@ -34,10 +34,10 @@ ui_batch_tool = {
                         "y": {"type": "integer"},
                         "text": {"type": "string"},
                         "key": {"type": "string"},
-                        "element_description": {
-                            "type": "string",
-                            "description": "A short description of the action taken",
-                        },
+                        # "element_description": {
+                        #     "type": "string",
+                        #     "description": "A short description of the action taken",
+                        # },
                     },
                     "required": ["action"],
                 },
@@ -78,7 +78,7 @@ class MacOSapp:
         self.llm_handler = llm_handler
         self.macos_engine = macos_engine
 
-    def _run_atomic(self, step: dict):
+    def _run_atomic(self, step: dict) -> str:
         """
         Executes a single low-level action and returns a short result string.
         step = {action:'click'|'type_text'|…, x:…, y:…, text:, key:…}
@@ -101,7 +101,7 @@ class MacOSapp:
         except Exception as e:
             return f"error: {e}"
 
-    def get_context(self):
+    def get_context(self) -> str:
         context = self.macos_engine.get_active_window_info()
         return context
 
@@ -141,13 +141,13 @@ class MacOSapp:
 
         old_context = processing_text
 
-        def run_after_step(state):
+        def run_after_step(state: dict):
             new_context = self.get_context()
             old_context = state["old_context"]
             delta = DeepDiff(old_context, new_context, verbose_level=2).to_json()
             state["old_context"] = new_context
 
-            return {"ui_delta": delta}
+            return json.dumps({"ui_delta": delta})
 
         self.llm_handler.run_tool_call_process(
             tool_name_resolver=tool_name_resolver,

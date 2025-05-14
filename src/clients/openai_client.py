@@ -5,6 +5,7 @@ from typing import Any, List, Dict, Optional
 
 from openai import OpenAI, OpenAIError
 from src.clients.llm_client_interface import LLMClientInterface
+from src.clients.types import ToolCallDict
 from src.utils.timing import time_method
 
 
@@ -158,19 +159,35 @@ class OpenAIClient(LLMClientInterface):
             print(f"An unexpected error occurred during OpenAI transcription: {e}")
             return ""  # Return empty string on unexpected errors
 
-    def format_messages(self, system_prompt, user_prompt):
+    def format_system_user_messages(self, system_prompt: str, user_prompt: str):
         return [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
 
-    def format_tool_message(id, name, result):
-        return {
-            "role": "tool",
-            "tool_call_id": id,
-            "name": name,
-            "content": json.dumps({"result": result}),
-        }
+    def format_tool_result_messages(self, id: str, name: str, args: dict, result: str):
+        return [
+            {
+                "role": "tool",
+                "tool_call_id": id,
+                "name": name,
+                "content": json.dumps({"result": result}),
+            }
+        ]
 
-    def format_user_message(content):
+    def format_user_message(self, content: str):
         return {"role": "user", "content": json.dumps(content)}
+
+    def extract_tool_calls(self, response: Any) -> List[ToolCallDict] | None:
+        tool_calls = response.choices[0].message.tool_calls
+        result = []
+        for tool_call in tool_calls:
+            result.append(
+                {
+                    "name": tool_call.function.name,
+                    "arguments": tool_call.function.arguments,
+                    "id": tool_call.id,
+                }
+            )
+
+        return result

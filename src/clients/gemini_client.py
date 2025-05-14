@@ -1,9 +1,11 @@
 import io
+import json
 from typing import Any, List, Dict, Optional
 from google import genai
 from google.genai import types
 
 from src.clients.llm_client_interface import LLMClientInterface
+from src.clients.types import ToolCallDict
 from src.utils.timing import time_method
 
 
@@ -49,7 +51,7 @@ class GeminiClient(LLMClientInterface):
         max_tokens: int,
         temperature: float,
         tool_functions: Optional[List[dict]] = None,
-        messages_override: Optional[List[Dict]] = None,
+        messages_override: Optional[List[types.Content]] = None,
     ) -> Any:
         if (
             not self._is_valid
@@ -62,21 +64,19 @@ class GeminiClient(LLMClientInterface):
         if not self._user_command_model:
             raise ValueError("Gemini user command model is required.")
 
-        if messages_override:
-            print("Inten hasn't implemented messages_override for GeminiClient.")
-            return None
-
         tools = types.Tool(function_declarations=tool_functions)
-        contents = self.format_messages(system_prompt, text)
+        contents = self.format_system_user_messages(system_prompt, text)
 
         try:
             response = self._client.models.generate_content(
                 model=self._user_command_model,
-                contents=contents,
-                generation_config=types.GenerationConfig(
-                    temperature=temperature, max_output_tokens=max_tokens
+                contents=messages_override if messages_override else contents,
+                config=types.GenerateContentConfig(
+                    tools=[tools],
+                    temperature=temperature,
+                    max_output_tokens=max_tokens,
+                    system_instruction=system_prompt,
                 ),
-                config=types.GenerateContentConfig(tools=[tools]),
             )
 
             if tool_functions:
@@ -85,7 +85,7 @@ class GeminiClient(LLMClientInterface):
                 return response.text
         except Exception as e:
             # Catch broader exceptions during the API call
-            print(f"An unexpected error occurred during Gemini transcription: {e}")
+            print(f"An unexpected error occurred during Gemini response: {e}")
             return ""  # Return empty string on unexpected errors
 
     @time_method
@@ -181,19 +181,45 @@ class GeminiClient(LLMClientInterface):
             print(f"An unexpected error occurred during Gemini transcription: {e}")
             return ""  # Return empty string on unexpected errors
 
-    def format_messages(self, system_prompt, user_prompt):
+    def format_system_user_messages(self, system_prompt: str, user_prompt: str):
+        # System prompt has to be sent at the config level for Gemini
         return [
             types.Content(role="user", parts=[types.Part(text=user_prompt)]),
-            types.Content(role="system", parts=[types.Part(text=system_prompt)]),
         ]
 
-    def format_tool_message(self, id, name, result):
-        return types.Content(
-            role="model",
-            parts=types.Part.from_function_response(
-                name=name, id=id, response={"result": result}
+    def format_tool_result_messages(self, id: str, name: str, args: dict, result: str):
+        return [
+            types.Content(
+                role="model",
+                parts=[types.Part.from_function_call(name=name, args=args)],
             ),
-        )
+            types.Content(
+                role="model",
+                parts=[
+                    types.Part.from_function_response(
+                        name=name,
+                        response={"result": result},
+                    )
+                ],
+            ),
+        ]
 
-    def format_user_message(content):
+    def format_user_message(self, content: str):
         return types.Content(role="user", parts=[types.Part(text=content)])
+
+    def extract_tool_calls(self, response: Any) -> List[ToolCallDict] | None:
+        response: types.GenerateContentResponse = response
+        parts = response.candidates[0].content.parts
+        result = []
+        for part in parts:
+            function_call = part.function_call
+            if not function_call:
+                continue
+            result.append(
+                {
+                    "name": function_call.name,
+                    "arguments": json.dumps(function_call.args),
+                    "id": function_call.id,
+                }
+            )
+        return result

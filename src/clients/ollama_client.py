@@ -6,6 +6,7 @@ import requests
 
 from src.clients.llm_client_interface import LLMClientInterface
 from src.utils.timing import time_method
+from src.clients.types import ToolCallDict
 
 
 class OllamaClient(LLMClientInterface):
@@ -237,11 +238,14 @@ class OllamaClient(LLMClientInterface):
             "Ollama client does not support multi modal responses."
         )
 
-    def format_messages(self, system_prompt: str, user_prompt: str):
+    def format_system_user_messages(self, system_prompt: str, user_prompt: str):
         raise ValueError("OllamaClient does not support message formatting.")
 
-    def format_tool_message(id, name, result):
+    def format_tool_result_messages(self, id: str, name: str, args: dict, result: str):
         raise ValueError("OllamaClient does not support tools")
 
-    def format_user_message(content: str):
+    def format_user_message(self, content: str):
         raise ValueError("OllamaClient does not support user message formatting.")
+
+    def extract_tool_calls(self, response: Any) -> List[ToolCallDict] | None:
+        raise ValueError("OllamaClient does not support tool calls")

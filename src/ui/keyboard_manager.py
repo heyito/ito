@@ -9,42 +9,47 @@ from PyQt6.QtCore import QObject, pyqtSignal
 class KeyboardManager(QObject):
     # Singleton instance
     _instance = None
-    
+
     # Signal when hotkey is pressed
     hotkey_pressed = pyqtSignal(str)
-    
+
     @classmethod
     def instance(cls):
         if cls._instance is None:
             cls._instance = KeyboardManager()
         return cls._instance
-    
+
     def __init__(self):
         if KeyboardManager._instance is not None:
-            raise Exception("KeyboardManager is a singleton! Use KeyboardManager.instance()")
+            raise Exception(
+                "KeyboardManager is a singleton! Use KeyboardManager.instance()"
+            )
         super().__init__()
         self._listener = None
         self._target_hotkey = None
         self._hotkey_str = None
         self._listener_started = False
         self._tap = None
-        self._is_macos = platform.system() == 'Darwin'
-        
+
+        # self._is_macos = platform.system() == 'Darwin'
+        # TODO: THIS IS FALSE JUST FOR DEV TESTING WITH EXTERNAL KEYBOARD
+        self._is_macos = False
+
         # Map of function key names to their Quartz keycodes
         self._function_key_codes = {
-            'f1': 122,
-            'f2': 120,
-            'f3': 99,
-            'f4': 118,
-            'f5': 96,
-            'f6': 97,
-            'f7': 98,
-            'f8': 100,
-            'f9': 101,
-            'f10': 109,
-            'f11': 103,
-            'f12': 111,
-            'fn': 179
+            "f1": 122,
+            "f2": 120,
+            "f3": 99,
+            "f4": 118,
+            "f5": 96,
+            "f6": 97,
+            "f7": 98,
+            "f8": 100,
+            "f9": 101,
+            "f10": 109,
+            "f11": 103,
+            "f12": 111,
+            "fn": 179,
         }
 
     def initialize_listener(self) -> bool:
@@ -53,7 +58,7 @@ class KeyboardManager(QObject):
         if self._listener_started:
             print("Keyboard listener already initialized")
             return True
-            
+
         try:
             if self._is_macos:
                 # On macOS, use Quartz for keyboard events
@@ -62,7 +67,7 @@ class KeyboardManager(QObject):
                 # On other platforms, use pynput
                 self._listener = keyboard.Listener(on_press=self._on_keyboard_press)
                 self._listener.start()
-            
+
             self._listener_started = True
             print("Keyboard listener initialized successfully")
             return True
@@ -73,11 +78,14 @@ class KeyboardManager(QObject):
 
     def _setup_quartz_listener(self):
         """Set up Quartz event tap for keyboard events on macOS"""
+
         def callback(proxy, type_, event, refcon):
             if type_ == Quartz.kCGEventKeyDown:
                 # Get the keycode from the event
-                keycode = Quartz.CGEventGetIntegerValueField(event, Quartz.kCGKeyboardEventKeycode)
-                
+                keycode = Quartz.CGEventGetIntegerValueField(
+                    event, Quartz.kCGKeyboardEventKeycode
+                )
+
                 # Check if this is our target key
                 if self._target_hotkey and isinstance(self._target_hotkey, int):
                     if keycode == self._target_hotkey:
@@ -85,7 +93,7 @@ class KeyboardManager(QObject):
                         self.hotkey_pressed.emit(self._hotkey_str)
                         # Return None to consume the event
                         return None
-            
+
             # Return the event for all other keys
             return event
 
@@ -96,7 +104,7 @@ class KeyboardManager(QObject):
             Quartz.kCGEventTapOptionDefault,
             Quartz.CGEventMaskBit(Quartz.kCGEventKeyDown),
             callback,
-            None
+            None,
         )
 
         if self._tap:
@@ -105,7 +113,7 @@ class KeyboardManager(QObject):
             Quartz.CFRunLoopAddSource(
                 Quartz.CFRunLoopGetCurrent(),
                 runLoopSource,
-                Quartz.kCFRunLoopDefaultMode
+                Quartz.kCFRunLoopDefaultMode,
             )
             # Enable the event tap
             Quartz.CGEventTapEnable(self._tap, True)
@@ -123,17 +131,17 @@ class KeyboardManager(QObject):
                 else:
                     print(f"Unsupported hotkey for macOS: {hotkey_str}")
                     return False
-            
+
             new_hotkey = self._parse_hotkey(hotkey_str)
             if not new_hotkey:
                 print(f"Invalid hotkey: {hotkey_str}")
                 return False
-                
+
             self._hotkey_str = hotkey_str
             self._target_hotkey = new_hotkey
             print(f"Hotkey updated to: {hotkey_str}")
             return True
-            
+
         except Exception as e:
             print(f"Failed to set hotkey: {e}")
             traceback.print_exc()
@@ -153,7 +161,7 @@ class KeyboardManager(QObject):
                 self._listener = None
             except Exception as e:
                 print(f"Error cleaning up keyboard listener: {e}")
-        
+
         self._listener_started = False
         self._target_hotkey = None
         self._hotkey_str = None
@@ -163,10 +171,10 @@ class KeyboardManager(QObject):
         """Parse hotkey string into pynput key object"""
         try:
             # Special case for Fn key
-            if hotkey_str.lower() == 'fn':
+            if hotkey_str.lower() == "fn":
                 # Create a KeyCode with the Fn key's virtual key code (179)
                 return keyboard.KeyCode(vk=179)
-            
+
             # Check if it's a special key (like Key.f9)
             return getattr(keyboard.Key, hotkey_str)
         except AttributeError:
@@ -177,9 +185,8 @@ class KeyboardManager(QObject):
 
     def _on_keyboard_press(self, key):
         """Internal callback for keyboard events (non-macOS)"""
-        print(f"Keyboard pressed: {key}")
         if key == self._target_hotkey:
             print(f"Hotkey pressed: {self._hotkey_str}")
             self.hotkey_pressed.emit(self._hotkey_str)
             return False
-        return True 
+        return True

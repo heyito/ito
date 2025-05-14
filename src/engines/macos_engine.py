@@ -94,7 +94,7 @@ class MacOSEngine:
         Quartz.CGEventPost(Quartz.kCGHIDEventTap, down)
         Quartz.CGEventPost(Quartz.kCGHIDEventTap, up)
 
-    def get_active_window_info(self):
+    def get_active_window_info(self) -> str:
         try:
             start_time = time.perf_counter()
             result = subprocess.run(

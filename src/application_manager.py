@@ -216,6 +216,7 @@ class ApplicationManager(QObject):
 
     def start_application(self) -> bool:
         """Start the application background thread and the hotkey listener."""
+        print("Starting application...")
         if not _pynput_available:
             self.error_occurred.emit("Pynput library not found. Hotkeys disabled.")
             self.status_changed.emit(StatusMessage.ERROR.value)
@@ -421,6 +422,9 @@ class ApplicationManager(QObject):
         """
         timestamp = time.strftime("%H:%M:%S")
         # Check if the background application instance exists and is running
+        print(
+            f"self.app_instance: {self.app_instance}, self.app_thread: {self.app_thread}, self.app_thread.is_alive(): {self.app_thread.is_alive()}"
+        )
         if (
             not self.app_instance
             or not self.app_thread

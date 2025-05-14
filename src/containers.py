@@ -38,6 +38,7 @@ from src.handlers.vosk_processor import VoskProcessor
 from src.one_shot_application_runner import OneShotApplicationRunner
 from src.streaming_application_runner import StreamingApplicationRunner
 
+
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
 

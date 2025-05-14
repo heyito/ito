@@ -61,6 +61,26 @@ class SegmentedButtonGroup(QWidget):
         selected_bg = self.theme_manager.get_color('button.pressed')
         border_color = self.theme_manager.get_color('primary')
 
+        # Disabled state colors
+        try:
+            disabled_text_color = self.theme_manager.get_color('text_disabled')
+            if disabled_text_color is None: # If get_color can return None for partial matches
+                raise KeyError # Treat as if key was not found at all for simplicity here
+        except KeyError:
+            try:
+                disabled_text_color = self.theme_manager.get_color('text_secondary')
+                if disabled_text_color is None:
+                    raise KeyError
+            except KeyError:
+                disabled_text_color = '#888888' # Ultimate fallback
+        
+        try:
+            disabled_background_color = self.theme_manager.get_color('button.disabled_background')
+            if disabled_background_color is None:
+                 raise KeyError
+        except KeyError:
+            disabled_background_color = background # Fallback to normal background
+
         # Add rounded corners to first/last
         if first and last:
             border_radius = "border-radius: 8px;"
@@ -89,4 +109,5 @@ class SegmentedButtonGroup(QWidget):
         padding = "padding: 12px 20px;"
         return (
             f"QPushButton {{{background_style} color: {text_color}; {font_weight} {border_radius} {border} {padding}}}"
+            f"QPushButton:disabled {{background: {disabled_background_color}; color: {disabled_text_color}; border-right: 1.5px solid {border_color if not last else 'transparent'};}}"
         )

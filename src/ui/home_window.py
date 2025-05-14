@@ -1,4 +1,3 @@
-import os
 import sys
 import traceback
 
@@ -59,6 +58,94 @@ else:
     _objc_available = False
 
 class HomeWindow(QMainWindow):
+    # Centralized UI Restriction Rules
+    # Each rule defines a condition and actions to take if the condition is met or not.
+    UI_RESTRICTIONS = [
+        { # ONESHOT mode: force LLM to gemini, disable Speech Rec tab
+            "condition": {
+                "widget_name": "application_mode_selector",
+                "property": "currentText",
+                "value": "oneshot"
+            },
+            "then_actions": [
+                {
+                    "target_widget_name": "llm_source",
+                    "action": "force_selection",
+                    "value": "gemini_api"
+                },
+                { # ADDED: Disable Speech Rec tab
+                    "target_widget_name": "speech_recognition_button",
+                    "action": "set_enabled",
+                    "enabled": False
+                }
+            ],
+            "else_actions": [ # Only manage llm_source here
+                {
+                    "target_widget_name": "llm_source",
+                    "action": "enable_all_options"
+                }
+            ]
+        },
+        { # STREAMING mode: show Vosk path, disable Speech Rec tab
+            "condition": {
+                "widget_name": "application_mode_selector",
+                "property": "currentText",
+                "value": "streaming"
+            },
+            "then_actions": [
+                {
+                    "target_widget_name": "vosk_model_path_container",
+                    "action": "set_visibility_and_space",
+                    "visible": True
+                },
+                { # ADDED: Disable Speech Rec tab
+                    "target_widget_name": "speech_recognition_button",
+                    "action": "set_enabled",
+                    "enabled": False
+                }
+            ],
+            "else_actions": [ # Only manage vosk_model_path_container here
+                {
+                    "target_widget_name": "vosk_model_path_container",
+                    "action": "set_visibility_and_space",
+                    "visible": False
+                }
+            ]
+        },
+        # --- Rules for LLM Provider Model Container Visibility ---
+        {
+            "condition": {"widget_name": "llm_source", "property": "currentText", "value": "openai_api"},
+            "then_actions": [{"target_widget_name": "openai_model_container", "action": "set_visibility_and_space", "visible": True}],
+            "else_actions": [{"target_widget_name": "openai_model_container", "action": "set_visibility_and_space", "visible": False}]
+        },
+        {
+            "condition": {"widget_name": "llm_source", "property": "currentText", "value": "gemini_api"},
+            "then_actions": [{"target_widget_name": "gemini_model_container", "action": "set_visibility_and_space", "visible": True}],
+            "else_actions": [{"target_widget_name": "gemini_model_container", "action": "set_visibility_and_space", "visible": False}]
+        },
+        {
+            "condition": {"widget_name": "llm_source", "property": "currentText", "value": "groq_api"},
+            "then_actions": [{"target_widget_name": "groq_model_container", "action": "set_visibility_and_space", "visible": True}],
+            "else_actions": [{"target_widget_name": "groq_model_container", "action": "set_visibility_and_space", "visible": False}]
+        },
+        {
+            "condition": {"widget_name": "llm_source", "property": "currentText", "value": "ollama"},
+            "then_actions": [{"target_widget_name": "llm_model_edit_container", "action": "set_visibility_and_space", "visible": True}],
+            "else_actions": [{"target_widget_name": "llm_model_edit_container", "action": "set_visibility_and_space", "visible": False}]
+        }
+        # Add more rules here as new interdependencies are identified.
+        # Example: A rule based on llm_source selection affecting another widget.
+        # {
+        #     "condition": {
+        #         "widget_name": "llm_source",
+        #         "property": "currentText",
+        #         "value": "ollama"
+        #     },
+        #     "then_actions": [...],
+        #     "else_actions": [...]
+        # }
+    ]
+
     def __init__(self, theme_manager: ThemeManager):
         super().__init__()
         self.theme_manager = theme_manager
@@ -577,13 +664,14 @@ class HomeWindow(QMainWindow):
         self.set_line_edit_style(self.vosk_model_path_edit)
         vosk_model_path_label = QLabel("Model Path")
         self.set_label_style(vosk_model_path_label)
-        vosk_model_path_container = QWidget()
-        vosk_model_path_layout = QVBoxLayout(vosk_model_path_container)
+        self.vosk_model_path_container = QWidget() 
+        self.vosk_model_path_container.setObjectName("vosk_model_path_container")
+        vosk_model_path_layout = QVBoxLayout(self.vosk_model_path_container)
         vosk_model_path_layout.setContentsMargins(0, 0, 0, 0)
         vosk_model_path_layout.setSpacing(4)
         vosk_model_path_layout.addWidget(vosk_model_path_label)
         vosk_model_path_layout.addWidget(self.vosk_model_path_edit)
-        mode_layout.addWidget(vosk_model_path_container)
+        mode_layout.addWidget(self.vosk_model_path_container)
 
         mode_layout.addStretch()
         self.stacked_widget.addWidget(self.mode_page)
@@ -850,7 +938,7 @@ class HomeWindow(QMainWindow):
         self.asr_compute_type.selectionChanged.connect(self.save_settings)
 
         # LLM Settings
-        self.llm_source.selectionChanged.connect(self.save_settings)
+        self.llm_source.selectionChanged.connect(self._handle_llm_source_change)
         self.llm_model_edit.textChanged.connect(self.save_settings)
         self.openai_model.selectionChanged.connect(self.save_settings)
         self.groq_model.selectionChanged.connect(self.save_settings)
@@ -875,7 +963,7 @@ class HomeWindow(QMainWindow):
         self.start_recording_hotkey.textChanged.connect(self.save_settings)
 
         # Mode Settings
-        self.application_mode_selector.selectionChanged.connect(self.save_settings)
+        self.application_mode_selector.selectionChanged.connect(self._handle_ui_change)
         self.vosk_model_path_edit.textChanged.connect(self.save_settings)
 
         # Load settings after UI is fully initialized
@@ -1241,14 +1329,6 @@ class HomeWindow(QMainWindow):
             self.llm_source.setCurrentText(config["LLM"]["source"])
             self.llm_source.blockSignals(False)
 
-            # Model field is now handled by _update_llm_provider_fields
-            # We need to ensure _update_llm_provider_fields correctly sets the user_command_model
-            # based on the loaded LLM source and its specific model.
-
-            # OpenAI model (user_command_model) is set by _update_llm_provider_fields if source is openai_api
-            # Groq model (user_command_model) is set by _update_llm_provider_fields if source is groq_api
-            # Ollama model is set by _update_llm_provider_fields if source is ollama
-
             self.max_tokens.setValue(config["LLM"]["max_tokens"])
             self.temperature.setValue(config["LLM"]["temperature"])
 
@@ -1283,15 +1363,21 @@ class HomeWindow(QMainWindow):
             vosk_config = config.get("Vosk", {})
             vosk_path_from_config = vosk_config.get(
                 "model_path"
-            )  # Should always have a valid path now
+            )
             self.vosk_model_path_edit.setText(
                 vosk_path_from_config if vosk_path_from_config else ""
-            )  # Set text, handle potential None just in case
+            )
+              
+            self._apply_ui_restrictions()
+            self._sync_active_llm_model_value() # Ensure LLM model value is synced after rules are applied
 
         except Exception as e:
             print(f"Error in load_settings: {str(e)}")
             print(f"Error details: {traceback.format_exc()}")
             self.handle_error(f"Failed to load settings: {str(e)}")
+
+        # After all UI visibility/state changes, sync the active LLM model value field
+        self._sync_active_llm_model_value()
 
     def closeEvent(self, event):
         """Handle window close event"""
@@ -1524,6 +1610,191 @@ class HomeWindow(QMainWindow):
                 opacity: 0.9;
             }}
         """)
+
+    def _handle_ui_change(self):
+        """Handle changes in application mode selection or other UI elements that drive restrictions."""
+        self._apply_ui_restrictions() # Apply all defined UI restrictions
+        self.save_settings() # Save settings as application_mode changed,
+                             # and potentially other settings due to restrictions.
+
+    def _apply_ui_restrictions(self):
+        """Apply all UI restrictions defined in UI_RESTRICTIONS."""
+        # Collect all unique widget names that are targets of actions to manage signal blocking
+        # For now, we know llm_source is a primary one needing signal management for its dependent updates.
+        widgets_to_manage_signals = set()
+        for rule_config in HomeWindow.UI_RESTRICTIONS:
+            for action_list_key in ["then_actions", "else_actions"]:
+                if action_list_key in rule_config:
+                    for action_detail in rule_config[action_list_key]:
+                        # Specifically looking for widgets that might trigger cascading updates
+                        # like _update_llm_provider_fields if their state is programmatically changed.
+                        if action_detail["target_widget_name"] == "llm_source":
+                             widgets_to_manage_signals.add(action_detail["target_widget_name"])
+        
+        # Block signals for widgets that have dependent UI updates triggered by their changes
+        for widget_name in widgets_to_manage_signals:
+            widget = getattr(self, widget_name, None)
+            if widget and hasattr(widget, "blockSignals"):
+                widget.blockSignals(True)
+
+        # --- Pass 0: Set default states for widgets before specific rules are applied ---
+        # This ensures that if no rule actively changes a state, it reverts to a known default.
+        self.speech_recognition_button.setEnabled(True)
+        # Add other widgets here if they follow a similar pattern of default state + specific overrides
+
+        # --- Pass 1: Apply defaults or reset states for certain widget types before rules --- 
+        # For SegmentedButtonGroups that could be targets of "force_selection" or "disable_options",
+        # it's often cleaner to enable all their options first.
+        # This makes "else_actions" for these simpler (often just "enable_all_options").
+        for rule_config in HomeWindow.UI_RESTRICTIONS:
+            for action_list_key in ["then_actions", "else_actions"]:
+                if action_list_key in rule_config:
+                    for action_detail in rule_config[action_list_key]:
+                        target_widget = getattr(self, action_detail["target_widget_name"], None)
+                        if isinstance(target_widget, SegmentedButtonGroup):
+                            # If an "enable_all_options" action exists, it implies this widget should be fully enabled
+                            # unless a rule specifically constrains it. So, ensure all buttons are enabled by default.
+                            # This is particularly for the `else_actions` of a `force_selection`.
+                            if action_detail["action"] == "enable_all_options": # A bit of a heuristic
+                                for button in target_widget.buttons:
+                                    button.setEnabled(True)
+                            # A more direct pre-reset for all targeted SegmentedButtonGroups could also be done here.
+
+        # --- Pass 2: Evaluate conditions and apply actions --- 
+        for rule_config in HomeWindow.UI_RESTRICTIONS:
+            condition_cfg = rule_config["condition"]
+            condition_widget = getattr(self, condition_cfg["widget_name"], None)
+
+            if not condition_widget:
+                print(f"Warning: Condition widget '{condition_cfg['widget_name']}' not found for a UI rule.")
+                continue
+
+            current_value = None
+            if condition_cfg["property"] == "currentText" and hasattr(condition_widget, "currentText"):
+                current_value = condition_widget.currentText()
+            elif condition_cfg["property"] == "isChecked" and hasattr(condition_widget, "isChecked"):
+                current_value = condition_widget.isChecked()
+            # Add more property types if needed
+            else:
+                print(f"Warning: Property '{condition_cfg['property']}' not supported for widget '{condition_cfg['widget_name']}'.")
+                continue
+
+            condition_met = (current_value == condition_cfg["value"])
+            
+            actions_to_apply = rule_config["then_actions"] if condition_met else rule_config.get("else_actions", [])
+
+            for action_detail in actions_to_apply:
+                target_widget = getattr(self, action_detail["target_widget_name"], None)
+                if not target_widget:
+                    print(f"Warning: Target widget '{action_detail['target_widget_name']}' not found for action.")
+                    continue
+                
+                action_type = action_detail["action"]
+
+                if isinstance(target_widget, SegmentedButtonGroup):
+                    if action_type == "force_selection":
+                        value_to_set = action_detail["value"]
+                        for button in target_widget.buttons:
+                            button.setEnabled(button.text() == value_to_set)
+                        target_widget.setCurrentText(value_to_set)
+                    elif action_type == "disable_options":
+                        options_to_disable = action_detail.get("options", [])
+                        for button in target_widget.buttons:
+                            if button.text() in options_to_disable:
+                                button.setEnabled(False)
+                    elif action_type == "enable_all_options":
+                        for button in target_widget.buttons:
+                            button.setEnabled(True)
+                        target_widget.setEnabled(True) # Ensure the group widget itself is enabled
+                
+                elif isinstance(target_widget, QWidget): # General QWidget actions
+                    if action_type == "set_visibility_and_space":
+                        is_visible = action_detail["visible"]
+                        set_widget_hidden_but_take_space(target_widget, not is_visible)
+                    elif action_type == "set_enabled":
+                        is_enabled = action_detail["enabled"]
+                        if action_detail["target_widget_name"] == "speech_recognition_button":
+                            # Assuming rule_config is available in this scope from the outer loop
+                            rule_condition_info = rule_config.get("condition", {})
+                            print(f"[DEBUG SRB] Rule condition: {rule_condition_info}. Applying set_enabled: {is_enabled} to speech_recognition_button. Condition met for this rule: {condition_met}")
+                        target_widget.setEnabled(is_enabled)
+                
+                # Add more widget types and actions as needed
+                else:
+                    print(f"Warning: Action '{action_type}' on target '{action_detail['target_widget_name']}' is for an unhandled widget type: {type(target_widget)}.")
+
+        # Unblock signals
+        for widget_name in widgets_to_manage_signals:
+            widget = getattr(self, widget_name, None)
+            if widget and hasattr(widget, "blockSignals"):
+                 widget.blockSignals(False)
+
+        # Manually trigger update of dependent UI components that were programmatically changed.
+        if "llm_source" in widgets_to_manage_signals:
+            self._update_llm_provider_fields()
+        # If other widgets affected by restrictions have their own update_..._fields methods,
+        # they should be called here too, if their names are in widgets_to_manage_signals.
+
+    def _handle_llm_source_change(self):
+        """Handle changes in LLM source selection."""
+        self._apply_ui_restrictions() # Apply UI restrictions (will show/hide correct model container)
+        # _sync_active_llm_model_value() will be called by _apply_ui_restrictions
+        self.save_settings() # Save settings as llm_source changed
+
+    def _sync_active_llm_model_value(self):
+        """Sync the currently selected LLM model value based on the active LLM source and loaded settings."""
+        # Block signals from model widgets during programmatic update
+        self.llm_model_edit.blockSignals(True)
+        self.openai_model.blockSignals(True)
+        self.groq_model.blockSignals(True)
+        self.gemini_model.blockSignals(True)
+
+        try:
+            config = self.app_manager.load_settings()  # Get fresh complete settings
+            llm_source = self.llm_source.currentText()
+
+            # Default values from ApplicationManager for consistency (or use hardcoded if preferred)
+            # These defaults are typically for initial setup if no specific model is found in settings.
+            default_openai_model = config.get("OpenAI", {}).get("model", "gpt-4.1")
+            default_gemini_model = config.get("Gemini", {}).get("model", "gemini-2.0-flash")
+            default_groq_model = config.get("Groq", {}).get("model", "llama-3.3-70b-versatile")
+            default_ollama_model = config.get("Ollama", {}).get("model", "llama3.2:latest")
+
+            # Get the actual model stored for the current source under LLM/model if available,
+            # otherwise use the provider-specific model, then the ultimate default.
+            llm_config_model = config.get("LLM", {}).get("model")
+
+            # Helper to check if a SegmentedButtonGroup contains a button with specific text
+            def has_button_with_text(segmented_button_group, text_to_find):
+                if not text_to_find: return False # Cannot find an empty string button typically
+                for button in segmented_button_group.buttons:
+                    if button.text() == text_to_find:
+                        return True
+                return False
+
+            # Set model based on source - Visibility is handled by _apply_ui_restrictions
+            if llm_source == "openai_api":
+                openai_specific_model = config.get("OpenAI", {}).get("user_command_model", default_openai_model)
+                # Prioritize LLM/model if it's valid for this provider, then provider-specific, then default
+                model_to_set = llm_config_model if has_button_with_text(self.openai_model, llm_config_model) else openai_specific_model
+                self.openai_model.setCurrentText(model_to_set)
+            elif llm_source == "gemini_api":
+                gemini_specific_model = config.get("Gemini", {}).get("user_command_model", default_gemini_model)
+                model_to_set = llm_config_model if has_button_with_text(self.gemini_model, llm_config_model) else gemini_specific_model
+                self.gemini_model.setCurrentText(model_to_set)
+            elif llm_source == "groq_api":
+                groq_specific_model = config.get("Groq", {}).get("user_command_model", default_groq_model)
+                model_to_set = llm_config_model if has_button_with_text(self.groq_model, llm_config_model) else groq_specific_model
+                self.groq_model.setCurrentText(model_to_set)
+            elif llm_source == "ollama": # Check if this is the exact text from SegmentedButtonGroup
+                self.llm_model_edit.setText(llm_config_model if llm_config_model else default_ollama_model)
+
+        finally:
+            # Unblock signals
+            self.llm_model_edit.blockSignals(False)
+            self.openai_model.blockSignals(False)
+            self.groq_model.blockSignals(False)
+            self.gemini_model.blockSignals(False)
 
 def set_widget_hidden_but_take_space(widget: QWidget, hidden: bool):
     if hidden:

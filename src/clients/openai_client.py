@@ -168,11 +168,21 @@ class OpenAIClient(LLMClientInterface):
     def format_tool_result_messages(self, id: str, name: str, args: dict, result: str):
         return [
             {
+                "role": "assistant",
+                "tool_calls": [
+                    {
+                        "id": id,
+                        "type": "function",
+                        "function": {"name": name, "arguments": json.dumps(args)},
+                    }
+                ],
+            },
+            {
                 "role": "tool",
                 "tool_call_id": id,
                 "name": name,
                 "content": json.dumps({"result": result}),
-            }
+            },
         ]
 
     def format_user_message(self, content: str):

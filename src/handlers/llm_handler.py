@@ -161,6 +161,7 @@ class LLMHandler:
             if not tool_calls:
                 break
 
+            is_complete = False
             for tool_call in tool_calls:
                 tool_name = tool_call["name"]
                 tool_call_id = tool_call["id"]
@@ -168,6 +169,7 @@ class LLMHandler:
 
                 result = tool_name_resolver(tool_name, **args)
                 if result is None:
+                    is_complete = True
                     break
                 if result is not str:
                     result = str(result)
@@ -176,6 +178,9 @@ class LLMHandler:
                     id=tool_call_id, name=tool_name, args=args, result=result
                 )
                 messages.extend(tool_messages)
+
+            if is_complete:
+                break
 
             steps += 1
             user_info = run_after_step(state)

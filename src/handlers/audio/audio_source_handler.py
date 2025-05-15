@@ -7,6 +7,7 @@ import numpy as np
 import sounddevice as sd
 import asyncio
 import time
+from src.ui.keyboard_manager import KeyboardManager
 
 logger = logging.getLogger("AudioSourceHandler")
 
@@ -15,6 +16,7 @@ class AudioSourceHandler(AudioSourceInterface):
         super().__init__(sample_rate, channels, device_index)
         self._last_queue_full_log_time: float = 0.0
         self._queue_full_log_cooldown_seconds: float = 5.0
+        self._keyboard_manager = KeyboardManager.instance()
 
     def record_audio_stream_with_vad(self, stop_event, audio_queue, vad_config):
         if not webrtcvad:
@@ -53,6 +55,14 @@ class AudioSourceHandler(AudioSourceInterface):
             except Exception as e:
                 print(f"Error initializing VAD: {e}. Disabling VAD.")
                 vad_enabled = False
+
+        else:
+            print("VAD disabled. Listening for hotkey release.")
+            def _handle_hotkey_release(self, hotkey_str: str) -> None:
+                if not vad_enabled:
+                  self._stop_event.set()
+
+            self._keyboard_manager.hotkey_released.connect(self._handle_hotkey_release)
 
         # Track consecutive silence time for VAD decision
         speech_detected_recently = False

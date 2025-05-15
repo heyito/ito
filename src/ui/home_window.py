@@ -760,8 +760,8 @@ class HomeWindow(QMainWindow):
         voice_detection_layout.addWidget(self.voice_detection_title, alignment=Qt.AlignmentFlag.AlignLeft)
 
         # VAD Section (migrated from Settings page)
-        self.vad_enabled = QCheckBox()
-        vad_enabled_label = QLabel("Enable Voice Activity Detection")
+        self.vad_enabled = SegmentedButtonGroup(["Enabled", "Disabled"])
+        vad_enabled_label = QLabel("Voice Activity Detection")
         self.set_label_style(vad_enabled_label)
         vad_enabled_container = QWidget()
         vad_enabled_layout = QVBoxLayout(vad_enabled_container)
@@ -951,7 +951,7 @@ class HomeWindow(QMainWindow):
         self.channels.selectionChanged.connect(self.save_settings)
 
         # VAD Settings
-        self.vad_enabled.stateChanged.connect(self.save_settings)
+        self.vad_enabled.selectionChanged.connect(self.save_settings)
         self.vad_aggressiveness.selectionChanged.connect(self.save_settings)
         self.silence_duration.selectionChanged.connect(self.save_settings)
         self.frame_duration.selectionChanged.connect(self.save_settings)
@@ -1246,7 +1246,7 @@ class HomeWindow(QMainWindow):
                     "channels": int(self.channels.currentText()),
                 },
                 "VAD": {
-                    "enabled": self.vad_enabled.isChecked(),
+                    "enabled": self.vad_enabled.currentText() == "Enabled",
                     "aggressiveness": int(self.vad_aggressiveness.currentText()),
                     "silence_duration_ms": int(self.silence_duration.currentText()),
                     "frame_duration_ms": int(self.frame_duration.currentText()),
@@ -1340,7 +1340,7 @@ class HomeWindow(QMainWindow):
             self.channels.setCurrentText(str(config['Audio']['channels']))
             
             # Load VAD settings
-            self.vad_enabled.setChecked(config['VAD']['enabled'])
+            self.vad_enabled.setCurrentText("Enabled" if config['VAD']['enabled'] else "Disabled")
             self.vad_aggressiveness.setCurrentText(str(config['VAD']['aggressiveness']))
             self.silence_duration.setCurrentText(str(config['VAD']['silence_duration_ms']))
             self.frame_duration.setCurrentText(str(config['VAD']['frame_duration_ms']))

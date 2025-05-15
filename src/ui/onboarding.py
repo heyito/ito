@@ -5,7 +5,7 @@ import traceback
 
 import sounddevice as sd
 from PySide6.QtCore import QObject, Signal, Slot, Qt, QSettings, QSize, QPoint, QRect, QTimer
-from PySide6.QtGui import QPixmap, QPainter, QColor, QFont, QIcon, QScreen, QPainterPath, QPen, QBrush
+from PySide6.QtGui import QPixmap, QPainter, QColor, QFont, QIcon, QScreen, QPainterPath, QPen, QBrush, QKeySequence
 from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 from src.ui.components.inten_layout import IntenLayout
 from src.ui.theme.manager import ThemeManager
+from src.ui.keyboard_manager import KeyboardManager
 
 # --- Platform specific code for macOS ---
 _ns_window = None
@@ -117,6 +118,11 @@ class OnboardingWindow(QMainWindow):
             'microphone': False,
             'accessibility': False
         }
+
+        # --- Initialize Keyboard Manager ---
+        self.keyboard_manager = KeyboardManager.instance()
+        self.current_hotkey = None
+        self.is_recording_hotkey = False
 
         # --- Show Welcome Screen ---
         self.settings = QSettings(self.ORGANIZATION_NAME, self.APPLICATION_NAME)
@@ -494,14 +500,169 @@ class OnboardingWindow(QMainWindow):
             print("Please grant accessibility access in your system settings")
 
     def check_all_permissions_and_proceed(self):
-        """Checks if all permissions are granted and proceeds to completion screen."""
+        """Checks if all permissions are granted and proceeds to keyboard setup screen."""
         if all(self.permission_states.values()):
-            self.show_completion_screen()
+            self.show_keyboard_setup_screen()
         else:
             # Show error message
             error_label = QLabel("Please grant all required permissions to continue")
             error_label.setStyleSheet(f"color: {self.theme_manager.get_color('error')};")
             self.layout.addWidget(error_label)
+
+    def show_keyboard_setup_screen(self):
+        self.clear_layout()
+
+        # --- Centered Layout ---
+        content_layout = QVBoxLayout()
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(40)
+
+        # Title
+        title_label = QLabel("Set Up Your Keyboard Shortcut")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setStyleSheet(f'''
+            font-size: 34px;
+            font-weight: 600;
+            color: {self.theme_manager.get_color('text_primary')};
+            margin-top: 0px;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        ''')
+        content_layout.addWidget(title_label)
+
+        # Description
+        desc_label = QLabel("Press any key or key combination to set your shortcut")
+        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        desc_label.setStyleSheet(f'''
+            font-size: 16px;
+            color: {self.theme_manager.get_color('text_secondary')};
+            font-weight: 400;
+            margin-bottom: 10px;
+            letter-spacing: 0.05px;
+        ''')
+        content_layout.addWidget(desc_label)
+
+        # Keyboard display container (modern card style)
+        keyboard_container = QWidget()
+        keyboard_container.setFixedSize(420, 140)
+        keyboard_container.setStyleSheet(f'''
+            background: {self.theme_manager.get_color('surface')};
+            border-radius: 22px;
+        ''')
+        keyboard_layout = QVBoxLayout(keyboard_container)
+        keyboard_layout.setContentsMargins(28, 24, 28, 24)
+        keyboard_layout.setSpacing(12)
+
+        # Key pill display area
+        self.key_pill_container = QWidget()
+        self.key_pill_layout = QHBoxLayout(self.key_pill_container)
+        self.key_pill_layout.setContentsMargins(0, 0, 0, 0)
+        self.key_pill_layout.setSpacing(12)
+        self.key_pill_layout.addStretch()
+        self.key_pills = []
+        self.update_key_pills([])  # Start empty
+        self.key_pill_layout.addStretch()
+        keyboard_layout.addWidget(self.key_pill_container, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        # Key combination display (instructions)
+        self.key_combo_display = QLabel("Press any key…")
+        self.key_combo_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.key_combo_display.setStyleSheet(f'''
+            font-size: 15px;
+            color: {self.theme_manager.get_color('text_secondary')};
+            font-weight: 400;
+            margin-top: 2px;
+            letter-spacing: 0.1px;
+        ''')
+        keyboard_layout.addWidget(self.key_combo_display)
+
+        content_layout.addWidget(keyboard_container, alignment=Qt.AlignmentFlag.AlignCenter)
+        content_layout.addSpacing(16)
+
+        # Continue Button
+        self.continue_button = QPushButton("Continue")
+        self.continue_button.setObjectName("onboarding-primary")
+        self.continue_button.clicked.connect(self.complete_keyboard_setup)
+        self.continue_button.setEnabled(False)
+        self.continue_button.setFixedWidth(220)
+        self.continue_button.setFixedHeight(48)
+        content_layout.addWidget(self.continue_button, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        # --- Center the content in the main layout ---
+        self.layout.addStretch(2)
+        self.layout.addLayout(content_layout)
+        self.layout.addStretch(3)
+
+        # Start listening for keyboard input
+        self.start_keyboard_listening()
+
+    def update_key_pills(self, keys):
+        # Remove old pills
+        for pill in getattr(self, 'key_pills', []):
+            self.key_pill_layout.removeWidget(pill)
+            pill.deleteLater()
+        self.key_pills = []
+        # Add new pills
+        for key in keys:
+            # Convert key object to symbol/string
+            key_str = self.keyboard_manager.get_key_symbol(key)
+            pill = QLabel(key_str)
+            pill.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            pill.setStyleSheet(f'''
+                QLabel {{
+                    background: rgba(255,255,255,0.18);
+                    color: {self.theme_manager.get_color('text_primary')};
+                    border-radius: 12px;
+                    padding: 8px 18px;
+                    font-size: 22px;
+                    font-weight: 500;
+                    min-width: 38px;
+                    margin: 0 2px;
+                }}
+            ''')
+            self.key_pill_layout.insertWidget(self.key_pill_layout.count() - 1, pill)
+            self.key_pills.append(pill)
+
+    def start_keyboard_listening(self):
+        self.is_recording_hotkey = True
+        self.current_hotkey = None
+        self.update_key_pills([])
+        self.key_combo_display.setText("Press any key…")
+        self.continue_button.setEnabled(False)
+        # Start polling for pressed keys
+        self.keyboard_poll_timer = QTimer(self)
+        self.keyboard_poll_timer.timeout.connect(self.poll_pressed_keys)
+        self.keyboard_poll_timer.start(50)
+
+    def poll_pressed_keys(self):
+        if not self.is_recording_hotkey:
+            return
+        pressed_keys = KeyboardManager.instance().get_pressed_keys()
+        # Convert to symbols/strings for display and hotkey string
+        key_symbols = [self.keyboard_manager.get_key_symbol(k) for k in pressed_keys]
+        if len(key_symbols) > 0:
+            print(f'Pressed keys: {key_symbols}')
+        if getattr(self, '_last_pressed_keys', None) != key_symbols:
+            self._last_pressed_keys = key_symbols
+            self.update_key_pills(pressed_keys)
+            self.current_hotkey = "+".join(key_symbols)
+            # Update instructions and continue button
+            if pressed_keys:
+                self.key_combo_display.setText("Press any other key to change")
+                self.continue_button.setEnabled(True)
+            else:
+                self.key_combo_display.setText("Press any key…")
+                self.continue_button.setEnabled(False)
+
+    def complete_keyboard_setup(self):
+        if hasattr(self, 'keyboard_poll_timer'):
+            self.keyboard_poll_timer.stop()
+        if self.current_hotkey:
+            self.settings.setValue("Hotkeys/start_recording_hotkey", self.current_hotkey)
+            self.settings.sync()
+            self.keyboard_manager.set_hotkey(self.current_hotkey)
+            self.is_recording_hotkey = False
+            self.show_completion_screen()
 
     def show_completion_screen(self):
         self.clear_layout()

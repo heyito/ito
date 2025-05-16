@@ -163,7 +163,16 @@ class AudioSourceHandler(AudioSourceInterface):
                                   ):
         
         vad_enabled = vad_config.get('enabled', True)
-        
+
+        if not vad_enabled:
+            print("VAD disabled. Listening for hotkey release.")
+            def _handle_hotkey_release(hotkey_str: str) -> None:
+                if not vad_enabled:
+                    print("VAD disabled for streaming mode. Listening for hotkey release.")
+                    stop_event.set()
+
+            self._keyboard_manager.hotkey_released.connect(_handle_hotkey_release)
+
         try: # Ensure the entire operational part of the method is within a try block
             if output_format not in ['numpy', 'bytes']:
                 print(f"DEBUG AudioSourceHandler: Invalid output_format {output_format}")
@@ -229,14 +238,6 @@ class AudioSourceHandler(AudioSourceInterface):
                 actual_latency_ms = stream.latency * 1000
                 actual_blocksize_samples = stream.blocksize
                 actual_block_duration_ms = (actual_blocksize_samples / self.sample_rate) * 1000
-
-                # Add hotkey release handler for when VAD is disabled
-                def _handle_hotkey_release(hotkey_str: str) -> None:
-                    if not vad_enabled:
-                        print("VAD disabled. Listening for hotkey release.")
-                        stop_event.set()
-
-                self._keyboard_manager.hotkey_released.connect(_handle_hotkey_release)
 
                 log_msg = (f"Audio stream opened in {stream_open_duration:.2f} ms. "
                            f"Actual negotiated latency: {actual_latency_ms:.2f} ms. "

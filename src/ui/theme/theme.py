@@ -42,6 +42,7 @@ THEME = {
         "onboarding": {
             "title": QColor(255, 255, 255, 255),
             "subtitle": QColor(255, 255, 255, 180),
+            "shadow": QColor(0, 0, 0, 50),
             "button": {
                 "background": QColor(246, 235, 221, 255),  # F6EBDD
                 "text": QColor(24, 26, 42, 255),  # 181A2A
@@ -96,11 +97,12 @@ THEME = {
         "onboarding": {
             "title": QColor(24, 26, 42, 255),  # 181A2A
             "subtitle": QColor(24, 26, 42, 180),  # 181A2A with 70% opacity
+            "shadow": QColor(0, 0, 0, 50),
             "button": {
                 "background": QColor(246, 235, 221, 255),  # F6EBDD
                 "text": QColor(24, 26, 42, 255),  # 181A2A
                 "hover": QColor(243, 226, 199, 255),  # f3e2c7
-                "disabled": QColor(243, 226, 199, 128),  # f3e2c7 with 50% opacity
+                "disabled": QColor(100, 100, 100, 128),  # f3e2c7 with 50% opacity
                 "disabled_text": QColor(176, 176, 176, 255),  # b0b0b0
             },
             "success": {

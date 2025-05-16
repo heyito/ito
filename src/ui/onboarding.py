@@ -229,9 +229,9 @@ class OnboardingWindow(QMainWindow):
 
         # Update title and subtitle labels
         for widget in self.findChildren(QLabel):
-            if widget.text() in ["Welcome to Inten", "Required Permissions", "Setup Complete!"]:
+            if widget.text() in ["Welcome to Inten", "Required Permissions", "Setup Complete!", "Set Up Your Keyboard Shortcut"]:
                 widget.setStyleSheet(f'''
-                    font-size: {28 if widget.text() != "Welcome to Inten" else 36}px;
+                    font-size: {28 if widget.text() != "Welcome to Inten" and widget.text() != "Set Up Your Keyboard Shortcut" else 36 if widget.text() == "Welcome to Inten" else 34}px;
                     font-weight: {600 if widget.text() != "Welcome to Inten" else 700};
                     color: {self.theme_manager.get_color('text_primary')};
                     margin-top: 0px;
@@ -240,13 +240,46 @@ class OnboardingWindow(QMainWindow):
                 ''')
             elif widget.text() in ["Let's set up your permissions to get started.", 
                                  "Inten needs a few permissions to help you be more productive",
-                                 "You're all set to start using Inten!"]:
+                                 "You're all set to start using Inten!",
+                                 "Press and Hold any key or key combination to set your shortcut"]:
                 widget.setStyleSheet(f'''
-                    font-size: {15 if widget.text() == "Inten needs a few permissions to help you be more productive" else 18}px;
+                    font-size: {15 if widget.text() == "Inten needs a few permissions to help you be more productive" else 16 if widget.text() == "Press any key or key combination to set your shortcut" else 18}px;
                     color: {self.theme_manager.get_color('text_secondary')};
                     font-weight: 400;
-                    margin-bottom: {40 if widget.text() == "Inten needs a few permissions to help you be more productive" else 24}px;
+                    margin-bottom: {40 if widget.text() == "Inten needs a few permissions to help you be more productive" else 10 if widget.text() == "Press any key or key combination to set your shortcut" else 24}px;
                     letter-spacing: 0.1px;
+                ''')
+
+        # Update keyboard setup screen elements
+        for widget in self.findChildren(QWidget):
+            if hasattr(widget, 'objectName') and widget.objectName() == "keyboard_container":
+                widget.setStyleSheet(f'''
+                    background: {self.theme_manager.get_color('surface')};
+                    border-radius: 22px;
+                ''')
+            elif hasattr(widget, 'objectName') and widget.objectName() == "key_combo_display":
+                widget.setStyleSheet(f'''
+                    font-size: 15px;
+                    color: {self.theme_manager.get_color('text_secondary')};
+                    font-weight: 400;
+                    margin-top: 2px;
+                    letter-spacing: 0.1px;
+                ''')
+
+        # Update key pills
+        if hasattr(self, 'key_pills'):
+            for pill in self.key_pills:
+                pill.setStyleSheet(f'''
+                    QLabel {{
+                        background: {self.theme_manager.get_color('onboarding.shadow')};
+                        color: {self.theme_manager.get_color('text_primary')};
+                        border-radius: 12px;
+                        padding: 8px 18px;
+                        font-size: 22px;
+                        font-weight: 500;
+                        min-width: 38px;
+                        margin: 0 2px;
+                    }}
                 ''')
 
     def clear_layout(self):
@@ -544,6 +577,7 @@ class OnboardingWindow(QMainWindow):
 
         # Keyboard display container (modern card style)
         keyboard_container = QWidget()
+        keyboard_container.setObjectName("keyboard_container")
         keyboard_container.setFixedSize(420, 140)
         keyboard_container.setStyleSheet(f'''
             background: {self.theme_manager.get_color('surface')};
@@ -566,6 +600,7 @@ class OnboardingWindow(QMainWindow):
 
         # Key combination display (instructions)
         self.key_combo_display = QLabel("Press any key…")
+        self.key_combo_display.setObjectName("key_combo_display")
         self.key_combo_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.key_combo_display.setStyleSheet(f'''
             font-size: 15px;
@@ -610,7 +645,7 @@ class OnboardingWindow(QMainWindow):
             pill.setAlignment(Qt.AlignmentFlag.AlignCenter)
             pill.setStyleSheet(f'''
                 QLabel {{
-                    background: rgba(255,255,255,0.18);
+                    background: {self.theme_manager.get_color('onboarding.shadow')};;
                     color: {self.theme_manager.get_color('text_primary')};
                     border-radius: 12px;
                     padding: 8px 18px;

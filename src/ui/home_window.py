@@ -842,6 +842,8 @@ class HomeWindow(QMainWindow):
         self.start_recording_hotkey = QLineEdit()
         self.start_recording_hotkey.setMaximumWidth(300)
         self.set_line_edit_style(self.start_recording_hotkey)
+        self.start_recording_hotkey.setReadOnly(True)  # Make it read-only since we'll handle input differently
+        self.start_recording_hotkey.setPlaceholderText("Press and hold keys for 2 seconds to set hotkey...")
         start_recording_hotkey_label = QLabel("Start Recording Hotkey")
         self.set_label_style(start_recording_hotkey_label)
         start_recording_hotkey_container = QWidget()
@@ -851,6 +853,20 @@ class HomeWindow(QMainWindow):
         start_recording_hotkey_layout.addWidget(start_recording_hotkey_label)
         start_recording_hotkey_layout.addWidget(self.start_recording_hotkey)
         keyboard_form_layout.addRow(start_recording_hotkey_container)
+
+        # Add keyboard listening functionality
+        self.is_recording_hotkey = False
+        self._last_pressed_keys = None
+        self._hold_start_time = None
+        self.hold_timer = QTimer(self)
+        self.hold_timer.setSingleShot(True)
+        self.hold_timer.timeout.connect(self.on_hotkey_hold_complete)
+        self.keyboard_poll_timer = QTimer(self)
+        self.keyboard_poll_timer.timeout.connect(self.poll_pressed_keys)
+        self.keyboard_poll_timer.start(50)  # Poll every 50ms
+
+        # Start listening when the keyboard page is shown
+        self.keyboard_button.clicked.connect(self.start_keyboard_listening)
 
         keyboard_layout.addLayout(keyboard_form_layout)
         keyboard_layout.addStretch()
@@ -1049,6 +1065,14 @@ class HomeWindow(QMainWindow):
                         self.set_label_style(widget, color=self.theme_manager.get_color('text_primary'), font_size=15, font_weight=600)
 
     def select_menu(self, index):
+        # If we're leaving the keyboard page, stop recording
+        if self.stacked_widget.currentWidget() == self.keyboard_page:
+            self.is_recording_hotkey = False
+            self._last_pressed_keys = None
+            self._hold_start_time = None
+            self.hold_timer.stop()
+        
+        # Switch to the selected page
         self.stacked_widget.setCurrentIndex(index)
         self.speech_recognition_button.setChecked(index == 0)
         self.language_model_button.setChecked(index == 1)
@@ -1058,6 +1082,10 @@ class HomeWindow(QMainWindow):
         self.voice_detection_button.setChecked(index == 5)
         self.keyboard_button.setChecked(index == 6)
         self.developer_button.setChecked(index == 7)
+        
+        # If we're entering the keyboard page, start recording
+        if index == 6:  # Keyboard page index
+            self.start_keyboard_listening()
 
     def handle_save_timing_report(self):
         """Handles the click of the 'Save Timing Report' button."""
@@ -1795,6 +1823,50 @@ class HomeWindow(QMainWindow):
             self.openai_model.blockSignals(False)
             self.groq_model.blockSignals(False)
             self.gemini_model.blockSignals(False)
+
+    def start_keyboard_listening(self):
+        """Start listening for keyboard input when keyboard page is shown"""
+        self.is_recording_hotkey = True
+        self._last_pressed_keys = None
+        self._hold_start_time = None
+        self.hold_timer.stop()
+        self.start_recording_hotkey.setPlaceholderText("Press and hold keys for 2 seconds to set hotkey...")
+
+    def poll_pressed_keys(self):
+        """Poll for pressed keys and handle hotkey recording"""
+        if not self.is_recording_hotkey or self.stacked_widget.currentWidget() != self.keyboard_page:
+            return
+
+        pressed_keys = self.app_manager.keyboard_manager.get_pressed_keys()
+        key_symbols = [self.app_manager.keyboard_manager.get_key_symbol(k) for k in pressed_keys]
+        
+        if len(key_symbols) > 0:
+            # If keys changed, reset hold timer
+            if self._last_pressed_keys != key_symbols:
+                self._last_pressed_keys = key_symbols
+                self._hold_start_time = None
+                self.hold_timer.stop()
+                self.start_recording_hotkey.setText("+".join(key_symbols))
+                self.start_recording_hotkey.setPlaceholderText("Hold keys for 2 seconds to lock in...")
+            # If keys are the same and we haven't started the hold timer
+            elif self._hold_start_time is None:
+                self._hold_start_time = QTimer.singleShot(2000, self.on_hotkey_hold_complete)
+        else:
+            # If no keys are pressed and we haven't locked in a combination
+            if not self.start_recording_hotkey.text():
+                self._last_pressed_keys = None
+                self._hold_start_time = None
+                self.hold_timer.stop()
+                self.start_recording_hotkey.setText("")
+                self.start_recording_hotkey.setPlaceholderText("Press and hold keys for 2 seconds to set hotkey...")
+
+    def on_hotkey_hold_complete(self):
+        """Called when user has held the same keys for 2 seconds"""
+        if self._last_pressed_keys:
+            hotkey_str = "+".join(self._last_pressed_keys)
+            self.start_recording_hotkey.setText(hotkey_str)
+            self.start_recording_hotkey.setPlaceholderText("Press any other key to change")
+            self.save_settings()  # Save the new hotkey setting
 
 def set_widget_hidden_but_take_space(widget: QWidget, hidden: bool):
     if hidden:

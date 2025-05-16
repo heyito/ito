@@ -88,6 +88,7 @@ class AudioSourceInterface(ABC):
         stop_event: threading.Event,
         async_queue: asyncio.Queue,
         loop: asyncio.AbstractEventLoop,
+        vad_config,
         output_format: Literal["numpy", "bytes"] = "bytes",
     ):  # Default to bytes for Vosk
         """Starts streaming audio chunks into the provided asyncio Queue."""

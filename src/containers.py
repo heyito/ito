@@ -205,6 +205,7 @@ class Container(containers.DeclarativeContainer):
         audio_handler=audio_source_handler,
         asr_processor_cls=realtime_asr_processor_cls,
         asr_config=vosk_config_provider,
+        vad_config=vad_config_provider,
         loop=asyncio_loop,  # Inject the loop from the manager
     )
 

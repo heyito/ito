@@ -668,6 +668,13 @@ class OnboardingWindow(QMainWindow):
         self.keyboard_poll_timer = QTimer(self)
         self.keyboard_poll_timer.timeout.connect(self.poll_pressed_keys)
         self.keyboard_poll_timer.start(50)
+        
+        # Add hold timer
+        self.hold_timer = QTimer(self)
+        self.hold_timer.setSingleShot(True)
+        self.hold_timer.timeout.connect(self.on_hold_complete)
+        self._last_pressed_keys = None
+        self._hold_start_time = None
 
     def poll_pressed_keys(self):
         if not self.is_recording_hotkey:
@@ -675,19 +682,36 @@ class OnboardingWindow(QMainWindow):
         pressed_keys = KeyboardManager.instance().get_pressed_keys()
         # Convert to symbols/strings for display and hotkey string
         key_symbols = [self.keyboard_manager.get_key_symbol(k) for k in pressed_keys]
+        
         if len(key_symbols) > 0:
-            print(f'Pressed keys: {key_symbols}')
-        if getattr(self, '_last_pressed_keys', None) != key_symbols:
-            self._last_pressed_keys = key_symbols
-            self.update_key_pills(pressed_keys)
-            self.current_hotkey = "+".join(key_symbols)
-            # Update instructions and continue button
-            if pressed_keys:
-                self.key_combo_display.setText("Press any other key to change")
-                self.continue_button.setEnabled(True)
-            else:
+            # If keys changed, reset hold timer
+            if getattr(self, '_last_pressed_keys', None) != key_symbols:
+                self._last_pressed_keys = key_symbols
+                self._hold_start_time = None
+                self.hold_timer.stop()
+                self.update_key_pills(pressed_keys)
+                self.current_hotkey = "+".join(key_symbols)
+                self.key_combo_display.setText("Hold keys for 2 seconds to lock in...")
+                self.continue_button.setEnabled(False)
+            # If keys are the same and we haven't started the hold timer
+            elif self._hold_start_time is None:
+                self._hold_start_time = QTimer.singleShot(2000, self.on_hold_complete)
+        else:
+            # If no keys are pressed and we haven't locked in a combination
+            if not self.continue_button.isEnabled():
+                self._last_pressed_keys = None
+                self._hold_start_time = None
+                self.hold_timer.stop()
+                self.update_key_pills([])
+                self.current_hotkey = None
                 self.key_combo_display.setText("Press any key…")
                 self.continue_button.setEnabled(False)
+
+    def on_hold_complete(self):
+        """Called when user has held the same keys for 2 seconds"""
+        if self._last_pressed_keys:
+            self.key_combo_display.setText("Press any other key to change")
+            self.continue_button.setEnabled(True)
 
     def complete_keyboard_setup(self):
         if hasattr(self, 'keyboard_poll_timer'):

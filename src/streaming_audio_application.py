@@ -412,7 +412,7 @@ class StreamingAudioApplication(ApplicationInterface):
         self.audio_capture_thread_handle = threading.Thread(
             target=self.audio_handler.stream_audio_to_async_queue,
             # Ensure the audio handler sends raw bytes compatible with Vosk
-            args=(self.stop_audio_capture_event, self.audio_stream_queue, self.asyncio_loop, 'bytes'), # Specify output_format='bytes'
+            args=(self.stop_audio_capture_event, self.audio_stream_queue, self.asyncio_loop, self.vad_config, 'bytes'), # Specify output_format='bytes'
             daemon=True,
             name="AudioCaptureThread"
         )

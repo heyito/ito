@@ -16,9 +16,11 @@ class AudioStreamer:
                  audio_handler: AudioSourceHandler,
                  asr_processor_cls: Type[RealTimeASRProcessor], # Pass the class
                  asr_config: dict, # Config specific to the ASR processor
+                 vad_config: dict,
                  loop: asyncio.AbstractEventLoop):
         self.audio_handler = audio_handler
         self.loop = loop
+        self.vad_config = vad_config
         self._is_streaming = False
         self._stop_event = threading.Event()
         self._audio_capture_thread: Optional[threading.Thread] = None
@@ -137,7 +139,7 @@ class AudioStreamer:
             capture_thread_start_time = time.monotonic()
             self._audio_capture_thread = threading.Thread(
                 target=self.audio_handler.stream_audio_to_async_queue,
-                args=(self._stop_event, self._audio_queue, self.loop, 'bytes'),
+                args=(self._stop_event, self._audio_queue, self.loop, self.vad_config, 'bytes'),
                 daemon=True, name="AudioCaptureThread"
             )
             self._audio_capture_thread.start()

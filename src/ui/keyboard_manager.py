@@ -32,26 +32,22 @@ class KeyboardManager(QObject):
         self._listener_started = False
         self._tap = None
         self.pressed_keys = set()
+        self._was_hotkey_pressed = False
 
         # self._is_macos = platform.system() == 'Darwin'
         self._is_macos = False
 
-        # Map of function key names to their Quartz keycodes
-        self._function_key_codes = {
-            "f1": 122,
-            "f2": 120,
-            "f3": 99,
-            "f4": 118,
-            "f5": 96,
-            "f6": 97,
-            "f7": 98,
-            "f8": 100,
-            "f9": 101,
-            "f10": 109,
-            "f11": 103,
-            "f12": 111,
-            "fn": 179,
-        }
+    def _check_hotkey_match(self) -> bool:
+        """
+        Check if the currently pressed keys match the target hotkey.
+        Returns True if there's a match, False otherwise.
+        """
+        if not self._target_hotkey:
+            return False
+            
+        # Get symbols for currently pressed keys
+        current_keys = set(self.get_pressed_keys())
+        return current_keys == self._target_hotkey
 
     def initialize_listener(self) -> bool:
         print("Initializing keyboard listener")
@@ -61,16 +57,11 @@ class KeyboardManager(QObject):
             return True
 
         try:
-            if self._is_macos:
-                # On macOS, use Quartz for keyboard events
-                self._setup_quartz_listener()
-                self._listener_started = True
-            else:
-                self._listener = keyboard.Listener(
-                    on_press=self._on_press,
-                    on_release=self._on_release,
-                )
-                self._listener.start()
+            self._listener = keyboard.Listener(
+                on_press=self._on_press,
+                on_release=self._on_release,
+            )
+            self._listener.start()
 
             self._listener_started = True
             print("Keyboard listener initialized successfully")
@@ -80,89 +71,18 @@ class KeyboardManager(QObject):
             traceback.print_exc()
             return False
 
-    def _setup_quartz_listener(self):
-        """Set up Quartz event tap for keyboard events on macOS"""
-
-        def callback(proxy, type_, event, refcon):
-            if type_ in (Quartz.kCGEventKeyDown, Quartz.kCGEventKeyUp, Quartz.kCGEventFlagsChanged):
-                # Get the keycode from the event
-                keycode = Quartz.CGEventGetIntegerValueField(
-                    event, Quartz.kCGKeyboardEventKeycode
-                )
-
-                # Get the flags from the event
-                flags = Quartz.CGEventGetFlags(event)
-
-                # print(f"Quartz keycode: {keycode}, flags: {flags}")
-
-                # Check if this is our target key
-                if self._target_hotkey and isinstance(self._target_hotkey, int):
-                    # Handle both direct Fn key (179) and Fn-modified keys (63 for F3)
-                    # print(f"Target hotkey: {self._target_hotkey}, keycode: {keycode}, type_: {'DOWN' if type_ == Quartz.kCGEventKeyDown else 'UP'}")
-                    if keycode == self._target_hotkey or (keycode == 63 and flags & 0x800000):
-                        if type_ == Quartz.kCGEventKeyDown:
-                            pass
-                            # print(f"Hotkey pressed: {self._hotkey_str}")
-                            # Emit the pressed signal
-                            # self.hotkey_pressed.emit(self._hotkey_str)
-                        elif type_ == Quartz.kCGEventKeyUp:
-                            pass
-                            # print(f"Hotkey released: {self._hotkey_str}")
-                            # Emit the released signal
-                            # self.hotkey_released.emit(self._hotkey_str)
-                        # Return None to consume the event
-                        return None
-
-            # Return the event for all other keys
-            return event
-
-        # Create the event tap
-        event_mask = (
-            Quartz.CGEventMaskBit(Quartz.kCGEventKeyDown) |
-            Quartz.CGEventMaskBit(Quartz.kCGEventKeyUp) |
-            Quartz.CGEventMaskBit(Quartz.kCGEventFlagsChanged)
-        )
-        self._tap = Quartz.CGEventTapCreate(
-            Quartz.kCGSessionEventTap,
-            Quartz.kCGHeadInsertEventTap,
-            Quartz.kCGEventTapOptionDefault,
-            event_mask,
-            callback,
-            None,
-        )
-
-        if self._tap:
-            # Create a run loop source and add it to the current run loop
-            runLoopSource = Quartz.CFMachPortCreateRunLoopSource(None, self._tap, 0)
-            Quartz.CFRunLoopAddSource(
-                Quartz.CFRunLoopGetCurrent(),
-                runLoopSource,
-                Quartz.kCFRunLoopDefaultMode,
-            )
-            # Enable the event tap
-            Quartz.CGEventTapEnable(self._tap, True)
-
     def set_hotkey(self, hotkey_str: str) -> bool:
-        """Set the target hotkey without restarting the listener"""
+        """Set the target hotkey without restarting the listener.
+        hotkey_str should be in the format 'key1+key2+key3' where each key is in symbolic form.
+        Example: '⌘+⇧+a' or 'ctrl+shift+a'
+        """
         try:
-            if self._is_macos:
-                # For macOS, we need to handle function keys differently
-                hotkey_str = hotkey_str.lower()
-                if hotkey_str in self._function_key_codes:
-                    self._hotkey_str = hotkey_str
-                    self._target_hotkey = self._function_key_codes[hotkey_str]
-                    return True
-                else:
-                    print(f"Unsupported hotkey for macOS: {hotkey_str}")
-                    return False
-
-            new_hotkey = self._parse_hotkey(hotkey_str)
-            if not new_hotkey:
-                print(f"Invalid hotkey: {hotkey_str}")
-                return False
-
+            # Store the symbolic string
             self._hotkey_str = hotkey_str
-            self._target_hotkey = new_hotkey
+            
+            # Convert to set of key symbols for comparison
+            self._target_hotkey = set(hotkey_str.split('+'))
+            
             print(f"Hotkey updated to: {hotkey_str}")
             return True
 
@@ -173,13 +93,7 @@ class KeyboardManager(QObject):
 
     def cleanup(self):
         """Clean up the keyboard listener. Should only be called when the application is closing."""
-        if self._is_macos and self._tap:
-            try:
-                Quartz.CGEventTapEnable(self._tap, False)
-                self._tap = None
-            except Exception as e:
-                print(f"Error cleaning up Quartz event tap: {e}")
-        elif self._listener and self._listener_started:
+        if self._listener and self._listener_started:
             try:
                 self._listener.stop()
                 self._listener = None
@@ -189,23 +103,8 @@ class KeyboardManager(QObject):
         self._listener_started = False
         self._target_hotkey = None
         self._hotkey_str = None
+        self._was_hotkey_pressed = False
         print("Keyboard listener cleaned up")
-
-    def _parse_hotkey(self, hotkey_str: str):
-        """Parse hotkey string into pynput key object"""
-        try:
-            # Special case for Fn key
-            if hotkey_str.lower() == "fn":
-                # Create a KeyCode with the Fn key's virtual key code (179)
-                return keyboard.KeyCode(vk=179)
-
-            # Check if it's a special key (like Key.f9)
-            return getattr(keyboard.Key, hotkey_str)
-        except AttributeError:
-            # If not a special key, treat as character key
-            if len(hotkey_str) == 1:
-                return keyboard.KeyCode.from_char(hotkey_str)
-            return None
         
     def get_key_symbol(self, key):
         """
@@ -213,13 +112,16 @@ class KeyboardManager(QObject):
         Handles special keys by returning their name or a specific symbol (especially for macOS).
         For alphanumeric keys, returns the character.
         """
+        # If key is already a string, return it
+        if isinstance(key, str):
+            return key
+
         try:
             # For alphanumeric keys, return the character
             if str(key) == '<63>':
                 return 'fn'
             return key.char
         except AttributeError:
-            print('I got this key: ', key, type(key))
             # For special keys (like Key.space, Key.shift, Key.esc, etc.)
             # Use macOS symbols for common modifier keys.
             if key == keyboard.Key.space:
@@ -236,8 +138,6 @@ class KeyboardManager(QObject):
                 return '⌥' # Option (Alt) symbol
             elif key == keyboard.Key.cmd or key == keyboard.Key.cmd_r:
                 return '⌘' # Command symbol (macOS)
-            elif key == keyboard.Key.menu:
-                return 'menu'
             elif key == keyboard.Key.backspace:
                 return 'backspace'
             elif key == keyboard.Key.delete:
@@ -263,19 +163,23 @@ class KeyboardManager(QObject):
     def _on_press(self, key):
         """
         Callback function for key press events.
-        Adds the pressed key to the set.
+        Adds the pressed key to the set and checks for hotkey match.
         """
-        # Using a try-except block to handle keys without a char attribute
         try:
-            print(f'Key pressed: {key}')
             # Add the key object directly to the set
             self.pressed_keys.add(key)
-            # print(f'Key pressed: {key}') # Optional: for debugging
+            
+            # Check if we have a hotkey match
+            is_match = self._check_hotkey_match()
+            
+            # If we have a match and weren't previously pressed, emit the signal
+            if is_match and not self._was_hotkey_pressed:
+                self._was_hotkey_pressed = True
+                self.hotkey_pressed.emit(self._hotkey_str)
+                
         except Exception as e:
-            # Handle special keys which don't have a .char attribute
-            # print(f'Special key pressed: {key}') # Optional: for debugging
-            self.pressed_keys.add(key)
-
+            print(f"Error in _on_press: {e}")
+            traceback.print_exc()
 
     def _on_release(self, key):
         """
@@ -283,36 +187,53 @@ class KeyboardManager(QObject):
         Handles special case for key 63 (Fn on macOS).
         """
         try:
-            print(f'Key released: {key}')
             # Special handling for Fn key (keycode 63)
             if hasattr(key, 'vk') and key.vk == 63:
                 if key not in self.pressed_keys:
                     # First release event: treat as press
                     self.pressed_keys.add(key)
+                    # Check for hotkey match after adding Fn
+                    is_match = self._check_hotkey_match()
+                    if is_match and not self._was_hotkey_pressed:
+                        self._was_hotkey_pressed = True
+                        self.hotkey_pressed.emit(self._hotkey_str)
                     return
                 else:
                     # Second release event: treat as release
                     self.pressed_keys.remove(key)
+                    # Check if we should emit release signal
+                    if self._was_hotkey_pressed:
+                        self._was_hotkey_pressed = False
+                        self.hotkey_released.emit(self._hotkey_str)
                     return
+
             # Normal behavior for other keys
             if key in self.pressed_keys:
                 self.pressed_keys.remove(key)
+                # Check if we should emit release signal
+                if self._was_hotkey_pressed and not self._check_hotkey_match():
+                    self._was_hotkey_pressed = False
+                    self.hotkey_released.emit(self._hotkey_str)
+                    
         except KeyError:
             pass
         except Exception as e:
-            pass
+            print(f"Error in _on_release: {e}")
+            traceback.print_exc()
 
         # Stop listener
         if key == keyboard.Key.esc:
             return False
 
-
     def get_pressed_keys(self):
         """
         Returns a list of symbols for the currently pressed keys,
-        up to a maximum of 3.
+        up to a maximum of 3, in a consistent sorted order.
         """
-        # Convert the set of key objects to a list of their symbols
-        # and limit the list to the first 3 elements
-        return list(self.pressed_keys)[:3]
+        # Convert the set of key objects to their symbols
+        key_symbols = [self.get_key_symbol(k) for k in self.pressed_keys]
+        # Sort the symbols to ensure consistent order
+        key_symbols.sort()
+        # Return up to 3 keys
+        return key_symbols[:3]
         

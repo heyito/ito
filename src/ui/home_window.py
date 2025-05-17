@@ -1834,7 +1834,7 @@ class HomeWindow(QMainWindow):
 
     def poll_pressed_keys(self):
         """Poll for pressed keys and handle hotkey recording"""
-        if not self.is_recording_hotkey or self.stacked_widget.currentWidget() != self.keyboard_page:
+        if not self.is_recording_hotkey or self.stacked_widget.currentWidget() != self.keyboard_page or not self.isActiveWindow():
             return
 
         pressed_keys = self.app_manager.keyboard_manager.get_pressed_keys()

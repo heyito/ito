@@ -22,7 +22,8 @@ from PySide6.QtWidgets import (
     QWidget,
     QFrame,
     QGraphicsOpacityEffect,
-    QApplication
+    QApplication,
+    QSizePolicy,
 )
 
 from src.application_manager import ApplicationManager
@@ -57,82 +58,144 @@ if sys.platform == "darwin":
 else:
     _objc_available = False
 
+
 class HomeWindow(QMainWindow):
     # Centralized UI Restriction Rules
     # Each rule defines a condition and actions to take if the condition is met or not.
     UI_RESTRICTIONS = [
-        { # ONESHOT mode: force LLM to gemini, disable Speech Rec tab
+        {  # ONESHOT mode: force LLM to gemini, disable Speech Rec tab
             "condition": {
                 "widget_name": "application_mode_selector",
                 "property": "currentText",
-                "value": "oneshot"
+                "value": "oneshot",
             },
             "then_actions": [
                 {
                     "target_widget_name": "llm_source",
                     "action": "force_selection",
-                    "value": "gemini_api"
+                    "value": "gemini_api",
                 },
-                { # ADDED: Disable Speech Rec tab
+                {  # ADDED: Disable Speech Rec tab
                     "target_widget_name": "speech_recognition_button",
                     "action": "set_enabled",
-                    "enabled": False
-                }
+                    "enabled": False,
+                },
             ],
-            "else_actions": [ # Only manage llm_source here
-                {
-                    "target_widget_name": "llm_source",
-                    "action": "enable_all_options"
-                }
-            ]
+            "else_actions": [  # Only manage llm_source here
+                {"target_widget_name": "llm_source", "action": "enable_all_options"}
+            ],
         },
-        { # STREAMING mode: show Vosk path, disable Speech Rec tab
+        {  # STREAMING mode: show Vosk path, disable Speech Rec tab
             "condition": {
                 "widget_name": "application_mode_selector",
                 "property": "currentText",
-                "value": "streaming"
+                "value": "streaming",
             },
             "then_actions": [
                 {
                     "target_widget_name": "vosk_model_path_container",
                     "action": "set_visibility_and_space",
-                    "visible": True
+                    "visible": True,
                 },
-                { # ADDED: Disable Speech Rec tab
+                {  # ADDED: Disable Speech Rec tab
                     "target_widget_name": "speech_recognition_button",
                     "action": "set_enabled",
-                    "enabled": False
-                }
+                    "enabled": False,
+                },
             ],
-            "else_actions": [ # Only manage vosk_model_path_container here
+            "else_actions": [  # Only manage vosk_model_path_container here
                 {
                     "target_widget_name": "vosk_model_path_container",
                     "action": "set_visibility_and_space",
-                    "visible": False
+                    "visible": False,
                 }
-            ]
+            ],
         },
         # --- Rules for LLM Provider Model Container Visibility ---
         {
-            "condition": {"widget_name": "llm_source", "property": "currentText", "value": "openai_api"},
-            "then_actions": [{"target_widget_name": "openai_model_container", "action": "set_visibility_and_space", "visible": True}],
-            "else_actions": [{"target_widget_name": "openai_model_container", "action": "set_visibility_and_space", "visible": False}]
+            "condition": {
+                "widget_name": "llm_source",
+                "property": "currentText",
+                "value": "openai_api",
+            },
+            "then_actions": [
+                {
+                    "target_widget_name": "openai_model_container",
+                    "action": "set_visibility_and_space",
+                    "visible": True,
+                }
+            ],
+            "else_actions": [
+                {
+                    "target_widget_name": "openai_model_container",
+                    "action": "set_visibility_and_space",
+                    "visible": False,
+                }
+            ],
         },
         {
-            "condition": {"widget_name": "llm_source", "property": "currentText", "value": "gemini_api"},
-            "then_actions": [{"target_widget_name": "gemini_model_container", "action": "set_visibility_and_space", "visible": True}],
-            "else_actions": [{"target_widget_name": "gemini_model_container", "action": "set_visibility_and_space", "visible": False}]
+            "condition": {
+                "widget_name": "llm_source",
+                "property": "currentText",
+                "value": "gemini_api",
+            },
+            "then_actions": [
+                {
+                    "target_widget_name": "gemini_model_container",
+                    "action": "set_visibility_and_space",
+                    "visible": True,
+                }
+            ],
+            "else_actions": [
+                {
+                    "target_widget_name": "gemini_model_container",
+                    "action": "set_visibility_and_space",
+                    "visible": False,
+                }
+            ],
         },
         {
-            "condition": {"widget_name": "llm_source", "property": "currentText", "value": "groq_api"},
-            "then_actions": [{"target_widget_name": "groq_model_container", "action": "set_visibility_and_space", "visible": True}],
-            "else_actions": [{"target_widget_name": "groq_model_container", "action": "set_visibility_and_space", "visible": False}]
+            "condition": {
+                "widget_name": "llm_source",
+                "property": "currentText",
+                "value": "groq_api",
+            },
+            "then_actions": [
+                {
+                    "target_widget_name": "groq_model_container",
+                    "action": "set_visibility_and_space",
+                    "visible": True,
+                }
+            ],
+            "else_actions": [
+                {
+                    "target_widget_name": "groq_model_container",
+                    "action": "set_visibility_and_space",
+                    "visible": False,
+                }
+            ],
         },
         {
-            "condition": {"widget_name": "llm_source", "property": "currentText", "value": "ollama"},
-            "then_actions": [{"target_widget_name": "llm_model_edit_container", "action": "set_visibility_and_space", "visible": True}],
-            "else_actions": [{"target_widget_name": "llm_model_edit_container", "action": "set_visibility_and_space", "visible": False}]
-        }
+            "condition": {
+                "widget_name": "llm_source",
+                "property": "currentText",
+                "value": "ollama",
+            },
+            "then_actions": [
+                {
+                    "target_widget_name": "llm_model_edit_container",
+                    "action": "set_visibility_and_space",
+                    "visible": True,
+                }
+            ],
+            "else_actions": [
+                {
+                    "target_widget_name": "llm_model_edit_container",
+                    "action": "set_visibility_and_space",
+                    "visible": False,
+                }
+            ],
+        },
         # Add more rules here as new interdependencies are identified.
         # Example: A rule based on llm_source selection affecting another widget.
         # {
@@ -201,7 +264,9 @@ class HomeWindow(QMainWindow):
                 print(f"Error applying native styling: {e}")
 
         # Main widget and layout
-        main_widget = IntenLayout(self, radius=8, show_close_button=True, theme_manager=self.theme_manager)
+        main_widget = IntenLayout(
+            self, radius=8, show_close_button=True, theme_manager=self.theme_manager
+        )
         main_widget.setObjectName("main_widget")
         self.setCentralWidget(main_widget)
         main_layout = QHBoxLayout()
@@ -259,7 +324,7 @@ class HomeWindow(QMainWindow):
         self.app_name.setStyleSheet(f"""
             font-size: 24px; 
             font-weight: 600; 
-            color: {self.theme_manager.get_color('text_primary')};
+            color: {self.theme_manager.get_color("text_primary")};
         """)
         center_layout.addWidget(self.app_name)
 
@@ -328,17 +393,25 @@ class HomeWindow(QMainWindow):
 
         self.speech_recognition_title = QLabel("Speech Recognition")
         self.set_page_title_style(self.speech_recognition_title)
-        speech_recognition_layout.addWidget(self.speech_recognition_title, alignment=Qt.AlignmentFlag.AlignLeft)
+        speech_recognition_layout.addWidget(
+            self.speech_recognition_title, alignment=Qt.AlignmentFlag.AlignLeft
+        )
 
         # ASR form layout directly in the page (no scroll area)
         asr_form_content = QWidget()
         asr_form_layout = QFormLayout(asr_form_content)
         asr_form_layout.setSpacing(12)
         asr_form_layout.setContentsMargins(0, 0, 0, 0)
-        asr_form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
-        asr_form_layout.setFormAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        asr_form_layout.setLabelAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop
+        )
+        asr_form_layout.setFormAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
+        )
 
-        self.asr_source = SegmentedButtonGroup(["openai_api", "faster_whisper", "groq_api", "gemini_api"])
+        self.asr_source = SegmentedButtonGroup(
+            ["openai_api", "faster_whisper", "groq_api", "gemini_api"]
+        )
         asr_source_label = QLabel("ASR Provider")
         self.set_label_style(asr_source_label)
         asr_source_container = QWidget()
@@ -370,15 +443,17 @@ class HomeWindow(QMainWindow):
         gemini_asr_model_layout.addWidget(gemini_asr_model_label)
         gemini_asr_model_layout.addWidget(self.gemini_asr_model)
 
-        self.faster_whisper_model = SegmentedButtonGroup([
-            "tiny",
-            "base",
-            "small",
-            "medium",
-            "large-v1",
-            "large-v2",
-            "large-v3",
-        ])
+        self.faster_whisper_model = SegmentedButtonGroup(
+            [
+                "tiny",
+                "base",
+                "small",
+                "medium",
+                "large-v1",
+                "large-v2",
+                "large-v3",
+            ]
+        )
         faster_whisper_model_label = QLabel("Local Whisper Model")
         self.set_label_style(faster_whisper_model_label)
         self.faster_whisper_model_container = QWidget()
@@ -388,11 +463,9 @@ class HomeWindow(QMainWindow):
         faster_whisper_model_layout.addWidget(faster_whisper_model_label)
         faster_whisper_model_layout.addWidget(self.faster_whisper_model)
 
-        self.groq_asr_model = SegmentedButtonGroup([
-            "distil-whisper-large-v3-en",
-            "whisper-large-v3-turbo",
-            "whisper-large-v3"
-        ])
+        self.groq_asr_model = SegmentedButtonGroup(
+            ["distil-whisper-large-v3-en", "whisper-large-v3-turbo", "whisper-large-v3"]
+        )
         groq_asr_model_label = QLabel("Groq Model")
         self.set_label_style(groq_asr_model_label)
         self.groq_asr_model_container = QWidget()
@@ -422,7 +495,9 @@ class HomeWindow(QMainWindow):
         asr_device_layout.addWidget(self.asr_device)
         asr_form_layout.addRow(self.asr_device_container)
 
-        self.asr_compute_type = SegmentedButtonGroup(["default", "int8", "int8_float16", "float16"])
+        self.asr_compute_type = SegmentedButtonGroup(
+            ["default", "int8", "int8_float16", "float16"]
+        )
         self.asr_compute_type_label = QLabel("Compute Type")
         self.set_label_style(self.asr_compute_type_label)
         self.asr_compute_type_container = QWidget()
@@ -447,16 +522,24 @@ class HomeWindow(QMainWindow):
         language_model_layout.setContentsMargins(0, 0, 0, 0)
         self.language_model_title = QLabel("Language Model Settings")
         self.set_page_title_style(self.language_model_title)
-        language_model_layout.addWidget(self.language_model_title, alignment=Qt.AlignmentFlag.AlignLeft)
+        language_model_layout.addWidget(
+            self.language_model_title, alignment=Qt.AlignmentFlag.AlignLeft
+        )
 
         llm_form_content = QWidget()
         llm_form_layout = QFormLayout(llm_form_content)
         llm_form_layout.setSpacing(16)
         llm_form_layout.setContentsMargins(0, 0, 0, 0)
-        llm_form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        llm_form_layout.setFormAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        llm_form_layout.setLabelAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
+        llm_form_layout.setFormAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
 
-        self.llm_source = SegmentedButtonGroup(["ollama", "openai_api", "groq_api", "gemini_api"])
+        self.llm_source = SegmentedButtonGroup(
+            ["ollama", "openai_api", "groq_api", "gemini_api"]
+        )
         llm_source_label = QLabel("LLM Source")
         self.set_label_style(llm_source_label)
         llm_source_container = QWidget()
@@ -479,12 +562,9 @@ class HomeWindow(QMainWindow):
         llm_model_edit_layout.addWidget(llm_model_edit_label)
         llm_model_edit_layout.addWidget(self.llm_model_edit)
 
-        self.openai_model = SegmentedButtonGroup([
-            "gpt-4.1",
-            "gpt-4-turbo",
-            "gpt-4",
-            "gpt-3.5-turbo"
-        ])
+        self.openai_model = SegmentedButtonGroup(
+            ["gpt-4.1", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]
+        )
         openai_model_label = QLabel("OpenAI Model")
         self.set_label_style(openai_model_label)
         self.openai_model_container = QWidget()
@@ -494,9 +574,7 @@ class HomeWindow(QMainWindow):
         openai_model_layout.addWidget(openai_model_label)
         openai_model_layout.addWidget(self.openai_model)
 
-        self.gemini_model = SegmentedButtonGroup([
-            "gemini-2.0-flash"
-        ])
+        self.gemini_model = SegmentedButtonGroup(["gemini-2.0-flash"])
         gemini_model_label = QLabel("Gemini Model")
         self.set_label_style(gemini_model_label)
         self.gemini_model_container = QWidget()
@@ -506,12 +584,14 @@ class HomeWindow(QMainWindow):
         gemini_model_layout.addWidget(gemini_model_label)
         gemini_model_layout.addWidget(self.gemini_model)
 
-        self.groq_model = SegmentedButtonGroup([
-            "llama-3.3-70b-versatile",
-            "llama3-70b-8192",
-            "mixtral-8x7b-32768",
-            "gemma-7b-it"
-        ])
+        self.groq_model = SegmentedButtonGroup(
+            [
+                "llama-3.3-70b-versatile",
+                "llama3-70b-8192",
+                "mixtral-8x7b-32768",
+                "gemma-7b-it",
+            ]
+        )
         groq_model_label = QLabel("Groq Model")
         self.set_label_style(groq_model_label)
         self.groq_model_container = QWidget()
@@ -591,7 +671,9 @@ class HomeWindow(QMainWindow):
         api_keys_layout.setContentsMargins(0, 0, 0, 0)
         self.api_keys_title = QLabel("API Keys")
         self.set_page_title_style(self.api_keys_title)
-        api_keys_layout.addWidget(self.api_keys_title, alignment=Qt.AlignmentFlag.AlignLeft)
+        api_keys_layout.addWidget(
+            self.api_keys_title, alignment=Qt.AlignmentFlag.AlignLeft
+        )
 
         # API Key fields (migrated from Settings page)
         self.openai_api_key_edit = QLineEdit()
@@ -654,7 +736,9 @@ class HomeWindow(QMainWindow):
         application_mode_layout.setContentsMargins(0, 0, 0, 0)
         application_mode_layout.setSpacing(4)
         application_mode_layout.addWidget(application_mode_label)
-        self.application_mode_selector = SegmentedButtonGroup(["discrete", "streaming", "oneshot"])
+        self.application_mode_selector = SegmentedButtonGroup(
+            ["discrete", "streaming", "oneshot"]
+        )
         application_mode_layout.addWidget(self.application_mode_selector)
         mode_layout.addWidget(application_mode_container)
 
@@ -664,7 +748,7 @@ class HomeWindow(QMainWindow):
         self.set_line_edit_style(self.vosk_model_path_edit)
         vosk_model_path_label = QLabel("Model Path")
         self.set_label_style(vosk_model_path_label)
-        self.vosk_model_path_container = QWidget() 
+        self.vosk_model_path_container = QWidget()
         self.vosk_model_path_container.setObjectName("vosk_model_path_container")
         vosk_model_path_layout = QVBoxLayout(self.vosk_model_path_container)
         vosk_model_path_layout.setContentsMargins(0, 0, 0, 0)
@@ -685,7 +769,9 @@ class HomeWindow(QMainWindow):
         audio_layout.addWidget(self.audio_title, alignment=Qt.AlignmentFlag.AlignLeft)
 
         # Audio Section
-        self.sample_rate = SegmentedButtonGroup(["8000", "16000", "22050", "44100", "48000"])
+        self.sample_rate = SegmentedButtonGroup(
+            ["8000", "16000", "22050", "44100", "48000"]
+        )
         sample_rate_label = QLabel("Sample Rate")
         self.set_label_style(sample_rate_label)
         sample_rate_container = QWidget()
@@ -729,7 +815,9 @@ class HomeWindow(QMainWindow):
                 self.handle_error(error_msg)
 
         # --- Unified Global Styles for Home Window ---
-        self.setStyleSheet(self.styleSheet() + """
+        self.setStyleSheet(
+            self.styleSheet()
+            + """
             QPushButton#btn-primary {
                 background-color: #F6EBDD;
                 color: #181A2A;
@@ -749,7 +837,8 @@ class HomeWindow(QMainWindow):
                 background-color: #f3e2c7;
                 color: #b0b0b0;
             }
-        """)
+        """
+        )
 
         # --- Voice Detection PAGE ---
         self.voice_detection_page = QWidget()
@@ -757,7 +846,9 @@ class HomeWindow(QMainWindow):
         voice_detection_layout.setContentsMargins(0, 0, 0, 0)
         self.voice_detection_title = QLabel("Voice Detection")
         self.set_page_title_style(self.voice_detection_title)
-        voice_detection_layout.addWidget(self.voice_detection_title, alignment=Qt.AlignmentFlag.AlignLeft)
+        voice_detection_layout.addWidget(
+            self.voice_detection_title, alignment=Qt.AlignmentFlag.AlignLeft
+        )
 
         # VAD Section (migrated from Settings page)
         self.vad_enabled = SegmentedButtonGroup(["Enabled", "Disabled"])
@@ -782,7 +873,9 @@ class HomeWindow(QMainWindow):
         vad_aggressiveness_layout.addWidget(self.vad_aggressiveness)
         voice_detection_layout.addWidget(vad_aggressiveness_container)
 
-        self.silence_duration = SegmentedButtonGroup(["100", "500", "1000", "2000", "5000"])
+        self.silence_duration = SegmentedButtonGroup(
+            ["100", "500", "1000", "2000", "5000"]
+        )
         silence_duration_label = QLabel("Silence Duration (ms)")
         self.set_label_style(silence_duration_label)
         silence_duration_container = QWidget()
@@ -813,7 +906,9 @@ class HomeWindow(QMainWindow):
         keyboard_layout.setContentsMargins(0, 0, 0, 0)
         self.keyboard_title = QLabel("Keyboard")
         self.set_page_title_style(self.keyboard_title)
-        keyboard_layout.addWidget(self.keyboard_title, alignment=Qt.AlignmentFlag.AlignLeft)
+        keyboard_layout.addWidget(
+            self.keyboard_title, alignment=Qt.AlignmentFlag.AlignLeft
+        )
 
         # Create form layout directly in the keyboard page
         keyboard_form_layout = QFormLayout()
@@ -842,9 +937,13 @@ class HomeWindow(QMainWindow):
         self.start_recording_hotkey = QLineEdit()
         self.start_recording_hotkey.setMaximumWidth(300)
         self.set_line_edit_style(self.start_recording_hotkey)
-        self.start_recording_hotkey.setReadOnly(True)  # Make it read-only since we'll handle input differently
-        self.start_recording_hotkey.setPlaceholderText("Press and hold keys for 2 seconds to set hotkey...")
-        start_recording_hotkey_label = QLabel("Start Recording Hotkey")
+        self.start_recording_hotkey.setReadOnly(
+            True
+        )  # Make it read-only since we'll handle input differently
+        self.start_recording_hotkey.setPlaceholderText(
+            "Press and hold keys for 2 seconds to set hotkey..."
+        )
+        start_recording_hotkey_label = QLabel("Inten Hotkey")
         self.set_label_style(start_recording_hotkey_label)
         start_recording_hotkey_container = QWidget()
         start_recording_hotkey_layout = QVBoxLayout(start_recording_hotkey_container)
@@ -854,19 +953,31 @@ class HomeWindow(QMainWindow):
         start_recording_hotkey_layout.addWidget(self.start_recording_hotkey)
         keyboard_form_layout.addRow(start_recording_hotkey_container)
 
+        # Container for both start/stop buttons
+        hotkey_button_container = QWidget()
+        hotkey_button_layout = QHBoxLayout(hotkey_button_container)
+        hotkey_button_layout.setContentsMargins(0, 0, 0, 0)
+        hotkey_button_layout.setSpacing(10)
+
+        self.start_hotkey_button = QPushButton("Start Recording")
+        self.set_primary_button_style(self.start_hotkey_button)
+        self.start_hotkey_button.clicked.connect(self.start_hotkey_recording)
+        hotkey_button_layout.addWidget(self.start_hotkey_button)
+
+        self.stop_hotkey_button = QPushButton("Stop Recording")
+        self.set_primary_button_style(self.stop_hotkey_button)
+        self.stop_hotkey_button.setVisible(False)
+        self.stop_hotkey_button.clicked.connect(self.stop_hotkey_recording)
+        hotkey_button_layout.addWidget(self.stop_hotkey_button)
+
+        hotkey_button_layout.addStretch()
+
+        keyboard_form_layout.addRow(hotkey_button_container)
+
         # Add keyboard listening functionality
-        self.is_recording_hotkey = False
         self._last_pressed_keys = None
-        self._hold_start_time = None
-        self.hold_timer = QTimer(self)
-        self.hold_timer.setSingleShot(True)
-        self.hold_timer.timeout.connect(self.on_hotkey_hold_complete)
         self.keyboard_poll_timer = QTimer(self)
         self.keyboard_poll_timer.timeout.connect(self.poll_pressed_keys)
-        self.keyboard_poll_timer.start(50)  # Poll every 50ms
-
-        # Start listening when the keyboard page is shown
-        self.keyboard_button.clicked.connect(self.start_keyboard_listening)
 
         keyboard_layout.addLayout(keyboard_form_layout)
         keyboard_layout.addStretch()
@@ -878,7 +989,9 @@ class HomeWindow(QMainWindow):
         developer_layout.setContentsMargins(0, 0, 0, 0)
         self.developer_title = QLabel("Developer")
         self.set_page_title_style(self.developer_title)
-        developer_layout.addWidget(self.developer_title, alignment=Qt.AlignmentFlag.AlignLeft)
+        developer_layout.addWidget(
+            self.developer_title, alignment=Qt.AlignmentFlag.AlignLeft
+        )
 
         # Create form layout directly in the developer page
         developer_form_layout = QFormLayout()
@@ -892,7 +1005,11 @@ class HomeWindow(QMainWindow):
         )
 
         # Developer Timing Tools Section
-        self.add_section_header(developer_form_layout, "Developer Timing Tools", color=self.theme_manager.get_color('text_primary'))
+        self.add_section_header(
+            developer_form_layout,
+            "Developer Timing Tools",
+            color=self.theme_manager.get_color("text_primary"),
+        )
 
         # Timing report buttons container
         timing_buttons_widget = QWidget()
@@ -916,7 +1033,11 @@ class HomeWindow(QMainWindow):
         developer_form_layout.addRow(timing_buttons_widget)
 
         # Reset All Section
-        self.add_section_header(developer_form_layout, "Reset Settings", color=self.theme_manager.get_color('text_primary'))
+        self.add_section_header(
+            developer_form_layout,
+            "Reset Settings",
+            color=self.theme_manager.get_color("text_primary"),
+        )
 
         # Reset All button container
         reset_button_widget = QWidget()
@@ -1021,7 +1142,7 @@ class HomeWindow(QMainWindow):
         self.app_name.setStyleSheet(f"""
             font-size: 24px; 
             font-weight: 600; 
-            color: {self.theme_manager.get_color('text_primary')};
+            color: {self.theme_manager.get_color("text_primary")};
         """)
 
         # Update all page title colors using the helper
@@ -1038,7 +1159,7 @@ class HomeWindow(QMainWindow):
             self.set_page_title_style(label)
 
         # Update all themed labels
-        if hasattr(self, '_themed_labels'):
+        if hasattr(self, "_themed_labels"):
             for label in self._themed_labels:
                 self.set_label_style(label)
 
@@ -1056,22 +1177,29 @@ class HomeWindow(QMainWindow):
         # Update all section headers to use the current theme color
         for layout in [
             # Add all layouts where section headers are used
-            getattr(self, 'developer_page', None),
-            getattr(self, 'keyboard_page', None),
+            getattr(self, "developer_page", None),
+            getattr(self, "keyboard_page", None),
         ]:
             if layout:
                 for widget in layout.findChildren(QLabel):
-                    if widget.text() in ["Developer Timing Tools", "Reset Settings", "Output Settings", "Hotkey Settings"]:
-                        self.set_label_style(widget, color=self.theme_manager.get_color('text_primary'), font_size=15, font_weight=600)
+                    if widget.text() in [
+                        "Developer Timing Tools",
+                        "Reset Settings",
+                        "Output Settings",
+                        "Hotkey Settings",
+                    ]:
+                        self.set_label_style(
+                            widget,
+                            color=self.theme_manager.get_color("text_primary"),
+                            font_size=15,
+                            font_weight=600,
+                        )
 
     def select_menu(self, index):
         # If we're leaving the keyboard page, stop recording
         if self.stacked_widget.currentWidget() == self.keyboard_page:
             self.is_recording_hotkey = False
             self._last_pressed_keys = None
-            self._hold_start_time = None
-            self.hold_timer.stop()
-        
         # Switch to the selected page
         self.stacked_widget.setCurrentIndex(index)
         self.speech_recognition_button.setChecked(index == 0)
@@ -1082,10 +1210,6 @@ class HomeWindow(QMainWindow):
         self.voice_detection_button.setChecked(index == 5)
         self.keyboard_button.setChecked(index == 6)
         self.developer_button.setChecked(index == 7)
-        
-        # If we're entering the keyboard page, start recording
-        if index == 6:  # Keyboard page index
-            self.start_keyboard_listening()
 
     def handle_save_timing_report(self):
         """Handles the click of the 'Save Timing Report' button."""
@@ -1146,7 +1270,7 @@ class HomeWindow(QMainWindow):
         header.setStyleSheet(f"""
             font-size: 15px;
             font-weight: 600;
-            color: {color or self.theme_manager.get_color('text_primary')};
+            color: {color or self.theme_manager.get_color("text_primary")};
             margin-top: 24px;
             margin-bottom: 8px;
             font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -1197,9 +1321,7 @@ class HomeWindow(QMainWindow):
 
             asr_source_value = self.asr_source.currentText()
             current_asr_provider_model_value = ""
-            current_asr_local_model_size = (
-                self.faster_whisper_model.currentText()
-            )
+            current_asr_local_model_size = self.faster_whisper_model.currentText()
 
             openai_client_asr_model = (
                 self.openai_asr_model.currentText()
@@ -1207,28 +1329,20 @@ class HomeWindow(QMainWindow):
             groq_client_asr_model = (
                 self.groq_asr_model.currentText()
             )  # Default for Groq client
-            gemini_client_asr_model = (
-                self.gemini_asr_model.currentText()
-            )
+            gemini_client_asr_model = self.gemini_asr_model.currentText()
 
             if asr_source_value == "openai_api":
-                current_asr_provider_model_value = (
-                    self.openai_asr_model.currentText()
-                )
+                current_asr_provider_model_value = self.openai_asr_model.currentText()
                 openai_client_asr_model = (
                     current_asr_provider_model_value  # Sync if OpenAI is ASR provider
                 )
             elif asr_source_value == "gemini_api":
-                current_asr_provider_model_value = (
-                    self.gemini_asr_model.currentText()
-                )
+                current_asr_provider_model_value = self.gemini_asr_model.currentText()
                 gemini_client_asr_model = (
                     current_asr_provider_model_value  # Sync if Gemini is ASR provider
                 )
             elif asr_source_value == "groq_api":
-                current_asr_provider_model_value = (
-                    self.groq_asr_model.currentText()
-                )
+                current_asr_provider_model_value = self.groq_asr_model.currentText()
                 groq_client_asr_model = (
                     current_asr_provider_model_value  # Sync if Groq is ASR provider
                 )
@@ -1364,15 +1478,19 @@ class HomeWindow(QMainWindow):
             self._update_llm_provider_fields()
 
             # Load Audio settings
-            self.sample_rate.setCurrentText(str(config['Audio']['sample_rate']))
-            self.channels.setCurrentText(str(config['Audio']['channels']))
-            
+            self.sample_rate.setCurrentText(str(config["Audio"]["sample_rate"]))
+            self.channels.setCurrentText(str(config["Audio"]["channels"]))
+
             # Load VAD settings
-            self.vad_enabled.setCurrentText("Enabled" if config['VAD']['enabled'] else "Disabled")
-            self.vad_aggressiveness.setCurrentText(str(config['VAD']['aggressiveness']))
-            self.silence_duration.setCurrentText(str(config['VAD']['silence_duration_ms']))
-            self.frame_duration.setCurrentText(str(config['VAD']['frame_duration_ms']))
-            
+            self.vad_enabled.setCurrentText(
+                "Enabled" if config["VAD"]["enabled"] else "Disabled"
+            )
+            self.vad_aggressiveness.setCurrentText(str(config["VAD"]["aggressiveness"]))
+            self.silence_duration.setCurrentText(
+                str(config["VAD"]["silence_duration_ms"])
+            )
+            self.frame_duration.setCurrentText(str(config["VAD"]["frame_duration_ms"]))
+
             # Load Output settings
             self.output_method.setCurrentText(config["Output"]["method"])
 
@@ -1389,15 +1507,13 @@ class HomeWindow(QMainWindow):
 
             # Load Vosk settings (Path is now guaranteed by ApplicationManager)
             vosk_config = config.get("Vosk", {})
-            vosk_path_from_config = vosk_config.get(
-                "model_path"
-            )
+            vosk_path_from_config = vosk_config.get("model_path")
             self.vosk_model_path_edit.setText(
                 vosk_path_from_config if vosk_path_from_config else ""
             )
-              
+
             self._apply_ui_restrictions()
-            self._sync_active_llm_model_value() # Ensure LLM model value is synced after rules are applied
+            self._sync_active_llm_model_value()  # Ensure LLM model value is synced after rules are applied
 
         except Exception as e:
             print(f"Error in load_settings: {str(e)}")
@@ -1469,9 +1585,15 @@ class HomeWindow(QMainWindow):
 
             # Default values from ApplicationManager for consistency
             default_openai_model = config.get("OpenAI", {}).get("model", "gpt-4.1")
-            default_gemini_model = config.get("Gemini", {}).get("model", "gemini-2.0-flash")
-            default_groq_model = config.get("Groq", {}).get("model", "llama-3.3-70b-versatile")
-            default_ollama_model = config.get("Ollama", {}).get("model", "llama3.2:latest")
+            default_gemini_model = config.get("Gemini", {}).get(
+                "model", "gemini-2.0-flash"
+            )
+            default_groq_model = config.get("Groq", {}).get(
+                "model", "llama-3.3-70b-versatile"
+            )
+            default_ollama_model = config.get("Ollama", {}).get(
+                "model", "llama3.2:latest"
+            )
 
             # Get the actual model stored for the current source under LLM/model if available,
             # otherwise use the provider-specific model, then the ultimate default.
@@ -1487,24 +1609,46 @@ class HomeWindow(QMainWindow):
             if llm_source == "openai_api":
                 self.openai_model_container.show()
                 # Use user_command_model from OpenAI section, then LLM/model, then default
-                openai_specific_model = config.get("OpenAI", {}).get("user_command_model", default_openai_model)
-                model_to_set = llm_config_model if llm_config_model and llm_config_model in self.openai_model.buttons else openai_specific_model
+                openai_specific_model = config.get("OpenAI", {}).get(
+                    "user_command_model", default_openai_model
+                )
+                model_to_set = (
+                    llm_config_model
+                    if llm_config_model
+                    and llm_config_model in self.openai_model.buttons
+                    else openai_specific_model
+                )
                 self.openai_model.setCurrentText(model_to_set)
             elif llm_source == "gemini_api":
                 self.gemini_model_container.show()
                 # Use user_command_model from Gemini section, then LLM/model, then default
-                gemini_specific_model = config.get("Gemini", {}).get("user_command_model", default_gemini_model)
-                model_to_set = llm_config_model if llm_config_model and llm_config_model in self.gemini_model.buttons else gemini_specific_model
+                gemini_specific_model = config.get("Gemini", {}).get(
+                    "user_command_model", default_gemini_model
+                )
+                model_to_set = (
+                    llm_config_model
+                    if llm_config_model
+                    and llm_config_model in self.gemini_model.buttons
+                    else gemini_specific_model
+                )
                 self.gemini_model.setCurrentText(model_to_set)
             elif llm_source == "groq_api":
                 self.groq_model_container.show()
                 # Use user_command_model from Groq section, then LLM/model, then default
-                groq_specific_model = config.get("Groq", {}).get("user_command_model", default_groq_model)
-                model_to_set = llm_config_model if llm_config_model and llm_config_model in self.groq_model.buttons else groq_specific_model
+                groq_specific_model = config.get("Groq", {}).get(
+                    "user_command_model", default_groq_model
+                )
+                model_to_set = (
+                    llm_config_model
+                    if llm_config_model and llm_config_model in self.groq_model.buttons
+                    else groq_specific_model
+                )
                 self.groq_model.setCurrentText(model_to_set)
             else:  # ollama or unknown source
                 self.llm_model_edit_container.show()
-                self.llm_model_edit.setText(llm_config_model if llm_config_model else default_ollama_model)
+                self.llm_model_edit.setText(
+                    llm_config_model if llm_config_model else default_ollama_model
+                )
 
         finally:
             # Unblock signals
@@ -1516,7 +1660,9 @@ class HomeWindow(QMainWindow):
     def update_setting_visibility(self):
         is_local_asr = self.asr_source.currentText() == "faster_whisper"
         set_widget_hidden_but_take_space(self.asr_device_container, not is_local_asr)
-        set_widget_hidden_but_take_space(self.asr_compute_type_container, not is_local_asr)
+        set_widget_hidden_but_take_space(
+            self.asr_compute_type_container, not is_local_asr
+        )
 
     def _update_asr_provider_fields(self):
         """Update ASR model fields based on the selected ASR source."""
@@ -1544,17 +1690,21 @@ class HomeWindow(QMainWindow):
                 openai_default = config.get("OpenAI", {}).get("asr_model", "whisper-1")
                 model_to_set = (
                     current_asr_model_setting
-                    if current_asr_model_setting and current_asr_model_setting in self.openai_asr_model.buttons
+                    if current_asr_model_setting
+                    and current_asr_model_setting in self.openai_asr_model.buttons
                     else openai_default
                 )
                 self.openai_asr_model.setCurrentText(model_to_set)
                 self.asr_model_label.setText("ASR Model (OpenAI):")
             elif asr_source == "gemini_api":
                 self.gemini_asr_model_container.show()
-                gemini_default = config.get("Gemini", {}).get("asr_model", "gemini-2.0-flash")
+                gemini_default = config.get("Gemini", {}).get(
+                    "asr_model", "gemini-2.0-flash"
+                )
                 model_to_set = (
                     current_asr_model_setting
-                    if current_asr_model_setting and current_asr_model_setting in self.gemini_asr_model.buttons
+                    if current_asr_model_setting
+                    and current_asr_model_setting in self.gemini_asr_model.buttons
                     else gemini_default
                 )
                 self.gemini_asr_model.setCurrentText(model_to_set)
@@ -1566,10 +1716,13 @@ class HomeWindow(QMainWindow):
                 self.asr_model_label.setText("ASR Model (Local Whisper):")
             elif asr_source == "groq_api":
                 self.groq_asr_model_container.show()
-                groq_default = config.get("Groq", {}).get("asr_model", "distil-whisper-large-v3-en")
+                groq_default = config.get("Groq", {}).get(
+                    "asr_model", "distil-whisper-large-v3-en"
+                )
                 model_to_set = (
                     current_asr_model_setting
-                    if current_asr_model_setting and current_asr_model_setting in self.groq_asr_model.buttons
+                    if current_asr_model_setting
+                    and current_asr_model_setting in self.groq_asr_model.buttons
                     else groq_default
                 )
                 self.groq_asr_model.setCurrentText(model_to_set)
@@ -1589,7 +1742,7 @@ class HomeWindow(QMainWindow):
         label.setStyleSheet(f"""
             font-size: 24px;
             font-weight: 600;
-            color: {self.theme_manager.get_color('text_primary')};
+            color: {self.theme_manager.get_color("text_primary")};
             margin-bottom: 28px;
             margin-left: 0px;
         """)
@@ -1603,13 +1756,15 @@ class HomeWindow(QMainWindow):
             }
         """)
 
-    def set_label_style(self, label, *, color=None, font_size=13, padding='8px 0px', font_weight=None):
-        if not hasattr(self, '_themed_labels'):
+    def set_label_style(
+        self, label, *, color=None, font_size=13, padding="8px 0px", font_weight=None
+    ):
+        if not hasattr(self, "_themed_labels"):
             self._themed_labels = []
         if label not in self._themed_labels:
             self._themed_labels.append(label)
-        label_color = color or self.theme_manager.get_color('text_primary')
-        weight = f'font-weight: {font_weight};' if font_weight else ''
+        label_color = color or self.theme_manager.get_color("text_primary")
+        weight = f"font-weight: {font_weight};" if font_weight else ""
         label.setStyleSheet(f"""
             font-size: {font_size}px;
             color: {label_color};
@@ -1618,8 +1773,8 @@ class HomeWindow(QMainWindow):
         """)
 
     def set_primary_button_style(self, button):
-        background = self.theme_manager.get_color('button.background')
-        text = self.theme_manager.get_color('button.text')
+        background = self.theme_manager.get_color("button.background")
+        text = self.theme_manager.get_color("button.text")
         button.setStyleSheet(f"""
             QPushButton {{
                 background-color: {background};
@@ -1641,9 +1796,9 @@ class HomeWindow(QMainWindow):
 
     def _handle_ui_change(self):
         """Handle changes in application mode selection or other UI elements that drive restrictions."""
-        self._apply_ui_restrictions() # Apply all defined UI restrictions
-        self.save_settings() # Save settings as application_mode changed,
-                             # and potentially other settings due to restrictions.
+        self._apply_ui_restrictions()  # Apply all defined UI restrictions
+        self.save_settings()  # Save settings as application_mode changed,
+        # and potentially other settings due to restrictions.
 
     def _apply_ui_restrictions(self):
         """Apply all UI restrictions defined in UI_RESTRICTIONS."""
@@ -1657,8 +1812,10 @@ class HomeWindow(QMainWindow):
                         # Specifically looking for widgets that might trigger cascading updates
                         # like _update_llm_provider_fields if their state is programmatically changed.
                         if action_detail["target_widget_name"] == "llm_source":
-                             widgets_to_manage_signals.add(action_detail["target_widget_name"])
-        
+                            widgets_to_manage_signals.add(
+                                action_detail["target_widget_name"]
+                            )
+
         # Block signals for widgets that have dependent UI updates triggered by their changes
         for widget_name in widgets_to_manage_signals:
             widget = getattr(self, widget_name, None)
@@ -1670,7 +1827,7 @@ class HomeWindow(QMainWindow):
         self.speech_recognition_button.setEnabled(True)
         # Add other widgets here if they follow a similar pattern of default state + specific overrides
 
-        # --- Pass 1: Apply defaults or reset states for certain widget types before rules --- 
+        # --- Pass 1: Apply defaults or reset states for certain widget types before rules ---
         # For SegmentedButtonGroups that could be targets of "force_selection" or "disable_options",
         # it's often cleaner to enable all their options first.
         # This makes "else_actions" for these simpler (often just "enable_all_options").
@@ -1678,45 +1835,63 @@ class HomeWindow(QMainWindow):
             for action_list_key in ["then_actions", "else_actions"]:
                 if action_list_key in rule_config:
                     for action_detail in rule_config[action_list_key]:
-                        target_widget = getattr(self, action_detail["target_widget_name"], None)
+                        target_widget = getattr(
+                            self, action_detail["target_widget_name"], None
+                        )
                         if isinstance(target_widget, SegmentedButtonGroup):
                             # If an "enable_all_options" action exists, it implies this widget should be fully enabled
                             # unless a rule specifically constrains it. So, ensure all buttons are enabled by default.
                             # This is particularly for the `else_actions` of a `force_selection`.
-                            if action_detail["action"] == "enable_all_options": # A bit of a heuristic
+                            if (
+                                action_detail["action"] == "enable_all_options"
+                            ):  # A bit of a heuristic
                                 for button in target_widget.buttons:
                                     button.setEnabled(True)
                             # A more direct pre-reset for all targeted SegmentedButtonGroups could also be done here.
 
-        # --- Pass 2: Evaluate conditions and apply actions --- 
+        # --- Pass 2: Evaluate conditions and apply actions ---
         for rule_config in HomeWindow.UI_RESTRICTIONS:
             condition_cfg = rule_config["condition"]
             condition_widget = getattr(self, condition_cfg["widget_name"], None)
 
             if not condition_widget:
-                print(f"Warning: Condition widget '{condition_cfg['widget_name']}' not found for a UI rule.")
+                print(
+                    f"Warning: Condition widget '{condition_cfg['widget_name']}' not found for a UI rule."
+                )
                 continue
 
             current_value = None
-            if condition_cfg["property"] == "currentText" and hasattr(condition_widget, "currentText"):
+            if condition_cfg["property"] == "currentText" and hasattr(
+                condition_widget, "currentText"
+            ):
                 current_value = condition_widget.currentText()
-            elif condition_cfg["property"] == "isChecked" and hasattr(condition_widget, "isChecked"):
+            elif condition_cfg["property"] == "isChecked" and hasattr(
+                condition_widget, "isChecked"
+            ):
                 current_value = condition_widget.isChecked()
             # Add more property types if needed
             else:
-                print(f"Warning: Property '{condition_cfg['property']}' not supported for widget '{condition_cfg['widget_name']}'.")
+                print(
+                    f"Warning: Property '{condition_cfg['property']}' not supported for widget '{condition_cfg['widget_name']}'."
+                )
                 continue
 
-            condition_met = (current_value == condition_cfg["value"])
-            
-            actions_to_apply = rule_config["then_actions"] if condition_met else rule_config.get("else_actions", [])
+            condition_met = current_value == condition_cfg["value"]
+
+            actions_to_apply = (
+                rule_config["then_actions"]
+                if condition_met
+                else rule_config.get("else_actions", [])
+            )
 
             for action_detail in actions_to_apply:
                 target_widget = getattr(self, action_detail["target_widget_name"], None)
                 if not target_widget:
-                    print(f"Warning: Target widget '{action_detail['target_widget_name']}' not found for action.")
+                    print(
+                        f"Warning: Target widget '{action_detail['target_widget_name']}' not found for action."
+                    )
                     continue
-                
+
                 action_type = action_detail["action"]
 
                 if isinstance(target_widget, SegmentedButtonGroup):
@@ -1733,29 +1908,38 @@ class HomeWindow(QMainWindow):
                     elif action_type == "enable_all_options":
                         for button in target_widget.buttons:
                             button.setEnabled(True)
-                        target_widget.setEnabled(True) # Ensure the group widget itself is enabled
-                
-                elif isinstance(target_widget, QWidget): # General QWidget actions
+                        target_widget.setEnabled(
+                            True
+                        )  # Ensure the group widget itself is enabled
+
+                elif isinstance(target_widget, QWidget):  # General QWidget actions
                     if action_type == "set_visibility_and_space":
                         is_visible = action_detail["visible"]
                         set_widget_hidden_but_take_space(target_widget, not is_visible)
                     elif action_type == "set_enabled":
                         is_enabled = action_detail["enabled"]
-                        if action_detail["target_widget_name"] == "speech_recognition_button":
+                        if (
+                            action_detail["target_widget_name"]
+                            == "speech_recognition_button"
+                        ):
                             # Assuming rule_config is available in this scope from the outer loop
                             rule_condition_info = rule_config.get("condition", {})
-                            print(f"[DEBUG SRB] Rule condition: {rule_condition_info}. Applying set_enabled: {is_enabled} to speech_recognition_button. Condition met for this rule: {condition_met}")
+                            print(
+                                f"[DEBUG SRB] Rule condition: {rule_condition_info}. Applying set_enabled: {is_enabled} to speech_recognition_button. Condition met for this rule: {condition_met}"
+                            )
                         target_widget.setEnabled(is_enabled)
-                
+
                 # Add more widget types and actions as needed
                 else:
-                    print(f"Warning: Action '{action_type}' on target '{action_detail['target_widget_name']}' is for an unhandled widget type: {type(target_widget)}.")
+                    print(
+                        f"Warning: Action '{action_type}' on target '{action_detail['target_widget_name']}' is for an unhandled widget type: {type(target_widget)}."
+                    )
 
         # Unblock signals
         for widget_name in widgets_to_manage_signals:
             widget = getattr(self, widget_name, None)
             if widget and hasattr(widget, "blockSignals"):
-                 widget.blockSignals(False)
+                widget.blockSignals(False)
 
         # Manually trigger update of dependent UI components that were programmatically changed.
         if "llm_source" in widgets_to_manage_signals:
@@ -1765,9 +1949,9 @@ class HomeWindow(QMainWindow):
 
     def _handle_llm_source_change(self):
         """Handle changes in LLM source selection."""
-        self._apply_ui_restrictions() # Apply UI restrictions (will show/hide correct model container)
+        self._apply_ui_restrictions()  # Apply UI restrictions (will show/hide correct model container)
         # _sync_active_llm_model_value() will be called by _apply_ui_restrictions
-        self.save_settings() # Save settings as llm_source changed
+        self.save_settings()  # Save settings as llm_source changed
 
     def _sync_active_llm_model_value(self):
         """Sync the currently selected LLM model value based on the active LLM source and loaded settings."""
@@ -1784,9 +1968,15 @@ class HomeWindow(QMainWindow):
             # Default values from ApplicationManager for consistency (or use hardcoded if preferred)
             # These defaults are typically for initial setup if no specific model is found in settings.
             default_openai_model = config.get("OpenAI", {}).get("model", "gpt-4.1")
-            default_gemini_model = config.get("Gemini", {}).get("model", "gemini-2.0-flash")
-            default_groq_model = config.get("Groq", {}).get("model", "llama-3.3-70b-versatile")
-            default_ollama_model = config.get("Ollama", {}).get("model", "llama3.2:latest")
+            default_gemini_model = config.get("Gemini", {}).get(
+                "model", "gemini-2.0-flash"
+            )
+            default_groq_model = config.get("Groq", {}).get(
+                "model", "llama-3.3-70b-versatile"
+            )
+            default_ollama_model = config.get("Ollama", {}).get(
+                "model", "llama3.2:latest"
+            )
 
             # Get the actual model stored for the current source under LLM/model if available,
             # otherwise use the provider-specific model, then the ultimate default.
@@ -1794,7 +1984,8 @@ class HomeWindow(QMainWindow):
 
             # Helper to check if a SegmentedButtonGroup contains a button with specific text
             def has_button_with_text(segmented_button_group, text_to_find):
-                if not text_to_find: return False # Cannot find an empty string button typically
+                if not text_to_find:
+                    return False  # Cannot find an empty string button typically
                 for button in segmented_button_group.buttons:
                     if button.text() == text_to_find:
                         return True
@@ -1802,20 +1993,42 @@ class HomeWindow(QMainWindow):
 
             # Set model based on source - Visibility is handled by _apply_ui_restrictions
             if llm_source == "openai_api":
-                openai_specific_model = config.get("OpenAI", {}).get("user_command_model", default_openai_model)
+                openai_specific_model = config.get("OpenAI", {}).get(
+                    "user_command_model", default_openai_model
+                )
                 # Prioritize LLM/model if it's valid for this provider, then provider-specific, then default
-                model_to_set = llm_config_model if has_button_with_text(self.openai_model, llm_config_model) else openai_specific_model
+                model_to_set = (
+                    llm_config_model
+                    if has_button_with_text(self.openai_model, llm_config_model)
+                    else openai_specific_model
+                )
                 self.openai_model.setCurrentText(model_to_set)
             elif llm_source == "gemini_api":
-                gemini_specific_model = config.get("Gemini", {}).get("user_command_model", default_gemini_model)
-                model_to_set = llm_config_model if has_button_with_text(self.gemini_model, llm_config_model) else gemini_specific_model
+                gemini_specific_model = config.get("Gemini", {}).get(
+                    "user_command_model", default_gemini_model
+                )
+                model_to_set = (
+                    llm_config_model
+                    if has_button_with_text(self.gemini_model, llm_config_model)
+                    else gemini_specific_model
+                )
                 self.gemini_model.setCurrentText(model_to_set)
             elif llm_source == "groq_api":
-                groq_specific_model = config.get("Groq", {}).get("user_command_model", default_groq_model)
-                model_to_set = llm_config_model if has_button_with_text(self.groq_model, llm_config_model) else groq_specific_model
+                groq_specific_model = config.get("Groq", {}).get(
+                    "user_command_model", default_groq_model
+                )
+                model_to_set = (
+                    llm_config_model
+                    if has_button_with_text(self.groq_model, llm_config_model)
+                    else groq_specific_model
+                )
                 self.groq_model.setCurrentText(model_to_set)
-            elif llm_source == "ollama": # Check if this is the exact text from SegmentedButtonGroup
-                self.llm_model_edit.setText(llm_config_model if llm_config_model else default_ollama_model)
+            elif (
+                llm_source == "ollama"
+            ):  # Check if this is the exact text from SegmentedButtonGroup
+                self.llm_model_edit.setText(
+                    llm_config_model if llm_config_model else default_ollama_model
+                )
 
         finally:
             # Unblock signals
@@ -1824,49 +2037,64 @@ class HomeWindow(QMainWindow):
             self.groq_model.blockSignals(False)
             self.gemini_model.blockSignals(False)
 
-    def start_keyboard_listening(self):
-        """Start listening for keyboard input when keyboard page is shown"""
-        self.is_recording_hotkey = True
-        self._last_pressed_keys = None
-        self._hold_start_time = None
-        self.hold_timer.stop()
-        self.start_recording_hotkey.setPlaceholderText("Press and hold keys for 2 seconds to set hotkey...")
+    # def start_keyboard_listening(self):
+    #     """Start listening for keyboard input when keyboard page is shown"""
+    #     self.is_recording_hotkey = True
+    #     self._last_pressed_keys = None
+    #     self._hold_start_time = None
+    #     self.hold_timer.stop()
+    #     self.start_recording_hotkey.setPlaceholderText(
+    #         "Press and hold keys for 2 seconds to set hotkey..."
+    #     )
 
     def poll_pressed_keys(self):
         """Poll for pressed keys and handle hotkey recording"""
-        if not self.is_recording_hotkey or self.stacked_widget.currentWidget() != self.keyboard_page or not self.isActiveWindow():
+        if (
+            not self.is_recording_hotkey
+            or self.stacked_widget.currentWidget() != self.keyboard_page
+            or not self.isActiveWindow()
+        ):
             return
 
         pressed_keys = self.app_manager.keyboard_manager.get_pressed_keys()
-        key_symbols = [self.app_manager.keyboard_manager.get_key_symbol(k) for k in pressed_keys]
-        
+        key_symbols = [
+            self.app_manager.keyboard_manager.get_key_symbol(k) for k in pressed_keys
+        ]
+
         if len(key_symbols) > 0:
-            # If keys changed, reset hold timer
             if self._last_pressed_keys != key_symbols:
                 self._last_pressed_keys = key_symbols
-                self._hold_start_time = None
-                self.hold_timer.stop()
                 self.start_recording_hotkey.setText("+".join(key_symbols))
-                self.start_recording_hotkey.setPlaceholderText("Hold keys for 2 seconds to lock in...")
-            # If keys are the same and we haven't started the hold timer
-            elif self._hold_start_time is None:
-                self._hold_start_time = QTimer.singleShot(2000, self.on_hotkey_hold_complete)
         else:
             # If no keys are pressed and we haven't locked in a combination
             if not self.start_recording_hotkey.text():
                 self._last_pressed_keys = None
-                self._hold_start_time = None
-                self.hold_timer.stop()
                 self.start_recording_hotkey.setText("")
-                self.start_recording_hotkey.setPlaceholderText("Press and hold keys for 2 seconds to set hotkey...")
 
-    def on_hotkey_hold_complete(self):
-        """Called when user has held the same keys for 2 seconds"""
+    def start_hotkey_recording(self):
+        self.start_hotkey_button.setVisible(False)
+        self.stop_hotkey_button.setVisible(True)
+        self.is_recording_hotkey = True
+        self._last_pressed_keys = None
+        self.keyboard_poll_timer.start(50)
+
+    def stop_hotkey_recording(self):
+        print("Stopping hotkey recording")
+        self.is_recording_hotkey = False
+        self.keyboard_poll_timer.stop()
+        self.start_hotkey_button.setEnabled(True)
+
         if self._last_pressed_keys:
             hotkey_str = "+".join(self._last_pressed_keys)
             self.start_recording_hotkey.setText(hotkey_str)
-            self.start_recording_hotkey.setPlaceholderText("Press any other key to change")
-            self.save_settings()  # Save the new hotkey setting
+            self.start_recording_hotkey.setPlaceholderText(
+                "Press any other key to change"
+            )
+            # self.save_settings()  # Save the new hotkey setting
+
+        self.start_hotkey_button.setVisible(True)
+        self.stop_hotkey_button.setVisible(False)
+
 
 def set_widget_hidden_but_take_space(widget: QWidget, hidden: bool):
     if hidden:

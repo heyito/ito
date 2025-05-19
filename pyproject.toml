@@ -36,6 +36,7 @@ deepdiff = "^8.4.2"
 groq = "^0.24.0"
 google-genai = "^1.14.0"
 pyside6 = "^6.9.0"
+rich = "^14.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

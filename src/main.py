@@ -10,7 +10,6 @@ import traceback
 import sounddevice as sd
 from PySide6.QtWidgets import QApplication
 
-from src.containers import Container
 from src.ui.keyboard_manager import KeyboardManager
 from src.ui.theme.manager import ThemeManager
 from src.ui.onboarding import OnboardingWindow

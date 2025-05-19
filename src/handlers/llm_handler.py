@@ -6,7 +6,8 @@ from typing import Callable, List, Dict, Optional, Any
 from src.clients.llm_client_interface import LLMClientInterface
 from src.utils.timing import time_method
 
-from google.genai import types
+from rich import print as rprint
+from rich.pretty import pprint
 
 # Default System Prompt (can be configured or overridden)
 DEFAULT_LLM_SYSTEM_PROMPT = "You are a helpful AI assistant."
@@ -147,6 +148,7 @@ class LLMHandler:
         )
 
         steps = 0
+        all_tool_calls = {}
         while steps < max_steps:
             resp = self.client.generate_response(
                 text="",
@@ -179,6 +181,8 @@ class LLMHandler:
                 )
                 messages.extend(tool_messages)
 
+                all_tool_calls[f"{tool_name}_{steps}"] = args
+
             if is_complete:
                 break
 
@@ -186,3 +190,8 @@ class LLMHandler:
             user_info = run_after_step(state)
             if user_info:
                 messages.append(self.client.format_user_message(content=user_info))
+
+        rprint(
+            "[bold green]Tool call report [italic](<tool_name>_<step>)[/italic]: [/bold green]"
+        )
+        pprint(all_tool_calls)

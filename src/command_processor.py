@@ -6,6 +6,7 @@ import traceback
 from typing import Any, Dict, Optional
 
 from src.engines.processing_engine import ProcessingEngine
+from src.types.status_messages import StatusMessage
 
 class CommandProcessor:
     """Handles the execution of the command processing pipeline."""
@@ -37,7 +38,7 @@ class CommandProcessor:
         timestamp = time.strftime('%H:%M:%S')
         if (not user_text_command or not user_text_command.strip()) and not user_command_audio:
             print(f"[{timestamp}] CommandProcessor: Skipping empty command.")
-            self._update_status("Ready (empty command)")
+            self._update_status(StatusMessage.READY)
             return False
 
         # Make copies of data outside the lock to minimize lock holding time

@@ -293,22 +293,45 @@ class ApplicationManager(QObject):
                 if hasattr(self.app_instance, "stop_application_event"):
                     self.app_instance.stop_application_event.set()
 
+            # Stop asyncio loop first if it exists
+            if hasattr(self.container, "asyncio_loop_manager"):
+                print("Stopping asyncio loop manager...")
+                try:
+                    self.container.asyncio_loop_manager().stop_loop()
+                except Exception as e:
+                    print(f"Error stopping asyncio loop: {e}")
+
             print("Waiting for background application thread to join...")
-            self.app_thread.join(timeout=2.0)  # Increased timeout
-            if self.app_thread.is_alive():
-                print("Warning: Background application thread did not exit cleanly.")
-            else:
-                print("Background application thread joined.")
-                stopped_thread = True
-            self.app_thread = None
-            self.app_instance = None
+            try:
+                self.app_thread.join(timeout=5.0)  # Increased timeout
+                if self.app_thread.is_alive():
+                    print("Warning: Background application thread did not exit cleanly.")
+                    # Force terminate the thread if it's still alive
+                    import ctypes
+                    thread_id = self.app_thread.ident
+                    if thread_id:
+                        res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
+                            ctypes.c_long(thread_id),
+                            ctypes.py_object(SystemExit)
+                        )
+                        if res == 0:
+                            print("Failed to force terminate thread")
+                        elif res != 1:
+                            ctypes.pythonapi.PyThreadState_SetAsyncExc(
+                                ctypes.c_long(thread_id),
+                                None
+                            )
+                            print("Failed to force terminate thread")
+                else:
+                    print("Background application thread joined.")
+                    stopped_thread = True
+            except Exception as e:
+                print(f"Error joining application thread: {e}")
+            finally:
+                self.app_thread = None
+                self.app_instance = None
         else:
             print("No background application thread to stop.")
-
-        # Stop asyncio loop if streaming mode might have used it
-        if hasattr(self.container, "asyncio_loop_manager"):
-            print("Stopping asyncio loop manager...")
-            self.container.asyncio_loop_manager().stop_loop()
 
         # Clear queues
         print("Clearing queues...")
@@ -326,7 +349,6 @@ class ApplicationManager(QObject):
 
         # Multiprocessing cleanup
         import multiprocessing
-
         try:
             print("Cleaning up multiprocessing resources...")
             # Get all active children

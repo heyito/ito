@@ -15,18 +15,26 @@ class RestartHandler(FileSystemEventHandler):
     def start_process(self):
         if self.process:
             # Kill the existing process
-            os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
-            self.process.wait()
+            try:
+                os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
+                self.process.wait()
+            except ProcessLookupError:
+                # Process might have already terminated
+                pass
         
         # Start a new process
-        env = os.environ.copy()
-        env['DEV'] = 'true'
-        self.process = subprocess.Popen(
-            [sys.executable, '-m', 'src.main'],
-            env=env,
-            preexec_fn=os.setsid  # Create new process group
-        )
-        print("\n🔄 Restarted application")
+        try:
+            env = os.environ.copy()
+            env['DEV'] = 'true'
+            self.process = subprocess.Popen(
+                [sys.executable, '-m', 'src.main'],
+                env=env,
+                preexec_fn=os.setsid,
+            )
+            print("\n🔄 Started application")
+        except Exception as e:
+            print(f"\n❌ Error starting application: {str(e)}")
+            self.process = None
 
     def on_modified(self, event):
         if event.src_path.endswith('.py'):
@@ -48,7 +56,10 @@ def main():
     except KeyboardInterrupt:
         observer.stop()
         if handler.process:
-            os.killpg(os.getpgid(handler.process.pid), signal.SIGTERM)
+            try:
+                os.killpg(os.getpgid(handler.process.pid), signal.SIGTERM)
+            except ProcessLookupError:
+                pass
     observer.join()
 
 if __name__ == "__main__":

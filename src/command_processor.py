@@ -49,7 +49,7 @@ class CommandProcessor:
         with self._lock:
             if self._is_processing:
                 print(f"[{timestamp}] CommandProcessor: Busy (is_processing is True). Skipping command: '{command_copy[:30]}...'")
-                self._update_status("Busy processing previous command")
+                self._update_status(StatusMessage.BUSY)
                 return False
             
             # Mark as processing and store the thread reference under lock

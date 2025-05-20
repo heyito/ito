@@ -120,19 +120,18 @@ class DiscreteApplicationRunner(ApplicationInterface):
             user_text_command = self.asr_handler.transcribe_audio(audio_buffer)
             if not user_text_command or not user_text_command.strip():
                 print(f"[{timestamp}] Discrete Runner: Transcription empty.")
-                self._update_status(StatusMessage.READY_EMPTY)
-                return
+                raise ValueError("Transcription empty")
             print(f"[{timestamp}] Discrete Runner: Transcribed: '{user_text_command}'")
             self._update_status(StatusMessage.TRANSCRIBED.format(text=user_text_command[:40]))
         except Exception as e:
             print(f"[{timestamp}] Discrete Runner: ASR Error: {e}")
             traceback.print_exc()
-            self._update_status(StatusMessage.ASR_ERROR.format(error=str(e)))
+            self._update_status(StatusMessage.ERROR.format(error=str(e)))
             return
 
         # --- Wait for Context ---
         print(f"[{timestamp}] Discrete Runner: Waiting for context...")
-        context_doc_text = self.context_manager.wait_for_context(timeout=5.0)
+        self.context_manager.wait_for_context(timeout=5.0)
         # Get the full context dict (app_name + doc_text)
         current_context_data = self.context_manager.get_current_context()
         print(f"[{timestamp}] Discrete Runner: Context ready (App: {current_context_data.get('app_name')}).")

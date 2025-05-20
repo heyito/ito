@@ -17,13 +17,11 @@ class StatusMessage(Enum):
     ALREADY_RECORDING = "Already recording..."
     LISTENING = "Listening for hotkey '{hotkey}'..."
     LISTENER_FAILED = "Hotkey listener failed to start!"
-    ERROR = "Application error occurred"
     RECORDING = "Recording command..."
     ERROR_RECORDING = "Error processing audio"
     TRANSCRIBING = "Transcribing command..."
-    READY_EMPTY = "Ready (empty transcription)"
     TRANSCRIBED = "Transcribed: '{text}'"
-    ASR_ERROR = "ASR Error: {error}"
+    ERROR = "Error: {error}"
 
     def format(self, **kwargs) -> str:
         """Format the status message with any provided keyword arguments."""
@@ -37,8 +35,8 @@ class StatusMessage(Enum):
         if message.startswith("Transcribed: '"):
             return cls.TRANSCRIBED
         # Check for ASR error messages
-        if message.startswith("ASR Error: "):
-            return cls.ASR_ERROR
+        if message.startswith("Error: "):
+            return cls.ERROR
         # Check for exact matches
         for status in cls:
             if message == status.value:

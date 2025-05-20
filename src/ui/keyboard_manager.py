@@ -221,10 +221,6 @@ class KeyboardManager(QObject):
             print(f"Error in _on_release: {e}")
             traceback.print_exc()
 
-        # Stop listener
-        if key == keyboard.Key.esc:
-            return False
-
     def get_pressed_keys(self):
         """
         Returns a list of symbols for the currently pressed keys,

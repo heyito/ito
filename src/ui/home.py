@@ -59,7 +59,7 @@ else:
     _objc_available = False
 
 
-class HomeWindow(QMainWindow):
+class Home(QMainWindow):
     # Centralized UI Restriction Rules
     # Each rule defines a condition and actions to take if the condition is met or not.
     UI_RESTRICTIONS = [
@@ -1805,7 +1805,7 @@ class HomeWindow(QMainWindow):
         # Collect all unique widget names that are targets of actions to manage signal blocking
         # For now, we know llm_source is a primary one needing signal management for its dependent updates.
         widgets_to_manage_signals = set()
-        for rule_config in HomeWindow.UI_RESTRICTIONS:
+        for rule_config in Home.UI_RESTRICTIONS:
             for action_list_key in ["then_actions", "else_actions"]:
                 if action_list_key in rule_config:
                     for action_detail in rule_config[action_list_key]:
@@ -1831,7 +1831,7 @@ class HomeWindow(QMainWindow):
         # For SegmentedButtonGroups that could be targets of "force_selection" or "disable_options",
         # it's often cleaner to enable all their options first.
         # This makes "else_actions" for these simpler (often just "enable_all_options").
-        for rule_config in HomeWindow.UI_RESTRICTIONS:
+        for rule_config in Home.UI_RESTRICTIONS:
             for action_list_key in ["then_actions", "else_actions"]:
                 if action_list_key in rule_config:
                     for action_detail in rule_config[action_list_key]:
@@ -1850,7 +1850,7 @@ class HomeWindow(QMainWindow):
                             # A more direct pre-reset for all targeted SegmentedButtonGroups could also be done here.
 
         # --- Pass 2: Evaluate conditions and apply actions ---
-        for rule_config in HomeWindow.UI_RESTRICTIONS:
+        for rule_config in Home.UI_RESTRICTIONS:
             condition_cfg = rule_config["condition"]
             condition_widget = getattr(self, condition_cfg["widget_name"], None)
 

@@ -130,13 +130,13 @@ class OnboardingWindow(QMainWindow):
         if setup_complete:
             print("Permissions setup previously completed. Transitioning to home screen.")
             # Import here to avoid circular imports
-            from src.ui.home_window import HomeWindow
+            from src.ui.home import Home
             # Create home window but don't show it yet
-            self.home_window = HomeWindow(theme_manager=self.theme_manager)
+            self.home = Home(theme_manager=self.theme_manager)
             # Hide this window before showing the home window
             self.hide()
             # Show the home window
-            self.home_window.show()
+            self.home.show()
             # Use a timer to close this window after a short delay
             QTimer.singleShot(0, self.close)
         else:
@@ -654,14 +654,14 @@ class OnboardingWindow(QMainWindow):
         self.settings.setValue("permissionsSetupComplete", True)
         
         # Import here to avoid circular imports
-        from src.ui.home_window import HomeWindow
+        from src.ui.home import Home
         
         # Create home window but don't show it yet
-        self.home_window = HomeWindow(theme_manager=self.theme_manager)
+        self.home = Home(theme_manager=self.theme_manager)
         # Hide this window before showing the home window
         self.hide()
         # Show the home window
-        self.home_window.show()
+        self.home.show()
         # Use a timer to close this window after a short delay
         QTimer.singleShot(0, self.close)
 

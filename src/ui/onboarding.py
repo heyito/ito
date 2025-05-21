@@ -1,11 +1,6 @@
-import os
-import platform
 import sys
-import traceback
 
-import sounddevice as sd
-from PySide6.QtCore import QObject, Signal, Qt, QSettings, QPoint, QTimer
-from PySide6.QtGui import QPixmap
+from PySide6.QtCore import Qt, QSettings, QPoint, QTimer
 from PySide6.QtWidgets import (
     QApplication,
     QLabel,
@@ -14,51 +9,11 @@ from PySide6.QtWidgets import (
 from src.ui.components.inten_layout import IntenLayout
 from src.ui.theme.manager import ThemeManager
 from src.ui.keyboard_manager import KeyboardManager
+from src.ui.permission_checker import PermissionChecker
 from src.ui.screens.onboarding.permission_screen import PermissionScreen
 from src.ui.screens.onboarding.keyboard_setup_screen import KeyboardSetupScreen
 from src.ui.screens.onboarding.welcome_screen import WelcomeScreen
 from src.ui.screens.onboarding.completion_screen import CompletionScreen
-
-
-class PermissionChecker(QObject):
-    permission_checked = Signal(str, bool)  # permission_name, is_granted
-
-    def check_microphone(self):
-        try:
-            # Just try to query the default input device - this triggers permission check
-            # without actually opening a stream
-            device_info = sd.query_devices(kind="input")
-            print(
-                f"Microphone permission granted - found device: {device_info['name']}"
-            )
-            self.permission_checked.emit("microphone", True)
-        except sd.PortAudioError as e:
-            print(f"Microphone permission error: {e}")
-            self.permission_checked.emit("microphone", False)
-        except Exception as e:
-            print(f"Unexpected error checking microphone: {e}")
-            traceback.print_exc()
-            self.permission_checked.emit("microphone", False)
-
-    def check_accessibility(self):
-        if platform.system() == "Darwin":
-            try:
-                from src import platform_utils_macos
-
-                print("Checking accessibility permissions...")
-                has_permission = platform_utils_macos.check_accessibility_permission()
-                print(f"Accessibility permission check result: {has_permission}")
-                self.permission_checked.emit("accessibility", has_permission)
-            except ImportError as e:
-                print(f"Error importing platform_utils_macos: {e}")
-                self.permission_checked.emit("accessibility", False)
-            except Exception as e:
-                print(f"Error checking accessibility permission: {e}")
-                traceback.print_exc()
-                self.permission_checked.emit("accessibility", False)
-        else:
-            print("Not on macOS, assuming accessibility permissions granted")
-            self.permission_checked.emit("accessibility", True)
 
 
 class OnboardingWindow(QMainWindow):
@@ -130,15 +85,6 @@ class OnboardingWindow(QMainWindow):
             self.show_welcome_screen()
             # Now show the window
             self.show()
-
-        logo_path = self.theme_manager.get_logo_path()
-        logo_pixmap = None
-        if logo_path:
-            logo_pixmap = QPixmap(logo_path)
-            if not logo_pixmap.isNull():
-                print(f"Loaded logo from: {logo_path}")
-        if not logo_pixmap or logo_pixmap.isNull():
-            print("Logo not found, using fallback emoji.")
 
         # Apply initial styles
         self.update_styles(self.theme_manager.current_theme)
@@ -288,24 +234,14 @@ class OnboardingWindow(QMainWindow):
         acc_button.clicked.connect(
             self.permission_screen.request_accessibility_permission
         )
-        continue_button.clicked.connect(self.check_all_permissions_and_proceed)
+        continue_button.clicked.connect(
+            self.permission_screen.check_all_permissions_and_proceed
+        )
 
         # Connect permission checker signal
         self.permission_checker.permission_checked.connect(
             self.permission_screen.handle_permission_check
         )
-
-    def check_all_permissions_and_proceed(self):
-        """Checks if all permissions are granted and proceeds to keyboard setup screen."""
-        if all(self.permission_states.values()):
-            self.show_keyboard_setup_screen()
-        else:
-            # Show error message
-            error_label = QLabel("Please grant all required permissions to continue")
-            error_label.setStyleSheet(
-                f"color: {self.theme_manager.get_color('error')};"
-            )
-            self.layout.addWidget(error_label)
 
     def show_keyboard_setup_screen(self):
         self.clear_layout()

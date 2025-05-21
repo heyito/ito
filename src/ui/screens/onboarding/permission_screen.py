@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QWidget,
+    QMainWindow,
 )
 import platform
 import os
@@ -20,32 +21,72 @@ class PermissionScreen:
         self.progress_bar = None
         self.continue_button = None
         self.permission_states = {"microphone": False, "accessibility": False}
+        self._is_cleaned_up = False
+
+        # Store references to widgets that need style updates
+        self.title_label = None
+        self.desc_label = None
+        self.mic_button = None
+        self.acc_button = None
+        self.continue_button = None
+        self.mic_status = None
+        self.acc_status = None
+
+        # Connect theme changes
+        self.theme_manager.theme_changed.connect(self.update_styles)
+
+    def update_styles(self):
+        """Update all styles based on current theme"""
+        if self._is_cleaned_up:
+            return
+
+        if self.title_label:
+            self.title_label.setStyleSheet(f"""
+                font-size: 28px;
+                font-weight: 600;
+                color: {self.theme_manager.get_color("text_primary")};
+                margin-top: 0px;
+                margin-bottom: 6px;
+                letter-spacing: -0.5px;
+            """)
+
+        if self.desc_label:
+            self.desc_label.setStyleSheet(f"""
+                font-size: 15px;
+                color: {self.theme_manager.get_color("text_secondary")};
+                font-weight: 400;
+                margin-bottom: 40px;
+                letter-spacing: 0.1px;
+            """)
+
+        if self.mic_status:
+            is_granted = self.permission_states.get("microphone", False)
+            self.mic_status.setStyleSheet(
+                f"color: {self.theme_manager.get_color('text_primary')};"
+                if is_granted
+                else f"color: {self.theme_manager.get_color('text_secondary')};"
+            )
+
+        if self.acc_status:
+            is_granted = self.permission_states.get("accessibility", False)
+            self.acc_status.setStyleSheet(
+                f"color: {self.theme_manager.get_color('text_primary')};"
+                if is_granted
+                else f"color: {self.theme_manager.get_color('text_secondary')};"
+            )
 
     def create(self, parent_layout):
         # Title
-        title_label = QLabel("Required Permissions")
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_label.setStyleSheet(f"""
-            font-size: 28px; 
-            font-weight: 600; 
-            color: {self.theme_manager.get_color("text_primary")};
-            margin-top: 40px; 
-            margin-bottom: 8px;
-            letter-spacing: -0.5px;
-        """)
-        parent_layout.addWidget(title_label)
+        self.title_label = QLabel("Required Permissions")
+        self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        parent_layout.addWidget(self.title_label)
 
         # Description
-        desc_label = QLabel(
+        self.desc_label = QLabel(
             "Inten needs a few permissions to help you be more productive"
         )
-        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        desc_label.setStyleSheet(f"""
-            font-size: 15px; 
-            color: {self.theme_manager.get_color("text_secondary")};
-            margin-bottom: 40px;
-        """)
-        parent_layout.addWidget(desc_label)
+        self.desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        parent_layout.addWidget(self.desc_label)
 
         # Progress Bar
         self.progress_bar = QProgressBar()
@@ -93,9 +134,9 @@ class PermissionScreen:
         )
         mic_layout.addWidget(self.mic_status)
 
-        mic_button = QPushButton("Grant Access")
-        mic_button.setObjectName("onboarding-primary")
-        mic_layout.addWidget(mic_button)
+        self.mic_button = QPushButton("Grant Access")
+        self.mic_button.setObjectName("onboarding-primary")
+        mic_layout.addWidget(self.mic_button)
 
         permissions_layout.addWidget(mic_container)
 
@@ -126,9 +167,9 @@ class PermissionScreen:
         )
         acc_layout.addWidget(self.acc_status)
 
-        acc_button = QPushButton("Grant Access")
-        acc_button.setObjectName("onboarding-primary")
-        acc_layout.addWidget(acc_button)
+        self.acc_button = QPushButton("Grant Access")
+        self.acc_button.setObjectName("onboarding-primary")
+        acc_layout.addWidget(self.acc_button)
 
         permissions_layout.addWidget(acc_container)
 
@@ -155,7 +196,10 @@ class PermissionScreen:
         QTimer.singleShot(100, self.permission_checker.check_microphone)
         QTimer.singleShot(200, self.permission_checker.check_accessibility)
 
-        return mic_button, acc_button, self.continue_button
+        # Apply initial styles
+        self.update_styles()
+
+        return self.mic_button, self.acc_button, self.continue_button
 
     def update_progress(self):
         """Updates the progress bar based on granted permissions."""
@@ -165,30 +209,29 @@ class PermissionScreen:
 
     def handle_permission_check(self, permission, is_granted):
         """Handle permission check results"""
+        if self._is_cleaned_up:
+            return
+
         self.permission_states[permission] = is_granted
 
         if permission == "microphone":
             self.mic_status.setText("Granted" if is_granted else "Not Granted")
-            self.mic_status.setStyleSheet(
-                f"color: {self.theme_manager.get_color('success')};"
-                if is_granted
-                else f"color: {self.theme_manager.get_color('error')};"
-            )
         elif permission == "accessibility":
             self.acc_status.setText("Granted" if is_granted else "Not Granted")
-            self.acc_status.setStyleSheet(
-                f"color: {self.theme_manager.get_color('success')};"
-                if is_granted
-                else f"color: {self.theme_manager.get_color('error')};"
-            )
 
         self.update_progress()
 
         # Enable continue button if all permissions are granted
         self.continue_button.setEnabled(all(self.permission_states.values()))
 
+        # Apply styles
+        self.update_styles()
+
     def request_microphone_permission(self):
         """Request microphone permission"""
+        if self._is_cleaned_up:
+            return
+
         if platform.system() == "Darwin":
             os.system(
                 'open "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"'
@@ -199,6 +242,9 @@ class PermissionScreen:
 
     def request_accessibility_permission(self):
         """Request accessibility permission"""
+        if self._is_cleaned_up:
+            return
+
         if platform.system() == "Darwin":
             os.system(
                 'open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"'
@@ -206,3 +252,42 @@ class PermissionScreen:
             QTimer.singleShot(3000, self.permission_checker.check_accessibility)
         else:
             print("Please grant accessibility access in your system settings")
+
+    def check_all_permissions_and_proceed(self):
+        """Checks if all permissions are granted and proceeds to keyboard setup screen."""
+        if all(self.permission_states.values()):
+            # Import here to avoid circular imports
+            from src.ui.onboarding import OnboardingWindow
+
+            window = self.find_parent_window()
+            if window:
+                window.show_keyboard_setup_screen()
+        else:
+            # Show error message
+            error_label = QLabel("Please grant all required permissions to continue")
+            error_label.setStyleSheet(
+                f"color: {self.theme_manager.get_color('error')};"
+            )
+            self.layout.addWidget(error_label)
+
+    def find_parent_window(self):
+        """Find the parent OnboardingWindow instance"""
+        parent = self.parent()
+        while parent:
+            if isinstance(parent, QMainWindow):
+                return parent
+            parent = parent.parent()
+        return None
+
+    def cleanup(self):
+        """Clean up resources"""
+        self._is_cleaned_up = True
+
+        # Clear references to widgets
+        self.title_label = None
+        self.desc_label = None
+        self.mic_button = None
+        self.acc_button = None
+        self.continue_button = None
+        self.mic_status = None
+        self.acc_status = None

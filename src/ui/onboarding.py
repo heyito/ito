@@ -19,6 +19,7 @@ from src.ui.components.inten_layout import IntenLayout
 from src.ui.theme.manager import ThemeManager
 from src.ui.keyboard_manager import KeyboardManager
 from src.ui.screens.onboarding.permission_screen import PermissionScreen
+from src.ui.screens.onboarding.keyboard_setup_screen import KeyboardSetupScreen
 
 # --- Platform specific code for macOS ---
 _ns_window = None
@@ -248,38 +249,6 @@ class OnboardingWindow(QMainWindow):
                     letter-spacing: 0.1px;
                 ''')
 
-        # Update keyboard setup screen elements
-        for widget in self.findChildren(QWidget):
-            if hasattr(widget, 'objectName') and widget.objectName() == "keyboard_container":
-                widget.setStyleSheet(f'''
-                    background: {self.theme_manager.get_color('surface')};
-                    border-radius: 22px;
-                ''')
-            elif hasattr(widget, 'objectName') and widget.objectName() == "key_combo_display":
-                widget.setStyleSheet(f'''
-                    font-size: 15px;
-                    color: {self.theme_manager.get_color('text_secondary')};
-                    font-weight: 400;
-                    margin-top: 2px;
-                    letter-spacing: 0.1px;
-                ''')
-
-        # Update key pills
-        if hasattr(self, 'key_pills'):
-            for pill in self.key_pills:
-                pill.setStyleSheet(f'''
-                    QLabel {{
-                        background: {self.theme_manager.get_color('onboarding.shadow')};
-                        color: {self.theme_manager.get_color('text_primary')};
-                        border-radius: 12px;
-                        padding: 8px 18px;
-                        font-size: 22px;
-                        font-weight: 500;
-                        min-width: 38px;
-                        margin: 0 2px;
-                    }}
-                ''')
-
     def clear_layout(self):
         """Helper function to remove all widgets from the main layout."""
         while self.layout.count():
@@ -395,183 +364,22 @@ class OnboardingWindow(QMainWindow):
 
     def show_keyboard_setup_screen(self):
         self.clear_layout()
-
-        # --- Centered Layout ---
-        content_layout = QVBoxLayout()
-        content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(40)
-
-        # Title
-        title_label = QLabel("Set Up Your Keyboard Shortcut")
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_label.setStyleSheet(f'''
-            font-size: 34px;
-            font-weight: 600;
-            color: {self.theme_manager.get_color('text_primary')};
-            margin-top: 0px;
-            margin-bottom: 8px;
-            letter-spacing: -0.5px;
-        ''')
-        content_layout.addWidget(title_label)
-
-        # Description
-        desc_label = QLabel("Press any key or key combination to set your shortcut")
-        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        desc_label.setStyleSheet(f'''
-            font-size: 16px;
-            color: {self.theme_manager.get_color('text_secondary')};
-            font-weight: 400;
-            margin-bottom: 10px;
-            letter-spacing: 0.05px;
-        ''')
-        content_layout.addWidget(desc_label)
-
-        # Keyboard display container (modern card style)
-        keyboard_container = QWidget()
-        keyboard_container.setObjectName("keyboard_container")
-        keyboard_container.setFixedSize(420, 140)
-        keyboard_container.setStyleSheet(f'''
-            background: {self.theme_manager.get_color('surface')};
-            border-radius: 22px;
-        ''')
-        keyboard_layout = QVBoxLayout(keyboard_container)
-        keyboard_layout.setContentsMargins(28, 24, 28, 24)
-        keyboard_layout.setSpacing(12)
-
-        # Key pill display area
-        self.key_pill_container = QWidget()
-        self.key_pill_layout = QHBoxLayout(self.key_pill_container)
-        self.key_pill_layout.setContentsMargins(0, 0, 0, 0)
-        self.key_pill_layout.setSpacing(12)
-        self.key_pill_layout.addStretch()
-        self.key_pills = []
-        self.update_key_pills([])  # Start empty
-        self.key_pill_layout.addStretch()
-        keyboard_layout.addWidget(self.key_pill_container, alignment=Qt.AlignmentFlag.AlignCenter)
-
-        # Key combination display (instructions)
-        self.key_combo_display = QLabel("Press any key…")
-        self.key_combo_display.setObjectName("key_combo_display")
-        self.key_combo_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.key_combo_display.setStyleSheet(f'''
-            font-size: 15px;
-            color: {self.theme_manager.get_color('text_secondary')};
-            font-weight: 400;
-            margin-top: 2px;
-            letter-spacing: 0.1px;
-        ''')
-        keyboard_layout.addWidget(self.key_combo_display)
-
-        content_layout.addWidget(keyboard_container, alignment=Qt.AlignmentFlag.AlignCenter)
-        content_layout.addSpacing(16)
-
-        # Continue Button
-        self.continue_button = QPushButton("Continue")
-        self.continue_button.setObjectName("onboarding-primary")
-        self.continue_button.clicked.connect(self.complete_keyboard_setup)
-        self.continue_button.setEnabled(False)
-        self.continue_button.setFixedWidth(220)
-        self.continue_button.setFixedHeight(48)
-        content_layout.addWidget(self.continue_button, alignment=Qt.AlignmentFlag.AlignCenter)
-
-        # --- Center the content in the main layout ---
-        self.layout.addStretch(2)
-        self.layout.addLayout(content_layout)
-        self.layout.addStretch(3)
-
-        # Start listening for keyboard input
-        self.start_keyboard_listening()
-
-    def update_key_pills(self, keys):
-        # Remove old pills
-        for pill in getattr(self, 'key_pills', []):
-            self.key_pill_layout.removeWidget(pill)
-            pill.deleteLater()
-        self.key_pills = []
-        # Add new pills
-        for key in keys:
-            # Convert key object to symbol/string
-            key_str = self.keyboard_manager.get_key_symbol(key)
-            pill = QLabel(key_str)
-            pill.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            pill.setStyleSheet(f'''
-                QLabel {{
-                    background: {self.theme_manager.get_color('onboarding.shadow')};;
-                    color: {self.theme_manager.get_color('text_primary')};
-                    border-radius: 12px;
-                    padding: 8px 18px;
-                    font-size: 22px;
-                    font-weight: 500;
-                    min-width: 38px;
-                    margin: 0 2px;
-                }}
-            ''')
-            self.key_pill_layout.insertWidget(self.key_pill_layout.count() - 1, pill)
-            self.key_pills.append(pill)
-
-    def start_keyboard_listening(self):
-        self.is_recording_hotkey = True
-        self.current_hotkey = None
-        self.update_key_pills([])
-        self.key_combo_display.setText("Press any key…")
-        self.continue_button.setEnabled(False)
-        # Start polling for pressed keys
-        self.keyboard_poll_timer = QTimer(self)
-        self.keyboard_poll_timer.timeout.connect(self.poll_pressed_keys)
-        self.keyboard_poll_timer.start(50)
         
-        # Add hold timer
-        self.hold_timer = QTimer(self)
-        self.hold_timer.setSingleShot(True)
-        self.hold_timer.timeout.connect(self.on_hold_complete)
-        self._last_pressed_keys = None
-        self._hold_start_time = None
-
-    def poll_pressed_keys(self):
-        if not self.is_recording_hotkey:
-            return
-        pressed_keys = KeyboardManager.instance().get_pressed_keys()
-        # Convert to symbols/strings for display and hotkey string
-        key_symbols = [self.keyboard_manager.get_key_symbol(k) for k in pressed_keys]
+        # Create keyboard setup screen
+        self.keyboard_setup_screen = KeyboardSetupScreen(self.theme_manager, self.keyboard_manager)
         
-        if len(key_symbols) > 0:
-            # If keys changed, reset hold timer
-            if getattr(self, '_last_pressed_keys', None) != key_symbols:
-                self._last_pressed_keys = key_symbols
-                self._hold_start_time = None
-                self.hold_timer.stop()
-                self.update_key_pills(pressed_keys)
-                self.current_hotkey = "+".join(key_symbols)
-                self.key_combo_display.setText("Hold keys for 2 seconds to lock in...")
-                self.continue_button.setEnabled(False)
-            # If keys are the same and we haven't started the hold timer
-            elif self._hold_start_time is None:
-                self._hold_start_time = QTimer.singleShot(2000, self.on_hold_complete)
-        else:
-            # If no keys are pressed and we haven't locked in a combination
-            if not self.continue_button.isEnabled():
-                self._last_pressed_keys = None
-                self._hold_start_time = None
-                self.hold_timer.stop()
-                self.update_key_pills([])
-                self.current_hotkey = None
-                self.key_combo_display.setText("Press any key…")
-                self.continue_button.setEnabled(False)
-
-    def on_hold_complete(self):
-        """Called when user has held the same keys for 2 seconds"""
-        if self._last_pressed_keys:
-            self.key_combo_display.setText("Press any other key to change")
-            self.continue_button.setEnabled(True)
+        # Create the screen and get the continue button
+        continue_button = self.keyboard_setup_screen.create(self.layout)
+        
+        # Connect continue button signal
+        continue_button.clicked.connect(self.complete_keyboard_setup)
 
     def complete_keyboard_setup(self):
-        if hasattr(self, 'keyboard_poll_timer'):
-            self.keyboard_poll_timer.stop()
-        if self.current_hotkey:
-            self.settings.setValue("Hotkeys/start_recording_hotkey", self.current_hotkey)
+        if self.keyboard_setup_screen.current_hotkey:
+            self.settings.setValue("Hotkeys/start_recording_hotkey", self.keyboard_setup_screen.current_hotkey)
             self.settings.sync()
-            self.keyboard_manager.set_hotkey(self.current_hotkey)
-            self.is_recording_hotkey = False
+            self.keyboard_manager.set_hotkey(self.keyboard_setup_screen.current_hotkey)
+            self.keyboard_setup_screen.cleanup()
             self.show_completion_screen()
 
     def show_completion_screen(self):

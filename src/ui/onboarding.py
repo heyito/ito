@@ -21,6 +21,7 @@ from src.ui.keyboard_manager import KeyboardManager
 from src.ui.screens.onboarding.permission_screen import PermissionScreen
 from src.ui.screens.onboarding.keyboard_setup_screen import KeyboardSetupScreen
 from src.ui.screens.onboarding.welcome_screen import WelcomeScreen
+from src.ui.screens.onboarding.completion_screen import CompletionScreen
 
 class PermissionChecker(QObject):
     permission_checked = Signal(str, bool)  # permission_name, is_granted
@@ -301,76 +302,15 @@ class OnboardingWindow(QMainWindow):
 
     def show_completion_screen(self):
         self.clear_layout()
-
-        # --- Centered Layout ---
-        content_layout = QVBoxLayout()
-        content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(28)
-
-        # Centered icon container
-        icon_container = QWidget()
-        icon_layout = QHBoxLayout(icon_container)
-        icon_layout.setContentsMargins(0, 0, 0, 0)
-        icon_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        # Minimal, soft checkmark icon in a pastel green circle
-        check_icon = QLabel()
-        check_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        check_icon.setText("✓")
-        check_icon.setFixedSize(56, 56)
-        check_icon.setStyleSheet(f'''
-            QLabel {{
-                background-color: {self.theme_manager.get_color('onboarding.success.background')};
-                color: {self.theme_manager.get_color('onboarding.success.text')};
-                font-size: 32px;
-                border-radius: 28px;
-                margin-bottom: 4px;
-                font-weight: 500;
-                letter-spacing: 1px;
-            }}
-        ''')
-        icon_layout.addWidget(check_icon)
-        content_layout.addWidget(icon_container)
-        content_layout.addSpacing(8)
-
-        # Title
-        title_label = QLabel("Setup Complete!")
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_label.setStyleSheet(f'''
-            font-size: 28px;
-            font-weight: 600;
-            color: {self.theme_manager.get_color('text_primary')};
-            margin-top: 0px;
-            margin-bottom: 6px;
-            letter-spacing: -0.3px;
-        ''')
-        content_layout.addWidget(title_label)
-
-        # Subtitle
-        desc_label = QLabel("You're all set to start using Inten!")
-        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        desc_label.setStyleSheet(f'''
-            font-size: 16px;
-            color: {self.theme_manager.get_color('text_secondary')};
-            font-weight: 400;
-            margin-bottom: 20px;
-            letter-spacing: 0.05px;
-        ''')
-        content_layout.addWidget(desc_label)
-        content_layout.addSpacing(8)
-
-        # Start Button
-        start_button = QPushButton("Start Using Inten")
-        start_button.setObjectName("onboarding-primary")
+        
+        # Create completion screen
+        self.completion_screen = CompletionScreen(self.theme_manager)
+        
+        # Create the screen and get the start button
+        start_button = self.completion_screen.create(self.layout)
+        
+        # Connect start button signal
         start_button.clicked.connect(self.complete_setup)
-        start_button.setFixedHeight(38)
-        start_button.setMinimumWidth(140)
-        content_layout.addWidget(start_button, alignment=Qt.AlignmentFlag.AlignCenter)
-
-        # --- Center the content in the main layout ---
-        self.layout.addStretch(2)
-        self.layout.addLayout(content_layout)
-        self.layout.addStretch(3)
 
     def complete_setup(self):
         """Saves the setup complete flag if needed, then transitions to the home screen."""

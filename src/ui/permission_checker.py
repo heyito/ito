@@ -44,3 +44,25 @@ class PermissionChecker(QObject):
         else:
             print("Not on macOS, assuming accessibility permissions granted")
             self.permission_checked.emit("accessibility", True)
+
+    def check_input_monitoring(self):
+        if platform.system() == "Darwin":
+            try:
+                from src import platform_utils_macos
+
+                print("Checking input monitoring permissions...")
+                has_permission = (
+                    platform_utils_macos.check_input_monitoring_permission()
+                )
+                print(f"Input monitoring permission check result: {has_permission}")
+                self.permission_checked.emit("input_monitoring", has_permission)
+            except ImportError as e:
+                print(f"Error importing platform_utils_macos: {e}")
+                self.permission_checked.emit("input_monitoring", False)
+            except Exception as e:
+                print(f"Error checking input monitoring permission: {e}")
+                traceback.print_exc()
+                self.permission_checked.emit("input_monitoring", False)
+        else:
+            print("Not on macOS, assuming input monitoring permissions granted")
+            self.permission_checked.emit("input_monitoring", True)

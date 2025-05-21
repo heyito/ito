@@ -340,3 +340,30 @@ def check_accessibility_permission():
     except Exception as e:
         print(f"Error checking accessibility permissions: {e}")
         return False
+
+
+def check_input_monitoring_permission():
+    """Check if the application has input monitoring permission on macOS.
+
+    Returns:
+        bool: True if permission is granted, False otherwise.
+    """
+    if not is_macos():
+        return True
+
+    try:
+        # This script checks if we can get input monitoring status
+        script = """
+        tell application "System Events"
+            set inputMonitoringEnabled to false
+            try
+                set inputMonitoringEnabled to true
+            end try
+            return inputMonitoringEnabled
+        end tell
+        """
+        result = run_applescript_one_line(script)
+        return result.lower() == "true"
+    except Exception as e:
+        print(f"Error checking input monitoring permission: {e}")
+        return False

@@ -225,14 +225,17 @@ class OnboardingWindow(QMainWindow):
         self.permission_screen.permission_states = self.permission_states
 
         # Create the screen and get the buttons
-        mic_button, acc_button, continue_button = self.permission_screen.create(
-            self.layout
+        mic_button, acc_button, input_mon_button, continue_button = (
+            self.permission_screen.create(self.layout)
         )
 
         # Connect button signals
         mic_button.clicked.connect(self.permission_screen.request_microphone_permission)
         acc_button.clicked.connect(
             self.permission_screen.request_accessibility_permission
+        )
+        input_mon_button.clicked.connect(
+            self.permission_screen.request_input_monitoring_permission
         )
         continue_button.clicked.connect(
             self.permission_screen.check_all_permissions_and_proceed

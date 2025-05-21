@@ -14,6 +14,7 @@ from src.ui.screens.onboarding.permission_screen import PermissionScreen
 from src.ui.screens.onboarding.keyboard_setup_screen import KeyboardSetupScreen
 from src.ui.screens.onboarding.welcome_screen import WelcomeScreen
 from src.ui.screens.onboarding.completion_screen import CompletionScreen
+from src.ui.screens.onboarding.brain_setup_screen import BrainSetupScreen
 
 
 class OnboardingWindow(QMainWindow):
@@ -245,6 +246,43 @@ class OnboardingWindow(QMainWindow):
         self.permission_checker.permission_checked.connect(
             self.permission_screen.handle_permission_check
         )
+
+    def show_brain_setup_screen(self):
+        self.clear_layout()
+
+        # Create brain setup screen
+        self.brain_setup_screen = BrainSetupScreen(self.theme_manager)
+
+        # Create the screen and get the continue button
+        continue_button = self.brain_setup_screen.create(self.layout)
+
+        # Connect continue button signal
+        continue_button.clicked.connect(self.complete_brain_setup)
+
+    def complete_brain_setup(self):
+        # Get the configuration from the brain setup screen
+        config = self.brain_setup_screen.get_configuration()
+
+        # Save the configuration to settings
+        self.settings.setValue("LLM/source", config["llm_source"])
+        self.settings.setValue("LLM/model", config["llm_model"])
+        self.settings.setValue("ASR/source", config["asr_source"])
+        self.settings.setValue("ASR/model", config["asr_model"])
+
+        # Save API key if present
+        if config["api_key"]:
+            if config["llm_source"] == "groq_api":
+                self.settings.setValue("APIKeys/groq_api_key", config["api_key"])
+            elif config["llm_source"] == "openai_api":
+                self.settings.setValue("APIKeys/openai_api_key", config["api_key"])
+            elif config["llm_source"] == "gemini_api":
+                self.settings.setValue("APIKeys/gemini_api_key", config["api_key"])
+
+        self.settings.sync()
+
+        # Clean up and proceed to keyboard setup
+        self.brain_setup_screen.cleanup()
+        self.show_keyboard_setup_screen()
 
     def show_keyboard_setup_screen(self):
         self.clear_layout()

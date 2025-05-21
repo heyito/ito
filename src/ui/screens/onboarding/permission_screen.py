@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
@@ -7,13 +7,19 @@ from PySide6.QtWidgets import (
     QPushButton,
     QWidget,
     QMainWindow,
+    QSpacerItem,
+    QSizePolicy,
 )
 import platform
 import os
+from src.ui.theme.manager import ThemeManager
+from src.ui.permission_checker import PermissionChecker
 
 
 class PermissionScreen:
-    def __init__(self, theme_manager, permission_checker):
+    def __init__(
+        self, theme_manager: ThemeManager, permission_checker: PermissionChecker
+    ):
         self.theme_manager = theme_manager
         self.permission_checker = permission_checker
         self.mic_status = None
@@ -326,14 +332,11 @@ class PermissionScreen:
             print("Please grant input monitoring access in your system settings")
 
     def check_all_permissions_and_proceed(self):
-        """Checks if all permissions are granted and proceeds to keyboard setup screen."""
+        """Check all permissions and proceed if all are granted"""
         if all(self.permission_states.values()):
-            # Import here to avoid circular imports
-            from src.ui.onboarding import OnboardingWindow
-
-            window = self.find_parent_window()
-            if window:
-                window.show_keyboard_setup_screen()
+            # Get the parent window and call show_brain_setup_screen
+            parent_window = self.continue_button.window()
+            parent_window.show_brain_setup_screen()
         else:
             # Show error message
             error_label = QLabel("Please grant all required permissions to continue")

@@ -1557,20 +1557,6 @@ class Home(QMainWindow):
             return
         super().mouseReleaseEvent(event)
 
-    # Update form labels style
-    def update_form_labels(self):
-        for i in range(form_layout.rowCount()):
-            label_item = form_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
-            if label_item and label_item.widget():
-                label = label_item.widget()
-                if isinstance(label, QLabel) and not label.text().endswith("Settings"):
-                    label.setStyleSheet("""
-                        QLabel {
-                            color: #8E8E93;
-                            font-size: 13px;
-                        }
-                    """)
-
     def _update_llm_provider_fields(self, current_llm_source_text=None):
         """Update model fields based on the selected LLM source."""
         # Block signals from model widgets during programmatic update

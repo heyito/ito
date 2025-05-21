@@ -1531,32 +1531,6 @@ class Home(QMainWindow):
             self.app_manager.status_window.hide()
         super().closeEvent(event)
 
-    # Add these three event handlers at the end of the class
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            if event.position().y() < self._effective_top_margin:
-                self._dragging = True
-                self._drag_start_position = event.globalPosition()
-                event.accept()
-                return
-        super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event):
-        if self._dragging and event.buttons() & Qt.MouseButton.LeftButton:
-            delta = event.globalPosition() - self._drag_start_position
-            self.move(self.pos() + delta.toPoint())
-            self._drag_start_position = event.globalPosition()
-            event.accept()
-            return
-        super().mouseMoveEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._dragging = False
-            event.accept()
-            return
-        super().mouseReleaseEvent(event)
-
     def _update_llm_provider_fields(self, current_llm_source_text=None):
         """Update model fields based on the selected LLM source."""
         # Block signals from model widgets during programmatic update

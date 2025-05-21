@@ -142,6 +142,11 @@ class IntenLayout(QWidget):
         self._close_callback = close_callback
         self._show_close_button = show_close_button
         self._mac_titlebar_offset = 0
+        
+        # Initialize dragging variables
+        self._dragging = False
+        self._drag_start_position = QPoint()
+        
         # macOS titlebar offset logic
         if sys.platform == 'darwin':
             try:
@@ -306,3 +311,28 @@ class IntenLayout(QWidget):
     def _make_background_color(self, rect):
         from PySide6.QtGui import QColor
         return self.theme_manager.get_qcolor('background')
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            if event.position().y() < self._effective_top_margin:
+                self._dragging = True
+                self._drag_start_position = event.globalPosition()
+                event.accept()
+                return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self._dragging and event.buttons() & Qt.MouseButton.LeftButton:
+            delta = event.globalPosition() - self._drag_start_position
+            self.window().move(self.window().pos() + delta.toPoint())
+            self._drag_start_position = event.globalPosition()
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._dragging = False
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)

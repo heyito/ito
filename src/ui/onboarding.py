@@ -8,12 +8,8 @@ from PySide6.QtCore import QObject, Signal, Qt, QSettings, QPoint, QTimer
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QApplication,
-    QHBoxLayout,
     QLabel,
     QMainWindow,
-    QPushButton,
-    QVBoxLayout,
-    QWidget,
 )
 from src.ui.components.inten_layout import IntenLayout
 from src.ui.theme.manager import ThemeManager
@@ -329,32 +325,6 @@ class OnboardingWindow(QMainWindow):
         self.home.show()
         # Use a timer to close this window after a short delay
         QTimer.singleShot(0, self.close)
-
-    # --- Manual Dragging Event Handlers ---
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            if event.position().y() < self._effective_top_margin:
-                self._dragging = True
-                self._drag_start_position = event.globalPosition()
-                event.accept()
-                return
-        super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event):
-        if self._dragging and event.buttons() & Qt.MouseButton.LeftButton:
-            delta = event.globalPosition() - self._drag_start_position
-            self.move(self.pos() + delta.toPoint())
-            self._drag_start_position = event.globalPosition()
-            event.accept()
-            return
-        super().mouseMoveEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._dragging = False
-            event.accept()
-            return
-        super().mouseReleaseEvent(event)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

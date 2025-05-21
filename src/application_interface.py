@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import queue
 
+
 class ApplicationInterface(ABC):
     """Defines the common interface for application runners managed by ApplicationManager."""
 

@@ -5,6 +5,7 @@ import Quartz
 from pynput import keyboard
 from PySide6.QtCore import QObject, Signal
 
+
 class KeyboardManager(QObject):
     # Singleton instance
     _instance = None
@@ -13,7 +14,7 @@ class KeyboardManager(QObject):
     hotkey_pressed = Signal(str)
     # Signal when hotkey is released
     hotkey_released = Signal(str)
-    
+
     @classmethod
     def instance(cls):
         if cls._instance is None:
@@ -44,7 +45,7 @@ class KeyboardManager(QObject):
         """
         if not self._target_hotkey:
             return False
-            
+
         # Get symbols for currently pressed keys
         current_keys = set(self.get_pressed_keys())
         return current_keys == self._target_hotkey
@@ -79,10 +80,10 @@ class KeyboardManager(QObject):
         try:
             # Store the symbolic string
             self._hotkey_str = hotkey_str
-            
+
             # Convert to set of key symbols for comparison
-            self._target_hotkey = set(hotkey_str.split('+'))
-            
+            self._target_hotkey = set(hotkey_str.split("+"))
+
             print(f"Hotkey updated to: {hotkey_str}")
             return True
 
@@ -105,7 +106,7 @@ class KeyboardManager(QObject):
         self._hotkey_str = None
         self._was_hotkey_pressed = False
         print("Keyboard listener cleaned up")
-        
+
     def get_key_symbol(self, key):
         """
         Helper function to get a symbolic representation of the key.
@@ -118,48 +119,48 @@ class KeyboardManager(QObject):
 
         try:
             # For alphanumeric keys, return the character
-            if str(key) == '<63>':
-                return 'fn'
+            if str(key) == "<63>":
+                return "fn"
             return key.char
         except AttributeError:
             # For special keys (like Key.space, Key.shift, Key.esc, etc.)
             # Use macOS symbols for common modifier keys.
             if key == keyboard.Key.space:
-                return 'space'
+                return "space"
             elif key == keyboard.Key.enter:
-                return 'enter'
+                return "enter"
             elif key == keyboard.Key.esc:
-                return 'esc'
+                return "esc"
             elif key == keyboard.Key.shift or key == keyboard.Key.shift_r:
-                return '⇧' # Shift symbol
+                return "⇧"  # Shift symbol
             elif key == keyboard.Key.ctrl or key == keyboard.Key.ctrl_r:
-                return '^' # Control symbol
+                return "^"  # Control symbol
             elif key == keyboard.Key.alt or key == keyboard.Key.alt_r:
-                return '⌥' # Option (Alt) symbol
+                return "⌥"  # Option (Alt) symbol
             elif key == keyboard.Key.cmd or key == keyboard.Key.cmd_r:
-                return '⌘' # Command symbol (macOS)
+                return "⌘"  # Command symbol (macOS)
             elif key == keyboard.Key.backspace:
-                return 'backspace'
+                return "backspace"
             elif key == keyboard.Key.delete:
-                return 'delete'
+                return "delete"
             elif key == keyboard.Key.tab:
-                return 'tab'
+                return "tab"
             elif key == keyboard.Key.caps_lock:
-                return 'caps_lock'
+                return "caps_lock"
             elif key == keyboard.Key.up:
-                return '↑'
+                return "↑"
             elif key == keyboard.Key.down:
-                return '↓'
+                return "↓"
             elif key == keyboard.Key.left:
-                return '←'
+                return "←"
             elif key == keyboard.Key.right:
-                return '→'
+                return "→"
             # Add more mappings for other special keys as needed
             else:
                 # For other special keys (like F1-F12, page_up, home, etc.),
                 # pynput's default representation is often sufficient.
-                return str(key).replace('Key.', '') # Remove 'Key.' prefix
-            
+                return str(key).replace("Key.", "")  # Remove 'Key.' prefix
+
     def _on_press(self, key):
         """
         Callback function for key press events.
@@ -168,15 +169,15 @@ class KeyboardManager(QObject):
         try:
             # Add the key object directly to the set
             self.pressed_keys.add(key)
-            
+
             # Check if we have a hotkey match
             is_match = self._check_hotkey_match()
-            
+
             # If we have a match and weren't previously pressed, emit the signal
             if is_match and not self._was_hotkey_pressed:
                 self._was_hotkey_pressed = True
                 self.hotkey_pressed.emit(self._hotkey_str)
-                
+
         except Exception as e:
             print(f"Error in _on_press: {e}")
             traceback.print_exc()
@@ -188,7 +189,7 @@ class KeyboardManager(QObject):
         """
         try:
             # Special handling for Fn key (keycode 63)
-            if hasattr(key, 'vk') and key.vk == 63:
+            if hasattr(key, "vk") and key.vk == 63:
                 if key not in self.pressed_keys:
                     # First release event: treat as press
                     self.pressed_keys.add(key)
@@ -214,7 +215,7 @@ class KeyboardManager(QObject):
                 if self._was_hotkey_pressed and not self._check_hotkey_match():
                     self._was_hotkey_pressed = False
                     self.hotkey_released.emit(self._hotkey_str)
-                    
+
         except KeyError:
             pass
         except Exception as e:
@@ -232,4 +233,3 @@ class KeyboardManager(QObject):
         key_symbols.sort()
         # Return up to 3 keys
         return key_symbols[:3]
-        

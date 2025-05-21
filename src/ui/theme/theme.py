@@ -1,5 +1,5 @@
 from PySide6.QtGui import QColor
-    
+
 THEME = {
     "dark": {
         # Base colors
@@ -7,24 +7,20 @@ THEME = {
         "surface": QColor(30, 30, 30, 255),
         "primary": QColor(98, 0, 238, 255),
         "secondary": QColor(3, 218, 197, 255),
-        
         # Text colors
         "text_primary": QColor(255, 255, 255, 255),
         "text_secondary": QColor(255, 255, 255, 180),
         "text_disabled": QColor(255, 255, 255, 100),
-
         # Text reversed colors
         "text_reversed_primary": QColor(0, 0, 0, 255),
         "text_reversed_secondary": QColor(0, 0, 0, 180),
         "text_reversed_disabled": QColor(0, 0, 0, 100),
-        
         # State colors
         "error": QColor(255, 82, 82, 255),
         "error_hover": QColor(245, 75, 75, 255),
         "success": QColor(76, 175, 80, 255),
         "warning": QColor(255, 152, 0, 255),
         "info": QColor(33, 150, 243, 255),
-        
         # Component-specific colors
         "button": {
             "background": QColor(98, 0, 238, 255),
@@ -37,7 +33,6 @@ THEME = {
             "border": QColor(98, 0, 238, 255),
             "text": QColor(255, 255, 255, 255),
         },
-        
         # Onboarding specific colors
         "onboarding": {
             "title": QColor(255, 255, 255, 255),
@@ -53,8 +48,8 @@ THEME = {
             "success": {
                 "background": QColor(174, 233, 193, 255),  # AEE9C1
                 "text": QColor(46, 125, 79, 255),  # 2E7D4F
-            }
-        }
+            },
+        },
     },
     "light": {
         # Base colors
@@ -62,24 +57,20 @@ THEME = {
         "surface": QColor(245, 245, 245, 255),
         "primary": QColor(98, 0, 238, 255),
         "secondary": QColor(3, 218, 197, 255),
-        
         # Text colors
         "text_primary": QColor(0, 0, 0, 255),
         "text_secondary": QColor(0, 0, 0, 180),
         "text_disabled": QColor(0, 0, 0, 100),
-
         # Text reversed colors
         "text_reversed_primary": QColor(255, 255, 255, 255),
         "text_reversed_secondary": QColor(255, 255, 255, 180),
         "text_reversed_disabled": QColor(255, 255, 255, 100),
-        
         # State colors
         "error": QColor(211, 47, 47, 255),
         "error_hover": QColor(255, 82, 82, 100),
         "success": QColor(46, 125, 50, 255),
         "warning": QColor(237, 108, 2, 255),
         "info": QColor(2, 136, 209, 255),
-        
         # Component-specific colors
         "button": {
             "background": QColor(118, 20, 255, 255),  # Lighter purple
@@ -92,7 +83,6 @@ THEME = {
             "border": QColor(98, 0, 238, 255),
             "text": QColor(0, 0, 0, 255),
         },
-        
         # Onboarding specific colors
         "onboarding": {
             "title": QColor(24, 26, 42, 255),  # 181A2A
@@ -108,7 +98,7 @@ THEME = {
             "success": {
                 "background": QColor(174, 233, 193, 255),  # AEE9C1
                 "text": QColor(46, 125, 79, 255),  # 2E7D4F
-            }
-        }
-    }
+            },
+        },
+    },
 }

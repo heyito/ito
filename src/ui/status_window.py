@@ -1,23 +1,15 @@
 import sys
-from enum import Enum, auto
-from PySide6.QtCore import Qt, QPoint, QPropertyAnimation, QEasingCurve, QRectF, QTimer
+from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTimer
 from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QGraphicsOpacityEffect
-from PySide6.QtGui import QPainter, QPainterPath, QRegion, QFontMetrics, QColor, QPen
 from src.types.status_messages import StatusMessage
-from src.ui.components.inten_layout import MacBlur
 import queue
 import time
 
-if sys.platform == 'darwin':
+if sys.platform == "darwin":
     try:
         from ctypes import c_void_p
         import objc
         from AppKit import (
-            NSWindow,
-            NSWindowCollectionBehavior,
-            NSWindowLevel,
-            NSWindowStyleMask,
-            NSWindowTitleHidden,
             NSFullSizeContentViewWindowMask,
             NSWindowCollectionBehaviorCanJoinAllSpaces,
             NSWindowCollectionBehaviorStationary,
@@ -26,12 +18,14 @@ if sys.platform == 'darwin':
             NSWindowCollectionBehaviorFullScreenAuxiliary,
             NSWindowCollectionBehaviorFullScreenAllowsTiling,
         )
+
         _objc_available = True
     except ImportError:
         print("PyObjC framework not found. Cannot apply native macOS styling.")
         _objc_available = False
 else:
     _objc_available = False
+
 
 class StatusWindow(QWidget):
     DOT_SIZE = 40
@@ -45,10 +39,10 @@ class StatusWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint |
-            Qt.WindowType.Tool |
-            Qt.WindowType.WindowStaysOnTopHint |
-            Qt.WindowType.NoDropShadowWindowHint
+            Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.Tool
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.NoDropShadowWindowHint
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
@@ -102,16 +96,18 @@ class StatusWindow(QWidget):
                 if ns_window:
                     ns_window.setLevel_(25)
                     collection_behavior = (
-                        NSWindowCollectionBehaviorCanJoinAllSpaces |
-                        NSWindowCollectionBehaviorStationary |
-                        NSWindowCollectionBehaviorTransient |
-                        NSWindowCollectionBehaviorIgnoresCycle |
-                        NSWindowCollectionBehaviorFullScreenAuxiliary |
-                        NSWindowCollectionBehaviorFullScreenAllowsTiling
+                        NSWindowCollectionBehaviorCanJoinAllSpaces
+                        | NSWindowCollectionBehaviorStationary
+                        | NSWindowCollectionBehaviorTransient
+                        | NSWindowCollectionBehaviorIgnoresCycle
+                        | NSWindowCollectionBehaviorFullScreenAuxiliary
+                        | NSWindowCollectionBehaviorFullScreenAllowsTiling
                     )
                     ns_window.setCollectionBehavior_(collection_behavior)
                     ns_window.setTitlebarAppearsTransparent_(True)
-                    ns_window.setStyleMask_(ns_window.styleMask() | NSFullSizeContentViewWindowMask)
+                    ns_window.setStyleMask_(
+                        ns_window.styleMask() | NSFullSizeContentViewWindowMask
+                    )
                     ns_window.setIgnoresMouseEvents_(True)
                     ns_window.setHidesOnDeactivate_(False)
                     ns_window.setMovableByWindowBackground_(False)
@@ -119,6 +115,7 @@ class StatusWindow(QWidget):
             except Exception as e:
                 print(f"Error applying native macOS window behavior: {e}")
                 import traceback
+
                 traceback.print_exc()
 
         self.layout().activate()
@@ -136,20 +133,26 @@ class StatusWindow(QWidget):
                 status = self._status_queue.get_nowait()
                 if isinstance(status, StatusMessage):
                     status = status.value
-                
+
                 if self._current_state == StatusMessage.READY.value:
                     self._apply_status_update(status)
                 else:
                     # Check if current status has been showing long enough
-                    current_status_duration = (time.time() - self._status_start_time) * 1000  # Convert to ms
+                    current_status_duration = (
+                        time.time() - self._status_start_time
+                    ) * 1000  # Convert to ms
                     if current_status_duration >= self.STATUS_DELAY:
                         # If status has been showing long enough, update immediately
                         self._apply_status_update(status)
                     else:
                         # For non-READY transitions, use a delayed update
                         self._pending_status = status
-                        remaining_delay = max(0, self.STATUS_DELAY - current_status_duration)
-                        QTimer.singleShot(int(remaining_delay), self._apply_pending_status)
+                        remaining_delay = max(
+                            0, self.STATUS_DELAY - current_status_duration
+                        )
+                        QTimer.singleShot(
+                            int(remaining_delay), self._apply_pending_status
+                        )
         except queue.Empty:
             pass
         except Exception as e:
@@ -174,7 +177,9 @@ class StatusWindow(QWidget):
             else:
                 self.show_pill(status)
         self._current_state = status
-        self._status_start_time = time.time()  # Update the start time for the new status
+        self._status_start_time = (
+            time.time()
+        )  # Update the start time for the new status
 
     def update_status(self, status: str | StatusMessage, is_error: bool = False):
         """Queue a status update for processing."""
@@ -207,7 +212,12 @@ class StatusWindow(QWidget):
             x = (screen_geometry.width() - window_geometry.width()) // 2
             dock_height = 70
             margin = 10
-            y = screen_geometry.height() - window_geometry.height() - dock_height - margin
+            y = (
+                screen_geometry.height()
+                - window_geometry.height()
+                - dock_height
+                - margin
+            )
             self.move(x, y)
 
     def show_dot(self):
@@ -277,7 +287,7 @@ class StatusWindow(QWidget):
                 self.show_pill(self.status_label.text())
 
         self._animation.finished.connect(on_finished)
-        
+
         # Start both animations
         self._animation.start()
         self._opacity_animation.start()

@@ -7,8 +7,8 @@ from typing import Optional
 
 from src.app_config import AppConfig
 from src.application_interface import ApplicationInterface
-from src.context_manager import ContextManager # Example
-from src.command_processor import CommandProcessor # Example
+from src.context_manager import ContextManager  # Example
+from src.command_processor import CommandProcessor  # Example
 from src.handlers.audio.audio_recorder import AudioRecorder
 from src.types.status_messages import StatusMessage
 from src.utils.timing import time_method
@@ -19,23 +19,30 @@ class OneShotApplicationRunner(ApplicationInterface):
     Placeholder for an application runner that sends audio for transcription
     and LLM response in a single step.
     """
-    def __init__(self,
-                 config: AppConfig,
-                 context_manager: ContextManager,
-                 command_processor: CommandProcessor,
-                 audio_recorder: AudioRecorder,
-                 status_queue: Optional[queue.Queue]):
+
+    def __init__(
+        self,
+        config: AppConfig,
+        context_manager: ContextManager,
+        command_processor: CommandProcessor,
+        audio_recorder: AudioRecorder,
+        status_queue: Optional[queue.Queue],
+    ):
         self.config = config
         self.context_manager = context_manager
         self.command_processor = command_processor
         self.audio_recorder = audio_recorder
         self.status_queue = status_queue
         self._stop_event = threading.Event()
-        self._action_queue = queue.Queue() # Placeholder for potential actions
+        self._action_queue = queue.Queue()  # Placeholder for potential actions
 
-        print(f"OneShotApplicationRunner initialized. Mode: {self.config.application_mode}")
+        print(
+            f"OneShotApplicationRunner initialized. Mode: {self.config.application_mode}"
+        )
         if self.status_queue:
-            self.status_queue.put(f"one_shot Runner: Initialized (Mode: {self.config.application_mode})")
+            self.status_queue.put(
+                f"one_shot Runner: Initialized (Mode: {self.config.application_mode})"
+            )
 
     @time_method
     def trigger_interaction(self) -> None:
@@ -58,7 +65,7 @@ class OneShotApplicationRunner(ApplicationInterface):
                 if action == "START":
                     self._handle_start_recording()
             except queue.Empty:
-                continue # Check stop event
+                continue  # Check stop event
             except Exception as e:
                 print(f"One-Shot Runner Error: {e}")
                 traceback.print_exc()
@@ -66,7 +73,7 @@ class OneShotApplicationRunner(ApplicationInterface):
 
     def _handle_start_recording(self):
         """Initiates context fetch and audio recording."""
-        timestamp = time.strftime('%H:%M:%S')
+        timestamp = time.strftime("%H:%M:%S")
         print(f"[{timestamp}] One-Shot Runner: Handling start action...")
 
         # Start context fetch (non-blocking)
@@ -74,7 +81,7 @@ class OneShotApplicationRunner(ApplicationInterface):
 
         # Start audio recording (non-blocking), provide callback
         if not self.audio_recorder.start_recording(self._process_recorded_audio):
-             print(f"[{timestamp}] One-Shot Runner: Failed to start audio recorder.")
+            print(f"[{timestamp}] One-Shot Runner: Failed to start audio recorder.")
 
     def _process_recorded_audio(self, audio_buffer: Optional[bytes]):
         """
@@ -82,7 +89,7 @@ class OneShotApplicationRunner(ApplicationInterface):
         Executed by AudioRecorder's monitor thread.
         Handles transcription, context waiting, and command processing.
         """
-        timestamp = time.strftime('%H:%M:%S')
+        timestamp = time.strftime("%H:%M:%S")
         print(f"[{timestamp}] One-Shot Runner: Received audio buffer from recorder.")
 
         if not audio_buffer:
@@ -99,7 +106,9 @@ class OneShotApplicationRunner(ApplicationInterface):
         context_doc_text = self.context_manager.wait_for_context(timeout=5.0)
         # Get the full context dict (app_name + doc_text)
         current_context_data = self.context_manager.get_current_context()
-        print(f"[{timestamp}] One-Shot Runner: Context ready (App: {current_context_data.get('app_name')}).")
+        print(
+            f"[{timestamp}] One-Shot Runner: Context ready (App: {current_context_data.get('app_name')})."
+        )
 
         # --- Process Command ---
         print(f"[{timestamp}] One-Shot Runner: Initiating command processing...")
@@ -128,7 +137,7 @@ class OneShotApplicationRunner(ApplicationInterface):
     def cleanup(self) -> None:
         """Cleans up all composed components."""
         print("One-Shot Runner: Cleaning up...")
-        self._stop_event.set() # Signal event loop
+        self._stop_event.set()  # Signal event loop
 
         # Cleanup components in reasonable order
         self.audio_recorder.cleanup()
@@ -137,7 +146,9 @@ class OneShotApplicationRunner(ApplicationInterface):
 
         # Clear action queue
         while not self._action_queue.empty():
-             try: self._action_queue.get_nowait()
-             except queue.Empty: break
+            try:
+                self._action_queue.get_nowait()
+            except queue.Empty:
+                break
 
         print("Discrete Runner: Cleanup finished.")

@@ -1,8 +1,12 @@
-from PySide6.QtCore import QObject, Signal, Qt
-from PySide6.QtWidgets import QWidget, QPushButton, QSizePolicy, QHBoxLayout, QButtonGroup
-from PySide6.QtGui import QFontMetrics
+from PySide6.QtCore import Signal, Qt
+from PySide6.QtWidgets import (
+    QWidget,
+    QPushButton,
+    QSizePolicy,
+)
 from src.ui.components.flow_layout import QFlowLayout
 from src.ui.theme.manager import ThemeManager
+
 
 class SegmentedButtonGroup(QWidget):
     selectionChanged = Signal(str)
@@ -18,15 +22,19 @@ class SegmentedButtonGroup(QWidget):
         self.layout.setSpacing(0)
         self.layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
-        
+
         # Connect to theme changes
         self.theme_manager.theme_changed.connect(self._update_styles)
-        
+
         for i, option in enumerate(options):
             btn = QPushButton(option)
             btn.setCheckable(True)
             btn.clicked.connect(self._make_select_handler(option))
-            btn.setStyleSheet(self._button_style(selected=False, first=(i==0), last=(i==len(options)-1)))
+            btn.setStyleSheet(
+                self._button_style(
+                    selected=False, first=(i == 0), last=(i == len(options) - 1)
+                )
+            )
             btn.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
             self.layout.addWidget(btn)
             self.buttons.append(btn)
@@ -37,13 +45,18 @@ class SegmentedButtonGroup(QWidget):
         def handler():
             self.setCurrentText(option)
             self.selectionChanged.emit(option)
+
         return handler
 
     def setCurrentText(self, text):
         for i, btn in enumerate(self.buttons):
-            selected = (btn.text() == text)
+            selected = btn.text() == text
             btn.setChecked(selected)
-            btn.setStyleSheet(self._button_style(selected, first=(i==0), last=(i==len(self.buttons)-1)))
+            btn.setStyleSheet(
+                self._button_style(
+                    selected, first=(i == 0), last=(i == len(self.buttons) - 1)
+                )
+            )
         self.selected = text
 
     def currentText(self):
@@ -53,34 +66,42 @@ class SegmentedButtonGroup(QWidget):
         """Update all button styles when theme changes"""
         for i, btn in enumerate(self.buttons):
             selected = btn.isChecked()
-            btn.setStyleSheet(self._button_style(selected, first=(i==0), last=(i==len(self.buttons)-1)))
+            btn.setStyleSheet(
+                self._button_style(
+                    selected, first=(i == 0), last=(i == len(self.buttons) - 1)
+                )
+            )
 
     def _button_style(self, selected, first, last):
         # Get theme colors
-        background = self.theme_manager.get_color('button.background')
-        text_color = self.theme_manager.get_color('button.text')
-        selected_bg = self.theme_manager.get_color('button.pressed')
-        border_color = self.theme_manager.get_color('primary')
+        background = self.theme_manager.get_color("button.background")
+        text_color = self.theme_manager.get_color("button.text")
+        selected_bg = self.theme_manager.get_color("button.pressed")
+        border_color = self.theme_manager.get_color("primary")
 
         # Disabled state colors
         try:
-            disabled_text_color = self.theme_manager.get_color('text_disabled')
-            if disabled_text_color is None: # If get_color can return None for partial matches
-                raise KeyError # Treat as if key was not found at all for simplicity here
+            disabled_text_color = self.theme_manager.get_color("text_disabled")
+            if (
+                disabled_text_color is None
+            ):  # If get_color can return None for partial matches
+                raise KeyError  # Treat as if key was not found at all for simplicity here
         except KeyError:
             try:
-                disabled_text_color = self.theme_manager.get_color('text_secondary')
+                disabled_text_color = self.theme_manager.get_color("text_secondary")
                 if disabled_text_color is None:
                     raise KeyError
             except KeyError:
-                disabled_text_color = '#888888' # Ultimate fallback
-        
+                disabled_text_color = "#888888"  # Ultimate fallback
+
         try:
-            disabled_background_color = self.theme_manager.get_color('button.disabled_background')
+            disabled_background_color = self.theme_manager.get_color(
+                "button.disabled_background"
+            )
             if disabled_background_color is None:
-                 raise KeyError
+                raise KeyError
         except KeyError:
-            disabled_background_color = background # Fallback to normal background
+            disabled_background_color = background  # Fallback to normal background
 
         # Add rounded corners to first/last
         if first and last:

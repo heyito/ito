@@ -1,5 +1,6 @@
 from PySide6.QtCore import Qt, QPoint, QRect, QSize
-from PySide6.QtWidgets import QLayout, QLayoutItem, QSizePolicy
+from PySide6.QtWidgets import QLayout
+
 
 class QFlowLayout(QLayout):
     def __init__(self, parent=None, margin=0, spacing=-1):
@@ -45,7 +46,9 @@ class QFlowLayout(QLayout):
         for item in self.itemList:
             size = size.expandedTo(item.minimumSize())
         margins = self.contentsMargins()
-        size += QSize(margins.left() + margins.right(), margins.top() + margins.bottom())
+        size += QSize(
+            margins.left() + margins.right(), margins.top() + margins.bottom()
+        )
         return size
 
     def doLayout(self, rect, testOnly):
@@ -69,4 +72,4 @@ class QFlowLayout(QLayout):
                 item.setGeometry(QRect(QPoint(x, y), item.sizeHint()))
             x = nextX
             lineHeight = max(lineHeight, item.sizeHint().height())
-        return y + lineHeight - rect.y() 
+        return y + lineHeight - rect.y()

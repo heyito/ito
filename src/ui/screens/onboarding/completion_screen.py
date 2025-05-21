@@ -7,17 +7,18 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+
 class CompletionScreen:
     def __init__(self, theme_manager):
         self.theme_manager = theme_manager
         self._is_cleaned_up = False
-        
+
         # Store references to widgets that need style updates
         self.check_icon = None
         self.title_label = None
         self.desc_label = None
         self.start_button = None
-        
+
         # Connect theme changes
         self.theme_manager.theme_changed.connect(self.update_styles)
 
@@ -25,38 +26,38 @@ class CompletionScreen:
         """Update all styles based on current theme"""
         if self._is_cleaned_up:
             return
-            
+
         if self.check_icon:
-            self.check_icon.setStyleSheet(f'''
+            self.check_icon.setStyleSheet(f"""
                 QLabel {{
-                    background-color: {self.theme_manager.get_color('onboarding.success.background')};
-                    color: {self.theme_manager.get_color('onboarding.success.text')};
+                    background-color: {self.theme_manager.get_color("onboarding.success.background")};
+                    color: {self.theme_manager.get_color("onboarding.success.text")};
                     font-size: 32px;
                     border-radius: 28px;
                     margin-bottom: 4px;
                     font-weight: 500;
                     letter-spacing: 1px;
                 }}
-            ''')
-            
+            """)
+
         if self.title_label:
-            self.title_label.setStyleSheet(f'''
+            self.title_label.setStyleSheet(f"""
                 font-size: 28px;
                 font-weight: 600;
-                color: {self.theme_manager.get_color('text_primary')};
+                color: {self.theme_manager.get_color("text_primary")};
                 margin-top: 0px;
                 margin-bottom: 6px;
                 letter-spacing: -0.3px;
-            ''')
-            
+            """)
+
         if self.desc_label:
-            self.desc_label.setStyleSheet(f'''
+            self.desc_label.setStyleSheet(f"""
                 font-size: 16px;
-                color: {self.theme_manager.get_color('text_secondary')};
+                color: {self.theme_manager.get_color("text_secondary")};
                 font-weight: 400;
                 margin-bottom: 20px;
                 letter-spacing: 0.05px;
-            ''')
+            """)
 
     def create(self, parent_layout):
         # --- Centered Layout ---
@@ -95,7 +96,9 @@ class CompletionScreen:
         self.start_button.setObjectName("onboarding-primary")
         self.start_button.setFixedHeight(38)
         self.start_button.setMinimumWidth(140)
-        content_layout.addWidget(self.start_button, alignment=Qt.AlignmentFlag.AlignCenter)
+        content_layout.addWidget(
+            self.start_button, alignment=Qt.AlignmentFlag.AlignCenter
+        )
 
         # --- Center the content in the main layout ---
         parent_layout.addStretch(2)
@@ -110,9 +113,9 @@ class CompletionScreen:
     def cleanup(self):
         """Clean up resources"""
         self._is_cleaned_up = True
-        
+
         # Clear references to widgets
         self.check_icon = None
         self.title_label = None
         self.desc_label = None
-        self.start_button = None 
+        self.start_button = None

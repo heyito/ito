@@ -223,6 +223,11 @@ function startProcessingIndicator() {
         // Move to next opacity step
         stepIndex = (stepIndex + 1) % opacitySteps.length;
     }, 200); // Each step takes 200ms, full cycle is 1.6s
+
+    // Safety timeout to ensure processing indicator is stopped after 5 seconds
+    setTimeout(() => {
+        stopProcessingIndicator();
+    }, 5000);
 }
 
 function stopProcessingIndicator() {

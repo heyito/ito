@@ -137,8 +137,6 @@ class StatusWindow(QWidget):
                 if isinstance(status, StatusMessage):
                     status = status.value
                 
-                print(f"Current status: {self._current_state}, Status start time: {self._status_start_time}")
-                # If current state is READY update immediately
                 if self._current_state == StatusMessage.READY.value:
                     self._apply_status_update(status)
                 else:

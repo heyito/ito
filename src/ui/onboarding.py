@@ -20,29 +20,7 @@ from src.ui.theme.manager import ThemeManager
 from src.ui.keyboard_manager import KeyboardManager
 from src.ui.screens.onboarding.permission_screen import PermissionScreen
 from src.ui.screens.onboarding.keyboard_setup_screen import KeyboardSetupScreen
-
-# --- Platform specific code for macOS ---
-_ns_window = None
-if sys.platform == 'darwin':
-    try:
-        from ctypes import c_void_p
-
-        import objc
-        from AppKit import (
-            NSColor,
-            NSFullSizeContentViewWindowMask,
-            NSView,
-            NSWindow,
-            NSWindowTitleHidden,
-        )
-        print("PyObjC found. Applying native macOS styling.")
-        _objc_available = True
-    except ImportError:
-        print("PyObjC framework (pyobjc-framework-Cocoa) not found. Cannot apply native macOS styling.")
-        traceback.print_exc()
-        _objc_available = False
-else:
-    _objc_available = False
+from src.ui.screens.onboarding.welcome_screen import WelcomeScreen
 
 class PermissionChecker(QObject):
     permission_checked = Signal(str, bool)  # permission_name, is_granted
@@ -184,10 +162,6 @@ class OnboardingWindow(QMainWindow):
             }}
         """)
 
-        # Update logo if present
-        if hasattr(self, 'logo_label'):
-            self.update_logo_pixmap()
-
         # Update current screen styles
         self.update_current_screen_styles()
 
@@ -228,24 +202,22 @@ class OnboardingWindow(QMainWindow):
 
         # Update title and subtitle labels
         for widget in self.findChildren(QLabel):
-            if widget.text() in ["Welcome to Inten", "Required Permissions", "Setup Complete!", "Set Up Your Keyboard Shortcut"]:
+            if widget.text() in ["Required Permissions", "Setup Complete!"]:
                 widget.setStyleSheet(f'''
-                    font-size: {28 if widget.text() != "Welcome to Inten" and widget.text() != "Set Up Your Keyboard Shortcut" else 36 if widget.text() == "Welcome to Inten" else 34}px;
-                    font-weight: {600 if widget.text() != "Welcome to Inten" else 700};
+                    font-size: 28px;
+                    font-weight: 600;
                     color: {self.theme_manager.get_color('text_primary')};
                     margin-top: 0px;
                     margin-bottom: 6px;
                     letter-spacing: -0.5px;
                 ''')
-            elif widget.text() in ["Let's set up your permissions to get started.", 
-                                 "Inten needs a few permissions to help you be more productive",
-                                 "You're all set to start using Inten!",
-                                 "Press and Hold any key or key combination to set your shortcut"]:
+            elif widget.text() in ["Inten needs a few permissions to help you be more productive",
+                                 "You're all set to start using Inten!"]:
                 widget.setStyleSheet(f'''
-                    font-size: {15 if widget.text() == "Inten needs a few permissions to help you be more productive" else 16 if widget.text() == "Press any key or key combination to set your shortcut" else 18}px;
+                    font-size: {15 if widget.text() == "Inten needs a few permissions to help you be more productive" else 16}px;
                     color: {self.theme_manager.get_color('text_secondary')};
                     font-weight: 400;
-                    margin-bottom: {40 if widget.text() == "Inten needs a few permissions to help you be more productive" else 10 if widget.text() == "Press any key or key combination to set your shortcut" else 24}px;
+                    margin-bottom: {40 if widget.text() == "Inten needs a few permissions to help you be more productive" else 10}px;
                     letter-spacing: 0.1px;
                 ''')
 
@@ -269,70 +241,15 @@ class OnboardingWindow(QMainWindow):
 
     def show_welcome_screen(self):
         self.clear_layout()
-
-        # --- Centered Layout ---
-        content_layout = QVBoxLayout()
-        content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(36)
-
-        # Logo
-        self.logo_label = QLabel()
-        self.logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.update_logo_pixmap()
-        content_layout.addWidget(self.logo_label)
-
-        # Title
-        title_label = QLabel("Welcome to Inten")
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_label.setStyleSheet(f'''
-            font-size: 36px;
-            font-weight: 700;
-            color: {self.theme_manager.get_color('text_primary')};
-            margin-top: 0px;
-            margin-bottom: 6px;
-            letter-spacing: -0.5px;
-        ''')
-        content_layout.addWidget(title_label)
-
-        # Subtitle
-        desc_label = QLabel("Let's set up your permissions to get started.")
-        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        desc_label.setStyleSheet(f'''
-            font-size: 18px;
-            color: {self.theme_manager.get_color('text_secondary')};
-            font-weight: 400;
-            margin-bottom: 24px;
-            letter-spacing: 0.1px;
-        ''')
-        content_layout.addWidget(desc_label)
-
-        # Get Started Button
-        start_button = QPushButton("Get Started")
-        start_button.setObjectName("onboarding-primary")
+        
+        # Create welcome screen
+        self.welcome_screen = WelcomeScreen(self.theme_manager)
+        
+        # Create the screen and get the start button
+        start_button = self.welcome_screen.create(self.layout)
+        
+        # Connect start button signal
         start_button.clicked.connect(self.show_permission_screen)
-        start_button.setFixedHeight(44)
-        start_button.setMinimumWidth(180)
-        content_layout.addSpacing(8)
-        content_layout.addWidget(start_button, alignment=Qt.AlignmentFlag.AlignCenter)
-
-        # --- Center the content in the main layout ---
-        self.layout.addStretch(2)
-        self.layout.addLayout(content_layout)
-        self.layout.addStretch(3)
-
-    def update_logo_pixmap(self):
-        logo_path = self.theme_manager.get_logo_path()
-        if logo_path:
-            logo_pixmap = QPixmap(logo_path)
-            if not logo_pixmap.isNull():
-                scaled_pixmap = logo_pixmap.scaled(140, 140, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                self.logo_label.setPixmap(scaled_pixmap)
-                self.logo_label.setText("")
-                return
-        # Fallback
-        self.logo_label.setPixmap(QPixmap())
-        self.logo_label.setText("🎯")
-        self.logo_label.setStyleSheet("font-size: 80px; background-color: transparent; margin-bottom: 8px;")
 
     def show_permission_screen(self):
         self.clear_layout()

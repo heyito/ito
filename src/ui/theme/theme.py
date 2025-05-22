@@ -27,6 +27,8 @@ THEME = {
             "text": QColor(255, 255, 255, 255),
             "hover": QColor(118, 20, 255, 255),
             "pressed": QColor(78, 0, 218, 255),
+            "disabled": QColor(100, 100, 100, 128),  # f3e2c7 with 50% opacity
+            "disabled_text": QColor(176, 176, 176, 255),  # b0b0b0
         },
         "input": {
             "background": QColor(45, 45, 45, 255),
@@ -77,6 +79,8 @@ THEME = {
             "text": QColor(255, 255, 255, 255),
             "hover": QColor(138, 40, 255, 255),  # Even lighter on hover
             "pressed": QColor(98, 0, 238, 255),  # Original color when pressed
+            "disabled": QColor(100, 100, 100, 128),  # f3e2c7 with 50% opacity
+            "disabled_text": QColor(176, 176, 176, 255),  # b0b0b0
         },
         "input": {
             "background": QColor(255, 255, 255, 255),

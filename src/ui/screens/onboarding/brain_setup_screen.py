@@ -1,85 +1,236 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QVBoxLayout,
+    QHBoxLayout,
     QLabel,
     QPushButton,
     QWidget,
     QLineEdit,
     QSizePolicy,
+    QListWidget,
+    QListWidgetItem,
+    QFrame,
 )
+from PySide6.QtGui import QPixmap, QCursor, QDesktopServices
+from PySide6.QtCore import QUrl
 from src.ui.theme.manager import ThemeManager
-from src.ui.components.segmented_button_group import SegmentedButtonGroup
+from src.ui.components.menu_button import MenuButton
+
+
+class ProviderSelectButton(QFrame):
+    clicked = Signal(int)
+
+    def __init__(self, name, desc, idx, theme_manager, parent=None):
+        super().__init__(parent)
+        self.idx = idx
+        self.theme_manager = theme_manager
+        self.setObjectName("provider_select_button")
+        self.setCursor(Qt.PointingHandCursor)
+        self.setFrameShape(QFrame.StyledPanel)
+        self.setFrameShadow(QFrame.Raised)
+        self.selected = False
+        self.has_checkmark = False
+        self._init_ui(name, desc)
+        self.set_selected(False)
+
+    def _init_ui(self, name, desc):
+        self.outer_layout = QHBoxLayout(self)
+        self.outer_layout.setContentsMargins(0, 0, 0, 0)
+        self.outer_layout.setSpacing(0)
+
+        # Left bar
+        self.left_bar = QFrame()
+        self.left_bar.setFixedWidth(4)
+        self.left_bar.setStyleSheet("background: transparent; border-radius: 2px;")
+        self.outer_layout.addWidget(self.left_bar)
+
+        # Texts
+        text_container = QWidget()
+        text_layout = QVBoxLayout(text_container)
+        text_layout.setContentsMargins(12, 2, 12, 2)
+        text_layout.setSpacing(0)
+        self.name_label = QLabel(name)
+        self.name_label.setStyleSheet(
+            f"font-size: 15px; font-weight: 600; color: {self.theme_manager.get_color('text_primary')};"
+        )
+        self.desc_label = QLabel(desc)
+        self.desc_label.setStyleSheet(
+            f"font-size: 13px; color: {self.theme_manager.get_color('text_secondary')}; font-weight: 400;"
+        )
+        text_layout.addWidget(self.name_label)
+        text_layout.addWidget(self.desc_label)
+        self.outer_layout.addWidget(text_container, stretch=1)
+
+        # Checkmark
+        self.checkmark_label = QLabel()
+        self.checkmark_label.setFixedSize(20, 20)
+        self.checkmark_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.checkmark_label.setStyleSheet("background: transparent;")
+        self.checkmark_label.hide()
+        self.outer_layout.addWidget(self.checkmark_label)
+        self.setFixedHeight(44)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.clicked.emit(self.idx)
+        super().mousePressEvent(event)
+
+    def set_selected(self, selected):
+        self.selected = selected
+        if selected:
+            bar_color = self.theme_manager.get_color("primary")
+        else:
+            bar_color = "transparent"
+        self.left_bar.setStyleSheet(f"background: {bar_color}; border-radius: 2px;")
+        font_color = (
+            self.theme_manager.get_color("primary")
+            if selected
+            else self.theme_manager.get_color("text_primary")
+        )
+        self.name_label.setStyleSheet(
+            f"font-size: 15px; font-weight: 600; color: {font_color};"
+        )
+        # Remove border
+        self.setStyleSheet(
+            "QFrame#provider_select_button { border: none; background: transparent; }"
+        )
+
+    def set_checkmark(self, show):
+        self.has_checkmark = show
+        if show:
+            self.checkmark_label.setText("✓")
+            self.checkmark_label.setStyleSheet(
+                "background: #fff; border-radius: 10px; color: #222; font-size: 12px; font-weight: 700; border: none; padding: 0px;"
+            )
+            self.checkmark_label.show()
+        else:
+            self.checkmark_label.hide()
+
+
+class KeyHelperButton(QWidget):
+    def __init__(self, left_text, url, theme_manager, parent=None):
+        super().__init__(parent)
+        self.url = url
+        self.theme_manager = theme_manager
+        self.setCursor(QCursor(Qt.PointingHandCursor))
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(10, 0, 10, 0)
+        layout.setSpacing(0)
+        self.left_label = QLabel(left_text)
+        self.left_label.setStyleSheet(
+            f"font-size: 12px; color: {self.theme_manager.get_color('text_secondary')};"
+        )
+        layout.addWidget(self.left_label, alignment=Qt.AlignmentFlag.AlignLeft)
+        layout.addStretch()
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.url_label = QLabel(f"{url} ↗")
+        self.url_label.setStyleSheet(
+            f"font-size: 12px; color: {self.theme_manager.get_color('text_secondary')};"
+        )
+        layout.addWidget(self.url_label, alignment=Qt.AlignmentFlag.AlignRight)
+        self.mousePressEvent = self.open_url_event
+
+    def open_url_event(self, event):
+        QDesktopServices.openUrl(QUrl(self.url))
 
 
 class BrainSetupScreen:
+    PROVIDERS = [
+        {"name": "Groq", "desc": "Fastest"},
+        {"name": "OpenAI", "desc": "Highest Quality"},
+        {"name": "Gemini", "desc": "Balanced"},
+        {"name": "Ollama", "desc": "Local"},
+    ]
+
     def __init__(self, theme_manager: ThemeManager):
         self.theme_manager = theme_manager
         self.selected_brain_type = "groq"  # Default to Groq
         self.api_key_input = None
         self.continue_button = None
-        self.brain_type_group = None
+        self.provider_buttons = []
+        self.helper_widget = None
+        self.right_title = None
+        self.selected_idx = 0
+        self.provider_keys = {
+            provider["name"].lower(): "" for provider in self.PROVIDERS
+        }
 
     def create(self, parent_layout):
         # Main centering container
         outer_container = QWidget()
-        outer_layout = QVBoxLayout(outer_container)
+        outer_layout = QHBoxLayout(outer_container)
         outer_layout.setContentsMargins(0, 0, 0, 0)
         outer_layout.setSpacing(0)
         outer_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # Inner content container
-        container = QWidget()
-        container_layout = QVBoxLayout(container)
-        container_layout.setContentsMargins(0, 0, 0, 0)
-        container_layout.setSpacing(32)
-        container_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        # Left: Provider menu (sidebar)
+        left_widget = QWidget()
+        left_widget.setFixedWidth(300)
+        left_layout = QVBoxLayout(left_widget)
+        left_layout.setContentsMargins(32, 32, 32, 32)
+        left_layout.setSpacing(4)
+        left_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        # Title
-        title = QLabel("Configure the Brain")
-        title.setObjectName("permission_text")
+        title = QLabel("API Key Setup")
         title.setStyleSheet(
             f"""
             font-size: 28px;
             font-weight: 600;
             color: {self.theme_manager.get_color("text_primary")};
-            margin-top: 0px;
-            margin-bottom: 6px;
+            margin-bottom: 12px;
             letter-spacing: -0.5px;
             """
         )
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        container_layout.addWidget(title)
+        left_layout.addWidget(title)
 
-        # Subtitle
-        subtitle = QLabel("Choose your preferred AI provider")
-        subtitle.setObjectName("permission_text")
-        subtitle.setStyleSheet(
-            f"""
-            font-size: 15px;
-            color: {self.theme_manager.get_color("text_secondary")};
-            font-weight: 400;
-            margin-bottom: 40px;
-            letter-spacing: 0.1px;
-            """
+        subtitle = QLabel()
+        subtitle.setText(
+            f'<div style="line-height: 1.5; font-size: 15px; color: {self.theme_manager.get_color("text_secondary")}; font-weight: 400; letter-spacing: 0.1px;">Connect Inten to your preferred LLM by adding the API key</div>'
         )
-        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        container_layout.addWidget(subtitle)
+        subtitle.setWordWrap(True)
+        subtitle.setStyleSheet("margin-bottom: 24px;")
+        left_layout.addWidget(subtitle)
 
-        # SegmentedButtonGroup (left aligned, expanding)
-        self.brain_type_group = SegmentedButtonGroup(
-            [
-                "Groq (Fastest)",
-                "OpenAI (Highest Quality)",
-                "Gemini (Balanced)",
-                "Ollama (Local)",
-            ]
-        )
-        self.brain_type_group.setMinimumWidth(750)
-        container_layout.addWidget(
-            self.brain_type_group, alignment=Qt.AlignmentFlag.AlignLeft
-        )
+        # Provider custom buttons
+        self.provider_buttons = []
+        for idx, provider in enumerate(self.PROVIDERS):
+            btn = ProviderSelectButton(
+                provider["name"], provider["desc"], idx, self.theme_manager
+            )
+            btn.clicked.connect(self.handle_brain_type_change)
+            btn.set_selected(idx == 0)
+            left_layout.addWidget(btn)
+            self.provider_buttons.append(btn)
 
-        # QLineEdit (left aligned, expanding)
+        # Continue button under provider buttons
+        self.continue_button = QPushButton("Continue")
+        self.continue_button.setObjectName("onboarding-primary")
+        self.continue_button.setFixedHeight(44)
+        self.continue_button.setFixedWidth(120)
+        self.continue_button.setEnabled(False)
+        left_layout.addStretch()
+        left_layout.addWidget(self.continue_button)
+
+        # Right: Input and helper
+        right_widget = QWidget()
+        right_layout = QVBoxLayout(right_widget)
+        right_layout.setContentsMargins(32, 32, 32, 32)
+        right_layout.setSpacing(24)
+        right_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        self.right_title = QLabel()
+        self.right_title.setStyleSheet(
+            f"font-size: 20px; font-weight: 600; color: {self.theme_manager.get_color('text_primary')}; margin-bottom: 8px;"
+        )
+        right_layout.addWidget(self.right_title)
+        right_widget.setStyleSheet("""
+            #key_helper_button {
+                border: 2px solid red;
+                border-radius: 14px;
+                background: transparent;
+            }
+        """)
+
         self.api_key_input = QLineEdit()
         self.api_key_input.setPlaceholderText("Enter your API key")
         self.api_key_input.setStyleSheet(
@@ -94,75 +245,75 @@ class BrainSetupScreen:
             """
         )
         self.api_key_input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        container_layout.addWidget(
-            self.api_key_input, alignment=Qt.AlignmentFlag.AlignLeft
-        )
+        right_layout.addWidget(self.api_key_input)
 
-        # Add stretch to push content to center vertically
-        container_layout.addStretch()
+        right_layout.addStretch()
 
-        # Continue button (centered)
-        self.continue_button = QPushButton("Continue")
-        self.continue_button.setObjectName("onboarding-primary")
-        self.continue_button.setStyleSheet(
-            f"""
-            QPushButton#onboarding-primary {{
-                background-color: {self.theme_manager.get_color("onboarding.button.background")};
-                color: {self.theme_manager.get_color("onboarding.button.text")};
-                border: none;
-                border-radius: 8px;
-                font-size: 16px;
-                font-weight: 600;
-                padding: 0 14px;
-                min-height: 32px;
-                min-width: 160px;
-                letter-spacing: 0.2px;
-            }}
-            QPushButton#onboarding-primary:hover {{
-                background-color: {self.theme_manager.get_color("onboarding.button.hover")};
-            }}
-            QPushButton#onboarding-primary:disabled {{
-                background-color: {self.theme_manager.get_color("onboarding.button.disabled")};
-                color: {self.theme_manager.get_color("onboarding.button.disabled_text")};
-            }}
-            """
-        )
-        self.continue_button.setEnabled(False)
-        container_layout.addWidget(
-            self.continue_button, alignment=Qt.AlignmentFlag.AlignCenter
-        )
-
-        # Add the inner container to the outer centering layout
-        outer_layout.addWidget(container, alignment=Qt.AlignmentFlag.AlignCenter)
+        # Add left and right widgets to the main layout
+        outer_layout.addWidget(left_widget, stretch=1)
+        outer_layout.addWidget(right_widget, stretch=2)
         parent_layout.addWidget(outer_container)
 
         # Connect signals
-        self.brain_type_group.selectionChanged.connect(self.handle_brain_type_change)
-        self.api_key_input.textChanged.connect(self.validate_inputs)
+        self.api_key_input.textChanged.connect(self.handle_api_key_input_changed)
+
+        # Initialize right pane
+        self.handle_brain_type_change(0)
 
         return self.continue_button
 
-    def handle_brain_type_change(self):
-        """Handle brain type selection change"""
-        selected_text = self.brain_type_group.currentText()
-        # Extract the provider name from the text (remove the description in parentheses)
-        self.selected_brain_type = selected_text.split(" (")[0].lower()
-
-        # Update input label and placeholder based on brain type
+    def handle_brain_type_change(self, idx):
+        for i, btn in enumerate(self.provider_buttons):
+            btn.set_selected(i == idx)
+        self.selected_idx = idx
+        provider = self.PROVIDERS[idx]
+        self.selected_brain_type = provider["name"].lower()
+        self.api_key_input.blockSignals(True)
+        self.api_key_input.setText(self.provider_keys.get(self.selected_brain_type, ""))
+        self.api_key_input.blockSignals(False)
+        self._update_checkmarks()
+        self.right_title.setText(f"{provider['name']} API Key")
+        # Remove old helper widget if present
+        if self.helper_widget:
+            self.helper_widget.setParent(None)
+            self.helper_widget.deleteLater()
+            self.helper_widget = None
+        url = None
+        if self.selected_brain_type == "openai":
+            url = "https://platform.openai.com/api-keys"
+        elif self.selected_brain_type == "gemini":
+            url = "https://aistudio.google.com/apikey"
+        elif self.selected_brain_type == "groq":
+            url = "https://console.groq.com/keys"
+        if url:
+            self.helper_widget = KeyHelperButton(
+                "Click here to get the key", url, self.theme_manager
+            )
+            self.right_title.parentWidget().layout().insertWidget(2, self.helper_widget)
         if self.selected_brain_type == "ollama":
             self.api_key_input.setPlaceholderText(
                 "Enter model name (e.g., llama3.2:latest)"
             )
         else:
             self.api_key_input.setPlaceholderText("Enter your API key")
+        self.validate_inputs()
 
-        # Validate inputs
+    def handle_api_key_input_changed(self, text):
+        # Save the key for the selected provider
+        self.provider_keys[self.selected_brain_type] = text
         self.validate_inputs()
 
     def validate_inputs(self):
-        """Validate inputs and enable/disable continue button"""
         is_valid = bool(self.api_key_input.text().strip())
         self.continue_button.setEnabled(is_valid)
+        self._update_checkmarks()
+
+    def _update_checkmarks(self):
+        # Show checkmark for any provider with a non-empty key
+        for i, btn in enumerate(self.provider_buttons):
+            key = self.provider_keys.get(self.PROVIDERS[i]["name"].lower(), "")
+            show = bool(key.strip())
+            btn.set_checkmark(show)
 
     def get_configuration(self):
         """Get the current configuration based on selections"""
@@ -218,9 +369,14 @@ class BrainSetupScreen:
 
     def cleanup(self):
         """Clean up resources"""
-        if self.brain_type_group:
-            self.brain_type_group.deleteLater()
+        if self.provider_buttons:
+            for btn in self.provider_buttons:
+                btn.deleteLater()
         if self.api_key_input:
             self.api_key_input.deleteLater()
         if self.continue_button:
             self.continue_button.deleteLater()
+        if self.helper_widget:
+            self.helper_widget.deleteLater()
+        if self.right_title:
+            self.right_title.deleteLater()

@@ -300,6 +300,9 @@ class MacOSEngine:
         """
         print("Attempting to select all and copy text from the active application...")
 
+        pasteboard = NSPasteboard.generalPasteboard()
+        pasteboard.clearContents()
+
         self._send_shortcut(["command"], KEY_MAP["a"])
         time.sleep(0.3)
 
@@ -307,8 +310,6 @@ class MacOSEngine:
         time.sleep(0.2)
 
         # 3. Get text from clipboard
-        print("  Reading from clipboard...")
-        pasteboard = NSPasteboard.generalPasteboard()
 
         available_types = pasteboard.types()
         if NSStringPboardType in available_types:
@@ -336,25 +337,27 @@ class MacOSEngine:
         It does this by setting the clipboard content and then simulating Cmd+V.
         """
 
-        print(f"Attempting to paste text (first 50 chars): '{text_to_paste[:50].replace(os.linesep, ' ')}...'")
+        print(
+            f"Attempting to paste text (first 50 chars): '{text_to_paste[:50].replace(os.linesep, ' ')}...'"
+        )
 
         pasteboard = NSPasteboard.generalPasteboard()
-        pasteboard.clearContents() 
+        pasteboard.clearContents()
         # Prepare the data for the pasteboard
         # string_array = NSArray.arrayWithObject_(text_to_paste) # Old way, prefer direct types
         # success = pasteboard.writeObjects_(string_array)
         success = pasteboard.declareTypes_owner_([NSStringPboardType], None)
         if success:
             success = pasteboard.setString_forType_(text_to_paste, NSStringPboardType)
-        
+
         if not success:
             print("Error: Failed to set text on the pasteboard.")
             return False
-        
+
         time.sleep(0.1)
 
         self._send_shortcut(["command"], KEY_MAP["v"])
-        
+
         # Allow a moment for paste to occur
         time.sleep(0.1)
         print("✅ Paste command sent.")

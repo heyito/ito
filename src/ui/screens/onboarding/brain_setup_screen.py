@@ -10,11 +10,14 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QFrame,
+    QGraphicsOpacityEffect,
 )
 from PySide6.QtGui import QPixmap, QCursor, QDesktopServices
 from PySide6.QtCore import QUrl
 from src.ui.theme.manager import ThemeManager
 from src.ui.components.menu_button import MenuButton
+from PySide6.QtCore import QPropertyAnimation, QEasingCurve, QPoint
+from PySide6.QtCore import QTimer
 
 
 class ProviderSelectButton(QFrame):
@@ -253,6 +256,46 @@ class BrainSetupScreen:
         outer_layout.addWidget(left_widget, stretch=1)
         outer_layout.addWidget(right_widget, stretch=2)
         parent_layout.addWidget(outer_container)
+
+        # --- Animation Section ---
+        self._animation_refs = []  # Prevent GC
+
+        def start_animations():
+            # Fade in the whole page
+            opacity_effect = QGraphicsOpacityEffect(outer_container)
+            outer_container.setGraphicsEffect(opacity_effect)
+            opacity_anim = QPropertyAnimation(opacity_effect, b"opacity")
+            opacity_anim.setDuration(400)
+            opacity_anim.setStartValue(0)
+            opacity_anim.setEndValue(1)
+            opacity_anim.setEasingCurve(QEasingCurve.OutCubic)
+            opacity_anim.start(QPropertyAnimation.DeleteWhenStopped)
+            self._animation_refs.append(opacity_anim)
+            # Slide in left_widget from the left
+            left_start = left_widget.pos() - QPoint(60, 0)
+            left_end = left_widget.pos()
+            left_widget.move(left_start)
+            left_anim = QPropertyAnimation(left_widget, b"pos")
+            left_anim.setDuration(500)
+            left_anim.setStartValue(left_start)
+            left_anim.setEndValue(left_end)
+            left_anim.setEasingCurve(QEasingCurve.OutCubic)
+            left_anim.start(QPropertyAnimation.DeleteWhenStopped)
+            self._animation_refs.append(left_anim)
+            # Slide in right_widget from the right
+            right_start = right_widget.pos() + QPoint(60, 0)
+            right_end = right_widget.pos()
+            right_widget.move(right_start)
+            right_anim = QPropertyAnimation(right_widget, b"pos")
+            right_anim.setDuration(500)
+            right_anim.setStartValue(right_start)
+            right_anim.setEndValue(right_end)
+            right_anim.setEasingCurve(QEasingCurve.OutCubic)
+            right_anim.start(QPropertyAnimation.DeleteWhenStopped)
+            self._animation_refs.append(right_anim)
+
+        QTimer.singleShot(0, start_animations)
+        # --- End Animation Section ---
 
         # Connect signals
         self.api_key_input.textChanged.connect(self.handle_api_key_input_changed)

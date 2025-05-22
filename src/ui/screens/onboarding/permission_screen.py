@@ -334,9 +334,9 @@ class PermissionScreen:
     def check_all_permissions_and_proceed(self):
         """Check all permissions and proceed if all are granted"""
         if all(self.permission_states.values()):
-            # Get the parent window and call show_brain_setup_screen
+            # Get the parent window and call show_api_setup_screen
             parent_window = self.continue_button.window()
-            parent_window.show_brain_setup_screen()
+            parent_window.show_api_setup_screen()
         else:
             # Show error message
             error_label = QLabel("Please grant all required permissions to continue")

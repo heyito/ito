@@ -137,7 +137,7 @@ class KeyHelperButton(QWidget):
         QDesktopServices.openUrl(QUrl(self.url))
 
 
-class BrainSetupScreen:
+class ApiSetupScreen:
     PROVIDERS = [
         {"name": "Groq", "desc": "Fastest"},
         {"name": "OpenAI", "desc": "Highest Quality"},
@@ -147,7 +147,7 @@ class BrainSetupScreen:
 
     def __init__(self, theme_manager: ThemeManager):
         self.theme_manager = theme_manager
-        self.selected_brain_type = "groq"  # Default to Groq
+        self.selected_api_type = "groq"  # Default to Groq
         self.api_key_input = None
         self.continue_button = None
         self.provider_buttons = []
@@ -200,7 +200,7 @@ class BrainSetupScreen:
             btn = ProviderSelectButton(
                 provider["name"], provider["desc"], idx, self.theme_manager
             )
-            btn.clicked.connect(self.handle_brain_type_change)
+            btn.clicked.connect(self.handle_api_type_change)
             btn.set_selected(idx == 0)
             left_layout.addWidget(btn)
             self.provider_buttons.append(btn)
@@ -301,18 +301,18 @@ class BrainSetupScreen:
         self.api_key_input.textChanged.connect(self.handle_api_key_input_changed)
 
         # Initialize right pane
-        self.handle_brain_type_change(0)
+        self.handle_api_type_change(0)
 
         return self.continue_button
 
-    def handle_brain_type_change(self, idx):
+    def handle_api_type_change(self, idx):
         for i, btn in enumerate(self.provider_buttons):
             btn.set_selected(i == idx)
         self.selected_idx = idx
         provider = self.PROVIDERS[idx]
-        self.selected_brain_type = provider["name"].lower()
+        self.selected_api_type = provider["name"].lower()
         self.api_key_input.blockSignals(True)
-        self.api_key_input.setText(self.provider_keys.get(self.selected_brain_type, ""))
+        self.api_key_input.setText(self.provider_keys.get(self.selected_api_type, ""))
         self.api_key_input.blockSignals(False)
         self._update_checkmarks()
         self.right_title.setText(f"{provider['name']} API Key")
@@ -322,18 +322,18 @@ class BrainSetupScreen:
             self.helper_widget.deleteLater()
             self.helper_widget = None
         url = None
-        if self.selected_brain_type == "openai":
+        if self.selected_api_type == "openai":
             url = "https://platform.openai.com/api-keys"
-        elif self.selected_brain_type == "gemini":
+        elif self.selected_api_type == "gemini":
             url = "https://aistudio.google.com/apikey"
-        elif self.selected_brain_type == "groq":
+        elif self.selected_api_type == "groq":
             url = "https://console.groq.com/keys"
         if url:
             self.helper_widget = KeyHelperButton(
                 "Click here to get the key", url, self.theme_manager
             )
             self.right_title.parentWidget().layout().insertWidget(2, self.helper_widget)
-        if self.selected_brain_type == "ollama":
+        if self.selected_api_type == "ollama":
             self.api_key_input.setPlaceholderText(
                 "Enter model name (e.g., llama3.2:latest)"
             )
@@ -343,7 +343,7 @@ class BrainSetupScreen:
 
     def handle_api_key_input_changed(self, text):
         # Save the key for the selected provider
-        self.provider_keys[self.selected_brain_type] = text
+        self.provider_keys[self.selected_api_type] = text
         self.validate_inputs()
 
     def validate_inputs(self):
@@ -387,23 +387,26 @@ class BrainSetupScreen:
             "LLM": {"source": "", "max_tokens": 2000, "temperature": 0.7},
         }
 
-        if self.selected_brain_type == "groq":
-            config["Groq"]["api_key"] = self.api_key_input.text().strip()
+        # Update API keys for all providers
+        config["Groq"]["api_key"] = self.provider_keys.get("groq", "").strip()
+        config["OpenAI"]["api_key"] = self.provider_keys.get("openai", "").strip()
+        config["Gemini"]["api_key"] = self.provider_keys.get("gemini", "").strip()
+        config["Ollama"]["model"] = self.provider_keys.get("ollama", "").strip()
+
+        # Set source and model based on selected provider
+        if self.selected_api_type == "groq":
             config["LLM"]["source"] = "groq_api"
             config["ASR"]["source"] = "groq_api"
             config["ASR"]["model"] = config["Groq"]["asr_model"]
-        elif self.selected_brain_type == "openai":
-            config["OpenAI"]["api_key"] = self.api_key_input.text().strip()
+        elif self.selected_api_type == "openai":
             config["LLM"]["source"] = "openai_api"
             config["ASR"]["source"] = "openai_api"
             config["ASR"]["model"] = config["OpenAI"]["asr_model"]
-        elif self.selected_brain_type == "gemini":
-            config["Gemini"]["api_key"] = self.api_key_input.text().strip()
+        elif self.selected_api_type == "gemini":
             config["LLM"]["source"] = "gemini_api"
             config["ASR"]["source"] = "gemini_api"
             config["ASR"]["model"] = config["Gemini"]["asr_model"]
-        elif self.selected_brain_type == "ollama":
-            config["Ollama"]["model"] = self.api_key_input.text().strip()
+        elif self.selected_api_type == "ollama":
             config["LLM"]["source"] = "ollama"
             config["ASR"]["source"] = "faster_whisper"
             config["ASR"]["model"] = "medium"

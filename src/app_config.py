@@ -98,7 +98,7 @@ class AppConfig:
 
         # VAD settings
         vad_section = config_dict.get("VAD", {})
-        vad_enabled = vad_section.get("enabled", True)
+        vad_enabled = vad_section.get("enabled", False)
         if isinstance(vad_enabled, str):
             self.vad_enabled: bool = vad_enabled.lower() == "true"
         else:
@@ -126,4 +126,6 @@ class AppConfig:
 
         # Mode settings
         mode_section = config_dict.get("Mode", {})
-        self.application_mode: str = mode_section.get('application_mode', 'discrete').lower()
+        self.application_mode: str = mode_section.get(
+            "application_mode", "discrete"
+        ).lower()

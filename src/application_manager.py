@@ -128,7 +128,7 @@ class ApplicationManager(QObject):
         }
 
         # VAD settings - Convert string to boolean properly
-        vad_enabled = self.settings.value("VAD/enabled", "True")
+        vad_enabled = self.settings.value("VAD/enabled", "False")
         if isinstance(vad_enabled, str):
             vad_enabled = vad_enabled.lower() == "true"
         else:
@@ -171,8 +171,10 @@ class ApplicationManager(QObject):
             )
         }
 
-        config['Mode'] = {
-            'application_mode': self.settings.value("Mode/application_mode", "discrete").lower()
+        config["Mode"] = {
+            "application_mode": self.settings.value(
+                "Mode/application_mode", "discrete"
+            ).lower()
         }
 
         # Set the hotkey in the keyboard manager
@@ -390,7 +392,7 @@ class ApplicationManager(QObject):
             # Pass the status queue to the app instance
             self.app_instance.status_queue = self.status_queue
             self.app_instance.command_processor.status_queue = self.status_queue
-            
+
             # audio recorder may not have a status queue, so we need to check if it exists
             if hasattr(self.app_instance, "audio_recorder"):
                 self.app_instance.audio_recorder.status_queue = self.status_queue

@@ -14,7 +14,7 @@ from src.ui.screens.onboarding.permission_screen import PermissionScreen
 from src.ui.screens.onboarding.keyboard_setup_screen import KeyboardSetupScreen
 from src.ui.screens.onboarding.welcome_screen import WelcomeScreen
 from src.ui.screens.onboarding.completion_screen import CompletionScreen
-from src.ui.screens.onboarding.brain_setup_screen import BrainSetupScreen
+from src.ui.screens.onboarding.api_setup_screen import ApiSetupScreen
 
 
 class OnboardingWindow(QMainWindow):
@@ -247,41 +247,52 @@ class OnboardingWindow(QMainWindow):
             self.permission_screen.handle_permission_check
         )
 
-    def show_brain_setup_screen(self):
+    def show_api_setup_screen(self):
         self.clear_layout()
 
         # Create brain setup screen
-        self.brain_setup_screen = BrainSetupScreen(self.theme_manager)
+        self.api_setup_screen = ApiSetupScreen(self.theme_manager)
 
         # Create the screen and get the continue button
-        continue_button = self.brain_setup_screen.create(self.layout)
+        continue_button = self.api_setup_screen.create(self.layout)
 
         # Connect continue button signal
-        continue_button.clicked.connect(self.complete_brain_setup)
+        continue_button.clicked.connect(self.complete_api_setup)
 
-    def complete_brain_setup(self):
+    def complete_api_setup(self):
         # Get the configuration from the brain setup screen
-        config = self.brain_setup_screen.get_configuration()
+        config = self.api_setup_screen.get_configuration()
 
         # Save the configuration to settings
-        self.settings.setValue("LLM/source", config["llm_source"])
-        self.settings.setValue("LLM/model", config["llm_model"])
-        self.settings.setValue("ASR/source", config["asr_source"])
-        self.settings.setValue("ASR/model", config["asr_model"])
+        self.settings.setValue("LLM/source", config["LLM"]["source"])
+        self.settings.setValue("LLM/max_tokens", config["LLM"]["max_tokens"])
+        self.settings.setValue("LLM/temperature", config["LLM"]["temperature"])
+        self.settings.setValue("ASR/source", config["ASR"]["source"])
+        self.settings.setValue("ASR/model", config["ASR"]["model"])
+        self.settings.setValue(
+            "ASR/local_model_size", config["ASR"]["local_model_size"]
+        )
+        self.settings.setValue("ASR/device", config["ASR"]["device"])
+        self.settings.setValue("ASR/compute_type", config["ASR"]["compute_type"])
 
-        # Save API key if present
-        if config["api_key"]:
-            if config["llm_source"] == "groq_api":
-                self.settings.setValue("APIKeys/groq_api_key", config["api_key"])
-            elif config["llm_source"] == "openai_api":
-                self.settings.setValue("APIKeys/openai_api_key", config["api_key"])
-            elif config["llm_source"] == "gemini_api":
-                self.settings.setValue("APIKeys/gemini_api_key", config["api_key"])
+        # Save API keys for all providers
+        if config["Groq"]["api_key"]:
+            self.settings.setValue("APIKeys/groq_api_key", config["Groq"]["api_key"])
+        if config["OpenAI"]["api_key"]:
+            self.settings.setValue(
+                "APIKeys/openai_api_key", config["OpenAI"]["api_key"]
+            )
+        if config["Gemini"]["api_key"]:
+            self.settings.setValue(
+                "APIKeys/gemini_api_key", config["Gemini"]["api_key"]
+            )
+        if config["Ollama"]["model"]:
+            self.settings.setValue("APIKeys/ollama_model", config["Ollama"]["model"])
 
         self.settings.sync()
 
         # Clean up and proceed to keyboard setup
-        self.brain_setup_screen.cleanup()
+        self.api_setup_screen.cleanup()
         self.show_keyboard_setup_screen()
 
     def show_keyboard_setup_screen(self):

@@ -203,11 +203,7 @@ user_command: "Open a new note and type 'Groceries:'"
      {action:"type_text", x:400,y:300, text:"Groceries:\n", element_description:"Typed 'Groceries:' into the new note area"}   
   ])
 """
-# TODO: In the future^ system prompt requesting feedback
-# • Returning a `ui_batch` with only one step is allowed **only** when the task
-#   truly needs exactly one action.
-#   If you return a single-step batch and the goal is not finished the driver
-#   will stop the session and mark it as a failure.
+
 
 
 class PromptTemplate:

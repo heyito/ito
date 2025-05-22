@@ -158,7 +158,6 @@ class LLMHandler:
                 tool_functions=tool_functions,
                 messages_override=messages,
             )
-            # TODO: Make this on the client as well
             tool_calls = self.client.extract_tool_calls(resp)
             if not tool_calls:
                 break

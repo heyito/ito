@@ -83,6 +83,15 @@ class AudioSourceInterface(ABC):
         pass
 
     @abstractmethod
+    def record_audio_stream(self, stop_event, audio_queue):
+        """
+        Contuinously records audio, putting cunks into a queue.
+
+        Takes signal from stop_event to terminate
+        """
+        pass
+
+    @abstractmethod
     def stream_audio_to_async_queue(
         self,
         stop_event: threading.Event,

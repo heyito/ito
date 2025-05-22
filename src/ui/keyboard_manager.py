@@ -38,7 +38,7 @@ class KeyboardManager(QObject):
         # self._is_macos = platform.system() == 'Darwin'
         self._is_macos = False
 
-    def _check_hotkey_match(self) -> bool:
+    def check_hotkey_match(self) -> bool:
         """
         Check if the currently pressed keys match the target hotkey.
         Returns True if there's a match, False otherwise.
@@ -171,7 +171,7 @@ class KeyboardManager(QObject):
             self.pressed_keys.add(key)
 
             # Check if we have a hotkey match
-            is_match = self._check_hotkey_match()
+            is_match = self.check_hotkey_match()
 
             # If we have a match and weren't previously pressed, emit the signal
             if is_match and not self._was_hotkey_pressed:
@@ -194,7 +194,7 @@ class KeyboardManager(QObject):
                     # First release event: treat as press
                     self.pressed_keys.add(key)
                     # Check for hotkey match after adding Fn
-                    is_match = self._check_hotkey_match()
+                    is_match = self.check_hotkey_match()
                     if is_match and not self._was_hotkey_pressed:
                         self._was_hotkey_pressed = True
                         self.hotkey_pressed.emit(self._hotkey_str)
@@ -212,7 +212,7 @@ class KeyboardManager(QObject):
             if key in self.pressed_keys:
                 self.pressed_keys.remove(key)
                 # Check if we should emit release signal
-                if self._was_hotkey_pressed and not self._check_hotkey_match():
+                if self._was_hotkey_pressed and not self.check_hotkey_match():
                     self._was_hotkey_pressed = False
                     self.hotkey_released.emit(self._hotkey_str)
 

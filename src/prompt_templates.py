@@ -205,7 +205,6 @@ user_command: "Open a new note and type 'Groceries:'"
 """
 
 
-
 class PromptTemplate:
     def __init__(self, sections: dict[str, str]):
         self.sections = sections
@@ -255,8 +254,6 @@ def create_chrome_prompt(
 ) -> str:
     """Create a prompt for Chrome context."""
     content_with_selection = content
-    if selected_text:
-        content_with_selection += f"\n\nSelected text: {selected_text}"
 
     return CHROME_PROMPT_TEMPLATE.format(
         application="Google Chrome",

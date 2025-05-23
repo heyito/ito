@@ -290,8 +290,11 @@ class AudioStreamer:
                     )
 
             # Check for a specific cleanup method on the ASR processor if implemented
-            cleanup_fn = getattr(asr_processor_to_clean, "cleanup", None)
-            if callable(cleanup_fn):
+            # cleanup_fn = getattr(asr_processor_to_clean, "cleanup", None)
+            # if callable(cleanup_fn):
+            if hasattr(asr_processor_to_clean, "cleanup") and callable(
+                asr_processor_to_clean.cleanup
+            ):
                 try:
                     logger.info(
                         "AudioStreamer: Calling cleanup() on ASR processor instance..."

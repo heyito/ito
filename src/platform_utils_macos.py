@@ -1,5 +1,6 @@
 # src/platform_utils_macos.py
 import json
+import logging
 import os
 import platform
 import socket
@@ -8,7 +9,6 @@ import subprocess
 import sys
 import time
 import uuid
-import logging
 from pathlib import Path
 
 # Configure logging

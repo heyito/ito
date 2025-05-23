@@ -1,6 +1,6 @@
+import logging
 import platform
 import traceback
-import logging
 
 import sounddevice as sd
 from PySide6.QtCore import QObject, Signal

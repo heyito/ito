@@ -1,5 +1,7 @@
 import logging
 
+from rich import print as rprint
+
 from src.apps.browser import BrowserApp
 from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp

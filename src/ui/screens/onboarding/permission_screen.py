@@ -1,12 +1,10 @@
-<<<<<<< HEAD
-from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve
-=======
+import logging
 import os
 import platform
 
-from PySide6.QtCore import Qt, QTimer
->>>>>>> 7807e27 (Fixed linting errors + added linting config to .vscode files)
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer
 from PySide6.QtWidgets import (
+    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -14,21 +12,13 @@ from PySide6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
     QWidget,
-<<<<<<< HEAD
-    QMainWindow,
-    QGraphicsOpacityEffect,
 )
-import platform
-import os
-import logging
-from src.ui.theme.manager import ThemeManager
+
 from src.ui.permission_checker import PermissionChecker
+from src.ui.theme.manager import ThemeManager
 
 # Configure logging
 logger = logging.getLogger(__name__)
-=======
-)
->>>>>>> 7807e27 (Fixed linting errors + added linting config to .vscode files)
 
 
 class PermissionScreen:
@@ -368,18 +358,9 @@ class PermissionScreen:
     def check_all_permissions_and_proceed(self):
         """Check all permissions and proceed if all are granted"""
         if all(self.permission_states.values()):
-<<<<<<< HEAD
             # Get the parent window and call show_api_setup_screen
             parent_window = self.continue_button.window()
             parent_window.show_api_setup_screen()
-=======
-            # Import here to avoid circular imports
-            from src.ui.onboarding import OnboardingWindow  # noqa: F401
-
-            window = self.find_parent_window()
-            if window:
-                window.show_keyboard_setup_screen()
->>>>>>> 7807e27 (Fixed linting errors + added linting config to .vscode files)
         else:
             # Show error message
             error_label = QLabel("Please grant all required permissions to continue")

@@ -1,6 +1,6 @@
+import logging
 import platform
 import time
-import logging
 
 import pyautogui
 import pyperclip

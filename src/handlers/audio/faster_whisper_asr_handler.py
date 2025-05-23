@@ -1,7 +1,7 @@
 import io
+import logging
 import time
 import traceback
-import logging
 
 from src.handlers.audio.asr_handler_interface import ASRHandlerInterface
 

@@ -1,20 +1,26 @@
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import (
-    QVBoxLayout,
-    QHBoxLayout,
-    QLabel,
-    QPushButton,
-    QWidget,
-    QLineEdit,
-    QSizePolicy,
-    QFrame,
-    QGraphicsOpacityEffect,
+from PySide6.QtCore import (
+    QEasingCurve,
+    QPoint,
+    QPropertyAnimation,
+    Qt,
+    QTimer,
+    QUrl,
+    Signal,
 )
 from PySide6.QtGui import QCursor, QDesktopServices
-from PySide6.QtCore import QUrl
+from PySide6.QtWidgets import (
+    QFrame,
+    QGraphicsOpacityEffect,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
+
 from src.ui.theme.manager import ThemeManager
-from PySide6.QtCore import QPropertyAnimation, QEasingCurve, QPoint
-from PySide6.QtCore import QTimer
 
 
 class ProviderSelectButton(QFrame):

@@ -1,10 +1,14 @@
 import traceback
 import threading
 import time
+import logging
 from typing import Optional
 
 from pynput import keyboard
 from PySide6.QtCore import QObject, Signal
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 
 class KeyboardManager(QObject):
@@ -44,6 +48,34 @@ class KeyboardManager(QObject):
         # self._is_macos = platform.system() == 'Darwin'
         self._is_macos = False
 
+    def _monitor_listener(self):
+        """Monitor the keyboard listener thread and restart it if it dies."""
+        while self._should_monitor:
+            if self._listener_thread and not self._listener_thread.is_alive():
+                error_msg = "Keyboard listener thread died unexpectedly"
+                logger.error(error_msg)
+                self.listener_status_changed.emit(False, error_msg)
+
+                # Attempt to restart the listener
+                try:
+                    self.cleanup()  # Clean up the dead listener
+                    success = self.initialize_listener()
+                    if success:
+                        logger.info("Successfully restarted keyboard listener")
+                        self.listener_status_changed.emit(
+                            True, "Listener restarted successfully"
+                        )
+                    else:
+                        error_msg = "Failed to restart keyboard listener"
+                        logger.error(error_msg)
+                        self.listener_status_changed.emit(False, error_msg)
+                except Exception as e:
+                    error_msg = f"Error restarting keyboard listener: {str(e)}"
+                    logger.error(error_msg)
+                    self.listener_status_changed.emit(False, error_msg)
+
+            time.sleep(1)  # Check every second
+
     def check_hotkey_match(self) -> bool:
         """
         Check if the currently pressed keys match the target hotkey.
@@ -57,10 +89,10 @@ class KeyboardManager(QObject):
         return current_keys == self._target_hotkey
 
     def initialize_listener(self) -> bool:
-        print("Initializing keyboard listener")
+        logger.info("Initializing keyboard listener")
         """Initialize the keyboard listener once. This should only be called once when the application starts."""
         if self._listener_started:
-            print("Keyboard listener already initialized")
+            logger.info("Keyboard listener already initialized")
             return True
 
         try:
@@ -69,13 +101,25 @@ class KeyboardManager(QObject):
                 on_release=self._on_release,
             )
             self._listener.start()
-
+            self._listener_thread = self._listener._thread
             self._listener_started = True
-            print("Keyboard listener initialized successfully")
+
+            # Start the monitor thread if it's not already running
+            if not self._monitor_thread or not self._monitor_thread.is_alive():
+                self._should_monitor = True
+                self._monitor_thread = threading.Thread(
+                    target=self._monitor_listener, daemon=True
+                )
+                self._monitor_thread.start()
+
+            logger.info("Keyboard listener initialized successfully")
+            self.listener_status_changed.emit(True, "Listener initialized successfully")
             return True
         except Exception as e:
-            print(f"Failed to initialize keyboard listener: {e}")
-            traceback.print_exc()
+            error_msg = f"Failed to initialize keyboard listener: {str(e)}"
+            logger.error(error_msg)
+            logger.error(traceback.format_exc())
+            self.listener_status_changed.emit(False, error_msg)
             return False
 
     def set_hotkey(self, hotkey_str: str) -> bool:
@@ -90,12 +134,12 @@ class KeyboardManager(QObject):
             # Convert to set of key symbols for comparison
             self._target_hotkey = set(hotkey_str.split("+"))
 
-            print(f"Hotkey updated to: {hotkey_str}")
+            logger.info(f"Hotkey updated to: {hotkey_str}")
             return True
 
         except Exception as e:
-            print(f"Failed to set hotkey: {e}")
-            traceback.print_exc()
+            logger.error(f"Failed to set hotkey: {e}")
+            logger.error(traceback.format_exc())
             return False
 
     def get_key_symbol(self, key):
@@ -170,8 +214,10 @@ class KeyboardManager(QObject):
                 self.hotkey_pressed.emit(self._hotkey_str)
 
         except Exception as e:
-            print(f"Error in _on_press: {e}")
-            traceback.print_exc()
+            error_msg = f"Error in _on_press: {str(e)}"
+            logger.error(error_msg)
+            logger.error(traceback.format_exc())
+            self.listener_status_changed.emit(False, error_msg)
 
     def _on_release(self, key):
         """
@@ -210,8 +256,10 @@ class KeyboardManager(QObject):
         except KeyError:
             pass
         except Exception as e:
-            print(f"Error in _on_release: {e}")
-            traceback.print_exc()
+            error_msg = f"Error in _on_release: {str(e)}"
+            logger.error(error_msg)
+            logger.error(traceback.format_exc())
+            self.listener_status_changed.emit(False, error_msg)
 
     def get_pressed_keys(self):
         """
@@ -227,15 +275,19 @@ class KeyboardManager(QObject):
 
     def cleanup(self):
         """Clean up the keyboard listener. Should only be called when the application is closing."""
+        self._should_monitor = False  # Stop the monitor thread
+
         if self._listener and self._listener_started:
             try:
                 self._listener.stop()
                 self._listener = None
             except Exception as e:
-                print(f"Error cleaning up keyboard listener: {e}")
+                logger.error(f"Error cleaning up keyboard listener: {e}")
+                logger.error(traceback.format_exc())
 
         self._listener_started = False
         self._target_hotkey = None
         self._hotkey_str = None
         self._was_hotkey_pressed = False
-        print("Keyboard listener cleaned up")
+        logger.info("Keyboard listener cleaned up")
+        self.listener_status_changed.emit(False, "Listener cleaned up")

@@ -146,12 +146,6 @@ class BrowserApp:
                             f"{browser_context['activeElement']['value']}\n"
                         )
 
-                # Add selected text if any
-                if browser_context.get("selectedText"):
-                    original_doc_text_for_command += (
-                        f"\nSelected text: {browser_context['selectedText']}\n"
-                    )
-
                 original_doc_text_for_command += "\n[END CURRENT DOCUMENT CONTENT]\n"
 
                 logger.info(

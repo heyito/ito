@@ -1,21 +1,22 @@
-import sys
 import logging
+import sys
 
-from PySide6.QtCore import Qt, QSettings, QPoint, QTimer
+from PySide6.QtCore import QPoint, QSettings, Qt, QTimer
 from PySide6.QtWidgets import (
     QApplication,
     QLabel,
     QMainWindow,
 )
+
 from src.ui.components.inten_layout import IntenLayout
-from src.ui.theme.manager import ThemeManager
 from src.ui.keyboard_manager import KeyboardManager
 from src.ui.permission_checker import PermissionChecker
-from src.ui.screens.onboarding.permission_screen import PermissionScreen
-from src.ui.screens.onboarding.keyboard_setup_screen import KeyboardSetupScreen
-from src.ui.screens.onboarding.welcome_screen import WelcomeScreen
-from src.ui.screens.onboarding.completion_screen import CompletionScreen
 from src.ui.screens.onboarding.api_setup_screen import ApiSetupScreen
+from src.ui.screens.onboarding.completion_screen import CompletionScreen
+from src.ui.screens.onboarding.keyboard_setup_screen import KeyboardSetupScreen
+from src.ui.screens.onboarding.permission_screen import PermissionScreen
+from src.ui.screens.onboarding.welcome_screen import WelcomeScreen
+from src.ui.theme.manager import ThemeManager
 
 # Configure logging
 logger = logging.getLogger(__name__)

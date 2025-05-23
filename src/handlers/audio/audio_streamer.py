@@ -3,7 +3,6 @@ import logging
 import threading
 import time
 import traceback
-from typing import Optional, Type
 
 from src.handlers.audio.audio_source_handler import AudioSourceHandler
 from src.handlers.real_time_asr_interface import RealTimeASRProcessor
@@ -18,7 +17,7 @@ class AudioStreamer:
     def __init__(
         self,
         audio_handler: AudioSourceHandler,
-        asr_processor_cls: Type[RealTimeASRProcessor],  # Pass the class
+        asr_processor_cls: type[RealTimeASRProcessor],  # Pass the class
         asr_config: dict,  # Config specific to the ASR processor
         vad_config: dict,
         loop: asyncio.AbstractEventLoop,
@@ -28,7 +27,7 @@ class AudioStreamer:
         self.vad_config = vad_config
         self._is_streaming = False
         self._stop_event = threading.Event()
-        self._audio_capture_thread: Optional[threading.Thread] = None
+        self._audio_capture_thread: threading.Thread | None = None
         self._lock = threading.Lock()
 
         logger.info("AudioStreamer: Initializing...")
@@ -44,10 +43,8 @@ class AudioStreamer:
                 self._create_queue_async(100), self.loop
             )
             # Timeout for init is less critical but good to have.
-            self._audio_queue: Optional[asyncio.Queue] = future_audio_q.result(
-                timeout=5.0
-            )
-            self.transcript_queue: Optional[asyncio.Queue] = future_transcript_q.result(
+            self._audio_queue: asyncio.Queue | None = future_audio_q.result(timeout=5.0)
+            self.transcript_queue: asyncio.Queue | None = future_transcript_q.result(
                 timeout=5.0
             )
             init_q_create_duration = (
@@ -68,7 +65,7 @@ class AudioStreamer:
         init_asr_setup_start_time = time.monotonic()
         try:
             logger.info("AudioStreamer: Pre-initializing ASR processor instance...")
-            self._asr_processor_instance: Optional[RealTimeASRProcessor] = (
+            self._asr_processor_instance: RealTimeASRProcessor | None = (
                 asr_processor_cls(
                     audio_input_queue=self._audio_queue,
                     sample_rate=self.audio_handler.sample_rate,
@@ -293,9 +290,8 @@ class AudioStreamer:
                     )
 
             # Check for a specific cleanup method on the ASR processor if implemented
-            if hasattr(asr_processor_to_clean, "cleanup") and callable(
-                getattr(asr_processor_to_clean, "cleanup")
-            ):
+            cleanup_fn = getattr(asr_processor_to_clean, "cleanup", None)
+            if callable(cleanup_fn):
                 try:
                     logger.info(
                         "AudioStreamer: Calling cleanup() on ASR processor instance..."

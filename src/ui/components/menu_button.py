@@ -1,5 +1,6 @@
-from PySide6.QtWidgets import QPushButton
 from PySide6.QtCore import Qt, Slot
+from PySide6.QtWidgets import QPushButton
+
 from src.ui.theme.manager import ThemeManager
 
 

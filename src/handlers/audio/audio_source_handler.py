@@ -1,12 +1,14 @@
+import asyncio
 import logging
 import threading
+import time
 from typing import Literal
-from src.handlers.audio.audio_source_interface import AudioSourceInterface
-import webrtcvad
+
 import numpy as np
 import sounddevice as sd
-import asyncio
-import time
+import webrtcvad
+
+from src.handlers.audio.audio_source_interface import AudioSourceInterface
 from src.ui.keyboard_manager import KeyboardManager
 
 logger = logging.getLogger("AudioSourceHandler")
@@ -360,7 +362,7 @@ class AudioSourceHandler(AudioSourceInterface):
             if loop.is_running():
                 loop.call_soon_threadsafe(async_queue.put_nowait, None)
             raise
-        except ValueError as ve:
+        except ValueError:
             if not stop_event.is_set():
                 stop_event.set()
             if loop.is_running():

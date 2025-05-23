@@ -1,11 +1,11 @@
-from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QPoint, QTimer
+from PySide6.QtCore import QEasingCurve, QPoint, QPropertyAnimation, Qt, QTimer
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
-    QVBoxLayout,
+    QGraphicsOpacityEffect,
     QLabel,
     QPushButton,
+    QVBoxLayout,
     QWidget,
-    QGraphicsOpacityEffect,
 )
 
 

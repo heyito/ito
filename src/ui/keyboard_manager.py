@@ -1,8 +1,7 @@
-import traceback
+import logging
 import threading
 import time
-import logging
-from typing import Optional
+import traceback
 
 from pynput import keyboard
 from PySide6.QtCore import QObject, Signal
@@ -34,15 +33,15 @@ class KeyboardManager(QObject):
                 "KeyboardManager is a singleton! Use KeyboardManager.instance()"
             )
         super().__init__()
-        self._listener: Optional[keyboard.Listener] = None
+        self._listener: keyboard.Listener | None = None
         self._target_hotkey = None
         self._hotkey_str = None
         self._listener_started = False
         self._tap = None
         self.pressed_keys = set()
         self._was_hotkey_pressed = False
-        self._listener_thread: Optional[threading.Thread] = None
-        self._monitor_thread: Optional[threading.Thread] = None
+        self._listener_thread: threading.Thread | None = None
+        self._monitor_thread: threading.Thread | None = None
         self._should_monitor = True
 
         # self._is_macos = platform.system() == 'Darwin'

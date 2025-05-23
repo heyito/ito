@@ -1,13 +1,19 @@
 # src/realtime_asr_interface.py
 import asyncio
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any
+
 
 class RealTimeASRProcessor(ABC):
     """Interface for real-time ASR processors (like Vosk, WebRTC)."""
 
     @abstractmethod
-    def __init__(self, audio_input_queue: asyncio.Queue, sample_rate: int, transcript_output_queue: asyncio.Queue, **kwargs):
+    def __init__(
+        self,
+        audio_input_queue: asyncio.Queue,
+        sample_rate: int,
+        transcript_output_queue: asyncio.Queue,
+        **kwargs,
+    ):
         """Initializes with necessary queues and configuration."""
         pass
 
@@ -23,7 +29,7 @@ class RealTimeASRProcessor(ABC):
 
     @abstractmethod
     def is_active(self) -> bool:
-         """Returns True if the processor is running."""
-         pass
+        """Returns True if the processor is running."""
+        pass
 
     # No cleanup needed in interface, implementation handles its threads/tasks

@@ -1,7 +1,6 @@
 # System prompt for the LLM
 import json
 
-
 PAGE_EDITOR_SYSTEM_PROMPT = """You are an AI assistant helping to edit documents based on user commands. You will be given the current document content (marked by [START CURRENT DOCUMENT CONTENT] and [END CURRENT DOCUMENT CONTENT]) and a user command (marked by [USER COMMAND]). 
 
 IMPORTANT: Your response MUST contain ONLY the modified document text that should replace the original content. DO NOT include:

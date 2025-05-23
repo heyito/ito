@@ -1,9 +1,8 @@
 import json
+import logging
 import queue
 import socket
 import threading
-import logging
-from typing import Optional
 
 from src import platform_utils_macos as platform_utils
 from src import prompt_templates
@@ -23,7 +22,7 @@ class BrowserApp:
         self,
         processing_text: str,
         user_text_command: str,
-        user_command_audio: Optional[bytes] = None,
+        user_command_audio: bytes | None = None,
     ):
         # Parse the text as JSON if it's from Browser
         full_llm_input = ""

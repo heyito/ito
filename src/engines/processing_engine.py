@@ -1,12 +1,10 @@
-from typing import Optional
 import logging
+
 from src.apps.browser import BrowserApp
 from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
 from src.types.apps import IntenApp
-from rich import print as rprint
-from src import platform_utils_macos as platform_utils
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -32,7 +30,7 @@ class ProcessingEngine:
         current_context: dict,
         processing_text: str,
         user_text_command: str,
-        user_command_audio: Optional[bytes] = None,
+        user_command_audio: bytes | None = None,
     ):
         rprint(f"[bold blue]Processing action: '{user_text_command}'[/bold blue]")
         logger.info(f"On document context (length: {len(processing_text)} chars)")
@@ -62,7 +60,7 @@ class ProcessingEngine:
         current_context: dict,
         processing_text: str,
         user_text_command: str,
-        user_command_audio: Optional[bytes] = None,
+        user_command_audio: bytes | None = None,
     ):
         rprint(f"[bold blue]Processing dictation: '{user_text_command}'[/bold blue]")
         current_app = current_context.get("app_name").strip()

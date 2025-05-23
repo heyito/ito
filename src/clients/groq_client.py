@@ -1,8 +1,9 @@
 import io
 import json
-import re
 import logging
-from typing import Any, Dict, List, Optional
+import re
+from typing import Any
+
 from groq import Groq, GroqError
 
 from src.clients.llm_client_interface import LLMClientInterface
@@ -51,8 +52,8 @@ class GroqClient(LLMClientInterface):
         system_prompt: str,
         max_tokens: int,
         temperature: float,
-        tool_functions: Optional[List[dict]] = None,
-        messages_override: Optional[List[Dict]] = None,
+        tool_functions: list[dict] | None = None,
+        messages_override: list[dict] | None = None,
     ) -> Any:
         if (
             not self._is_valid
@@ -117,8 +118,8 @@ class GroqClient(LLMClientInterface):
         system_prompt: str,
         max_tokens: int,
         temperature: float,
-        tools: list[dict] = [],
-        messages_override: Optional[List[Dict]] = None,
+        tools: list[dict] = None,
+        messages_override: list[dict] | None = None,
     ) -> Any:
         raise NotImplementedError("Groq client does not support multi modal responses.")
 
@@ -158,7 +159,7 @@ class GroqClient(LLMClientInterface):
 
     def format_system_user_messages(
         self, system_prompt: str, user_prompt: str
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         Formats the messages for the Groq API.
         """
@@ -167,7 +168,9 @@ class GroqClient(LLMClientInterface):
             {"role": "user", "content": user_prompt},
         ]
 
-    def format_tool_result_messages(self, id: str, name: str, args: dict, result: str):
+    def format_tool_result_messages(
+        self, tool_id: str, name: str, args: dict, result: str
+    ):
         return [
             {
                 "role": "tool",
@@ -180,7 +183,7 @@ class GroqClient(LLMClientInterface):
     def format_user_message(self, content: str):
         return {"role": "user", "content": json.dumps(content)}
 
-    def extract_tool_calls(self, response: Any) -> List[ToolCallDict] | None:
+    def extract_tool_calls(self, response: Any) -> list[ToolCallDict] | None:
         tool_calls = response.choices[0].message.tool_calls
         result = []
         for tool_call in tool_calls:

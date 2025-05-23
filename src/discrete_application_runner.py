@@ -1,17 +1,14 @@
 # src/discrete_application_runner.py
+import logging
 import queue
 import threading
 import time
 import traceback
-from typing import Optional, Dict, Any
-import logging
-
-import numpy as np
 
 from src.app_config import AppConfig
 from src.application_interface import ApplicationInterface
-from src.context_manager import ContextManager
 from src.command_processor import CommandProcessor
+from src.context_manager import ContextManager
 from src.handlers.audio.asr_handler_interface import ASRHandlerInterface
 from src.handlers.audio.audio_recorder import AudioRecorder
 from src.types.actions import ApplicationAction
@@ -33,7 +30,7 @@ class DiscreteApplicationRunner(ApplicationInterface):
         command_processor: CommandProcessor,
         audio_recorder: AudioRecorder,
         asr_handler: ASRHandlerInterface,
-        status_queue: Optional[queue.Queue],
+        status_queue: queue.Queue | None,
     ):
         self.config = config
         self.context_manager = context_manager
@@ -42,10 +39,10 @@ class DiscreteApplicationRunner(ApplicationInterface):
         self.asr_handler = asr_handler
         self.status_queue = status_queue  # Attached by ApplicationManager
 
-        self._mode = CommandMode.default_mode()
+        self._mode = CommandMode.default_mode
         self._action_queue: queue.Queue[ApplicationAction] = queue.Queue()
         self._stop_event = threading.Event()
-        self._monitor_thread: Optional[threading.Thread] = (
+        self._monitor_thread: threading.Thread | None = (
             None  # Monitor coordination thread
         )
 
@@ -130,7 +127,7 @@ class DiscreteApplicationRunner(ApplicationInterface):
         # Stop audio recording
         self.audio_recorder.stop_recording()
 
-    def _process_recorded_audio(self, audio_buffer: Optional[bytes]):
+    def _process_recorded_audio(self, audio_buffer: bytes | None):
         """
         Callback function passed to AudioRecorder.
         Executed by AudioRecorder's monitor thread.
@@ -146,7 +143,7 @@ class DiscreteApplicationRunner(ApplicationInterface):
         # --- Transcribe ---
         logger.info("Discrete Runner: Transcribing...")
         self._update_status(StatusMessage.TRANSCRIBING)
-        user_text_command: Optional[str] = None
+        user_text_command: str | None = None
         try:
             user_text_command = self.asr_handler.transcribe_audio(audio_buffer)
             if not user_text_command or not user_text_command.strip():

@@ -1,12 +1,10 @@
 import json
+import logging
 import os
 import subprocess
 import time
-import uuid
-import logging
 
 import Quartz
-
 from AppKit import NSPasteboard, NSStringPboardType
 
 # Configure logging

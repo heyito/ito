@@ -1,13 +1,13 @@
 import json
-import time
 import logging
-from typing import Any, List, Dict, Optional
+import time
+from typing import Any
 
 import requests
 
 from src.clients.llm_client_interface import LLMClientInterface
-from src.utils.timing import time_method
 from src.clients.types import ToolCallDict
+from src.utils.timing import time_method
 
 logger = logging.getLogger(__name__)
 
@@ -98,11 +98,10 @@ class OllamaClient(LLMClientInterface):
         system_prompt: str,
         max_tokens: int,
         temperature: float,
-        tool_functions: Optional[
-            List[Dict]
-        ] = None,  # Ollama doesn't directly support OpenAI tools this way
-        messages_override: Optional[List[Dict]] = None,
-    ) -> Optional[str]:
+        tool_functions: list[dict]
+        | None = None,  # Ollama doesn't directly support OpenAI tools this way
+        messages_override: list[dict] | None = None,
+    ) -> str | None:
         if not self._is_running:  # Relies on check_availability being called
             logger.error(
                 "OllamaClient ERROR: Ollama is not running or model not available. Cannot process request."
@@ -122,7 +121,6 @@ class OllamaClient(LLMClientInterface):
         # If messages_override is provided, we need to adapt it to Ollama's expected format if it differs.
         # The current Ollama code uses a combined prompt.
 
-        request_payload: Dict[str, Any]
         if messages_override:
             # Assuming messages_override is in OpenAI format, convert if necessary or ensure it's compatible.
             # For Ollama, you might send the whole list if the model supports it, or concatenate.
@@ -152,7 +150,6 @@ class OllamaClient(LLMClientInterface):
             # It expects a "prompt" string.
             # We will format messages_override into a single prompt string.
 
-            final_prompt_str = ""
             # Find system prompt in messages_override, if any
             system_msg_content = system_prompt  # Default
             user_msgs_formatted = []
@@ -244,8 +241,8 @@ class OllamaClient(LLMClientInterface):
         system_prompt: str,
         max_tokens: int,
         temperature: float,
-        tools: list[dict] = [],
-        messages_override: Optional[List[Dict]] = None,
+        tools: list[dict] = None,
+        messages_override: list[dict] | None = None,
     ) -> Any:
         raise NotImplementedError(
             "Ollama client does not support multi modal responses."
@@ -254,11 +251,13 @@ class OllamaClient(LLMClientInterface):
     def format_system_user_messages(self, system_prompt: str, user_prompt: str):
         raise ValueError("OllamaClient does not support message formatting.")
 
-    def format_tool_result_messages(self, id: str, name: str, args: dict, result: str):
+    def format_tool_result_messages(
+        self, tool_id: str, name: str, args: dict, result: str
+    ):
         raise ValueError("OllamaClient does not support tools")
 
     def format_user_message(self, content: str):
         raise ValueError("OllamaClient does not support user message formatting.")
 
-    def extract_tool_calls(self, response: Any) -> List[ToolCallDict] | None:
+    def extract_tool_calls(self, response: Any) -> list[ToolCallDict] | None:
         raise ValueError("OllamaClient does not support tool calls")

@@ -1,21 +1,18 @@
+import logging
+import sys
+
 from PySide6.QtCore import (
-    Qt,
     QPoint,
     QRectF,
+    Qt,
 )
 from PySide6.QtGui import (
     QPainter,
     QPainterPath,
     QRegion,
 )
-from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QPushButton,
-)
-import sys
-import logging
+from PySide6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
+
 from src.ui.theme.manager import ThemeManager
 
 # Configure logging
@@ -29,18 +26,21 @@ NSColor = None  # Placeholder for NSColor
 if sys.platform == "darwin":
     try:
         import objc
-        from ctypes import c_void_p
         from AppKit import (
-            NSMakeRect,
-            NSVisualEffectView,
-            NSViewWidthSizable,
-            NSViewHeightSizable,
-            NSVisualEffectStateActive,
-            NSVisualEffectBlendingModeBehindWindow,
-            NSWindowBelow,
-            NSFullSizeContentViewWindowMask,
-            NSVisualEffectMaterialPopover as AppKitPopoverConst,
             NSColor as AppKitNSColor,  # Import NSColor
+        )
+        from AppKit import (
+            NSFullSizeContentViewWindowMask,
+            NSMakeRect,
+            NSViewHeightSizable,
+            NSViewWidthSizable,
+            NSVisualEffectBlendingModeBehindWindow,
+            NSVisualEffectStateActive,
+            NSVisualEffectView,
+            NSWindowBelow,
+        )
+        from AppKit import (
+            NSVisualEffectMaterialPopover as AppKitPopoverConst,
         )
 
         NSVisualEffectMaterialPopover = AppKitPopoverConst  # Assign to module-level var
@@ -198,6 +198,7 @@ class IntenLayout(QWidget):
         if sys.platform == "darwin":
             try:
                 from ctypes import c_void_p
+
                 import objc
                 from AppKit import NSFullSizeContentViewWindowMask
 
@@ -228,7 +229,7 @@ class IntenLayout(QWidget):
         button_bg = self.theme_manager.get_color("button.background")
         button_text = self.theme_manager.get_color("button.text")
         button_hover = self.theme_manager.get_color("button.hover")
-        button_pressed = self.theme_manager.get_color("button.pressed")
+        _ = self.theme_manager.get_color("button.pressed")
         surface = self.theme_manager.get_color("surface")
         return f"""
             QWidget, QMainWindow {{
@@ -361,8 +362,6 @@ class IntenLayout(QWidget):
             MacBlur(self, self.radius)
 
     def _make_background_color(self, rect):
-        from PySide6.QtGui import QColor
-
         return self.theme_manager.get_qcolor("background")
 
     def mousePressEvent(self, event):

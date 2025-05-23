@@ -1,7 +1,8 @@
 import io
 import json
 import logging
-from typing import Any, List, Dict, Optional
+from typing import Any
+
 from google import genai
 from google.genai import types
 
@@ -54,8 +55,8 @@ class GeminiClient(LLMClientInterface):
         system_prompt: str,
         max_tokens: int,
         temperature: float,
-        tool_functions: Optional[List[dict]] = None,
-        messages_override: Optional[List[types.Content]] = None,
+        tool_functions: list[dict] | None = None,
+        messages_override: list[types.Content] | None = None,
     ) -> Any:
         if (
             not self._is_valid
@@ -100,8 +101,8 @@ class GeminiClient(LLMClientInterface):
         system_prompt: str,
         max_tokens: int,
         temperature: float,
-        tools: list[dict] = [],
-        messages_override: Optional[List[Dict]] = None,
+        tools: list[dict] = None,
+        messages_override: list[dict] | None = None,
     ) -> Any:
         logger.debug(f"GeminiClient: Audio buffer type: {type(audio_buffer)}")
         logger.debug(f"GeminiClient: Audio buffer content: {audio_buffer}")
@@ -195,7 +196,9 @@ class GeminiClient(LLMClientInterface):
             types.Content(role="user", parts=[types.Part(text=user_prompt)]),
         ]
 
-    def format_tool_result_messages(self, id: str, name: str, args: dict, result: str):
+    def format_tool_result_messages(
+        self, tool_id: str, name: str, args: dict, result: str
+    ):
         return [
             types.Content(
                 role="model",
@@ -215,7 +218,7 @@ class GeminiClient(LLMClientInterface):
     def format_user_message(self, content: str):
         return types.Content(role="user", parts=[types.Part(text=content)])
 
-    def extract_tool_calls(self, response: Any) -> List[ToolCallDict] | None:
+    def extract_tool_calls(self, response: Any) -> list[ToolCallDict] | None:
         response: types.GenerateContentResponse = response
         parts = response.candidates[0].content.parts
         result = []

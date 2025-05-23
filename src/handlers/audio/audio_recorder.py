@@ -1,10 +1,10 @@
 # src/audio_recorder.py
+import logging
 import queue
 import threading
 import time
 import traceback
-import logging
-from typing import Optional, Dict, Any
+from typing import Any
 
 import numpy as np
 
@@ -23,8 +23,8 @@ class AudioRecorder:
     def __init__(
         self,
         audio_handler: AudioSourceHandler,
-        vad_config: Dict[str, Any],
-        status_queue: Optional[queue.Queue],
+        vad_config: dict[str, Any],
+        status_queue: queue.Queue | None,
     ):
         self.audio_handler = audio_handler
         self.vad_config = vad_config
@@ -32,12 +32,12 @@ class AudioRecorder:
         self._is_recording = False
         self._stop_event = threading.Event()
         self._audio_queue: queue.Queue[np.ndarray] = queue.Queue()
-        self._recording_thread: Optional[threading.Thread] = None
-        self._monitor_thread: Optional[threading.Thread] = (
+        self._recording_thread: threading.Thread | None = None
+        self._monitor_thread: threading.Thread | None = (
             None  # Monitor thread belongs here conceptually
         )
-        self._audio_buffer: Optional[bytes] = None  # Store result here
-        self._processing_callback: Optional[callable] = (
+        self._audio_buffer: bytes | None = None  # Store result here
+        self._processing_callback: callable | None = (
             None  # Callback when audio is ready
         )
         self._lock = threading.Lock()
@@ -113,7 +113,7 @@ class AudioRecorder:
         )
 
         # --- Prepare Buffer ---
-        audio_buffer: Optional[bytes] = None
+        audio_buffer: bytes | None = None
         if chunks:
             try:
                 data = np.concatenate(chunks, axis=0)

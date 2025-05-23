@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt, QPoint, QRect, QSize
+from PySide6.QtCore import QPoint, QRect, QSize, Qt
 from PySide6.QtWidgets import QLayout
 
 

@@ -1,12 +1,11 @@
+from rich import print as rprint
+
 from src import platform_utils_macos as platform_utils
 from src.apps.browser import BrowserApp
 from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
 from src.types.apps import IntenApp
-from src.types.modes import CommandMode
-
-from rich import print as rprint
 
 
 class ContextEngine:

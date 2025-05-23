@@ -1,21 +1,20 @@
 # application_manager.py
+import logging
 import pathlib
 import queue
 import threading
 import time
 import traceback
-import logging
+from typing import Any
 
-from typing import Any, Dict, Optional, Tuple
-
-from PySide6.QtCore import QObject, Signal, QSettings, QTimer
+from PySide6.QtCore import QObject, QSettings, QTimer, Signal
 
 from src.application_interface import ApplicationInterface
 from src.containers import Container
 from src.types.modes import CommandMode
+from src.types.status_messages import StatusMessage
 from src.ui.keyboard_manager import KeyboardManager
 from src.ui.status_window import StatusWindow
-from src.types.status_messages import StatusMessage
 
 # Configure logging
 logger = logging.getLogger(__name__)

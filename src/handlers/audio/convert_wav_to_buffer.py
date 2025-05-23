@@ -1,7 +1,8 @@
 import io
+import logging
+
 import numpy as np
 import scipy.io.wavfile as wavfile
-import logging
 
 
 def save_wav_to_buffer(audio_data_numpy, sample_rate):

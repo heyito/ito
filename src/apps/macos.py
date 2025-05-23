@@ -1,15 +1,13 @@
 import json
-import time
 import logging
-from typing import Optional
+import time
 
 from deepdiff import DeepDiff
+from google.genai import types
 
 from src import prompt_templates
 from src.engines.macos_engine import MacOSEngine
 from src.handlers.llm_handler import LLMHandler
-
-from google.genai import types
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +125,7 @@ class MacOSapp:
         app_name: str,
         processing_text: str,
         user_text_command: str,
-        user_command_audio: Optional[bytes] = None,
+        user_command_audio: bytes | None = None,
     ):
         full_llm_input = prompt_templates.create_macos_ax_ocr_prompt(
             context=processing_text, command=user_text_command
@@ -174,7 +172,7 @@ class MacOSapp:
         app_name: str,
         processing_text: str,
         user_text_command: str,
-        user_command_audio: Optional[bytes] = None,
+        user_command_audio: bytes | None = None,
     ):
         full_llm_input = prompt_templates.create_general_document_body_prompt(
             app_name, processing_text, user_text_command

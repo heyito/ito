@@ -1,14 +1,13 @@
 # src/command_processor.py
+import logging
 import queue
 import threading
 import time
 import traceback
-import logging
-from typing import Dict, Optional
 
 from src.engines.processing_engine import ProcessingEngine
-from src.types.status_messages import StatusMessage
 from src.types.modes import CommandMode
+from src.types.status_messages import StatusMessage
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -20,13 +19,13 @@ class CommandProcessor:
     def __init__(
         self,
         processing_engine: ProcessingEngine,
-        status_queue: Optional[queue.Queue],
+        status_queue: queue.Queue | None,
     ):
         self.processing_engine = processing_engine
         self.status_queue = status_queue
         self._lock = threading.Lock()
         self._is_processing = False
-        self._processing_thread: Optional[threading.Thread] = None
+        self._processing_thread: threading.Thread | None = None
 
     @property
     def is_processing(self) -> bool:
@@ -44,10 +43,10 @@ class CommandProcessor:
 
     def process_command(
         self,
-        context_data: Dict[str, Optional[str]],
+        context_data: dict[str, str | None],
         user_text_command: str,
-        user_command_audio: Optional[bytes] = None,
-        mode: Optional[CommandMode] = CommandMode.default_mode(),
+        user_command_audio: bytes | None = None,
+        mode: CommandMode | None = CommandMode.default_mode,
     ) -> bool:
         """
         Starts the processing pipeline in a background thread if not already processing.
@@ -102,11 +101,11 @@ class CommandProcessor:
 
     def _processing_thread_target(
         self,
-        current_context: Dict[str, Optional[str]],
-        processing_text: Optional[str],
+        current_context: dict[str, str | None],
+        processing_text: str | None,
         user_text_command: str,
         mode: CommandMode,
-        user_command_audio: Optional[bytes] = None,
+        user_command_audio: bytes | None = None,
     ) -> None:
         """Target for the processing thread."""
         timestamp = time.strftime("%H:%M:%S")

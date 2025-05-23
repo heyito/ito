@@ -1,14 +1,15 @@
 import json
-import time
 import logging
-from typing import Callable, List, Dict, Optional, Any
-
+import time
+from collections.abc import Callable
+from typing import Any
 
 from src.clients.llm_client_interface import LLMClientInterface
 from src.utils.timing import time_method
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
 
 # Default System Prompt (can be configured or overridden)
 DEFAULT_LLM_SYSTEM_PROMPT = "You are a helpful AI assistant."
@@ -40,11 +41,11 @@ class LLMHandler:
         self,
         text: str,
         audio_buffer: bytes,
-        system_prompt_override: Optional[str] = None,  # Use Optional
+        system_prompt_override: str | None = None,  # Use Optional
         max_tokens: int = 4096,
         temperature: float = 0.7,
-        tool_functions: Optional[List[Dict]] = None,  # Use Optional
-        messages_override: Optional[List[Dict]] = None,  # Use Optional
+        tool_functions: list[dict] | None = None,  # Use Optional
+        messages_override: list[dict] | None = None,  # Use Optional
     ) -> Any:  # Return type depends on client (string or OpenAI response object)
         """
         Processes text using the configured LLM client.
@@ -54,7 +55,7 @@ class LLMHandler:
             system_prompt_override: Optional override for the system prompt
             max_tokens: Maximum number of tokens to generate
             temperature: Sampling temperature (0.0 to 1.0)
-            tools: List of tools available to the model
+            tools: list of tools available to the model
             messages_override: Optional override for the message history
 
         Returns:
@@ -134,12 +135,12 @@ class LLMHandler:
     def run_tool_call_process(
         self,
         tool_name_resolver: Callable[..., str],  # takes input: tool_name, **args
-        run_after_step: Callable[[Dict], str],
-        tool_functions: List[Dict],
+        run_after_step: Callable[[dict], str],
+        tool_functions: list[dict],
         system_prompt: str,
         user_prompt: str,
         max_steps: int = 5,
-        state: Optional[Dict] = None,
+        state: dict | None = None,
     ):
         """
         tool_name_resolver: Function that takes a tool name as an argument with kwargs
@@ -177,7 +178,7 @@ class LLMHandler:
                     result = str(result)
 
                 tool_messages = self.client.format_tool_result_messages(
-                    id=tool_call_id, name=tool_name, args=args, result=result
+                    tool_id=tool_call_id, name=tool_name, args=args, result=result
                 )
                 messages.extend(tool_messages)
 

@@ -1,5 +1,5 @@
-from abc import ABC, abstractmethod
 import queue
+from abc import ABC, abstractmethod
 
 from src.command_processor import CommandProcessor
 from src.types.modes import CommandMode

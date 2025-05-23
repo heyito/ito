@@ -1,9 +1,9 @@
-from typing import Optional
+import logging
+
 import src.platform_utils_macos as platform_utils
 from src import prompt_templates
 from src.engines.intent_engine import IntentEngine
 from src.handlers.llm_handler import LLMHandler
-import logging
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ class NotesApp:
         self,
         processing_text: str,
         user_text_command: str,
-        user_command_audio: Optional[bytes] = None,
+        user_command_audio: bytes | None = None,
     ):
         intent = self.intent_engine.get_intent(user_text_command)
         logger.info(f"NotesApp: Intent: {intent}")

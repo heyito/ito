@@ -1,12 +1,13 @@
-import sys
-import traceback
 import logging
+import traceback
 
 from PySide6.QtCore import QPointF, QSettings, Qt, QTimer
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFormLayout,
+    QFrame,
+    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -17,20 +18,18 @@ from PySide6.QtWidgets import (
     QStackedWidget,
     QVBoxLayout,
     QWidget,
-    QFrame,
-    QGraphicsOpacityEffect,
 )
+
+from src.application_manager import ApplicationManager
+from src.ui.components.inten_layout import IntenLayout
+from src.ui.components.menu_button import MenuButton
+from src.ui.components.segmented_button_group import SegmentedButtonGroup
+from src.ui.onboarding import OnboardingWindow
+from src.ui.theme.manager import ThemeManager
+from src.utils.timing import clear_timing_data, save_timing_report
 
 # Configure logging
 logger = logging.getLogger(__name__)
-
-from src.application_manager import ApplicationManager
-from src.ui.onboarding import OnboardingWindow
-from src.ui.components.inten_layout import IntenLayout
-from src.ui.components.segmented_button_group import SegmentedButtonGroup
-from src.ui.components.menu_button import MenuButton
-from src.ui.theme.manager import ThemeManager
-from src.utils.timing import save_timing_report, clear_timing_data
 
 
 class Home(QMainWindow):

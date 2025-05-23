@@ -1,16 +1,18 @@
-from abc import ABC, abstractmethod
-import threading
-import time
-from typing import Callable, Literal, Union
-import numpy as np
-import sounddevice as sd
 import asyncio
 import logging
+import threading
+import time
+from abc import ABC, abstractmethod
+from collections.abc import Callable
+from typing import Literal
+
+import numpy as np
+import sounddevice as sd
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-AudioChunk = Union[np.ndarray, bytes]
+AudioChunk = np.ndarray | bytes
 # Define a callback type hint for clarity
 AudioCallback = Callable[[AudioChunk], None]  # Simple callback
 AsyncAudioCallback = Callable[[AudioChunk], asyncio.Future]  # Async callback

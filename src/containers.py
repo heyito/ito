@@ -1,7 +1,4 @@
-import os
 import queue
-import sys
-from typing import Any
 
 from dependency_injector import containers, providers
 
@@ -32,8 +29,8 @@ from src.handlers.audio.audio_streamer import AudioStreamer
 from src.handlers.audio.faster_whisper_asr_handler import FasterWhisperASRHandler
 from src.handlers.audio.gemini_asr_handler import GeminiASRHandler
 from src.handlers.audio.groq_asr_handler import GroqASRHandler
-from src.handlers.llm_handler import LLMHandler
 from src.handlers.audio.openai_asr_handler import OpenAIASRHandler
+from src.handlers.llm_handler import LLMHandler
 from src.handlers.vosk_processor import VoskProcessor
 from src.one_shot_application_runner import OneShotApplicationRunner
 from src.streaming_application_runner import StreamingApplicationRunner

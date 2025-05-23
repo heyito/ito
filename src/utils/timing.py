@@ -1,11 +1,11 @@
-import time
 import functools
 import json
 import os
-from typing import List, Dict, Any
+import time
+from typing import Any
 
 # Global list to store timing data
-TIMING_DATA: List[Dict[str, Any]] = []
+TIMING_DATA: list[dict[str, Any]] = []
 
 
 def time_method(func):

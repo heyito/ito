@@ -1,7 +1,9 @@
-import os
 import logging
-from PySide6.QtCore import Signal, QObject
+import os
+
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QColor
+
 from src.ui.theme.theme import THEME
 
 # Configure logging

@@ -4,8 +4,10 @@ import signal
 import subprocess
 import sys
 import time
-from watchdog.observers import Observer
+
 from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
+
 
 class RestartHandler(FileSystemEventHandler):
     def __init__(self):
@@ -21,13 +23,13 @@ class RestartHandler(FileSystemEventHandler):
             except ProcessLookupError:
                 # Process might have already terminated
                 pass
-        
+
         # Start a new process
         try:
             env = os.environ.copy()
-            env['DEV'] = 'true'
+            env["DEV"] = "true"
             self.process = subprocess.Popen(
-                [sys.executable, '-m', 'src.main'],
+                [sys.executable, "-m", "src.main"],
                 env=env,
                 preexec_fn=os.setsid,
             )
@@ -37,17 +39,18 @@ class RestartHandler(FileSystemEventHandler):
             self.process = None
 
     def on_modified(self, event):
-        if event.src_path.endswith('.py'):
+        if event.src_path.endswith(".py"):
             print(f"\n📝 Detected change in {event.src_path}")
             self.start_process()
+
 
 def main():
     print("🚀 Starting development server with hot reload...")
     print("📂 Watching for changes in src directory...")
-    
+
     handler = RestartHandler()
     observer = Observer()
-    observer.schedule(handler, path='src', recursive=True)
+    observer.schedule(handler, path="src", recursive=True)
     observer.start()
 
     try:
@@ -62,5 +65,6 @@ def main():
                 pass
     observer.join()
 
+
 if __name__ == "__main__":
-    main() 
+    main()

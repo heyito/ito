@@ -1,9 +1,9 @@
 from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve
 from PySide6.QtWidgets import (
-    QVBoxLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QVBoxLayout,
     QWidget,
     QGraphicsOpacityEffect,
 )

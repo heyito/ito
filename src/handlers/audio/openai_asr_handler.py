@@ -4,8 +4,10 @@ from src.clients.openai_client import OpenAIClient
 from src.handlers.audio.asr_handler_interface import ASRHandlerInterface
 from src.utils.timing import time_method
 
+
 class OpenAIASRHandler(ASRHandlerInterface):
     """ASR Handler implementation using the OpenAI API."""
+
     def __init__(self, openAIClient: OpenAIClient):
         self._client = openAIClient
 

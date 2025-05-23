@@ -1,10 +1,11 @@
 import io
 import json
-import re
 import logging
-from typing import Any, List, Dict, Optional
+import re
+from typing import Any
 
 from openai import OpenAI, OpenAIError
+
 from src.clients.llm_client_interface import LLMClientInterface
 from src.clients.types import ToolCallDict
 from src.utils.timing import time_method
@@ -53,8 +54,8 @@ class OpenAIClient(LLMClientInterface):
         system_prompt: str,
         max_tokens: int,
         temperature: float,
-        tool_functions: Optional[List[dict]] = None,
-        messages_override: Optional[List[Dict]] = None,
+        tool_functions: list[dict] | None = None,
+        messages_override: list[dict] | None = None,
     ) -> Any:
         if (
             not self._is_valid
@@ -123,8 +124,8 @@ class OpenAIClient(LLMClientInterface):
         system_prompt: str,
         max_tokens: int,
         temperature: float,
-        tools: list[dict] = [],
-        messages_override: Optional[List[Dict]] = None,
+        tools: list[dict] = None,
+        messages_override: list[dict] | None = None,
     ) -> Any:
         raise NotImplementedError(
             "OpenAI client does not support multi modal responses."
@@ -172,7 +173,9 @@ class OpenAIClient(LLMClientInterface):
             {"role": "user", "content": user_prompt},
         ]
 
-    def format_tool_result_messages(self, id: str, name: str, args: dict, result: str):
+    def format_tool_result_messages(
+        self, tool_id: str, name: str, args: dict, result: str
+    ):
         return [
             {
                 "role": "assistant",
@@ -195,7 +198,7 @@ class OpenAIClient(LLMClientInterface):
     def format_user_message(self, content: str):
         return {"role": "user", "content": json.dumps(content)}
 
-    def extract_tool_calls(self, response: Any) -> List[ToolCallDict] | None:
+    def extract_tool_calls(self, response: Any) -> list[ToolCallDict] | None:
         tool_calls = response.choices[0].message.tool_calls
         result = []
         for tool_call in tool_calls:

@@ -60,7 +60,7 @@ class AudioInputTrack(
         if self._last_frame_time is None:
             self._last_frame_time = time.monotonic()
 
-        buffer_fill_start_time = time.monotonic()
+        # buffer_fill_start_time = time.monotonic()
         while len(self._input_buffer) < self._bytes_per_frame:
             chunk = await self._queue.get()
             if chunk is None:
@@ -389,9 +389,9 @@ class OpenAIWebRTCClient:
                     self._wait_for_connection(), timeout=20.0
                 )  # 20 second timeout
                 logger.info("WebRTC connection established successfully!")
-            except TimeoutError:
+            except TimeoutError as e:
                 logger.error("Timeout waiting for WebRTC connection to establish.")
-                raise ConnectionError("WebRTC connection timed out")
+                raise ConnectionError("WebRTC connection timed out") from e
 
         except aiohttp.ClientResponseError as e:
             logger.error(

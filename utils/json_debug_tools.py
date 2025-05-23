@@ -13,7 +13,7 @@ def count_key_occurrences(data, target_key, counts_aggregator):
                 # We found the target key!
                 # The value associated with target_key is what we categorize.
                 # Ensure the value is hashable for Counter (usually strings, numbers)
-                if isinstance(value, (list, dict)):
+                if isinstance(value, list | dict):
                     # If the value is complex, you might want to stringify it
                     # or decide on a specific way to categorize it.
                     # For "role", values are typically strings.
@@ -38,7 +38,6 @@ if __name__ == "__main__":
     try:
         with open(
             json_file_path,
-            "r",
         ) as f:
             loaded_json_data = json.load(f)
     except FileNotFoundError:

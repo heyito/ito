@@ -1,5 +1,4 @@
 from enum import StrEnum
-from typing import Optional
 
 from src.handlers.llm_handler import LLMHandler
 
@@ -14,6 +13,7 @@ class IntentTypes(StrEnum):
     @classmethod
     def from_string(cls, string: str):
         return cls[string.upper()]
+
 
 system_prompt = """
 You are a classification engine. Your job is to classify user commands into one of the following categories: 
@@ -37,11 +37,17 @@ class IntentEngine:
         self.llm_handler = llm_handler
         self.intent = None
 
-    def get_intent(self, user_text_command: str, user_command_audio: Optional[bytes] = None) -> IntentTypes:
-        response = self.llm_handler.process_input_with_llm(system_prompt_override=system_prompt, text=user_text_command, audio_buffer=user_command_audio)
+    def get_intent(
+        self, user_text_command: str, user_command_audio: bytes | None = None
+    ) -> IntentTypes:
+        response = self.llm_handler.process_input_with_llm(
+            system_prompt_override=system_prompt,
+            text=user_text_command,
+            audio_buffer=user_command_audio,
+        )
         try:
             intent = IntentTypes.from_string(response)
-        except KeyError:
-            raise ValueError(f"Invalid intent from LLM: {response}")
-        
+        except KeyError as e:
+            raise ValueError(f"Invalid intent from LLM: {response}") from e
+
         return intent

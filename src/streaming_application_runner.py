@@ -1,15 +1,14 @@
 # src/streaming_application_runner.py
 import asyncio
+import logging  # Use logging specific to streaming
 import queue
 import threading
 import time
-import logging  # Use logging specific to streaming
-from typing import Optional, Dict, Any, Type
 
 from src.app_config import AppConfig
 from src.application_interface import ApplicationInterface
-from src.context_manager import ContextManager
 from src.command_processor import CommandProcessor
+from src.context_manager import ContextManager
 from src.handlers.audio.audio_streamer import AudioStreamer
 
 logger = logging.getLogger("StreamingRunner")
@@ -24,7 +23,7 @@ class StreamingApplicationRunner(ApplicationInterface):
         context_manager: ContextManager,
         command_processor: CommandProcessor,
         audio_streamer: AudioStreamer,  # Expecting configured instance
-        status_queue: Optional[queue.Queue],
+        status_queue: queue.Queue | None,
     ):
         self.config = config
         self.context_manager = context_manager
@@ -35,7 +34,7 @@ class StreamingApplicationRunner(ApplicationInterface):
         self._action_queue = queue.Queue()
         self._stop_event = threading.Event()  # For the main runner loop
         self._asyncio_loop = audio_streamer.loop  # Get loop from streamer
-        self._transcript_consumer_task: Optional[asyncio.Task] = None
+        self._transcript_consumer_task: asyncio.Task | None = None
         self._current_partial_transcript: str = ""
 
         self._print_initial_info()

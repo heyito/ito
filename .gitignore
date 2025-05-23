@@ -12,7 +12,6 @@ env
 
 # IDE configuration files
 .idea/
-.vscode/
 
 # Secrets / Sensitive configuration
 config.ini

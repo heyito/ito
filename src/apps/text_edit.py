@@ -1,5 +1,5 @@
-from typing import Optional
 import logging
+
 from src import platform_utils_macos as platform_utils
 from src import prompt_templates
 from src.handlers.llm_handler import LLMHandler
@@ -18,7 +18,7 @@ class TextEditApp:
         self,
         processing_text: str,
         user_text_command: str,
-        user_command_audio: Optional[bytes] = None,
+        user_command_audio: bytes | None = None,
     ):
         full_llm_input = prompt_templates.create_general_document_body_prompt(
             application="TextEdit", content=processing_text, command=user_text_command

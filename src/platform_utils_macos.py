@@ -42,12 +42,12 @@ def run_applescript_one_line(script):
         logger.error(f"AppleScript Error: {e}")
         logger.error(f"Stderr: {e.stderr}")
         raise RuntimeError(f"AppleScript execution failed: {e.stderr}") from e
-    except subprocess.TimeoutExpired:
-        raise TimeoutError("AppleScript command timed out.")
-    except FileNotFoundError:
+    except subprocess.TimeoutExpired as e:
+        raise TimeoutError("AppleScript command timed out.") from e
+    except FileNotFoundError as e:
         raise FileNotFoundError(
             "osascript command not found. Is Xcode Command Line Tools installed?"
-        )
+        ) from e
     except Exception as e:
         raise RuntimeError(
             f"An unexpected error occurred running AppleScript: {e}"
@@ -93,8 +93,8 @@ def run_applescript_file(relative_script_path, args=None):
     except subprocess.CalledProcessError as e:
         logger.error(f"AppleScript Error: {e.stderr.strip()}")
         raise RuntimeError(f"AppleScript execution failed:\n{e.stderr.strip()}") from e
-    except subprocess.TimeoutExpired:
-        raise TimeoutError("AppleScript execution timed out.")
+    except subprocess.TimeoutExpired as e:
+        raise TimeoutError("AppleScript execution timed out.") from e
 
 
 def get_active_window_info():
@@ -277,7 +277,7 @@ def get_browser_context(socket_path):
     finally:
         try:
             sock.close()
-        except:
+        except Exception:
             pass
 
 

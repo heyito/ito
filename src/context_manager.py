@@ -1,9 +1,8 @@
 # src/context_manager.py
+import logging
 import threading
 import time
 import traceback
-import logging
-from typing import Dict, Optional
 
 from src import platform_utils_macos as platform_utils  # Or abstract this more
 from src.engines.context_engine import ContextEngine
@@ -18,16 +17,16 @@ class ContextManager:
 
     def __init__(self, context_engine: ContextEngine):
         self.context_engine = context_engine
-        self._current_context: Dict[str, Optional[str]] = {
+        self._current_context: dict[str, str | None] = {
             "app_name": None,
             "doc_text": None,
         }
-        self._fetch_thread: Optional[threading.Thread] = None
+        self._fetch_thread: threading.Thread | None = None
         self._lock = (
             threading.Lock()
         )  # Protects access to _current_context and _fetch_thread
 
-    def get_current_context(self) -> Dict[str, Optional[str]]:
+    def get_current_context(self) -> dict[str, str | None]:
         """Returns the last fetched context data."""
         with self._lock:
             # Return a copy to prevent external modification
@@ -67,7 +66,7 @@ class ContextManager:
     def _fetch_target(self, app_name: str, mode: CommandMode) -> None:
         """Internal target for the context fetching thread."""
         fetch_start_time = time.time()
-        fetched_context: Optional[str] = None
+        fetched_context: str | None = None
         error_occurred = False
         try:
             # Create context dict for the engine call *within the thread*
@@ -78,7 +77,7 @@ class ContextManager:
                     fetched_context = self.context_engine.get_full_app_context(
                         context_for_engine
                     )
-                case CommandMode.DICTATION:
+                case CommandMode.dictATION:
                     fetched_context = self.context_engine.get_focused_cursor_context(
                         context_for_engine
                     )
@@ -116,7 +115,7 @@ class ContextManager:
                 f"[{time.strftime('%H:%M:%S')}] ContextManager: Fetch thread finished ({status}, {fetch_duration:.3f}s)."
             )
 
-    def wait_for_context(self, timeout: float = 5.0) -> Optional[str]:
+    def wait_for_context(self, timeout: float = 5.0) -> str | None:
         """Waits for the current fetch operation to complete."""
         thread_to_wait = None
         with self._lock:

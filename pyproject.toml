@@ -49,3 +49,13 @@ pre-commit = "*"
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+extend-select = ["I", "UP", "F", "B", "A"] # you can customize this
+exclude = ["dist", "build"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

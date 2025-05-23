@@ -1,8 +1,10 @@
 from enum import Enum
 from typing import Optional
 
+
 class StatusMessage(Enum):
     """Enum for all possible status messages in the application."""
+
     READY = "Ready"
     STARTING = "Starting background application thread..."
     STARTED = "Application thread started. Listening for hotkey."
@@ -28,7 +30,7 @@ class StatusMessage(Enum):
         return self.value.format(**kwargs)
 
     @classmethod
-    def from_custom_message(cls, message: str) -> Optional['StatusMessage']:
+    def from_custom_message(cls, message: str) -> Optional["StatusMessage"]:
         """Try to match a custom message to a StatusMessage enum value.
         Returns None if no match is found."""
         # Check for transcribed messages
@@ -41,4 +43,4 @@ class StatusMessage(Enum):
         for status in cls:
             if message == status.value:
                 return status
-        return None 
+        return None

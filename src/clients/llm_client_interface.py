@@ -1,6 +1,6 @@
-from abc import ABC, abstractmethod
 import io
-from typing import Any, List, Dict, Optional
+from abc import ABC, abstractmethod
+from typing import Any
 
 from src.clients.types import ToolCallDict
 
@@ -41,12 +41,10 @@ class LLMClientInterface(ABC):
         system_prompt: str,
         max_tokens: int,
         temperature: float,
-        tool_functions: Optional[
-            List[Dict]
-        ] = None,  # Changed to Optional[List[Dict]] and default to None
-        messages_override: Optional[
-            List[Dict]
-        ] = None,  # Changed to Optional[List[Dict]] and default to None
+        tool_functions: list[dict]
+        | None = None,  # Changed to Optional[List[Dict]] and default to None
+        messages_override: list[dict]
+        | None = None,  # Changed to Optional[List[Dict]] and default to None
     ) -> Any:  # Return type can be a string or a provider-specific object (e.g., OpenAI's response for tools)
         """
         Processes the input text and generates a response from the LLM.
@@ -73,8 +71,10 @@ class LLMClientInterface(ABC):
         system_prompt: str,
         max_tokens: int,
         temperature: float,
-        tools: Optional[List[Dict]] = None, # Changed to Optional[List[Dict]] and default to None
-        messages_override: Optional[List[Dict]] = None, # Changed to Optional[List[Dict]] and default to None
+        tools: list[dict]
+        | None = None,  # Changed to Optional[List[Dict]] and default to None
+        messages_override: list[dict]
+        | None = None,  # Changed to Optional[List[Dict]] and default to None
     ) -> Any:
         """
         Processes audio and text using the configured LLM client.
@@ -101,7 +101,7 @@ class LLMClientInterface(ABC):
     @abstractmethod
     def format_system_user_messages(
         self, system_prompt: str, user_prompt: str
-    ) -> List[Any]:
+    ) -> list[Any]:
         """
         Formats the system prompt and user text into a list of messages.
 
@@ -117,11 +117,11 @@ class LLMClientInterface(ABC):
     @abstractmethod
     def format_tool_result_messages(
         self,
-        id: str,
+        tool_id: str,
         name: str,
         args: dict,
         result: str,
-    ) -> List[Any]:
+    ) -> list[Any]:
         pass
 
     @abstractmethod
@@ -129,7 +129,7 @@ class LLMClientInterface(ABC):
         pass
 
     @abstractmethod
-    def extract_tool_calls(self, response: Any) -> List[ToolCallDict] | None:
+    def extract_tool_calls(self, response: Any) -> list[ToolCallDict] | None:
         """
         Extracts tool calls from the LLM response.
 
@@ -143,8 +143,8 @@ class LLMClientInterface(ABC):
 
     @staticmethod
     def tool_functions_to_openai_format(
-        tool_functions: Optional[List[Dict]],
-    ) -> List[Dict]:
+        tool_functions: list[dict] | None,
+    ) -> list[dict]:
         """
 
         Converts tool functions to OpenAI's expected format.

@@ -1,10 +1,12 @@
-import sys
 import logging
-from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTimer
-from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QGraphicsOpacityEffect
-from src.types.status_messages import StatusMessage
 import queue
+import sys
 import time
+
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer
+from PySide6.QtWidgets import QGraphicsOpacityEffect, QLabel, QVBoxLayout, QWidget
+
+from src.types.status_messages import StatusMessage
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -12,15 +14,16 @@ logger = logging.getLogger(__name__)
 if sys.platform == "darwin":
     try:
         from ctypes import c_void_p
+
         import objc
         from AppKit import (
             NSFullSizeContentViewWindowMask,
             NSWindowCollectionBehaviorCanJoinAllSpaces,
+            NSWindowCollectionBehaviorFullScreenAllowsTiling,
+            NSWindowCollectionBehaviorFullScreenAuxiliary,
+            NSWindowCollectionBehaviorIgnoresCycle,
             NSWindowCollectionBehaviorStationary,
             NSWindowCollectionBehaviorTransient,
-            NSWindowCollectionBehaviorIgnoresCycle,
-            NSWindowCollectionBehaviorFullScreenAuxiliary,
-            NSWindowCollectionBehaviorFullScreenAllowsTiling,
         )
 
         _objc_available = True

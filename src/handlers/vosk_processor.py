@@ -1,11 +1,11 @@
 # src/processing/vosk_processor.py (New File)
 import asyncio
 import json
+import logging
 import queue
 import threading
 import time
 import traceback
-import logging
 
 logger = logging.getLogger("VoskProcessor")
 
@@ -66,14 +66,14 @@ class VoskProcessor:
         """The main loop running in the background thread."""
 
         while not self.stop_event.is_set():
-            loop_start_time = time.monotonic()
+            # loop_start_time = time.monotonic()
             try:
                 logger.debug("Attempting to get data from audio_input_queue...")
-                get_coro_start_time = time.monotonic()
+                # get_coro_start_time = time.monotonic()
                 future = asyncio.run_coroutine_threadsafe(
                     self.audio_input_queue.get(), self.loop
                 )
-                wait_start_time = time.monotonic()
+                # wait_start_time = time.monotonic()
                 data = None
                 try:
                     data = future.result(timeout=0.1)

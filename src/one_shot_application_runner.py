@@ -1,15 +1,14 @@
 # src/one_shot_application_runner.py
+import logging
 import queue
 import threading
 import time
 import traceback
-import logging
-from typing import Optional
 
 from src.app_config import AppConfig
 from src.application_interface import ApplicationInterface
-from src.context_manager import ContextManager  # Example
 from src.command_processor import CommandProcessor  # Example
+from src.context_manager import ContextManager  # Example
 from src.handlers.audio.audio_recorder import AudioRecorder
 from src.types.status_messages import StatusMessage
 from src.utils.timing import time_method
@@ -30,7 +29,7 @@ class OneShotApplicationRunner(ApplicationInterface):
         context_manager: ContextManager,
         command_processor: CommandProcessor,
         audio_recorder: AudioRecorder,
-        status_queue: Optional[queue.Queue],
+        status_queue: queue.Queue | None,
     ):
         self.config = config
         self.context_manager = context_manager
@@ -89,7 +88,7 @@ class OneShotApplicationRunner(ApplicationInterface):
                 f"[{timestamp}] One-Shot Runner: Failed to start audio recorder."
             )
 
-    def _process_recorded_audio(self, audio_buffer: Optional[bytes]):
+    def _process_recorded_audio(self, audio_buffer: bytes | None):
         """
         Callback function passed to AudioRecorder.
         Executed by AudioRecorder's monitor thread.
@@ -113,7 +112,7 @@ class OneShotApplicationRunner(ApplicationInterface):
 
         # --- Wait for Context ---
         logger.info(f"[{timestamp}] One-Shot Runner: Waiting for context...")
-        context_doc_text = self.context_manager.wait_for_context(timeout=5.0)
+        _ = self.context_manager.wait_for_context(timeout=5.0)
         # Get the full context dict (app_name + doc_text)
         current_context_data = self.context_manager.get_current_context()
         logger.info(

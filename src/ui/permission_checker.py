@@ -5,29 +5,50 @@ import traceback
 import sounddevice as sd
 from PySide6.QtCore import QObject, Signal
 
-# Configure logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("ai.inten.inten.ui")
 
 
 class PermissionChecker(QObject):
     permission_checked = Signal(str, bool)  # permission_name, is_granted
 
     def check_microphone(self):
-        try:
-            # Just try to query the default input device - this triggers permission check
-            # without actually opening a stream
-            device_info = sd.query_devices(kind="input")
-            logger.info(
-                f"Microphone permission granted - found device: {device_info['name']}"
-            )
-            self.permission_checked.emit("microphone", True)
-        except sd.PortAudioError as e:
-            logger.error(f"Microphone permission error: {e}")
-            self.permission_checked.emit("microphone", False)
-        except Exception as e:
-            logger.error(f"Unexpected error checking microphone: {e}")
-            traceback.print_exc()
-            self.permission_checked.emit("microphone", False)
+        if platform.system() == "Darwin":
+            try:
+                from AVFoundation import AVCaptureDevice, AVMediaTypeAudio
+
+                def mic_callback(granted):
+                    logger.info(f"Microphone permission callback received: {granted}")
+                    self.permission_checked.emit("microphone", granted)
+
+                logger.info("Requesting microphone permission via AVFoundation...")
+                AVCaptureDevice.requestAccessForMediaType_completionHandler_(
+                    AVMediaTypeAudio, mic_callback
+                )
+            except ImportError as e:
+                logger.error(f"Error importing AVFoundation: {e}")
+                self.permission_checked.emit("microphone", False)
+            except Exception as e:
+                logger.error(
+                    f"Unexpected error checking microphone via AVFoundation: {e}"
+                )
+                logger.error(traceback.format_exc())
+                self.permission_checked.emit("microphone", False)
+        else:
+            try:
+                # Just try to query the default input device - this triggers permission check
+                # without actually opening a stream
+                device_info = sd.query_devices(kind="input")
+                logger.info(
+                    f"Microphone permission granted - found device: {device_info['name']}"
+                )
+                self.permission_checked.emit("microphone", True)
+            except sd.PortAudioError as e:
+                logger.error(f"Microphone permission error: {e}")
+                self.permission_checked.emit("microphone", False)
+            except Exception as e:
+                logger.error(f"Unexpected error checking microphone: {e}")
+                logger.error(traceback.format_exc())
+                self.permission_checked.emit("microphone", False)
 
     def check_accessibility(self):
         if platform.system() == "Darwin":
@@ -43,7 +64,7 @@ class PermissionChecker(QObject):
                 self.permission_checked.emit("accessibility", False)
             except Exception as e:
                 logger.error(f"Error checking accessibility permission: {e}")
-                traceback.print_exc()
+                logger.error(traceback.format_exc())
                 self.permission_checked.emit("accessibility", False)
         else:
             logger.info("Not on macOS, assuming accessibility permissions granted")
@@ -67,7 +88,7 @@ class PermissionChecker(QObject):
                 self.permission_checked.emit("input_monitoring", False)
             except Exception as e:
                 logger.error(f"Error checking input monitoring permission: {e}")
-                traceback.print_exc()
+                logger.error(traceback.format_exc())
                 self.permission_checked.emit("input_monitoring", False)
         else:
             logger.info("Not on macOS, assuming input monitoring permissions granted")

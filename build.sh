@@ -3,65 +3,111 @@
 # Exit on any error
 set -e
 
+# Source the .env file
+source .env
+
 echo "🚀 Starting build process for Inten..."
+
+# --- Check PortAudio ---
+echo "🔍 Checking PortAudio installation..."
+if [ ! -f "$PORTAUDIO_PATH" ]; then
+    echo "❌ PortAudio not found at $PORTAUDIO_PATH"
+    echo "Please install PortAudio: brew install portaudio"
+    exit 1
+fi
+echo "✅ PortAudio found at $PORTAUDIO_PATH"
 
 # --- Build Swift Helper ---
 echo "🛠️ Building Swift helper (inten_macos_agent)..."
-# Navigate to the swift_helper directory, build, and navigate back
 (cd ./src/swift_helper && swift build -c release --arch arm64 --arch x86_64)
-# Define the path to the built Swift helper
-SWIFT_HELPER_BUILD_PATH="./src/swift_helper/.build/apple/Products/Release/inten_macos_agent"
 
-# Check if Swift helper was built
 if [ ! -f "$SWIFT_HELPER_BUILD_PATH" ]; then
     echo "❌ Swift helper build failed or not found at $SWIFT_HELPER_BUILD_PATH"
     exit 1
 fi
 echo "✅ Swift helper built successfully."
 
-# --- Prepare for PyInstaller ---
-# Create a directory in src to store binaries that PyInstaller will pick up
 echo "📦 Preparing Swift helper for packaging..."
 mkdir -p src/bin
 cp "$SWIFT_HELPER_BUILD_PATH" src/bin/inten_macos_agent
-chmod +x src/bin/inten_macos_agent # Ensure it's executable
-echo "Copied Swift helper to src/bin/inten_macos_agent"
+chmod +x src/bin/inten_macos_agent
 
-# Create temporary iconset directory
+# --- Create Application Icon ---
 echo "🎨 Creating application icon..."
 mkdir -p icon.iconset
 cp extension/public/inten-logo-16.png icon.iconset/icon_16x16.png
 cp extension/public/inten-logo-48.png icon.iconset/icon_32x32@2x.png
 cp extension/public/inten-logo-128.png icon.iconset/icon_128x128.png
-# Create additional required sizes
 sips -z 32 32 extension/public/inten-logo-48.png --out icon.iconset/icon_32x32.png
 sips -z 256 256 extension/public/inten-logo-128.png --out icon.iconset/icon_256x256.png
 sips -z 512 512 extension/public/inten-logo-128.png --out icon.iconset/icon_512x512.png
-
-# Convert to icns using iconutil (macOS command)
 iconutil -c icns icon.iconset
 
-# Clean previous builds
+# --- Clean Previous Builds ---
 echo "🧹 Cleaning previous builds..."
 rm -rf dist/ build/
 
-# Build the application using existing spec file
+# --- Build App with PyInstaller ---
 echo "🔨 Building application..."
 pyinstaller Inten.spec --noconfirm
 
-# Create directories for the installer
-echo "📁 Creating installer structure..."
-mkdir -p dist/dmg-contents
-rsync -a "dist/Inten.app" dist/dmg-contents/
+# --- Check Bundle ID ---
+ACTUAL_BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$DIST_DIR/$APP_NAME/Contents/Info.plist")
+if [ "$ACTUAL_BUNDLE_ID" != "$EXPECTED_BUNDLE_ID" ]; then
+    echo "❌ Bundle identifier mismatch! Expected $EXPECTED_BUNDLE_ID but found $ACTUAL_BUNDLE_ID"
+    exit 1
+fi
+echo "✅ Bundle identifier matches: $ACTUAL_BUNDLE_ID"
 
-# Add native messaging host script to Resources
+# --- Remove Invalid Object Files ---
+echo "🧼 Removing leftover .o object files (to avoid code signing rejection)..."
+find "$DIST_DIR/$APP_NAME" -name "*.o" -type f -delete
+
+# --- Add Resources ---
 echo "📝 Adding native messaging host script..."
-mkdir -p "dist/dmg-contents/Inten.app/Contents/Resources"
-cp src/native_messaging_host.sh "dist/dmg-contents/Inten.app/Contents/Resources/"
-chmod +x "dist/dmg-contents/Inten.app/Contents/Resources/native_messaging_host.sh"
+mkdir -p "$DIST_DIR/$APP_NAME/Contents/Resources"
+cp src/native_messaging_host.sh "$DIST_DIR/$APP_NAME/Contents/Resources/"
+chmod +x "$DIST_DIR/$APP_NAME/Contents/Resources/native_messaging_host.sh"
 
-# Create DMG with basic settings
-echo "💿 Creating DMG installer..."
+# === CODESIGN ===
+echo "🔐 Code signing application..."
+CODESIGN_FLAGS=(--force --options runtime --timestamp --sign "$SIGNING_IDENTITY")
+
+# Sign all .dylib and .so files in Frameworks
+find "$DIST_DIR/$APP_NAME/Contents/Frameworks" -type f \( -name "*.dylib" -o -name "*.so" \) -exec codesign "${CODESIGN_FLAGS[@]}" {} \;
+
+# Sign Resources (scripts, binaries)
+find "$DIST_DIR/$APP_NAME/Contents/Resources" -type f -exec codesign "${CODESIGN_FLAGS[@]}" {} \;
+
+# Sign main executable with entitlements
+codesign "${CODESIGN_FLAGS[@]}" \
+  --entitlements entitlements.plist \
+  "$DIST_DIR/$APP_NAME/Contents/MacOS/Inten"
+
+# Sign entire .app bundle with entitlements
+codesign "${CODESIGN_FLAGS[@]}" \
+  --entitlements entitlements.plist \
+  "$DIST_DIR/$APP_NAME"
+
+# Final deep sign pass
+codesign --deep "${CODESIGN_FLAGS[@]}" \
+  --entitlements entitlements.plist \
+  "$DIST_DIR/$APP_NAME"
+
+# Verify codesign
+echo "🔍 Verifying code signing..."
+codesign --verify --deep --strict --verbose=2 "$DIST_DIR/$APP_NAME"
+
+# === NOTARIZE ===
+echo "🛡️ Notarizing application..."
+./notarize.sh
+
+# === CREATE DMG ===
+echo "📦 Creating DMG structure..."
+mkdir -p dist/dmg-contents
+rsync -a "$DIST_DIR/$APP_NAME" dist/dmg-contents/
+
+echo "💿 Building DMG installer..."
 create-dmg \
   --volname "Inten Installer" \
   --volicon "icon.icns" \
@@ -73,7 +119,7 @@ create-dmg \
   "dist/Inten-Installer.dmg" \
   "dist/dmg-contents/"
 
-# Cleanup temporary files
+# --- Cleanup ---
 rm -rf icon.iconset icon.icns
 
-echo "✅ Build complete! Installer created at dist/Inten-Installer.dmg"
+echo "✅ Build complete! DMG is ready at: dist/Inten-Installer.dmg"

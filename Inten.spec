@@ -1,5 +1,25 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+info_plist_dict = {
+    'LSBackgroundOnly': False,
+    'NSHighResolutionCapable': True,
+    # These keys are often better explicitly set here to ensure they appear
+    # even if PyInstaller generates them differently or with older values.
+    'CFBundleShortVersionString': '1.0.0',
+    'CFBundleDisplayName': 'Inten',
+    'CFBundleExecutable': 'Inten',
+    'CFBundleIdentifier': 'ai.inten.inten', # This should match bundle_identifier in BUNDLE
+    'CFBundleName': 'Inten',
+    'CFBundlePackageType': 'APPL',
+
+    # Privacy Usage Descriptions - CRITICAL for macOS privacy prompts
+    'NSLocationWhenInUseUsageDescription': 'Inten uses location to provide relevant features based on your area.',
+    'NSMicrophoneUsageDescription': 'Inten needs access to your microphone to record and process voice commands.',
+    'NSAppleEventsUsageDescription': 'Inten needs access to control other applications to perform actions.',
+    'NSAccessibilityUsageDescription': 'Inten needs accessibility permissions to control other applications.',
+    'NSScreenCaptureUsageDescription': 'Inten needs screen recording permission to capture and process window content.',
+    'NSKeyboardUsageDescription': 'Inten needs keyboard access to process keyboard input and commands.',
+}
 
 a = Analysis(
     ['src/main.py'],
@@ -12,11 +32,6 @@ a = Analysis(
         ('inten-logo.png', '.'),
         ('inten-logo-dark.png', '.'),
         ('src/bin/inten_macos_agent', '.'),
-        ('./.venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/platforms', 'PyQt6/Qt6/plugins/platforms'),
-        ('./.venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/styles', 'PyQt6/Qt6/plugins/styles'),
-        ('./.venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/imageformats', 'PyQt6/Qt6/plugins/imageformats'),
-        ('./.venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/permissions', 'PyQt6/Qt6/plugins/permissions'),
-        ('./.venv/lib/python3.12/site-packages/PyQt6/Qt6/plugins/position', 'PyQt6/Qt6/plugins/position'),
         ('src/models/vosk-model-en-us-0.22-lgraph', 'models/vosk-model-en-us-0.22-lgraph'),
     ],
     hiddenimports=[
@@ -49,7 +64,8 @@ exe = EXE(
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
-    entitlements_file=None,
+    info_plist=info_plist_dict,
+    entitlements_file='entitlements.plist',
 )
 coll = COLLECT(
     exe,
@@ -65,15 +81,6 @@ app = BUNDLE(
     name='Inten.app',
     icon='icon.icns',
     bundle_identifier='ai.inten.inten',
-    info_plist={
-        'LSBackgroundOnly': False,
-        'NSHighResolutionCapable': True,
-        'CFBundleShortVersionString': '1.0.0',
-        'NSLocationWhenInUseUsageDescription': 'Inten uses location to provide relevant features based on your area.',
-        'NSMicrophoneUsageDescription': 'Inten needs access to your microphone to record and process voice commands.',
-        'NSAppleEventsUsageDescription': 'Inten needs access to control other applications to perform actions.',
-        'NSAccessibilityUsageDescription': 'Inten needs accessibility permissions to control other applications.',
-        'NSScreenCaptureUsageDescription': 'Inten needs screen recording permission to capture and process window content.',
-    },
+    info_plist=info_plist_dict,
     entitlements_file='entitlements.plist',
 )

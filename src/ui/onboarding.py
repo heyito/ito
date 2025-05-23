@@ -25,6 +25,15 @@ logger = logging.getLogger(__name__)
 class OnboardingWindow(QMainWindow):
     ORGANIZATION_NAME = "Inten"  # CHANGE THIS
     APPLICATION_NAME = "Inten"
+    _accessibility_dialog_open = False
+
+    @classmethod
+    def reset_setup_status(cls):
+        """Reset the setup status to force showing the onboarding flow."""
+        settings = QSettings(cls.ORGANIZATION_NAME, cls.APPLICATION_NAME)
+        settings.setValue("permissionsSetupComplete", False)
+        settings.sync()
+        print("DEBUG: Reset setup status to incomplete")
 
     def __init__(self, theme_manager: ThemeManager):
         super().__init__()
@@ -54,6 +63,7 @@ class OnboardingWindow(QMainWindow):
         self.layout.setSpacing(20)
 
         # --- Initialize Permission Checker ---
+        print("DEBUG: Initializing PermissionChecker")
         self.permission_checker = PermissionChecker()
 
         # --- Initialize Permission States ---
@@ -210,6 +220,7 @@ class OnboardingWindow(QMainWindow):
                             sub_widget.setParent(None)
 
     def show_welcome_screen(self):
+        print("DEBUG: Showing welcome screen")
         self.clear_layout()
 
         # Create welcome screen
@@ -222,6 +233,7 @@ class OnboardingWindow(QMainWindow):
         start_button.clicked.connect(self.show_permission_screen)
 
     def show_permission_screen(self):
+        print("DEBUG: Showing permission screen")
         self.clear_layout()
 
         # Create permission screen
@@ -342,7 +354,6 @@ class OnboardingWindow(QMainWindow):
         logger.info("Marking permissions setup as complete in settings.")
         # Save the flag indicating setup is done
         self.settings.setValue("permissionsSetupComplete", True)
-
         # Import here to avoid circular imports
         from src.ui.home import Home
 

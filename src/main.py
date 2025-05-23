@@ -6,13 +6,100 @@ import platform
 import signal
 import sys
 import traceback
+import threading
+import logging as minimal_logging
 
 import sounddevice as sd
 from PySide6.QtWidgets import QApplication
+from pynput.keyboard import Listener as MinimalListener
+
 
 from src.ui.keyboard_manager import KeyboardManager
 from src.ui.onboarding import OnboardingWindow
 from src.ui.theme.manager import ThemeManager
+
+# Configure logging to write to both stderr and a file
+try:
+    # Try to write to user's home directory first
+    log_dir = os.path.expanduser("~/Library/Logs/Inten")
+    log_file = os.path.join(log_dir, "inten.log")
+
+    # Try to create directory and verify we can write to it
+    try:
+        os.makedirs(log_dir, exist_ok=True)
+        # Test write access
+        with open(log_file, "a") as f:
+            f.write("=== Log file initialized ===\n")
+    except Exception as e:
+        # If we can't write to ~/Library/Logs, try /tmp
+        print(f"Could not write to {log_dir}: {e}")
+        log_dir = "/tmp/Inten"
+        log_file = os.path.join(log_dir, "inten.log")
+        os.makedirs(log_dir, exist_ok=True)
+        with open(log_file, "a") as f:
+            f.write("=== Log file initialized (using /tmp) ===\n")
+
+    print(f"Log file location: {log_file}")  # Print to stderr for immediate visibility
+
+    # Create a file handler
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    )
+
+    # Create a stream handler for stderr
+    stream_handler = logging.StreamHandler(sys.stderr)
+    stream_handler.setLevel(logging.DEBUG)
+    stream_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    )
+
+    # Configure root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(stream_handler)
+
+    # Configure specific loggers
+    loggers = [
+        "ai.inten.inten.main",
+        "ai.inten.inten.keyboard",
+        "ai.inten.inten.native_messaging",
+        "StreamingApp",
+        "StreamingRunner",
+    ]
+
+    for logger_name in loggers:
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.DEBUG)
+        # Don't propagate to root logger to avoid duplicate messages
+        logger.propagate = False
+        logger.addHandler(file_handler)
+        logger.addHandler(stream_handler)
+
+    # Create logger for the main module and log immediately
+    logger = logging.getLogger("ai.inten.inten.main")
+    logger.info("=== Application starting ===")
+    logger.info(f"Python version: {sys.version}")
+    logger.info(f"Platform: {platform.platform()}")
+    logger.info(f"Current directory: {os.getcwd()}")
+    logger.info(f"Script path: {os.path.abspath(__file__)}")
+    logger.info(f"Log file: {log_file}")
+    logger.debug("Debug logging enabled")
+
+except Exception as e:
+    # If logging setup fails, at least print to stderr
+    print(f"Failed to setup logging: {e}")
+    print(f"Error details: {traceback.format_exc()}")
+    # Fall back to basic stderr logging
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        stream=sys.stderr,
+    )
+    logger = logging.getLogger("ai.inten.inten.main")
+    logger.error(f"Failed to setup file logging: {e}")
 
 # Configure logging
 logging.basicConfig(
@@ -69,21 +156,46 @@ else:
     platform_utils = PlatformUtilsDummy()
 
 
-def check_microphone_permission():
-    """Check if microphone permission is granted and request it if needed."""
-    try:
-        # Try to query the default input device - this triggers permission check
-        device_info = sd.query_devices(kind="input")
-        logger.info(
-            f"Microphone permission granted - found device: {device_info['name']}"
-        )
+def check_accessibility_permission() -> bool:
+    """Check if the application has accessibility permissions on macOS."""
+    if platform.system() != "Darwin":
         return True
-    except sd.PortAudioError as e:
-        logger.error(f"Microphone permission error: {e}")
-        return False
+
+    try:
+        from src.platform_utils_macos import check_accessibility_permission as check_ax
+
+        return check_ax()
     except Exception as e:
-        logger.error(f"Unexpected error checking microphone: {e}")
-        traceback.print_exc()
+        logger.error(f"Error checking accessibility permissions: {e}")
+        logger.error(traceback.format_exc())
+        return False
+
+
+def check_microphone_permission() -> bool:
+    """Check if the application has microphone permissions."""
+    try:
+        logger.info("Checking microphone permissions...")
+        devices = sd.query_devices()
+        input_devices = [d for d in devices if d["max_input_channels"] > 0]
+        if not input_devices:
+            logger.error("No input devices found")
+            return False
+
+        # Try to open a test stream to verify permissions
+        try:
+            with sd.InputStream(
+                samplerate=16000, channels=1, blocksize=128, latency="low"
+            ):
+                logger.info(
+                    "Successfully opened test audio stream - permissions granted"
+                )
+                return True
+        except sd.PortAudioError as e:
+            logger.error(f"Failed to open test audio stream: {e}")
+            return False
+
+    except Exception as e:
+        logger.error(f"Error checking microphone permissions: {e}")
         return False
 
 
@@ -97,6 +209,16 @@ def run_native_messaging_host():
 def ensure_native_messaging_host_registered(native_messaging_script_path):
     """Ensure the native messaging host manifest is registered with Chrome"""
     try:
+        # Log environment information
+        logger = logging.getLogger("ai.inten.inten.native_messaging")
+        logger.info("=== Native Messaging Host Registration ===")
+        logger.info(f"Current working directory: {os.getcwd()}")
+        logger.info(f"User: {os.getenv('USER')}")
+        logger.info(f"Home directory: {os.path.expanduser('~')}")
+        logger.info(f"Process ID: {os.getpid()}")
+        logger.info(f"Parent Process ID: {os.getppid()}")
+        logger.info(f"Environment variables: {dict(os.environ)}")
+
         # Only need manifest directory now
         manifest_dir = os.path.expanduser(
             "~/Library/Application Support/Google/Chrome/NativeMessagingHosts"
@@ -106,6 +228,9 @@ def ensure_native_messaging_host_registered(native_messaging_script_path):
         os.makedirs(manifest_dir, exist_ok=True)
 
         # Create and write manifest file
+        logger.info(f"Target manifest directory: {manifest_dir}")
+
+        # Create manifest content
         manifest = {
             "name": "ai.inten.app",
             "description": "Inten native messaging host",
@@ -113,19 +238,75 @@ def ensure_native_messaging_host_registered(native_messaging_script_path):
             "type": "stdio",
             "allowed_origins": ["chrome-extension://jgfjmabgdpbccfecnilbjnjoglnholem/"],
         }
-        logger.info("Creating manifest: %s", manifest)
 
-        manifest_path = os.path.join(manifest_dir, "ai.inten.app.json")
-        with open(manifest_path, "w") as f:
-            json.dump(manifest, f, indent=2)
+        # Create a temporary manifest file
+        import tempfile
 
-        # Set manifest permissions
-        os.chmod(manifest_path, 0o644)
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as temp_file:
+            json.dump(manifest, temp_file, indent=2)
+            temp_path = temp_file.name
+            logger.info(f"Created temporary manifest at: {temp_path}")
 
-        logger.info("Native messaging host manifest registered successfully")
+        # Try to create manifest directory and copy file
+        try:
+            manifest_path = os.path.join(manifest_dir, "ai.inten.app.json")
+
+            # First try without sudo
+            try:
+                os.makedirs(manifest_dir, exist_ok=True)
+                import shutil
+
+                shutil.copy2(temp_path, manifest_path)
+                os.chmod(manifest_path, 0o644)
+                logger.info(
+                    "Native messaging host manifest registered successfully without sudo"
+                )
+            except PermissionError as e:
+                # If that fails, try with osascript to get sudo access
+                logger.info(
+                    f"Permission denied, attempting to register with osascript... Error: {str(e)}"
+                )
+                import subprocess
+
+                # Create an AppleScript that will handle the sudo commands
+                script = f"""
+                do shell script "mkdir -p '{manifest_dir}' && cp '{temp_path}' '{manifest_path}' && chmod 644 '{manifest_path}'" with administrator privileges
+                """
+
+                try:
+                    result = subprocess.run(
+                        ["osascript", "-e", script], capture_output=True, text=True
+                    )
+                    if result.returncode == 0:
+                        logger.info(
+                            "Native messaging host manifest registered successfully with osascript"
+                        )
+                    else:
+                        logger.error(f"osascript failed: {result.stderr}")
+                        raise subprocess.CalledProcessError(
+                            result.returncode,
+                            ["osascript"],
+                            result.stdout,
+                            result.stderr,
+                        )
+                except subprocess.CalledProcessError as e:
+                    logger.error(f"Failed to register with osascript: {e}")
+                    raise
+        finally:
+            # Clean up temporary file
+            try:
+                os.unlink(temp_path)
+                logger.info("Cleaned up temporary manifest file")
+            except Exception as e:
+                logger.error(f"Failed to clean up temporary file: {e}")
 
     except Exception as e:
+        logger = logging.getLogger("ai.inten.inten.native_messaging")
         logger.error(f"Failed to register native messaging host manifest: {e}")
+        logger.error("Chrome integration may not work properly")
+        # Don't raise the exception - this is not critical for the app to function
 
 
 # --- Signal Handlers ---
@@ -167,8 +348,12 @@ if __name__ == "__main__":
         logger.info("Starting native messaging host...")
         run_native_messaging_host()
     else:
-        # Register native messaging host first
-        ensure_native_messaging_host_registered(native_messaging_script_path)
+        try:
+            # Register native messaging host first
+            ensure_native_messaging_host_registered(native_messaging_script_path)
+        except Exception as e:
+            logger.error(f"Failed to register native messaging host: {e}")
+            # Continue anyway - this is not critical for the app to function
 
         # Create QApplication instance
         app = QApplication(sys.argv)
@@ -185,17 +370,29 @@ if __name__ == "__main__":
             )
 
         # Initialize keyboard manager (without setting hotkey yet)
+        logger.info("Initializing keyboard manager...")
         keyboard_manager = KeyboardManager.instance()
-        keyboard_manager.initialize_listener()
+        logger.info("Keyboard manager instance created")
+        if keyboard_manager.initialize_listener():
+            logger.info("Keyboard listener initialized successfully")
+        else:
+            logger.error("Failed to initialize keyboard listener")
+        logger.debug("Debug test message after keyboard initialization")
 
         # Initialize theme manager from the containers
+        logger.info("Initializing theme manager...")
         theme_manager = ThemeManager.instance()
+        logger.info("Theme manager initialized")
 
         # Create and show the OnboardingWindow
+        logger.info("Creating onboarding window...")
         onboarding_window = OnboardingWindow(
             theme_manager=theme_manager,
         )
+        logger.info("Onboarding window created")
         onboarding_window.show()
+        logger.info("Onboarding window shown")
 
         # Start the event loop
+        logger.info("Starting application event loop...")
         sys.exit(app.exec())

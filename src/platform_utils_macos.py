@@ -10,6 +10,10 @@ import sys
 import time
 import uuid
 from pathlib import Path
+import logging
+import ctypes
+import objc
+from Foundation import NSDictionary, NSBundle
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -330,26 +334,47 @@ def send_native_message(message):
 
 
 def check_accessibility_permission():
-    """Check if the app has accessibility permissions."""
-    if not is_macos():
-        return False
-
+    """Check if the app has accessibility permissions and request them if needed."""
     try:
-        # Use the AX API to check permissions
-        script = """
-        tell application "System Events"
-            try
-                set frontAppName to name of first application process whose frontmost is true
-                return true
-            on error
-                return false
-            end try
-        end tell
-        """
-        result = run_applescript_one_line(script)
-        return result.lower() == "true"
+        logger = logging.getLogger("ai.inten.inten.accessibility")
+        logger.info("Checking accessibility permissions...")
+
+        bundle_id = NSBundle.mainBundle().bundleIdentifier()
+        logger.info(f"Bundle ID: {bundle_id}")
+
+        # Load the ApplicationServices framework
+        app_services = ctypes.cdll.LoadLibrary(
+            "/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices"
+        )
+
+        # Set up the function signature
+        app_services.AXIsProcessTrustedWithOptions.argtypes = [ctypes.c_void_p]
+        app_services.AXIsProcessTrustedWithOptions.restype = ctypes.c_bool
+
+        # Create the options dictionary
+        options = NSDictionary.dictionaryWithObject_forKey_(
+            True, "AXTrustedCheckOptionPrompt"
+        )
+        options_ptr = objc.pyobjc_id(options)
+
+        # Call the function
+        is_trusted = app_services.AXIsProcessTrustedWithOptions(options_ptr)
+        logger.info(f"Accessibility trust status: {is_trusted}")
+
+        if is_trusted:
+            logger.info("Accessibility permissions granted")
+            return True
+        else:
+            logger.warning("Accessibility permissions not granted")
+            return False
+
     except Exception as e:
-        logger.error(f"Error checking accessibility permissions: {e}")
+        logger = logging.getLogger("ai.inten.inten.accessibility")
+        logger.error(f"Error checking/requesting accessibility permissions: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
+        import traceback
+
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return False
 
 

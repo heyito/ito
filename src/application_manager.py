@@ -56,11 +56,11 @@ class ApplicationManager(QObject):
         self.keyboard_manager.hotkey_pressed.connect(self._handle_hotkey_press)
         self.keyboard_manager.hotkey_released.connect(self._handle_hotkey_release)
 
-        self.hold_threshold = 0.5  # seconds, TODO: add to user config
-        self.hotkey_thread = threading.Timer(self.hold_threshold, self._hold_check)
-        self.hotkey_thread_lock = threading.Lock()
-        self.is_hotkey_long_hold = False
-        self.is_hotkey_tap = False
+        # self.hold_threshold = 0.5  # seconds, TODO: add to user config
+        # self.hotkey_thread = threading.Timer(self.hold_threshold, self._hold_check)
+        # self.hotkey_thread_lock = threading.Lock()
+        # self.is_hotkey_long_hold = False
+        # self.is_hotkey_tap = False
 
         # Load initial settings
         self.load_settings()
@@ -454,32 +454,29 @@ class ApplicationManager(QObject):
             self.status_changed.emit(StatusMessage.HOTKEY_IGNORED.value)
             return
 
-        with self.hotkey_thread_lock:
-            if self.hotkey_thread.is_alive():
-                logger.info("Hotkey thread is already running.")
-                return
-            else:
-                self.hotkey_thread = threading.Timer(
-                    self.hold_threshold, self._hold_check
-                )
-                self.hotkey_thread.start()
+        # with self.hotkey_thread_lock:
+        #     if self.hotkey_thread.is_alive():
+        #         logger.info("Hotkey thread is already running.")
+        #         return
+        #     else:
+        self._trigger_interaction(CommandMode.DICTATION, hotkey_name)
 
     def _handle_hotkey_release(self, hotkey_name: str) -> None:
-        if self.is_hotkey_long_hold:
-            logger.info("Hotkey long hold released.")
-            self.app_instance.stop_interaction()
-            self._reset_hotkey_state()
-        else:
-            if not self.is_hotkey_tap:
-                logger.info("First hotkey tap detected.")
-                self.is_hotkey_tap = True
-                self._trigger_interaction(CommandMode.ACTION, hotkey_name)
+        # if self.is_hotkey_long_hold:
+        #     logger.info("Hotkey long hold released.")
+        #     self.app_instance.stop_interaction()
+        #     self._reset_hotkey_state()
+        # else:
+        #     if not self.is_hotkey_tap:
+        #         logger.info("First hotkey tap detected.")
+        #         self.is_hotkey_tap = True
+        #         self._trigger_interaction(CommandMode.ACTION, hotkey_name)
 
-            else:
-                logger.info("Second completion hotkey tap detected.")
-                logger.info("Stopping interaction and resetting hotkey tap state.")
-                self.app_instance.stop_interaction()
-                self._reset_hotkey_state()
+        #     else:
+        logger.info("Second completion hotkey tap detected.")
+        logger.info("Stopping interaction and resetting hotkey tap state.")
+        self.app_instance.stop_interaction()
+        # self._reset_hotkey_state()
 
     def _hold_check(self) -> None:
         is_hotkey_on = self.keyboard_manager.check_hotkey_match()
@@ -490,25 +487,24 @@ class ApplicationManager(QObject):
                 CommandMode.DICTATION, self.keyboard_manager._hotkey_str
             )
 
-    def _reset_hotkey_state(self) -> None:
-        self.hotkey_thread.cancel()
-        self.is_hotkey_long_hold = False
-        self.is_hotkey_tap = False
+    # def _reset_hotkey_state(self) -> None:
+    #     self.hotkey_thread.cancel()
+    #     self.is_hotkey_long_hold = False
+    #     self.is_hotkey_tap = False
 
     def _trigger_interaction(self, command_mode: CommandMode, hotkey_name) -> None:
-        timestamp = time.strftime("%H:%M:%S")
         logger.info(
-            f"[{timestamp}] Hotkey '{hotkey_name}' detected by manager. Queuing action for background app."
+            f"Hotkey '{hotkey_name}' detected by manager. Queuing action for background app."
         )
         try:
             self.app_instance.trigger_interaction(command_mode)
             self.status_changed.emit("Hotkey pressed, initiating command...")
         except AttributeError:
             logger.error(
-                f"[{timestamp}] Error: Cannot queue action, app_instance or action_queue missing."
+                "Error: Cannot queue action, app_instance or action_queue missing."
             )
         except Exception as e:
-            logger.error(f"[{timestamp}] Error queuing action: {e}")
+            logger.error(f"Error queuing action: {e}")
             self.error_occurred.emit(f"Error sending action to background app: {e}")
 
     def validate_settings(self, new_settings: dict[str, Any]) -> tuple[bool, str]:

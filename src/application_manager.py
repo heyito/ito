@@ -611,13 +611,3 @@ class ApplicationManager(QObject):
 
         t = threading.Thread(target=monitor, daemon=True, name="StatusQueueMonitor")
         t.start()
-
-    def closeEvent(self, event):
-        """Handle window close event"""
-        self.stop_application()
-        # Clean up keyboard manager
-        self.keyboard_manager.cleanup()
-        # Hide status window
-        if hasattr(self, "status_window"):
-            self.status_window.hide()
-        super().closeEvent(event)

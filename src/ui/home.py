@@ -24,6 +24,7 @@ from src.application_manager import ApplicationManager
 from src.ui.components.inten_layout import IntenLayout
 from src.ui.components.menu_button import MenuButton
 from src.ui.components.segmented_button_group import SegmentedButtonGroup
+from src.ui.keyboard_manager import KeyboardManager
 from src.ui.onboarding import OnboardingWindow
 from src.ui.theme.manager import ThemeManager
 from src.utils.timing import clear_timing_data, save_timing_report
@@ -186,6 +187,7 @@ class Home(QMainWindow):
         super().__init__()
         self.theme_manager = theme_manager
         self.theme_manager.theme_changed.connect(self.update_styles)
+        self.keyboard_manager = KeyboardManager.instance()
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setWindowFlags(self.windowFlags() | Qt.WindowType.FramelessWindowHint)
         self.setWindowTitle("Inten")
@@ -1206,7 +1208,7 @@ class Home(QMainWindow):
         self.onboarding_window.show()
 
         # Close the current window
-        self.close()
+        self.hide()
 
     def add_section_header(self, layout, text, color=None):
         """Helper method to add styled section headers and a horizontal divider to the form"""
@@ -1470,11 +1472,21 @@ class Home(QMainWindow):
 
     def closeEvent(self, event):
         """Handle window close event"""
+        logger.info("Closing Home window")
+        self.keyboard_manager.cleanup()
         self.app_manager.stop_application()
         # Hide status window
         if hasattr(self.app_manager, "status_window"):
             self.app_manager.status_window.hide()
         super().closeEvent(event)
+
+    def hideEvent(self, event):
+        """Handle window hide event"""
+        logger.info("Hiding Home window")
+        self.app_manager.stop_application()
+        if hasattr(self.app_manager, "status_window"):
+            self.app_manager.status_window.hide()
+        super().hideEvent(event)
 
     def _update_llm_provider_fields(self, current_llm_source_text=None):
         """Update model fields based on the selected LLM source."""

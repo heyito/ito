@@ -18,14 +18,19 @@ class KeyboardListenerThread(QThread):
         super().__init__()
         self._on_press = on_press
         self._on_release = on_release
+        self.setObjectName("KeyboardListenerThread")
+        self._listener = None
+        self._running = True
 
     def run(self):
         try:
-            with keyboard.Listener(
+            self._listener = keyboard.Listener(
                 on_press=self._on_press,
                 on_release=self._on_release,
-            ) as listener:
-                listener.join()
+            )
+            with self._listener as listener:
+                while self._running:
+                    listener.join(timeout=0.1)  # Check every 100ms if we should stop
 
         except Exception as e:
             error_msg = f"Error in keyboard listener thread: {str(e)}"
@@ -33,6 +38,13 @@ class KeyboardListenerThread(QThread):
             logger.error(traceback.format_exc())
             self.error_occurred.emit(error_msg)
             self.status_changed.emit(False, error_msg)
+
+    def stop(self):
+        """Stop the keyboard listener thread gracefully"""
+        self._running = False
+        if self._listener:
+            self._listener.stop()
+        self.wait()  # Wait for the thread to finish
 
 
 class KeyboardManager(QObject):
@@ -262,6 +274,7 @@ class KeyboardManager(QObject):
     def cleanup(self):
         """Clean up the keyboard listener. Should only be called when the application is closing."""
         if self._listener_thread:
+            logger.info("Stopping keyboard listener thread")
             self._listener_thread.stop()
             self._listener_thread = None
 

@@ -2,11 +2,7 @@ import logging
 import sys
 
 from PySide6.QtCore import QPoint, QSettings, Qt, QTimer
-from PySide6.QtWidgets import (
-    QApplication,
-    QLabel,
-    QMainWindow,
-)
+from PySide6.QtWidgets import QApplication, QLabel, QMainWindow
 
 from src.ui.components.inten_layout import IntenLayout
 from src.ui.keyboard_manager import KeyboardManager
@@ -94,7 +90,7 @@ class OnboardingWindow(QMainWindow):
             # Show the home window
             self.home.show()
             # Use a timer to close this window after a short delay
-            QTimer.singleShot(0, self.close)
+            QTimer.singleShot(0, self.hide)
         else:
             logger.info("Starting permissions setup flow.")
             # If setup not done, start with the welcome screen
@@ -364,7 +360,13 @@ class OnboardingWindow(QMainWindow):
         # Show the home window
         self.home.show()
         # Use a timer to close this window after a short delay
-        QTimer.singleShot(0, self.close)
+        QTimer.singleShot(0, self.hide)
+
+    def closeEvent(self, event):
+        """Handle window close event"""
+        logger.info("Closing Onboarding window")
+        self.keyboard_manager.cleanup()
+        super().closeEvent(event)
 
 
 if __name__ == "__main__":

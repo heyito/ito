@@ -188,8 +188,9 @@ class StatusWindow(QWidget):
                 self.animate_to_pill(status)
             else:
                 self.show_pill(status)
-            # Start the error reset timer for non-READY statuses
-            self._error_reset_timer.start(self.ERROR_RESET_DELAY)
+            # Only start the error reset timer if the status contains "Error"
+            if "Error" in status:
+                self._error_reset_timer.start(self.ERROR_RESET_DELAY)
         self._current_state = status
         self._status_start_time = (
             time.time()

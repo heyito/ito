@@ -27,6 +27,7 @@ class BrowserApp:
         # Parse the text as JSON if it's from Browser
         full_llm_input = ""
         try:
+            logger.info(f"Processing text: {processing_text}")
             browser_context = json.loads(processing_text)
             logger.info(f"Browser context: {browser_context}")
 

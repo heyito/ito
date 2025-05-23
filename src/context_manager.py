@@ -77,7 +77,7 @@ class ContextManager:
                     fetched_context = self.context_engine.get_full_app_context(
                         context_for_engine
                     )
-                case CommandMode.dictATION:
+                case CommandMode.DICTATION:
                     fetched_context = self.context_engine.get_focused_cursor_context(
                         context_for_engine
                     )

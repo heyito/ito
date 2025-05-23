@@ -1,4 +1,5 @@
 # src/platform_utils_macos.py
+import ctypes
 import json
 import logging
 import os
@@ -10,10 +11,9 @@ import sys
 import time
 import uuid
 from pathlib import Path
-import logging
-import ctypes
+
 import objc
-from Foundation import NSDictionary, NSBundle
+from Foundation import NSBundle, NSDictionary
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -388,18 +388,25 @@ def check_input_monitoring_permission():
         return True
 
     try:
-        # This script checks if we can get input monitoring status
-        script = """
-        tell application "System Events"
-            set inputMonitoringEnabled to false
-            try
-                set inputMonitoringEnabled to true
-            end try
-            return inputMonitoringEnabled
-        end tell
-        """
-        result = run_applescript_one_line(script)
-        return result.lower() == "true"
+        # Load the ApplicationServices framework
+        app_services = ctypes.cdll.LoadLibrary(
+            "/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices"
+        )
+
+        # Set up the function signature for CGEventSourceKeyState
+        app_services.CGEventSourceKeyState.argtypes = [ctypes.c_int, ctypes.c_ushort]
+        app_services.CGEventSourceKeyState.restype = ctypes.c_bool
+
+        # Try to get the state of a key (we use the space key as a test)
+        # If we can get the key state, we have input monitoring permission
+        # kCGEventSourceStateHIDSystemState = 1
+        # kVK_Space = 0x31
+        try:
+            app_services.CGEventSourceKeyState(1, 0x31)
+            return True
+        except Exception:
+            return False
+
     except Exception as e:
         logger.error(f"Error checking input monitoring permission: {e}")
         return False

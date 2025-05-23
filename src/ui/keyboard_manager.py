@@ -1,13 +1,38 @@
 import logging
-import threading
-import time
 import traceback
 
 from pynput import keyboard
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, QThread, Signal
 
 # Configure logger
 logger = logging.getLogger(__name__)
+
+
+class KeyboardListenerThread(QThread):
+    """Thread class for running the keyboard listener"""
+
+    error_occurred = Signal(str)
+    status_changed = Signal(bool, str)
+
+    def __init__(self, on_press, on_release):
+        super().__init__()
+        self._on_press = on_press
+        self._on_release = on_release
+
+    def run(self):
+        try:
+            with keyboard.Listener(
+                on_press=self._on_press,
+                on_release=self._on_release,
+            ) as listener:
+                listener.join()
+
+        except Exception as e:
+            error_msg = f"Error in keyboard listener thread: {str(e)}"
+            logger.error(error_msg)
+            logger.error(traceback.format_exc())
+            self.error_occurred.emit(error_msg)
+            self.status_changed.emit(False, error_msg)
 
 
 class KeyboardManager(QObject):
@@ -33,47 +58,14 @@ class KeyboardManager(QObject):
                 "KeyboardManager is a singleton! Use KeyboardManager.instance()"
             )
         super().__init__()
-        self._listener: keyboard.Listener | None = None
+        self._listener_thread = None
         self._target_hotkey = None
         self._hotkey_str = None
         self._listener_started = False
         self._tap = None
         self.pressed_keys = set()
         self._was_hotkey_pressed = False
-        self._listener_thread: threading.Thread | None = None
-        self._monitor_thread: threading.Thread | None = None
-        self._should_monitor = True
-
-        # self._is_macos = platform.system() == 'Darwin'
         self._is_macos = False
-
-    def _monitor_listener(self):
-        """Monitor the keyboard listener thread and restart it if it dies."""
-        while self._should_monitor:
-            if self._listener_thread and not self._listener_thread.is_alive():
-                error_msg = "Keyboard listener thread died unexpectedly"
-                logger.error(error_msg)
-                self.listener_status_changed.emit(False, error_msg)
-
-                # Attempt to restart the listener
-                try:
-                    self.cleanup()  # Clean up the dead listener
-                    success = self.initialize_listener()
-                    if success:
-                        logger.info("Successfully restarted keyboard listener")
-                        self.listener_status_changed.emit(
-                            True, "Listener restarted successfully"
-                        )
-                    else:
-                        error_msg = "Failed to restart keyboard listener"
-                        logger.error(error_msg)
-                        self.listener_status_changed.emit(False, error_msg)
-                except Exception as e:
-                    error_msg = f"Error restarting keyboard listener: {str(e)}"
-                    logger.error(error_msg)
-                    self.listener_status_changed.emit(False, error_msg)
-
-            time.sleep(1)  # Check every second
 
     def check_hotkey_match(self) -> bool:
         """
@@ -95,21 +87,16 @@ class KeyboardManager(QObject):
             return True
 
         try:
-            self._listener = keyboard.Listener(
-                on_press=self._on_press,
-                on_release=self._on_release,
+            # Create and start the listener thread
+            self._listener_thread = KeyboardListenerThread(
+                on_press=self._on_press, on_release=self._on_release
             )
-            self._listener.start()
-            self._listener_thread = self._listener._thread
+            self._listener_thread.error_occurred.connect(
+                lambda msg: self.listener_status_changed.emit(False, msg)
+            )
+            self._listener_thread.status_changed.connect(self.listener_status_changed)
+            self._listener_thread.start()
             self._listener_started = True
-
-            # Start the monitor thread if it's not already running
-            if not self._monitor_thread or not self._monitor_thread.is_alive():
-                self._should_monitor = True
-                self._monitor_thread = threading.Thread(
-                    target=self._monitor_listener, daemon=True
-                )
-                self._monitor_thread.start()
 
             logger.info("Keyboard listener initialized successfully")
             self.listener_status_changed.emit(True, "Listener initialized successfully")
@@ -274,15 +261,9 @@ class KeyboardManager(QObject):
 
     def cleanup(self):
         """Clean up the keyboard listener. Should only be called when the application is closing."""
-        self._should_monitor = False  # Stop the monitor thread
-
-        if self._listener and self._listener_started:
-            try:
-                self._listener.stop()
-                self._listener = None
-            except Exception as e:
-                logger.error(f"Error cleaning up keyboard listener: {e}")
-                logger.error(traceback.format_exc())
+        if self._listener_thread:
+            self._listener_thread.stop()
+            self._listener_thread = None
 
         self._listener_started = False
         self._target_hotkey = None

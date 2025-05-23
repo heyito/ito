@@ -6,6 +6,7 @@ from typing import Dict, Optional
 
 from src import platform_utils_macos as platform_utils  # Or abstract this more
 from src.engines.context_engine import ContextEngine
+from src.types.modes import CommandMode
 
 
 class ContextManager:
@@ -28,7 +29,7 @@ class ContextManager:
             # Return a copy to prevent external modification
             return self._current_context.copy()
 
-    def fetch_context_async(self) -> None:
+    def fetch_context_async(self, mode: CommandMode) -> None:
         """Starts fetching context in a background thread."""
         timestamp = time.strftime("%H:%M:%S")
         with self._lock:
@@ -56,13 +57,13 @@ class ContextManager:
 
             self._fetch_thread = threading.Thread(
                 target=self._fetch_target,
-                args=(app_name,),  # Pass app_name explicitly
+                args=(app_name, mode),  # Pass app_name explicitly
                 daemon=True,
                 name="ContextFetchThread",
             )
             self._fetch_thread.start()
 
-    def _fetch_target(self, app_name: str) -> None:
+    def _fetch_target(self, app_name: str, mode: CommandMode) -> None:
         """Internal target for the context fetching thread."""
         fetch_start_time = time.time()
         fetched_context: Optional[str] = None
@@ -70,7 +71,20 @@ class ContextManager:
         try:
             # Create context dict for the engine call *within the thread*
             context_for_engine = {"app_name": app_name, "doc_text": None}
-            fetched_context = self.context_engine.get_context(context_for_engine)
+            fetched_context = None
+            match mode:
+                case CommandMode.ACTION:
+                    fetched_context = self.context_engine.get_full_app_context(
+                        context_for_engine
+                    )
+                case CommandMode.DICTATION:
+                    fetched_context = self.context_engine.get_focused_cursor_context(
+                        context_for_engine
+                    )
+                case _:
+                    raise ValueError(
+                        f"Unsupported CommandMode for ContextManager: {mode}"
+                    )
             if fetched_context is None:
                 print(
                     f"[{time.strftime('%H:%M:%S')}] ContextManager: Engine returned None for '{app_name}'."

@@ -6,6 +6,8 @@ import uuid
 
 import Quartz
 
+from AppKit import NSPasteboard, NSStringPboardType
+
 KEY_MAP = {
     "enter": 0x24,
     "return": 0x24,
@@ -30,24 +32,27 @@ MODIFIER_MAP = {
     "ctrl": Quartz.kCGEventFlagMaskControl,
 }
 
-DEV_MODE = os.getenv('DEV')
+DEV_MODE = os.getenv("DEV")
+
 
 class MacOSEngine:
     def __init__(self):
         # Path to your built Swift binary
         if DEV_MODE:
-          self.swift_helper_path = os.path.join(
-              os.path.dirname(__file__),
-              "..",
-              "swift_helper",
-              ".build",
-              "apple",
-              "Products",
-              "Release",
-              "inten_macos_agent",
-          )
+            self.swift_helper_path = os.path.join(
+                os.path.dirname(__file__),
+                "..",
+                "swift_helper",
+                ".build",
+                "apple",
+                "Products",
+                "Release",
+                "inten_macos_agent",
+            )
         else:
-          self.swift_helper_path = "/Applications/Inten.app/Contents/Resources/inten_macos_agent"
+            self.swift_helper_path = (
+                "/Applications/Inten.app/Contents/Resources/inten_macos_agent"
+            )
 
     def _click_at(self, x, y):
         for event_type in [
@@ -121,6 +126,17 @@ class MacOSEngine:
         except json.JSONDecodeError:
             print(f"Invalid JSON output from Swift helper: {result.stdout}")
             return None
+
+    def click_at_cursor(self):
+        """
+        Clicks where the cursor is currently located.
+        """
+        event = Quartz.CGEventCreate(None)  # Create a null event to query global state
+        current_pos = Quartz.CGEventGetLocation(event)
+        x, y = current_pos.x, current_pos.y
+        self._click_at(x, y)
+        print(f"✅ Clicked at cursor position: ({x}, {y})")
+        pass
 
     def click_at_global(self, x, y):
         """
@@ -275,6 +291,77 @@ class MacOSEngine:
         # Send the keypress with modifiers
         self._send_shortcut(modifiers, keycode)
         print(f"✅ Pressed key: {key} (keycode: {keycode})")
+
+    def copy_text_from_active_app(self) -> str:
+        """
+        Attempts to "Select All" (Cmd+A) and then "Copy" (Cmd+C) text
+        from the currently active application, then returns the copied text.
+        Returns an empty string if no text is copied or an error occurs.
+        """
+        print("Attempting to select all and copy text from the active application...")
+
+        pasteboard = NSPasteboard.generalPasteboard()
+        pasteboard.clearContents()
+
+        self._send_shortcut(["command"], KEY_MAP["a"])
+        time.sleep(0.3)
+
+        self._send_shortcut(["command"], KEY_MAP["c"])
+        time.sleep(0.2)
+
+        # 3. Get text from clipboard
+
+        available_types = pasteboard.types()
+        if NSStringPboardType in available_types:
+            copied_text_obj = pasteboard.stringForType_(NSStringPboardType)
+            if copied_text_obj is not None:
+                copied_text = str(copied_text_obj)
+                print(
+                    f"✅ Text copied successfully (first 50 chars): '{copied_text[:50].replace(os.linesep, ' ')}...'"
+                )
+                return copied_text
+            else:
+                print(
+                    "⚠️ NSStringPboardType was available, but stringForType_ returned None (no text content)."
+                )
+                return ""
+        else:
+            print(
+                f"⚠️ NSStringPboardType not found in clipboard. Available types: {available_types}"
+            )
+            return ""
+
+    def paste_text_to_active_app(self, text_to_paste: str):
+        """
+        Pastes the given text into the currently active application.
+        It does this by setting the clipboard content and then simulating Cmd+V.
+        """
+
+        print(
+            f"Attempting to paste text (first 50 chars): '{text_to_paste[:50].replace(os.linesep, ' ')}...'"
+        )
+
+        pasteboard = NSPasteboard.generalPasteboard()
+        pasteboard.clearContents()
+        # Prepare the data for the pasteboard
+        # string_array = NSArray.arrayWithObject_(text_to_paste) # Old way, prefer direct types
+        # success = pasteboard.writeObjects_(string_array)
+        success = pasteboard.declareTypes_owner_([NSStringPboardType], None)
+        if success:
+            success = pasteboard.setString_forType_(text_to_paste, NSStringPboardType)
+
+        if not success:
+            print("Error: Failed to set text on the pasteboard.")
+            return False
+
+        time.sleep(0.1)
+
+        self._send_shortcut(["command"], KEY_MAP["v"])
+
+        # Allow a moment for paste to occur
+        time.sleep(0.1)
+        print("✅ Paste command sent.")
+        return True
 
 
 if __name__ == "__main__":

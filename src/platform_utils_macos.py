@@ -97,7 +97,6 @@ def get_active_window_info():
     """Gets the name of the frontmost application on macOS."""
     if not is_macos():
         return None
-    # TODO: Potential improvement, pull these scripts from a file where they have syntax highlighting
     script = 'tell application "System Events" to get name of first application process whose frontmost is true'
     try:
         app_name = run_applescript_one_line(script)
@@ -204,6 +203,11 @@ def set_textedit_content(text_content):
     except (RuntimeError, TimeoutError, FileNotFoundError) as e:
         print(f"Could not set TextEdit content: {e}")
         return False
+    
+def set_cursor_content(text_content):
+    """Sets the text content of where the cursor is focused"""
+    if not is_macos(): return False
+    
 
 
 def get_browser_context(socket_path):

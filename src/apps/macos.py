@@ -9,6 +9,9 @@ from src.engines.macos_engine import MacOSEngine
 from src.handlers.llm_handler import LLMHandler
 
 from google.genai import types
+import src.platform_utils_macos as platform_utils
+
+from rich import print as rprint
 
 ui_batch_tool = {
     "name": "ui_batch",
@@ -71,7 +74,8 @@ gemini_tools = types.Tool(function_declarations=[ui_batch_tool, no_action_tool])
 
 
 class MacOSapp:
-    system_prompt = prompt_templates.MACOS_AX_OCR_SYSTEM_PROMPT
+    action_system_prompt = prompt_templates.MACOS_AX_OCR_SYSTEM_PROMPT
+    dictation_system_prompt = prompt_templates.PAGE_EDITOR_SYSTEM_PROMPT
     MAX_STEPS = 3
 
     def __init__(self, llm_handler: LLMHandler, macos_engine: MacOSEngine):
@@ -105,6 +109,10 @@ class MacOSapp:
         context = self.macos_engine.get_active_window_info()
         return context
 
+    def get_focused_cursor_context(self) -> str:
+        context = self.macos_engine.copy_text_from_active_app()
+        return context
+
     """
     Process the command and update the document.
 
@@ -114,7 +122,7 @@ class MacOSapp:
         user_text_command: str - The command to process
     """
 
-    def process_command(
+    def process_action(
         self,
         app_name: str,
         processing_text: str,
@@ -153,10 +161,38 @@ class MacOSapp:
             tool_name_resolver=tool_name_resolver,
             run_after_step=run_after_step,
             tool_functions=tool_functions,
-            system_prompt=self.system_prompt,
+            system_prompt=self.action_system_prompt,
             user_prompt=full_llm_input,
             max_steps=self.MAX_STEPS,
             state={"old_context": old_context},
         )
 
         print("Processing complete.")
+
+    def process_dictation(
+        self,
+        app_name: str,
+        processing_text: str,
+        user_text_command: str,
+        user_command_audio: Optional[bytes] = None,
+    ):
+        full_llm_input = prompt_templates.create_general_document_body_prompt(
+            app_name, processing_text, user_text_command
+        )
+        new_doc_text = self.llm_handler.process_input_with_llm(
+            text=full_llm_input,
+            audio_buffer=user_command_audio,
+            system_prompt_override=self.dictation_system_prompt,
+        )
+
+        if new_doc_text is None:  # Check for None specifically
+            print("LLM processing failed or did not return content.")
+            # is_processing is released in finally block
+            return
+        print(f"LLM returned new document content (length: {len(new_doc_text)} chars).")
+
+        rprint(
+            f"[bold blue] New document content:\n---\n{new_doc_text[:200]}...\n--- [/bold blue]"
+        )
+        # platform_utils.set_active_body(app_name, new_doc_text)
+        self.macos_engine.paste_text_to_active_app(new_doc_text)

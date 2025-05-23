@@ -425,7 +425,7 @@ class StreamingAudioApplication(ApplicationInterface):
                 try:
                     # Pass the current_context_data which now contains the app_name
                     context_call_start_time = time.time()  # Add call start time
-                    fetched_context = self.context_engine.get_context(
+                    fetched_context = self.context_engine.get_full_app_context(
                         self.current_context_data
                     )
                     context_call_end_time = time.time()  # Add call end time
@@ -689,7 +689,7 @@ class StreamingAudioApplication(ApplicationInterface):
 
         try:
             # Call the main processing logic in the ProcessingEngine
-            self.processing_engine.process(
+            self.processing_engine.process_action(
                 current_context=self.current_context_data,  # Pass the dict (contains app_name)
                 processing_text=original_doc_context,  # Pass the fetched text separately
                 user_text_command=final_transcript,

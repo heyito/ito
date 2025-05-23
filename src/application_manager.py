@@ -4,12 +4,14 @@ import queue
 import threading
 import time
 import traceback
+
 from typing import Any, Dict, Optional, Tuple
 
 from PySide6.QtCore import QObject, Signal, QSettings, QTimer
 
 from src.application_interface import ApplicationInterface
 from src.containers import Container
+from src.types.modes import CommandMode
 from src.ui.keyboard_manager import KeyboardManager
 from src.ui.status_window import StatusWindow
 from src.types.status_messages import StatusMessage
@@ -49,6 +51,13 @@ class ApplicationManager(QObject):
         # Get keyboard manager instance and connect to its signal
         self.keyboard_manager = KeyboardManager.instance()
         self.keyboard_manager.hotkey_pressed.connect(self._handle_hotkey_press)
+        self.keyboard_manager.hotkey_released.connect(self._handle_hotkey_release)
+
+        self.hold_threshold = 0.5  # seconds, TODO: add to user config
+        self.hotkey_thread = threading.Timer(self.hold_threshold, self._hold_check)
+        self.hotkey_thread_lock = threading.Lock()
+        self.is_hotkey_long_hold = False
+        self.is_hotkey_tap = False
 
         # Load initial settings
         self.load_settings()
@@ -438,15 +447,55 @@ class ApplicationManager(QObject):
             self.status_changed.emit(StatusMessage.HOTKEY_IGNORED.value)
             return
 
+        with self.hotkey_thread_lock:
+            if self.hotkey_thread.is_alive():
+                print("Hotkey thread is already running.")
+                return
+            else:
+                self.hotkey_thread = threading.Timer(
+                    self.hold_threshold, self._hold_check
+                )
+                self.hotkey_thread.start()
+
+    def _handle_hotkey_release(self, hotkey_name: str) -> None:
+        if self.is_hotkey_long_hold:
+            print("Hotkey long hold released.")
+            self.app_instance.stop_interaction()
+            self._reset_hotkey_state()
+        else:
+            if not self.is_hotkey_tap:
+                print("First hotkey tap detected.")
+                self.is_hotkey_tap = True
+                self._trigger_interaction(CommandMode.ACTION, hotkey_name)
+
+            else:
+                print("Second completion hotkey tap detected.")
+                print("Stopping interaction and resetting hotkey tap state.")
+                self.app_instance.stop_interaction()
+                self._reset_hotkey_state()
+
+    def _hold_check(self) -> None:
+        is_hotkey_on = self.keyboard_manager.check_hotkey_match()
+        if is_hotkey_on and not self.is_hotkey_long_hold:
+            print("Hotkey is being held down.")
+            self.is_hotkey_long_hold = True
+            self._trigger_interaction(
+                CommandMode.DICTATION, self.keyboard_manager._hotkey_str
+            )
+
+    def _reset_hotkey_state(self) -> None:
+        self.hotkey_thread.cancel()
+        self.is_hotkey_long_hold = False
+        self.is_hotkey_tap = False
+
+    def _trigger_interaction(self, command_mode: CommandMode, hotkey_name) -> None:
+        timestamp = time.strftime("%H:%M:%S")
         print(
             f"[{timestamp}] Hotkey '{hotkey_name}' detected by manager. Queuing action for background app."
         )
-        # Safely put the action onto the background thread's queue
         try:
-            self.app_instance.trigger_interaction()
-            self.status_changed.emit(
-                "Hotkey pressed, initiating command..."
-            )  # Update UI
+            self.app_instance.trigger_interaction(command_mode)
+            self.status_changed.emit("Hotkey pressed, initiating command...")
         except AttributeError:
             print(
                 f"[{timestamp}] Error: Cannot queue action, app_instance or action_queue missing."

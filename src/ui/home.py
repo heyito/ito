@@ -308,18 +308,18 @@ class Home(QMainWindow):
         menu_layout.addWidget(self.audio_button)
 
         # Add Voice Detection button
-        self.voice_detection_button = MenuButton("Voice Detection", 5)
-        self.voice_detection_button.clicked.connect(lambda: self.select_menu(5))
-        menu_layout.addWidget(self.voice_detection_button)
+        # self.voice_detection_button = MenuButton("Voice Detection", 5)
+        # self.voice_detection_button.clicked.connect(lambda: self.select_menu(5))
+        # menu_layout.addWidget(self.voice_detection_button)
 
         # Add Keyboard button
-        self.keyboard_button = MenuButton("Keyboard", 6)
-        self.keyboard_button.clicked.connect(lambda: self.select_menu(6))
+        self.keyboard_button = MenuButton("Keyboard", 5)
+        self.keyboard_button.clicked.connect(lambda: self.select_menu(5))
         menu_layout.addWidget(self.keyboard_button)
 
         # Add Developer button
-        self.developer_button = MenuButton("Developer", 7)
-        self.developer_button.clicked.connect(lambda: self.select_menu(7))
+        self.developer_button = MenuButton("Developer", 6)
+        self.developer_button.clicked.connect(lambda: self.select_menu(6))
         menu_layout.addWidget(self.developer_button)
 
         # Add stretch to push everything up
@@ -1157,9 +1157,9 @@ class Home(QMainWindow):
         self.api_keys_button.setChecked(index == 2)
         self.mode_button.setChecked(index == 3)
         self.audio_button.setChecked(index == 4)
-        self.voice_detection_button.setChecked(index == 5)
-        self.keyboard_button.setChecked(index == 6)
-        self.developer_button.setChecked(index == 7)
+        # self.voice_detection_button.setChecked(index == 5)
+        self.keyboard_button.setChecked(index == 5)
+        self.developer_button.setChecked(index == 6)
 
     def handle_save_timing_report(self):
         """Handles the click of the 'Save Timing Report' button."""

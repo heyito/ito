@@ -35,6 +35,7 @@ class StatusWindow(QWidget):
     DOT_OPACITY = 0
     PILL_OPACITY = 1.0  # 100% opacity for pill
     STATUS_DELAY = 350  # Delay between non-READY status changes in ms
+    ERROR_RESET_DELAY = 2000  # 2 seconds delay before resetting error status
 
     def __init__(self):
         super().__init__()
@@ -78,6 +79,9 @@ class StatusWindow(QWidget):
         self._opacity_animation = None
         self.radius = 3
         self._status_start_time = time.time()  # Track when current status started
+        self._error_reset_timer = QTimer(self)
+        self._error_reset_timer.setSingleShot(True)
+        self._error_reset_timer.timeout.connect(self._reset_error_status)
 
         # Status queue and timer for delayed updates
         self._status_queue = queue.Queue()
@@ -171,11 +175,14 @@ class StatusWindow(QWidget):
                 self.animate_to_dot()
             else:
                 self.show_dot()
+            self._error_reset_timer.stop()  # Stop any pending error reset
         else:
             if self._current_state == StatusMessage.READY.value:
                 self.animate_to_pill(status)
             else:
                 self.show_pill(status)
+            # Start the error reset timer for non-READY statuses
+            self._error_reset_timer.start(self.ERROR_RESET_DELAY)
         self._current_state = status
         self._status_start_time = (
             time.time()
@@ -291,3 +298,7 @@ class StatusWindow(QWidget):
         # Start both animations
         self._animation.start()
         self._opacity_animation.start()
+
+    def _reset_error_status(self):
+        """Reset the status to READY after an error."""
+        self.update_status(StatusMessage.READY)

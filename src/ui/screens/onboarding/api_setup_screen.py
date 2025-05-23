@@ -150,10 +150,64 @@ class ApiSetupScreen:
         self.provider_buttons = []
         self.helper_widget = None
         self.right_title = None
+        self.title = None
+        self.subtitle = None
         self.selected_idx = 0
         self.provider_keys = {
             provider["name"].lower(): "" for provider in self.PROVIDERS
         }
+        # Connect theme change signal
+        self.theme_manager.theme_changed.connect(self.update_styles)
+
+    def update_styles(self):
+        """Update styles when theme changes"""
+        if self.right_title:
+            self.right_title.setStyleSheet(
+                f"font-size: 20px; font-weight: 600; color: {self.theme_manager.get_color('text_primary')}; margin-bottom: 8px;"
+            )
+
+        # Update title and subtitle
+        if self.title:
+            self.title.setStyleSheet(
+                f"""
+                font-size: 28px;
+                font-weight: 600;
+                color: {self.theme_manager.get_color("text_primary")};
+                margin-bottom: 12px;
+                letter-spacing: -0.5px;
+                """
+            )
+
+        if self.subtitle:
+            self.subtitle.setText(
+                f'<div style="line-height: 1.5; font-size: 15px; color: {self.theme_manager.get_color("text_secondary")}; font-weight: 400; letter-spacing: 0.1px;">Connect Inten to your preferred LLM by adding the API key</div>'
+            )
+
+        # Update provider buttons
+        for btn in self.provider_buttons:
+            if btn.selected:
+                bar_color = self.theme_manager.get_color("primary")
+                font_color = self.theme_manager.get_color("primary")
+            else:
+                bar_color = "transparent"
+                font_color = self.theme_manager.get_color("text_primary")
+
+            btn.left_bar.setStyleSheet(f"background: {bar_color}; border-radius: 2px;")
+            btn.name_label.setStyleSheet(
+                f"font-size: 15px; font-weight: 600; color: {font_color};"
+            )
+            btn.desc_label.setStyleSheet(
+                f"font-size: 13px; color: {self.theme_manager.get_color('text_secondary')}; font-weight: 400;"
+            )
+
+        # Update helper widget if it exists
+        if self.helper_widget:
+            self.helper_widget.left_label.setStyleSheet(
+                f"font-size: 12px; color: {self.theme_manager.get_color('text_secondary')};"
+            )
+            self.helper_widget.url_label.setStyleSheet(
+                f"font-size: 12px; color: {self.theme_manager.get_color('text_secondary')};"
+            )
 
     def create(self, parent_layout):
         # Main centering container
@@ -171,8 +225,8 @@ class ApiSetupScreen:
         left_layout.setSpacing(4)
         left_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        title = QLabel("API Key Setup")
-        title.setStyleSheet(
+        self.title = QLabel("API Key Setup")
+        self.title.setStyleSheet(
             f"""
             font-size: 28px;
             font-weight: 600;
@@ -181,15 +235,15 @@ class ApiSetupScreen:
             letter-spacing: -0.5px;
             """
         )
-        left_layout.addWidget(title)
+        left_layout.addWidget(self.title)
 
-        subtitle = QLabel()
-        subtitle.setText(
+        self.subtitle = QLabel()
+        self.subtitle.setText(
             f'<div style="line-height: 1.5; font-size: 15px; color: {self.theme_manager.get_color("text_secondary")}; font-weight: 400; letter-spacing: 0.1px;">Connect Inten to your preferred LLM by adding the API key</div>'
         )
-        subtitle.setWordWrap(True)
-        subtitle.setStyleSheet("margin-bottom: 24px;")
-        left_layout.addWidget(subtitle)
+        self.subtitle.setWordWrap(True)
+        self.subtitle.setStyleSheet("margin-bottom: 24px;")
+        left_layout.addWidget(self.subtitle)
 
         # Provider custom buttons
         self.provider_buttons = []
@@ -412,6 +466,9 @@ class ApiSetupScreen:
 
     def cleanup(self):
         """Clean up resources"""
+        # Disconnect theme change signal
+        self.theme_manager.theme_changed.disconnect(self.update_styles)
+
         if self.provider_buttons:
             for btn in self.provider_buttons:
                 btn.deleteLater()
@@ -423,3 +480,7 @@ class ApiSetupScreen:
             self.helper_widget.deleteLater()
         if self.right_title:
             self.right_title.deleteLater()
+        if self.title:
+            self.title.deleteLater()
+        if self.subtitle:
+            self.subtitle.deleteLater()

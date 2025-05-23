@@ -7,15 +7,12 @@ from PySide6.QtWidgets import (
     QWidget,
     QLineEdit,
     QSizePolicy,
-    QListWidget,
-    QListWidgetItem,
     QFrame,
     QGraphicsOpacityEffect,
 )
-from PySide6.QtGui import QPixmap, QCursor, QDesktopServices
+from PySide6.QtGui import QCursor, QDesktopServices
 from PySide6.QtCore import QUrl
 from src.ui.theme.manager import ThemeManager
-from src.ui.components.menu_button import MenuButton
 from PySide6.QtCore import QPropertyAnimation, QEasingCurve, QPoint
 from PySide6.QtCore import QTimer
 
@@ -265,7 +262,7 @@ class ApiSetupScreen:
             opacity_effect = QGraphicsOpacityEffect(outer_container)
             outer_container.setGraphicsEffect(opacity_effect)
             opacity_anim = QPropertyAnimation(opacity_effect, b"opacity")
-            opacity_anim.setDuration(400)
+            opacity_anim.setDuration(800)
             opacity_anim.setStartValue(0)
             opacity_anim.setEndValue(1)
             opacity_anim.setEasingCurve(QEasingCurve.OutCubic)
@@ -276,7 +273,7 @@ class ApiSetupScreen:
             left_end = left_widget.pos()
             left_widget.move(left_start)
             left_anim = QPropertyAnimation(left_widget, b"pos")
-            left_anim.setDuration(500)
+            left_anim.setDuration(1000)
             left_anim.setStartValue(left_start)
             left_anim.setEndValue(left_end)
             left_anim.setEasingCurve(QEasingCurve.OutCubic)
@@ -287,7 +284,7 @@ class ApiSetupScreen:
             right_end = right_widget.pos()
             right_widget.move(right_start)
             right_anim = QPropertyAnimation(right_widget, b"pos")
-            right_anim.setDuration(500)
+            right_anim.setDuration(1000)
             right_anim.setStartValue(right_start)
             right_anim.setEndValue(right_end)
             right_anim.setEasingCurve(QEasingCurve.OutCubic)

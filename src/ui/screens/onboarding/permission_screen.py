@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve
 from PySide6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QWidget,
     QMainWindow,
+    QGraphicsOpacityEffect,
 )
 import platform
 import os
@@ -35,6 +36,7 @@ class PermissionScreen:
             "input_monitoring": False,
         }
         self._is_cleaned_up = False
+        self._animation_refs = []  # Store animation references
 
         # Store references to widgets that need style updates
         self.title_label = None
@@ -46,6 +48,7 @@ class PermissionScreen:
         self.mic_status = None
         self.acc_status = None
         self.input_mon_status = None
+        self.content_widget = None  # Store reference to content widget
 
         # Connect theme changes
         self.theme_manager.theme_changed.connect(self.update_styles)
@@ -99,20 +102,26 @@ class PermissionScreen:
             )
 
     def create(self, parent_layout):
+        # Create a container widget for all content
+        self.content_widget = QWidget()
+        content_layout = QVBoxLayout(self.content_widget)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
+
         # Store the layout reference
-        self.layout = parent_layout
+        self.layout = content_layout
 
         # Title
         self.title_label = QLabel("Required Permissions")
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        parent_layout.addWidget(self.title_label)
+        content_layout.addWidget(self.title_label)
 
         # Description
         self.desc_label = QLabel(
             "Inten needs a few permissions to help you be more productive"
         )
         self.desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        parent_layout.addWidget(self.desc_label)
+        content_layout.addWidget(self.desc_label)
 
         # Progress Bar
         self.progress_bar = QProgressBar()
@@ -120,12 +129,12 @@ class PermissionScreen:
         self.progress_bar.setValue(0)
         self.progress_bar.setTextVisible(False)
         self.progress_bar.setFixedWidth(200)
-        parent_layout.addWidget(
+        content_layout.addWidget(
             self.progress_bar, alignment=Qt.AlignmentFlag.AlignCenter
         )
 
         # Spacer
-        parent_layout.addSpacing(30)
+        content_layout.addSpacing(30)
 
         # Permissions Container
         permissions_container = QWidget()
@@ -233,22 +242,22 @@ class PermissionScreen:
         permissions_layout.addWidget(input_mon_container)
 
         # Add permissions container to main layout
-        parent_layout.addWidget(permissions_container)
+        content_layout.addWidget(permissions_container)
 
         # Add spacing before the Continue button
-        parent_layout.addSpacing(40)
+        content_layout.addSpacing(40)
 
         # Continue Button
         self.continue_button = QPushButton("Continue")
         self.continue_button.setObjectName("onboarding-primary")
         self.continue_button.setEnabled(False)
         self.continue_button.setFixedWidth(200)
-        parent_layout.addWidget(
+        content_layout.addWidget(
             self.continue_button, alignment=Qt.AlignmentFlag.AlignCenter
         )
 
-        # Add stretch after the button to push it up from the bottom
-        parent_layout.addStretch()
+        # Add the content widget to the parent layout
+        parent_layout.addWidget(self.content_widget)
 
         # Start checking permissions
         self.update_progress()  # Initial progress
@@ -258,6 +267,17 @@ class PermissionScreen:
 
         # Apply initial styles
         self.update_styles()
+
+        # Start fade-in animation
+        opacity_effect = QGraphicsOpacityEffect(self.content_widget)
+        self.content_widget.setGraphicsEffect(opacity_effect)
+        opacity_anim = QPropertyAnimation(opacity_effect, b"opacity")
+        opacity_anim.setDuration(800)
+        opacity_anim.setStartValue(0)
+        opacity_anim.setEndValue(1)
+        opacity_anim.setEasingCurve(QEasingCurve.OutCubic)
+        opacity_anim.start(QPropertyAnimation.DeleteWhenStopped)
+        self._animation_refs.append(opacity_anim)
 
         return (
             self.mic_button,
@@ -368,6 +388,9 @@ class PermissionScreen:
         """Clean up resources"""
         self._is_cleaned_up = True
 
+        # Clear animation references
+        self._animation_refs.clear()
+
         # Clear references to widgets
         self.title_label = None
         self.desc_label = None
@@ -378,3 +401,4 @@ class PermissionScreen:
         self.mic_status = None
         self.acc_status = None
         self.input_mon_status = None
+        self.content_widget = None

@@ -1,10 +1,11 @@
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve
 from PySide6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QWidget,
+    QGraphicsOpacityEffect,
 )
 
 
@@ -24,11 +25,13 @@ class KeyboardSetupScreen:
         self._last_pressed_keys = None
         self._hold_start_time = None
         self._is_cleaned_up = False
+        self._animation_refs = []  # Store animation references
 
         # Store references to widgets that need style updates
         self.title_label = None
         self.desc_label = None
         self.keyboard_container = None
+        self.content_widget = None  # Store reference to content widget
 
         # Connect theme changes
         self.theme_manager.theme_changed.connect(self.update_styles)
@@ -88,8 +91,9 @@ class KeyboardSetupScreen:
             """)
 
     def create(self, parent_layout):
-        # --- Centered Layout ---
-        content_layout = QVBoxLayout()
+        # Create a container widget for all content
+        self.content_widget = QWidget()
+        content_layout = QVBoxLayout(self.content_widget)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(40)
 
@@ -147,13 +151,24 @@ class KeyboardSetupScreen:
             self.continue_button, alignment=Qt.AlignmentFlag.AlignCenter
         )
 
-        # --- Center the content in the main layout ---
+        # Add the content widget to the parent layout
         parent_layout.addStretch(2)
-        parent_layout.addLayout(content_layout)
+        parent_layout.addWidget(self.content_widget)
         parent_layout.addStretch(3)
 
         # Apply initial styles
         self.update_styles()
+
+        # Start fade-in animation
+        opacity_effect = QGraphicsOpacityEffect(self.content_widget)
+        self.content_widget.setGraphicsEffect(opacity_effect)
+        opacity_anim = QPropertyAnimation(opacity_effect, b"opacity")
+        opacity_anim.setDuration(800)
+        opacity_anim.setStartValue(0)
+        opacity_anim.setEndValue(1)
+        opacity_anim.setEasingCurve(QEasingCurve.OutCubic)
+        opacity_anim.start(QPropertyAnimation.DeleteWhenStopped)
+        self._animation_refs.append(opacity_anim)
 
         # Start listening for keyboard input
         self.start_keyboard_listening()
@@ -247,6 +262,9 @@ class KeyboardSetupScreen:
         """Clean up timers and resources"""
         self._is_cleaned_up = True
 
+        # Clear animation references
+        self._animation_refs.clear()
+
         if self.keyboard_poll_timer:
             self.keyboard_poll_timer.stop()
             self.keyboard_poll_timer = None
@@ -266,3 +284,4 @@ class KeyboardSetupScreen:
         self.title_label = None
         self.desc_label = None
         self.keyboard_container = None
+        self.content_widget = None

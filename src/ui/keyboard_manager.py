@@ -56,6 +56,28 @@ class KeyboardManager(QObject):
         current_keys = set(self.get_pressed_keys())
         return current_keys == self._target_hotkey
 
+    def initialize_listener(self) -> bool:
+        print("Initializing keyboard listener")
+        """Initialize the keyboard listener once. This should only be called once when the application starts."""
+        if self._listener_started:
+            print("Keyboard listener already initialized")
+            return True
+
+        try:
+            self._listener = keyboard.Listener(
+                on_press=self._on_press,
+                on_release=self._on_release,
+            )
+            self._listener.start()
+
+            self._listener_started = True
+            print("Keyboard listener initialized successfully")
+            return True
+        except Exception as e:
+            print(f"Failed to initialize keyboard listener: {e}")
+            traceback.print_exc()
+            return False
+
     def set_hotkey(self, hotkey_str: str) -> bool:
         """Set the target hotkey without restarting the listener.
         hotkey_str should be in the format 'key1+key2+key3' where each key is in symbolic form.
@@ -202,3 +224,18 @@ class KeyboardManager(QObject):
         key_symbols.sort()
         # Return up to 3 keys
         return key_symbols[:3]
+
+    def cleanup(self):
+        """Clean up the keyboard listener. Should only be called when the application is closing."""
+        if self._listener and self._listener_started:
+            try:
+                self._listener.stop()
+                self._listener = None
+            except Exception as e:
+                print(f"Error cleaning up keyboard listener: {e}")
+
+        self._listener_started = False
+        self._target_hotkey = None
+        self._hotkey_str = None
+        self._was_hotkey_pressed = False
+        print("Keyboard listener cleaned up")

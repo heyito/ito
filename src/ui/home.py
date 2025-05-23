@@ -4,26 +4,20 @@ import traceback
 from PySide6.QtCore import QPointF, QSettings, Qt, QTimer
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
-    QCheckBox,
-    QComboBox,
     QDoubleSpinBox,
     QFormLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QListView,
     QMainWindow,
     QMessageBox,
     QPushButton,
-    QScrollBar,
     QSpinBox,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
     QFrame,
     QGraphicsOpacityEffect,
-    QApplication,
-    QSizePolicy,
 )
 
 from src.application_manager import ApplicationManager
@@ -33,30 +27,6 @@ from src.ui.components.segmented_button_group import SegmentedButtonGroup
 from src.ui.components.menu_button import MenuButton
 from src.ui.theme.manager import ThemeManager
 from src.utils.timing import save_timing_report, clear_timing_data
-
-# --- Platform specific code for macOS ---
-_ns_window = None
-if sys.platform == "darwin":
-    try:
-        from ctypes import c_void_p
-
-        import objc
-        from AppKit import (
-            NSColor,
-            NSFullSizeContentViewWindowMask,
-            NSView,
-            NSWindow,
-            NSWindowTitleHidden,
-        )
-
-        _objc_available = True
-    except ImportError:
-        print(
-            "PyObjC framework (pyobjc-framework-Cocoa) not found. Cannot apply native macOS styling."
-        )
-        _objc_available = False
-else:
-    _objc_available = False
 
 
 class Home(QMainWindow):
@@ -242,26 +212,6 @@ class Home(QMainWindow):
         self._dragging = False
         self._drag_start_position = QPointF()
         self._effective_top_margin = 40  # Same as onboarding window
-
-        # Apply native macOS styling
-        if _objc_available:
-            try:
-                view_id_sip = self.winId()
-                view_address = int(view_id_sip)
-                view_ptr = c_void_p(view_address)
-                ns_view = objc.objc_object(c_void_p=view_ptr)
-                global _ns_window
-                _ns_window = ns_view.window()
-
-                if _ns_window:
-                    _ns_window.setTitlebarAppearsTransparent_(True)
-                    _ns_window.setStyleMask_(
-                        _ns_window.styleMask() | NSFullSizeContentViewWindowMask
-                    )
-                else:
-                    print("Warning: Could not get NSWindow object.")
-            except Exception as e:
-                print(f"Error applying native styling: {e}")
 
         # Main widget and layout
         main_widget = IntenLayout(
@@ -1388,10 +1338,14 @@ class Home(QMainWindow):
                     "channels": int(self.channels.currentText()),
                 },
                 "VAD": {
-                    "enabled": self.vad_enabled.currentText() == "Enabled",
-                    "aggressiveness": int(self.vad_aggressiveness.currentText()),
-                    "silence_duration_ms": int(self.silence_duration.currentText()),
-                    "frame_duration_ms": int(self.frame_duration.currentText()),
+                    # "enabled": self.vad_enabled.currentText() == "Enabled",
+                    # "aggressiveness": int(self.vad_aggressiveness.currentText()),
+                    # "silence_duration_ms": int(self.silence_duration.currentText()),
+                    # "frame_duration_ms": int(self.frame_duration.currentText()),
+                    "enabled": False,
+                    "aggressiveness": 1,
+                    "silence_duration_ms": 500,
+                    "frame_duration_ms": 30,
                 },
                 "Output": {
                     "method": self.output_method.currentText(),
@@ -1482,14 +1436,14 @@ class Home(QMainWindow):
             self.channels.setCurrentText(str(config["Audio"]["channels"]))
 
             # Load VAD settings
-            self.vad_enabled.setCurrentText(
-                "Enabled" if config["VAD"]["enabled"] else "Disabled"
-            )
-            self.vad_aggressiveness.setCurrentText(str(config["VAD"]["aggressiveness"]))
-            self.silence_duration.setCurrentText(
-                str(config["VAD"]["silence_duration_ms"])
-            )
-            self.frame_duration.setCurrentText(str(config["VAD"]["frame_duration_ms"]))
+            # self.vad_enabled.setCurrentText(
+            #     "Enabled" if config["VAD"]["enabled"] else "Disabled"
+            # )
+            # self.vad_aggressiveness.setCurrentText(str(config["VAD"]["aggressiveness"]))
+            # self.silence_duration.setCurrentText(
+            #     str(config["VAD"]["silence_duration_ms"])
+            # )
+            # self.frame_duration.setCurrentText(str(config["VAD"]["frame_duration_ms"]))
 
             # Load Output settings
             self.output_method.setCurrentText(config["Output"]["method"])

@@ -1,13 +1,14 @@
 import json
 import time
+import logging
 from typing import Callable, List, Dict, Optional, Any
 
 
 from src.clients.llm_client_interface import LLMClientInterface
 from src.utils.timing import time_method
 
-from rich import print as rprint
-from rich.pretty import pprint
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Default System Prompt (can be configured or overridden)
 DEFAULT_LLM_SYSTEM_PROMPT = "You are a helpful AI assistant."
@@ -25,11 +26,11 @@ class LLMHandler:
         self.is_client_available = self.client.check_availability()
 
         if self.is_client_available:
-            print(
+            logger.info(
                 f"LLMHandler initialized with client: {self.client.source_name}, model: {self.client.user_command_model_name}"
             )
         else:
-            print(
+            logger.warning(
                 f"LLMHandler WARNING: Client {self.client.source_name} is not available or not configured correctly."
             )
 
@@ -63,7 +64,7 @@ class LLMHandler:
         start_time = time.time()
 
         if not text and not messages_override and not audio_buffer:
-            print(
+            logger.warning(
                 "LLMHandler: Received empty text for user message and no messages_override and no audio_buffer."
             )
             return None
@@ -79,14 +80,14 @@ class LLMHandler:
         if (
             not system_prompt
         ):  # Ensure system_prompt is not empty if it's going to be used
-            print(
+            logger.warning(
                 "LLMHandler Warning: LLM system prompt is empty. Using a default space."
             )
             system_prompt = " "
 
         try:
             if audio_buffer:
-                print(f"LLMHandler: Generating response with audio.")
+                logger.info("LLMHandler: Generating response with audio.")
                 response = self.client.generate_response_with_audio(
                     audio_buffer=audio_buffer,
                     text=text,
@@ -111,23 +112,23 @@ class LLMHandler:
             if response is not None:
                 pass  # Response is already in desired format from client
             else:
-                print(
+                logger.warning(
                     f"LLMHandler: Received no response or an error from {self.client.source_name}."
                 )
 
             end_time = time.time()
-            print(
+            logger.info(
                 f"{self.client.source_name} LLM API response time for model {self.client.user_command_model_name}: {end_time - start_time:.2f} seconds"
             )
             return response
 
         except Exception as e:
-            print(
+            logger.error(
                 f"LLMHandler: An unexpected error occurred while calling client's generate_response: {e}"
             )
             import traceback
 
-            traceback.print_exc()
+            logger.error(traceback.format_exc())
             return None
 
     def run_tool_call_process(
@@ -190,7 +191,5 @@ class LLMHandler:
             if user_info:
                 messages.append(self.client.format_user_message(content=user_info))
 
-        rprint(
-            "[bold green]Tool call report [italic](<tool_name>_<step>)[/italic]: [/bold green]"
-        )
-        pprint(all_tool_calls)
+        logger.info(f"Tool call report {tool_name} {steps}")
+        logger.info(all_tool_calls)

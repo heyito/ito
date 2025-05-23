@@ -25,6 +25,9 @@ _ACTION_TOGGLE_STREAMING = "TOGGLE_STREAMING"
 _ACTION_PROCESS_TRANSCRIPT = "PROCESS_TRANSCRIPT"
 _ACTION_FINALIZE_STREAM = "FINALIZE_STREAM"  # New action
 
+# --- Helper for logging within application ---
+logger = logging.getLogger(__name__)
+
 
 class StreamingAudioApplication(ApplicationInterface):
     # Add type hints for new handlers/engines
@@ -107,9 +110,9 @@ class StreamingAudioApplication(ApplicationInterface):
                 f"Vosk model directory not found at specified path: {self.vosk_model_path}. Please ensure the path is correct in the configuration."
             )
 
-        print(f"Validated Vosk model path from config: {self.vosk_model_path}")
+        logger.info(f"Validated Vosk model path from config: {self.vosk_model_path}")
 
-        print("StreamingAudioApplication Initialized (using Vosk)")
+        logger.info("StreamingAudioApplication Initialized (using Vosk)")
 
     def run(self) -> None:
         """
@@ -120,33 +123,33 @@ class StreamingAudioApplication(ApplicationInterface):
             self._start_asyncio_loop()
             self._run_event_loop()
         except Exception as e:
-            print(f"\nFATAL ERROR during application setup or run: {e}")
+            logger.error(f"\nFATAL ERROR during application setup or run: {e}")
             traceback.print_exc()
         finally:
             self._cleanup()
-            print("Streaming App shut down.")
+            logger.info("Streaming App shut down.")
 
     def _print_initial_info(self) -> None:
         """Prints initial configuration and status information."""
-        print("\n--- Real-time Streaming Transcription ---")
-        print(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"Audio Device Index: {self.audio_handler.device_index}")
-        print(f"Audio Sample Rate: {self.audio_handler.sample_rate}")
-        print(f"Audio Channels: {self.audio_handler.channels}")
-        print(
+        logger.info("\n--- Real-time Streaming Transcription ---")
+        logger.info(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info(f"Audio Device Index: {self.audio_handler.device_index}")
+        logger.info(f"Audio Sample Rate: {self.audio_handler.sample_rate}")
+        logger.info(f"Audio Channels: {self.audio_handler.channels}")
+        logger.info(
             f"\nPress '{self.config.start_recording_hotkey}' to START/STOP streaming transcription."
         )
-        print("Transcripts will be printed to the console.")
-        print("Press Ctrl+C in the console to quit.")
+        logger.info("Transcripts will be printed to the console.")
+        logger.info("Press Ctrl+C in the console to quit.")
 
     def _start_asyncio_loop(self):
         """Starts the asyncio event loop in a separate thread."""
         if self.asyncio_loop_thread is not None:
-            print("Asyncio loop thread already running.")
+            logger.info("Asyncio loop thread already running.")
             return
 
         def loop_thread_target():
-            print("Asyncio loop thread started.")
+            logger.info("Asyncio loop thread started.")
             self.asyncio_loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.asyncio_loop)
             try:
@@ -154,7 +157,7 @@ class StreamingAudioApplication(ApplicationInterface):
             finally:
                 # Cleanup tasks before loop stops
                 if self.asyncio_loop.is_running():
-                    print("Shutting down asyncio loop...")
+                    logger.info("Shutting down asyncio loop...")
                     # Gather all tasks to cancel them
                     tasks = asyncio.all_tasks(self.asyncio_loop)
                     for task in tasks:
@@ -165,7 +168,7 @@ class StreamingAudioApplication(ApplicationInterface):
                         self.asyncio_loop.shutdown_asyncgens()
                     )
                     self.asyncio_loop.close()
-                print("Asyncio loop thread finished.")
+                logger.info("Asyncio loop thread finished.")
 
         self.asyncio_loop_thread = threading.Thread(
             target=loop_thread_target, daemon=True, name="AsyncioLoopThread"
@@ -174,26 +177,26 @@ class StreamingAudioApplication(ApplicationInterface):
         # Wait briefly for the loop to be set
         time.sleep(0.2)
         if self.asyncio_loop is None:
-            print("ERROR: Asyncio loop did not start correctly.")
+            logger.error("ERROR: Asyncio loop did not start correctly.")
             raise RuntimeError("Failed to initialize asyncio event loop.")
         else:
-            print("Asyncio loop is running.")
+            logger.info("Asyncio loop is running.")
 
     def _stop_asyncio_loop(self):
         """Stops the asyncio event loop and waits for the thread to join."""
         if self.asyncio_loop and self.asyncio_loop.is_running():
-            print("Stopping asyncio loop...")
+            logger.info("Stopping asyncio loop...")
             self.asyncio_loop.call_soon_threadsafe(
                 self.asyncio_loop.stop
             )  # Request stop
         if self.asyncio_loop_thread and self.asyncio_loop_thread.is_alive():
-            print("Waiting for asyncio loop thread to finish...")
+            logger.info("Waiting for asyncio loop thread to finish...")
             self.asyncio_loop_thread.join(timeout=5.0)  # Wait up to 5 seconds
             if self.asyncio_loop_thread.is_alive():
-                print("Warning: Asyncio loop thread did not stop cleanly.")
+                logger.warning("Warning: Asyncio loop thread did not stop cleanly.")
         self.asyncio_loop = None
         self.asyncio_loop_thread = None
-        print("Asyncio loop stopped.")
+        logger.info("Asyncio loop stopped.")
 
     def _on_keyboard_press(self, key: keyboard.Key | keyboard.KeyCode | None) -> None:
         """
@@ -218,8 +221,8 @@ class StreamingAudioApplication(ApplicationInterface):
                 # Handle potential complex hotkey strings if needed in the future
                 # For now, log an error if it's not a recognized special key or single char
                 if not hasattr(self, "_logged_invalid_hotkey"):  # Log only once
-                    print(
-                        f"ERROR: Invalid or unsupported hotkey string in config: '{hotkey_str}'. Only single characters or names from keyboard.Key (e.g., 'fn', 'ctrl_l') are currently directly supported by this check."
+                    logger.error(
+                        f"Invalid or unsupported hotkey string in config: '{hotkey_str}'. Only single characters or names from keyboard.Key (e.g., 'fn', 'ctrl_l') are currently directly supported by this check."
                     )
                     self._logged_invalid_hotkey = True  # Prevent log flooding
                 return
@@ -242,14 +245,14 @@ class StreamingAudioApplication(ApplicationInterface):
         timestamp = time.strftime("%H:%M:%S")
         # Prevent queuing multiple start actions if already busy
 
-        print(
+        logger.info(
             f"[{timestamp}] Hotkey '{hotkey_name}' detected. Queuing context check & start command."
         )
         self.action_queue.put(_ACTION_TOGGLE_STREAMING)  # Signal the main loop
 
     def _run_event_loop(self) -> None:
         """The main event loop, processing actions from the hotkey."""
-        print("Entering main event loop. Waiting for hotkey...")
+        logger.info("Entering main event loop. Waiting for hotkey...")
         try:
             while True:
                 try:
@@ -261,7 +264,7 @@ class StreamingAudioApplication(ApplicationInterface):
                         if not self.is_streaming:
                             # Check if already processing before allowing start
                             if self.is_processing:
-                                print(
+                                logger.warning(
                                     f"[{time.strftime('%H:%M:%S')}] Cannot start streaming while processing previous command."
                                 )
                             else:
@@ -278,21 +281,21 @@ class StreamingAudioApplication(ApplicationInterface):
                         pass  # Processing initiation moved elsewhere
 
                     else:
-                        print(f"Warning: Unknown action received in queue: {action}")
+                        logger.warning(f"Unknown action received in queue: {action}")
 
                 except queue.Empty:
                     # Check if asyncio loop is still running periodically
                     if self.asyncio_loop and not self.asyncio_loop.is_running():
-                        print(
+                        logger.error(
                             "Error: Asyncio loop stopped unexpectedly. Shutting down."
                         )
                         break
                     pass  # Normal timeout while waiting
 
         except KeyboardInterrupt:
-            print("\nCtrl+C detected. Initiating shutdown...")
+            logger.info("\nCtrl+C detected. Initiating shutdown...")
         except Exception as e:
-            print(f"\nAn unexpected error occurred in the main loop: {e}")
+            logger.error(f"\nAn unexpected error occurred in the main loop: {e}")
             traceback.print_exc()
 
     async def _consume_transcripts(self):
@@ -325,12 +328,12 @@ class StreamingAudioApplication(ApplicationInterface):
                         "\r" + " " * len(self._current_partial_transcript) + "\r"
                     )  # Clear line
                     if final_transcript:
-                        print(f"FINAL TRANSCRIPT: {final_transcript}")
+                        logger.info(f"FINAL TRANSCRIPT: {final_transcript}")
                         self._current_partial_transcript = ""  # Reset partial
 
                         # --- Stop Streaming and Start Processing ---
                         timestamp = time.strftime("%H:%M:%S")
-                        print(
+                        logger.info(
                             f"[{timestamp}] Final transcript received. Stopping stream and initiating processing..."
                         )
 
@@ -339,24 +342,24 @@ class StreamingAudioApplication(ApplicationInterface):
                         # Ensure _stop_streaming_process is safe to call like this (it seems mostly thread-safe)
                         # but be mindful of potential race conditions if it interacts heavily with other threads.
                         stop_stream_start_time = time.time()  # Log start
-                        print(
+                        logger.info(
                             f"[{time.strftime('%H:%M:%S')}] Calling _stop_streaming_process..."
                         )
                         self._stop_streaming_process()  # Stop audio/Vosk
                         stop_stream_end_time = time.time()  # Log end
                         stop_duration = stop_stream_end_time - stop_stream_start_time
-                        print(
+                        logger.info(
                             f"[{time.strftime('%H:%M:%S')}] _stop_streaming_process finished (took {stop_duration:.3f}s)."
                         )
 
                         # Initiate LLM processing with the final transcript
-                        print(
+                        logger.info(
                             f"[{time.strftime('%H:%M:%S')}] Calling _initiate_llm_processing..."
                         )
                         self._initiate_llm_processing(final_transcript)
 
                     else:
-                        print(
+                        logger.info(
                             f"[{timestamp}] Final transcript was empty, skipping processing."
                         )
                         self._current_partial_transcript = ""  # Reset partial
@@ -387,22 +390,22 @@ class StreamingAudioApplication(ApplicationInterface):
     def _start_streaming_process(self) -> None:
         """Initiates audio capture, context fetching, and Vosk processing."""
         if self.is_streaming:
-            print("Already streaming.")
+            logger.info("Already streaming.")
             return
 
         if not self.asyncio_loop or not self.asyncio_loop.is_running():
-            print("ERROR: Asyncio loop is not running. Cannot start streaming.")
+            logger.error("ERROR: Asyncio loop is not running. Cannot start streaming.")
             return
 
         timestamp = time.strftime("%H:%M:%S")
-        print(f"[{timestamp}] --- Initiating Streaming (Vosk) ---")
+        logger.info(f"[{timestamp}] --- Initiating Streaming (Vosk) ---")
 
         # --- Start Context Fetching ---
         # 1. Get current app context info
-        print(f"[{timestamp}] Checking active window context...")
+        logger.info(f"[{timestamp}] Checking active window context...")
         active_window_info = platform_utils.get_active_window_info()
         if not active_window_info or not active_window_info.get("app_name"):
-            print(
+            logger.warning(
                 f"[{timestamp}] Error: Could not determine active window. Cannot fetch context."
             )
             # Decide if we should proceed without context or abort
@@ -413,12 +416,12 @@ class StreamingAudioApplication(ApplicationInterface):
             app_name = active_window_info.get("app_name", "Unknown")
             self.current_context_data["app_name"] = app_name
             self.current_context_data["doc_text"] = None  # Clear previous context
-            print(f"[{timestamp}] Active application: {app_name}")
+            logger.info(f"[{timestamp}] Active application: {app_name}")
 
             # 2. Define context fetching target function
             def fetch_context_target():
                 fetch_start_time = time.time()  # Add start time
-                print(
+                logger.info(
                     f"[{time.strftime('%H:%M:%S')}] Fetching context from '{app_name}' (in background)..."
                 )
                 fetched_context = None
@@ -431,15 +434,15 @@ class StreamingAudioApplication(ApplicationInterface):
                     context_call_end_time = time.time()  # Add call end time
                     call_duration = context_call_end_time - context_call_start_time
                     if fetched_context is None:
-                        print(
+                        logger.warning(
                             f"[{time.strftime('%H:%M:%S')}] Warning: Context engine returned None for '{app_name}' (call duration: {call_duration:.3f}s)."
                         )
                     else:
-                        print(
+                        logger.info(
                             f"[{time.strftime('%H:%M:%S')}] Context retrieved successfully (call duration: {call_duration:.3f}s)."
                         )
                 except Exception as e:
-                    print(
+                    logger.error(
                         f"[{time.strftime('%H:%M:%S')}] Error fetching context for '{app_name}': {e}"
                     )
                 finally:
@@ -448,7 +451,7 @@ class StreamingAudioApplication(ApplicationInterface):
                     self.current_context_data["doc_text"] = fetched_context
                     fetch_end_time = time.time()  # Add overall end time
                     fetch_duration = fetch_end_time - fetch_start_time
-                    print(
+                    logger.info(
                         f"[{time.strftime('%H:%M:%S')}] Context fetch thread finished (total duration: {fetch_duration:.3f}s)."
                     )
 
@@ -459,7 +462,7 @@ class StreamingAudioApplication(ApplicationInterface):
                 name="StreamingContextFetchThread",
             )
             self.context_fetch_thread_handle.start()
-            print(f"[{timestamp}] Context fetch thread started.")
+            logger.info(f"[{timestamp}] Context fetch thread started.")
         # --- End Context Fetching ---
 
         self.is_streaming = True
@@ -489,7 +492,7 @@ class StreamingAudioApplication(ApplicationInterface):
             name="AudioCaptureThread",
         )
         self.audio_capture_thread_handle.start()
-        print(f"[{timestamp}] Audio capture thread started (outputting bytes).")
+        logger.info(f"[{timestamp}] Audio capture thread started (outputting bytes).")
 
         # 3. Create and Start Vosk Processor
         try:
@@ -501,9 +504,11 @@ class StreamingAudioApplication(ApplicationInterface):
                 loop=self.asyncio_loop,
             )
             self.vosk_processor.start()  # Starts the background thread
-            print(f"[{timestamp}] Vosk processor started.")
+            logger.info(f"[{timestamp}] Vosk processor started.")
         except Exception as e:
-            print(f"[{timestamp}] ERROR initializing or starting Vosk processor: {e}")
+            logger.error(
+                f"[{timestamp}] ERROR initializing or starting Vosk processor: {e}"
+            )
             traceback.print_exc()
             # Cleanup if Vosk failed
             self.stop_audio_capture_event.set()
@@ -518,28 +523,28 @@ class StreamingAudioApplication(ApplicationInterface):
         self._transcript_consumer_task = asyncio.run_coroutine_threadsafe(
             self._consume_transcripts(), self.asyncio_loop
         )
-        print(f"[{timestamp}] Transcript consumer task started.")
+        logger.info(f"[{timestamp}] Transcript consumer task started.")
 
-        print(
+        logger.info(
             f"[{timestamp}] Streaming started. Press '{self.config.start_recording_hotkey}' again to stop."
         )
 
     def _stop_streaming_process(self) -> None:
         """Stops audio capture and Vosk processing."""
         if not self.is_streaming:
-            print("Not currently streaming.")
+            logger.info("Not currently streaming.")
             return
 
         timestamp = time.strftime("%H:%M:%S")
-        print(f"[{timestamp}] --- Stopping Streaming (Vosk) ---")
+        logger.info(f"[{timestamp}] --- Stopping Streaming (Vosk) ---")
         self.is_streaming = False
 
         # 1. Stop Vosk Processor Thread (signals queue with None)
         if self.vosk_processor:
-            print(f"[{timestamp}] Stopping Vosk processor...")
+            logger.info(f"[{timestamp}] Stopping Vosk processor...")
             self.vosk_processor.stop()  # This also puts None in audio_stream_queue
             self.vosk_processor = None
-            print(f"[{timestamp}] Vosk processor stopped.")
+            logger.info(f"[{timestamp}] Vosk processor stopped.")
         else:
             # If Vosk wasn't running, still need to signal audio queue potentially
             if (
@@ -558,18 +563,18 @@ class StreamingAudioApplication(ApplicationInterface):
             self.audio_capture_thread_handle
             and self.audio_capture_thread_handle.is_alive()
         ):
-            print(f"[{timestamp}] Waiting for audio capture thread to finish...")
+            logger.info(f"[{timestamp}] Waiting for audio capture thread to finish...")
             self.audio_capture_thread_handle.join(timeout=2.0)
             if self.audio_capture_thread_handle.is_alive():
-                print(
+                logger.warning(
                     f"[{timestamp}] Warning: Audio capture thread did not exit cleanly."
                 )
         self.audio_capture_thread_handle = None
-        print(f"[{timestamp}] Audio capture stopped.")
+        logger.info(f"[{timestamp}] Audio capture stopped.")
 
         # 3. Stop Transcript Consumer Task
         if self._transcript_consumer_task and not self._transcript_consumer_task.done():
-            print(f"[{timestamp}] Stopping transcript consumer task...")
+            logger.info(f"[{timestamp}] Stopping transcript consumer task...")
             # Signal consumer task to stop by putting None in its queue
             if (
                 self.transcript_queue
@@ -579,20 +584,24 @@ class StreamingAudioApplication(ApplicationInterface):
                 asyncio.run_coroutine_threadsafe(
                     self.transcript_queue.put(None), self.asyncio_loop
                 )
-                print(f"[{timestamp}] Signaled transcript consumer task with None.")
+                logger.info(
+                    f"[{timestamp}] Signaled transcript consumer task with None."
+                )
             else:
-                print(
+                logger.warning(
                     f"[{timestamp}] Transcript queue or asyncio loop not available to signal consumer task."
                 )
 
             # Cancel the task directly instead of waiting with result()
             # The task's CancelledError handler will manage cleanup.
-            print(f"[{timestamp}] Cancelling transcript consumer task...")
+            logger.info(f"[{timestamp}] Cancelling transcript consumer task...")
             cancelled_correctly = self._transcript_consumer_task.cancel()
             if cancelled_correctly:
-                print(f"[{timestamp}] Transcript consumer task cancellation requested.")
+                logger.info(
+                    f"[{timestamp}] Transcript consumer task cancellation requested."
+                )
             else:
-                print(
+                logger.warning(
                     f"[{timestamp}] Transcript consumer task could not be cancelled (might be already done)."
                 )
 
@@ -608,18 +617,20 @@ class StreamingAudioApplication(ApplicationInterface):
             print("\r" + " " * len(self._current_partial_transcript) + "\r")
             self._current_partial_transcript = ""
 
-        print(f"[{timestamp}] Streaming stopped.")
+        logger.info(f"[{timestamp}] Streaming stopped.")
 
     # --- LLM Processing Logic ---
 
     def _initiate_llm_processing(self, final_transcript: str) -> None:
         """Checks state, waits for context, and starts the LLM processing thread."""
         timestamp = time.strftime("%H:%M:%S")
-        print(f"[{timestamp}] Initiating LLM processing for: '{final_transcript}'")
+        logger.info(
+            f"[{timestamp}] Initiating LLM processing for: '{final_transcript}'"
+        )
 
         # Check processing lock *before* waiting for context or starting thread
         if self.processing_lock.locked():
-            print(
+            logger.warning(
                 f"[{timestamp}] Processing lock is held. Skipping new processing request."
             )
             return
@@ -630,20 +641,20 @@ class StreamingAudioApplication(ApplicationInterface):
             and self.context_fetch_thread_handle.is_alive()
         ):
             wait_start_time = time.time()  # Log wait start
-            print(
+            logger.info(
                 f"[{time.strftime('%H:%M:%S')}] Waiting for context fetch thread to complete..."
             )
             self.context_fetch_thread_handle.join(timeout=5.0)  # Add a timeout
             wait_end_time = time.time()  # Log wait end
             wait_duration = wait_end_time - wait_start_time
             if self.context_fetch_thread_handle.is_alive():
-                print(
+                logger.warning(
                     f"[{time.strftime('%H:%M:%S')}] Warning: Context fetch thread did not complete within timeout ({wait_duration:.3f}s wait)."
                 )
                 # Decide how to handle this - process without context? Abort?
                 # For now, let's proceed but context might be None or incomplete.
             else:
-                print(
+                logger.info(
                     f"[{time.strftime('%H:%M:%S')}] Context fetch thread joined ({wait_duration:.3f}s wait)."
                 )
         self.context_fetch_thread_handle = None  # Clear the handle
@@ -653,7 +664,7 @@ class StreamingAudioApplication(ApplicationInterface):
         retrieved_doc_context = self.current_context_data.get("doc_text")
 
         # Start the actual processing in a separate thread
-        print(f"[{timestamp}] Starting LLM processing thread...")
+        logger.info(f"[{timestamp}] Starting LLM processing thread...")
         self.processing_thread_handle = threading.Thread(
             target=self._llm_processing_thread_target,
             args=(final_transcript, retrieved_doc_context),
@@ -670,18 +681,18 @@ class StreamingAudioApplication(ApplicationInterface):
 
         # Acquire lock and set processing state
         if not self.processing_lock.acquire(blocking=False):
-            print(
+            logger.error(
                 f"[{timestamp}] Error (Processing Thread): Could not acquire processing lock. Aborting."
             )
             return
 
         self.is_processing = True
-        print(f"[{timestamp}] --- Starting LLM Processing Pipeline ---")
-        print(
+        logger.info(f"[{timestamp}] --- Starting LLM Processing Pipeline ---")
+        logger.info(
             f"[{timestamp}] Context App: {self.current_context_data.get('app_name', 'N/A')}"
         )
-        # print(f"[{timestamp}] Context Text (Preview): {original_doc_context[:100] + '... ' if original_doc_context else 'None'}")
-        print(f"[{timestamp}] User Command (from stream): '{final_transcript}'")
+        # logger.info(f"[{timestamp}] Context Text (Preview): {original_doc_context[:100] + '... ' if original_doc_context else 'None'}")
+        logger.info(f"[{timestamp}] User Command (from stream): '{final_transcript}'")
 
         # Clear the stored context text after retrieving it for this run
         # Prevents accidental reuse if context fetching fails next time
@@ -694,17 +705,21 @@ class StreamingAudioApplication(ApplicationInterface):
                 processing_text=original_doc_context,  # Pass the fetched text separately
                 user_text_command=final_transcript,
             )
-            print(f"[{timestamp}] Processing engine finished successfully.")
+            logger.info(f"[{timestamp}] Processing engine finished successfully.")
 
         except Exception as e:
-            print(f"[{timestamp}] Error during processing pipeline execution: {e}")
+            logger.error(
+                f"[{timestamp}] Error during processing pipeline execution: {e}"
+            )
             traceback.print_exc()
         finally:
             # Crucial Cleanup for this thread
             self.is_processing = False
             self.processing_lock.release()
-            print(f"[{timestamp}] --- LLM Processing Pipeline Finished ---")
-            print(f"[{timestamp}] Ready for next command (streaming or discrete).")
+            logger.info(f"[{timestamp}] --- LLM Processing Pipeline Finished ---")
+            logger.info(
+                f"[{timestamp}] Ready for next command (streaming or discrete)."
+            )
             if self.status_queue:
                 self.status_queue.put(StatusMessage.READY)
 
@@ -718,23 +733,23 @@ class StreamingAudioApplication(ApplicationInterface):
 
     def _cleanup(self) -> None:
         """Performs cleanup operations when the application is shutting down."""
-        print("Initiating cleanup...")
+        logger.info("Initiating cleanup...")
         # 1. Stop streaming if active
         if self.is_streaming:
-            print("Streaming is active during shutdown, stopping it first.")
+            logger.info("Streaming is active during shutdown, stopping it first.")
             self._stop_streaming_process()
 
         # 2. Stop hotkey listener (ensure this works with pynput)
         if self.hotkey_listener:
-            print("Stopping hotkey listener...")
+            logger.info("Stopping hotkey listener...")
             try:
                 # For pynput Listener, call stop()
                 self.hotkey_listener.stop()
                 # Join the listener thread? pynput might manage this. Check docs.
                 # self.hotkey_listener.join() # If needed
-                print("Hotkey listener stopped.")
+                logger.info("Hotkey listener stopped.")
             except Exception as e:
-                print(f"Error stopping pynput listener: {e}")
+                logger.error(f"Error stopping pynput listener: {e}")
             self.hotkey_listener = None
 
         # 3. Stop asyncio loop
@@ -746,36 +761,38 @@ class StreamingAudioApplication(ApplicationInterface):
             self.context_fetch_thread_handle
             and self.context_fetch_thread_handle.is_alive()
         ):
-            print("Waiting for context fetch thread during final cleanup...")
+            logger.info("Waiting for context fetch thread during final cleanup...")
             self.context_fetch_thread_handle.join(timeout=1.0)
             if self.context_fetch_thread_handle.is_alive():
-                print("Warning: Context fetch thread still alive during final cleanup.")
+                logger.warning(
+                    "Warning: Context fetch thread still alive during final cleanup."
+                )
 
         if (
             self.audio_capture_thread_handle
             and self.audio_capture_thread_handle.is_alive()
         ):
-            print("Warning: Audio capture thread still alive during final cleanup.")
+            logger.warning(
+                "Warning: Audio capture thread still alive during final cleanup."
+            )
         # Vosk processor thread should be joined in _stop_streaming_process or _cleanup->stop_streaming
 
         # Wait for processing thread if it was running
         if self.processing_thread_handle and self.processing_thread_handle.is_alive():
-            print("Waiting for processing thread during final cleanup...")
+            logger.info("Waiting for processing thread during final cleanup...")
             # Note: We don't signal this thread directly to stop, but it should finish
             # on its own. Joining ensures we wait for file operations etc.
             self.processing_thread_handle.join(
                 timeout=5.0
             )  # Allow more time for LLM/processing
             if self.processing_thread_handle.is_alive():
-                print("Warning: Processing thread still alive during final cleanup.")
+                logger.warning(
+                    "Warning: Processing thread still alive during final cleanup."
+                )
 
         # Release processing lock if held (shouldn't be, but for safety)
         if self.processing_lock.locked():
-            print("Releasing processing lock during final cleanup...")
+            logger.info("Releasing processing lock during final cleanup...")
             self.processing_lock.release()
 
-        print("Cleanup sequence complete.")
-
-
-# --- Helper for logging within application ---
-logger = logging.getLogger("StreamingApp")
+        logger.info("Cleanup sequence complete.")

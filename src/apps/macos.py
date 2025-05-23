@@ -1,5 +1,6 @@
 import json
 import time
+import logging
 from typing import Optional
 
 from deepdiff import DeepDiff
@@ -9,9 +10,8 @@ from src.engines.macos_engine import MacOSEngine
 from src.handlers.llm_handler import LLMHandler
 
 from google.genai import types
-import src.platform_utils_macos as platform_utils
 
-from rich import print as rprint
+logger = logging.getLogger(__name__)
 
 ui_batch_tool = {
     "name": "ui_batch",
@@ -142,7 +142,7 @@ class MacOSapp:
                     result.append(outcome)
                 return result
             elif tool_name == "no_action":
-                print("No action required. Tool call completed.")
+                logger.info("No action required. Tool call completed.")
                 return None
             else:
                 return self._run_atomic({"action": tool_name, **args})
@@ -167,7 +167,7 @@ class MacOSapp:
             state={"old_context": old_context},
         )
 
-        print("Processing complete.")
+        logger.info("Processing complete.")
 
     def process_dictation(
         self,
@@ -186,13 +186,12 @@ class MacOSapp:
         )
 
         if new_doc_text is None:  # Check for None specifically
-            print("LLM processing failed or did not return content.")
+            logger.error("LLM processing failed or did not return content.")
             # is_processing is released in finally block
             return
-        print(f"LLM returned new document content (length: {len(new_doc_text)} chars).")
-
-        rprint(
-            f"[bold blue] New document content:\n---\n{new_doc_text[:200]}...\n--- [/bold blue]"
+        logger.info(
+            f"LLM returned new document content (length: {len(new_doc_text)} chars)."
         )
-        # platform_utils.set_active_body(app_name, new_doc_text)
+
+        logger.info(f"New document content:\n---\n{new_doc_text[:200]}...\n---")
         self.macos_engine.paste_text_to_active_app(new_doc_text)

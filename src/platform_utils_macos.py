@@ -8,7 +8,11 @@ import subprocess
 import sys
 import time
 import uuid
+import logging
 from pathlib import Path
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 def is_macos():
@@ -35,8 +39,8 @@ def run_applescript_one_line(script):
         )
         return process.stdout.strip()
     except subprocess.CalledProcessError as e:
-        print(f"AppleScript Error: {e}")
-        print(f"Stderr: {e.stderr}")
+        logger.error(f"AppleScript Error: {e}")
+        logger.error(f"Stderr: {e.stderr}")
         raise RuntimeError(f"AppleScript execution failed: {e.stderr}") from e
     except subprocess.TimeoutExpired:
         raise TimeoutError("AppleScript command timed out.")
@@ -84,10 +88,10 @@ def run_applescript_file(relative_script_path, args=None):
         result = subprocess.run(
             command, capture_output=True, text=True, check=True, timeout=10
         )
-        print(f"AppleScript output: {result}")
+        logger.info(f"AppleScript output: {result}")
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
-        print(f"AppleScript Error: {e.stderr.strip()}")
+        logger.error(f"AppleScript Error: {e.stderr.strip()}")
         raise RuntimeError(f"AppleScript execution failed:\n{e.stderr.strip()}") from e
     except subprocess.TimeoutExpired:
         raise TimeoutError("AppleScript execution timed out.")
@@ -102,7 +106,7 @@ def get_active_window_info():
         app_name = run_applescript_one_line(script)
         return {"app_name": app_name}
     except (RuntimeError, TimeoutError, FileNotFoundError) as e:
-        print(f"Could not get active window info: {e}")
+        logger.error(f"Could not get active window info: {e}")
         return None
 
 
@@ -115,7 +119,7 @@ def get_textedit_content():
         return run_applescript_one_line(script)
     except (RuntimeError, TimeoutError, FileNotFoundError) as e:
         # Handle cases like TextEdit not running or no document open
-        print(f"Could not get TextEdit content: {e}")
+        logger.error(f"Could not get TextEdit content: {e}")
         return None
 
 
@@ -126,7 +130,7 @@ def get_notes_content():
     try:
         return run_applescript_file("notes/get_active_note_body.applescript")
     except (RuntimeError, TimeoutError, FileNotFoundError) as e:
-        print(f"Could not get Notes content: {e}")
+        logger.error(f"Could not get Notes content: {e}")
         return None
 
 
@@ -138,7 +142,7 @@ def set_notes_content(text_content):
         run_applescript_file("notes/set_active_note_body.applescript", [text_content])
         return True
     except (RuntimeError, TimeoutError, FileNotFoundError) as e:
-        print(f"Could not set Notes content: {e}")
+        logger.error(f"Could not set Notes content: {e}")
         return False
 
 
@@ -172,7 +176,7 @@ def capture_application_window(app_name):
     region = f"{x},{y},{w},{h}"
     output_path = get_screenshot_path()
     subprocess.run(["screencapture", "-x", f"-R{region}", output_path], check=True)
-    print(f"Screenshot saved to: {output_path}")
+    logger.info(f"Screenshot saved to: {output_path}")
     return output_path
 
 
@@ -201,26 +205,27 @@ def set_textedit_content(text_content):
         run_applescript_one_line(script)
         return True
     except (RuntimeError, TimeoutError, FileNotFoundError) as e:
-        print(f"Could not set TextEdit content: {e}")
+        logger.error(f"Could not set TextEdit content: {e}")
         return False
-    
+
+
 def set_cursor_content(text_content):
     """Sets the text content of where the cursor is focused"""
-    if not is_macos(): return False
-    
+    if not is_macos():
+        return False
 
 
 def get_browser_context(socket_path):
-    print("Getting content from Chrome...")
+    logger.info("Getting content from Chrome...")
     try:
         sock = socket.socket(socket.AF_UNIX)
         sock.connect(socket_path)
 
         # Send request for context
         request = {"type": "request_context"}
-        print(f"Sending request: {request}")
+        logger.info(f"Sending request: {request}")
         sock.send(json.dumps(request).encode())
-        print("Waiting for response...")
+        logger.info("Waiting for response...")
 
         # Keep reading responses until we get the context one
         start_time = time.time()
@@ -234,18 +239,20 @@ def get_browser_context(socket_path):
                     break
 
                 buffer += chunk
-                print(f"Received chunk, buffer size: {len(buffer)}")
+                logger.debug(f"Received chunk, buffer size: {len(buffer)}")
 
                 try:
                     # Try to parse the buffer as JSON
                     data = json.loads(buffer.decode())
-                    print(f"Successfully parsed JSON message type: {data.get('type')}")
+                    logger.debug(
+                        f"Successfully parsed JSON message type: {data.get('type')}"
+                    )
 
                     # Only return if it's the context response we're waiting for
                     if data.get("type") == "context":
                         return data.get("data")
                     else:
-                        print(
+                        logger.debug(
                             f"Ignoring non-context message of type: {data.get('type')}"
                         )
                         buffer = b""  # Clear buffer after successful parse
@@ -257,15 +264,15 @@ def get_browser_context(socket_path):
                     continue
 
             except UnicodeDecodeError as e:
-                print(f"Error decoding response bytes: {e}")
-                print(f"Raw buffer: {buffer}")
+                logger.error(f"Error decoding response bytes: {e}")
+                logger.debug(f"Raw buffer: {buffer}")
                 continue
 
-        print("Timeout waiting for context response")
+        logger.warning("Timeout waiting for context response")
         return None
 
     except Exception as e:
-        print(f"Error getting Chrome context: {e}")
+        logger.error(f"Error getting Chrome context: {e}")
         return None
     finally:
         try:
@@ -281,7 +288,7 @@ def get_active_body(app_name):
     try:
         return run_applescript_file("get_active_body.applescript", [app_name])
     except (RuntimeError, TimeoutError, FileNotFoundError) as e:
-        print(f"Could not get active body: {e}")
+        logger.error(f"Could not get active body: {e}")
         return None
 
 
@@ -293,7 +300,7 @@ def set_active_body(app_name, text_content):
         run_applescript_file("set_active_body.applescript", [app_name, text_content])
         return True
     except (RuntimeError, TimeoutError, FileNotFoundError) as e:
-        print(f"Could not set active body: {e}")
+        logger.error(f"Could not set active body: {e}")
         return False
 
 
@@ -318,7 +325,7 @@ def send_native_message(message):
         response = sys.stdin.buffer.read(response_length).decode("utf-8")
         return json.loads(response)
     except Exception as e:
-        print(f"Error sending native message: {e}")
+        logger.error(f"Error sending native message: {e}")
         return None
 
 
@@ -342,7 +349,7 @@ def check_accessibility_permission():
         result = run_applescript_one_line(script)
         return result.lower() == "true"
     except Exception as e:
-        print(f"Error checking accessibility permissions: {e}")
+        logger.error(f"Error checking accessibility permissions: {e}")
         return False
 
 
@@ -369,5 +376,5 @@ def check_input_monitoring_permission():
         result = run_applescript_one_line(script)
         return result.lower() == "true"
     except Exception as e:
-        print(f"Error checking input monitoring permission: {e}")
+        logger.error(f"Error checking input monitoring permission: {e}")
         return False

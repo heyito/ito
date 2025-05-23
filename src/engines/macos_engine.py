@@ -3,10 +3,17 @@ import os
 import subprocess
 import time
 import uuid
+import logging
 
 import Quartz
 
 from AppKit import NSPasteboard, NSStringPboardType
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 KEY_MAP = {
     "enter": 0x24,
@@ -110,21 +117,17 @@ class MacOSEngine:
             )
             end_time = time.perf_counter()
             elapsed_ms = (end_time - start_time) * 1000  # Convert to milliseconds
-            print(f"Swift helper execution time: {elapsed_ms:.2f} ms")
+            logger.info(f"Swift helper execution time: {elapsed_ms:.2f} ms")
 
             window_info = json.loads(result.stdout)
-
-            # Write the JSON to a file
-            # with open(f"context-{uuid.uuid4()}.json", "w") as f:
-            #     json.dump(window_info, f)  # 'indent' for pretty formatting
 
             return window_info
 
         except subprocess.CalledProcessError as e:
-            print(f"Swift helper error: {e.stderr}")
+            logger.error(f"Swift helper error: {e.stderr}")
             return None
         except json.JSONDecodeError:
-            print(f"Invalid JSON output from Swift helper: {result.stdout}")
+            logger.error(f"Invalid JSON output from Swift helper: {result.stdout}")
             return None
 
     def click_at_cursor(self):
@@ -135,7 +138,7 @@ class MacOSEngine:
         current_pos = Quartz.CGEventGetLocation(event)
         x, y = current_pos.x, current_pos.y
         self._click_at(x, y)
-        print(f"✅ Clicked at cursor position: ({x}, {y})")
+        logger.info(f"Clicked at cursor position: ({x}, {y})")
         pass
 
     def click_at_global(self, x, y):
@@ -143,7 +146,7 @@ class MacOSEngine:
         Clicks at the given (x, y) coordinate relative to the current screen.
         """
         self._click_at(x, y)
-        print(f"✅ Clicked at ({x}, {y})")
+        logger.info(f"Clicked at ({x}, {y})")
 
     def type_text_global(self, x, y, text):
         """
@@ -152,7 +155,7 @@ class MacOSEngine:
         self._click_at(x, y)
         time.sleep(0.4)  # Give some time for the click to register
         self._type_text(text)
-        print(f"✅ Typed at ({x}, {y}): {text}")
+        logger.info(f"Typed at ({x}, {y}): {text}")
 
     def replace_text_at_global(self, x, y, text):
         self._click_at(x, y)
@@ -161,7 +164,7 @@ class MacOSEngine:
         self._send_shortcut([], 0x33)  # Delete
         time.sleep(0.3)
         self._type_text(text)
-        print(f"✅ Replaced text at ({x}, {y}): {text}")
+        logger.info(f"Replaced text at ({x}, {y}): {text}")
 
     def press_key(self, key: str):
         """
@@ -285,12 +288,12 @@ class MacOSEngine:
         # Resolve to keycode
         keycode = keycode_map.get(main_key)
         if keycode is None:
-            print(f"❌ Unknown key: {main_key}")
+            logger.error(f"Unknown key: {main_key}")
             return
 
         # Send the keypress with modifiers
         self._send_shortcut(modifiers, keycode)
-        print(f"✅ Pressed key: {key} (keycode: {keycode})")
+        logger.info(f"Pressed key: {key} (keycode: {keycode})")
 
     def copy_text_from_active_app(self) -> str:
         """
@@ -298,7 +301,9 @@ class MacOSEngine:
         from the currently active application, then returns the copied text.
         Returns an empty string if no text is copied or an error occurs.
         """
-        print("Attempting to select all and copy text from the active application...")
+        logger.info(
+            "Attempting to select all and copy text from the active application..."
+        )
 
         pasteboard = NSPasteboard.generalPasteboard()
         pasteboard.clearContents()
@@ -316,18 +321,18 @@ class MacOSEngine:
             copied_text_obj = pasteboard.stringForType_(NSStringPboardType)
             if copied_text_obj is not None:
                 copied_text = str(copied_text_obj)
-                print(
-                    f"✅ Text copied successfully (first 50 chars): '{copied_text[:50].replace(os.linesep, ' ')}...'"
+                logger.info(
+                    f"Text copied successfully (first 50 chars): '{copied_text[:50].replace(os.linesep, ' ')}...'"
                 )
                 return copied_text
             else:
-                print(
-                    "⚠️ NSStringPboardType was available, but stringForType_ returned None (no text content)."
+                logger.warning(
+                    "NSStringPboardType was available, but stringForType_ returned None (no text content)."
                 )
                 return ""
         else:
-            print(
-                f"⚠️ NSStringPboardType not found in clipboard. Available types: {available_types}"
+            logger.warning(
+                f"NSStringPboardType not found in clipboard. Available types: {available_types}"
             )
             return ""
 
@@ -337,21 +342,19 @@ class MacOSEngine:
         It does this by setting the clipboard content and then simulating Cmd+V.
         """
 
-        print(
+        logger.info(
             f"Attempting to paste text (first 50 chars): '{text_to_paste[:50].replace(os.linesep, ' ')}...'"
         )
 
         pasteboard = NSPasteboard.generalPasteboard()
         pasteboard.clearContents()
         # Prepare the data for the pasteboard
-        # string_array = NSArray.arrayWithObject_(text_to_paste) # Old way, prefer direct types
-        # success = pasteboard.writeObjects_(string_array)
         success = pasteboard.declareTypes_owner_([NSStringPboardType], None)
         if success:
             success = pasteboard.setString_forType_(text_to_paste, NSStringPboardType)
 
         if not success:
-            print("Error: Failed to set text on the pasteboard.")
+            logger.error("Failed to set text on the pasteboard.")
             return False
 
         time.sleep(0.1)
@@ -360,7 +363,7 @@ class MacOSEngine:
 
         # Allow a moment for paste to occur
         time.sleep(0.1)
-        print("✅ Paste command sent.")
+        logger.info("Paste command sent.")
         return True
 
 
@@ -372,7 +375,7 @@ if __name__ == "__main__":
     engine = MacOSEngine()
     info = engine.get_active_window_info()
 
-    print(f"Info: {info}")
+    logger.info(f"Info: {info}")
 
     end_time = time.perf_counter()
     elapsed_ms = (end_time - start_time) * 1000  # Convert to milliseconds
@@ -384,9 +387,9 @@ if __name__ == "__main__":
             break
 
     if target:
-        print(f"Found target: {target}")
+        logger.info(f"Found target: {target}")
     else:
-        print("Target not found")
+        logger.error("Target not found")
         raise Exception("Target not found")
 
     frame = target["matched_element"]["frame"]

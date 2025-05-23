@@ -1,12 +1,15 @@
 import io
 import json
 import re
+import logging
 from typing import Any, List, Dict, Optional
 
 from openai import OpenAI, OpenAIError
 from src.clients.llm_client_interface import LLMClientInterface
 from src.clients.types import ToolCallDict
 from src.utils.timing import time_method
+
+logger = logging.getLogger(__name__)
 
 
 class OpenAIClient(LLMClientInterface):
@@ -36,10 +39,10 @@ class OpenAIClient(LLMClientInterface):
 
     def check_availability(self) -> bool:
         if not self._api_key:
-            print("OpenAIClient ERROR: API key is missing.")
+            logger.error("OpenAIClient ERROR: API key is missing.")
             self._is_valid = False
             return False
-        print("OpenAIClient: API key is present.")
+        logger.info("OpenAIClient: API key is present.")
         self._is_valid = True
         return True
 
@@ -56,7 +59,7 @@ class OpenAIClient(LLMClientInterface):
         if (
             not self._is_valid
         ):  # Relies on check_availability being called or key presence
-            print(
+            logger.error(
                 "OpenAIClient ERROR: API key is invalid or missing. Cannot process request."
             )
             return None
@@ -82,7 +85,7 @@ class OpenAIClient(LLMClientInterface):
 
             if not actual_tools:  # If no tools were intended, process as text
                 processed_text = response.choices[0].message.content
-                print(f"OpenAIClient returned processed text: {processed_text}")
+                logger.info(f"OpenAIClient returned processed text: {processed_text}")
                 if processed_text:
                     # Remove markdown ```json ... ```
                     return re.sub(
@@ -96,19 +99,21 @@ class OpenAIClient(LLMClientInterface):
             else:
                 # If tools were used, return the full response object
                 # The caller (LLMHandler or its user) will handle this.
-                print("OpenAIClient returned tool call response object.")
+                logger.info("OpenAIClient returned tool call response object.")
                 return response
 
         except OpenAIError as e:
-            print(f"OpenAI API Error during LLM processing: {e}")
+            logger.error(f"OpenAI API Error during LLM processing: {e}")
             if hasattr(e, "body") and e.body:
-                print(f"Error Body: {e.body}")
+                logger.error(f"Error Body: {e.body}")
             return None
         except Exception as e:
-            print(f"An unexpected error occurred during OpenAI LLM processing: {e}")
+            logger.error(
+                f"An unexpected error occurred during OpenAI LLM processing: {e}"
+            )
             import traceback
 
-            traceback.print_exc()
+            logger.error(traceback.format_exc())
             return None
 
     def generate_response_with_audio(
@@ -129,7 +134,7 @@ class OpenAIClient(LLMClientInterface):
     def transcribe_audio(self, audio_buffer: io.BytesIO) -> str:
         """Transcribes audio using the OpenAI Whisper API."""
         if not self._client:
-            print("Error: OpenAI client not initialized.")
+            logger.error("Error: OpenAI client not initialized.")
             return ""
 
         if not self._asr_model:
@@ -152,11 +157,13 @@ class OpenAIClient(LLMClientInterface):
             return transcript.strip()
 
         except OpenAIError as e:
-            print(f"OpenAI API Error during transcription: {e}")
+            logger.error(f"OpenAI API Error during transcription: {e}")
             return ""  # Return empty string on specific API errors
         except Exception as e:
             # Catch broader exceptions during the API call
-            print(f"An unexpected error occurred during OpenAI transcription: {e}")
+            logger.error(
+                f"An unexpected error occurred during OpenAI transcription: {e}"
+            )
             return ""  # Return empty string on unexpected errors
 
     def format_system_user_messages(self, system_prompt: str, user_prompt: str):

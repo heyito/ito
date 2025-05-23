@@ -1,7 +1,11 @@
 import os
+import logging
 from PySide6.QtCore import Signal, QObject
 from PySide6.QtGui import QColor
 from src.ui.theme.theme import THEME
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class ThemeManager(QObject):
@@ -69,9 +73,8 @@ class ThemeManager(QObject):
         for part in parts:
             value = value[part]
 
-        # print an error if the color is not found
         if value is None:
-            print(f"Color not found: {path}")
+            logger.error(f"Color not found: {path}")
             return None
 
         return value

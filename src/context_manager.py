@@ -2,11 +2,15 @@
 import threading
 import time
 import traceback
+import logging
 from typing import Dict, Optional
 
 from src import platform_utils_macos as platform_utils  # Or abstract this more
 from src.engines.context_engine import ContextEngine
 from src.types.modes import CommandMode
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class ContextManager:
@@ -31,28 +35,25 @@ class ContextManager:
 
     def fetch_context_async(self, mode: CommandMode) -> None:
         """Starts fetching context in a background thread."""
-        timestamp = time.strftime("%H:%M:%S")
         with self._lock:
             if self._fetch_thread and self._fetch_thread.is_alive():
-                print(f"[{timestamp}] Context fetch already in progress. Skipping.")
+                logger.info("Context fetch already in progress. Skipping.")
                 return
 
-            print(f"[{timestamp}] ContextManager: Checking active window...")
+            logger.info("ContextManager: Checking active window...")
             # Reset context before fetching
             self._current_context = {"app_name": None, "doc_text": None}
             active_window_info = platform_utils.get_active_window_info()
 
             if not active_window_info or not active_window_info.get("app_name"):
-                print(
-                    f"[{timestamp}] ContextManager: Could not determine active window."
-                )
+                logger.warning("ContextManager: Could not determine active window.")
                 self._current_context["app_name"] = "Unknown"
                 return  # Don't start thread
 
             app_name = active_window_info.get("app_name", "Unknown")
             self._current_context["app_name"] = app_name
-            print(
-                f"[{timestamp}] ContextManager: Active app '{app_name}'. Starting fetch thread..."
+            logger.info(
+                f"ContextManager: Active app '{app_name}'. Starting fetch thread..."
             )
 
             self._fetch_thread = threading.Thread(
@@ -86,12 +87,12 @@ class ContextManager:
                         f"Unsupported CommandMode for ContextManager: {mode}"
                     )
             if fetched_context is None:
-                print(
+                logger.warning(
                     f"[{time.strftime('%H:%M:%S')}] ContextManager: Engine returned None for '{app_name}'."
                 )
         except Exception as e:
             error_occurred = True
-            print(
+            logger.error(
                 f"[{time.strftime('%H:%M:%S')}] ContextManager: Error fetching context for '{app_name}': {e}"
             )
             traceback.print_exc()
@@ -103,7 +104,7 @@ class ContextManager:
                     # Only update doc_text, app_name was set before thread start
                     self._current_context["doc_text"] = fetched_context
                 else:
-                    print(
+                    logger.info(
                         f"[{time.strftime('%H:%M:%S')}] ContextManager: Stale fetch result ignored."
                     )
 
@@ -111,7 +112,7 @@ class ContextManager:
             status = (
                 "failed" if error_occurred or fetched_context is None else "succeeded"
             )
-            print(
+            logger.info(
                 f"[{time.strftime('%H:%M:%S')}] ContextManager: Fetch thread finished ({status}, {fetch_duration:.3f}s)."
             )
 
@@ -123,12 +124,12 @@ class ContextManager:
 
         if thread_to_wait and thread_to_wait.is_alive():
             timestamp = time.strftime("%H:%M:%S")
-            print(
+            logger.info(
                 f"[{timestamp}] ContextManager: Waiting for context fetch (timeout: {timeout}s)..."
             )
             thread_to_wait.join(timeout=timeout)
             if thread_to_wait.is_alive():
-                print(
+                logger.warning(
                     f"[{timestamp}] ContextManager: Warning: Context fetch timed out."
                 )
                 # Don't clear self._fetch_thread here, let it finish/error out
@@ -140,13 +141,13 @@ class ContextManager:
 
     def cleanup(self) -> None:
         """Cleans up the context manager resources."""
-        print("ContextManager: Cleaning up...")
+        logger.info("ContextManager: Cleaning up...")
         thread_to_join = None
         with self._lock:
             thread_to_join = self._fetch_thread
             self._fetch_thread = None  # Prevent new waits/access
 
         if thread_to_join and thread_to_join.is_alive():
-            print("ContextManager: Waiting for running fetch thread...")
+            logger.info("ContextManager: Waiting for running fetch thread...")
             thread_to_join.join(timeout=1.0)  # Short timeout on cleanup
-        print("ContextManager: Cleanup finished.")
+        logger.info("ContextManager: Cleanup finished.")

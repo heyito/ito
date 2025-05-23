@@ -1,12 +1,15 @@
 import io
 import json
 import re
+import logging
 from typing import Any, Dict, List, Optional
 from groq import Groq, GroqError
 
 from src.clients.llm_client_interface import LLMClientInterface
 from src.clients.types import ToolCallDict
 from src.utils.timing import time_method
+
+logger = logging.getLogger(__name__)
 
 
 class GroqClient(LLMClientInterface):
@@ -34,10 +37,10 @@ class GroqClient(LLMClientInterface):
 
     def check_availability(self) -> bool:
         if not self._api_key:
-            print("GroqClient ERROR: API key is missing.")
+            logger.error("API key is missing.")
             self._is_valid = False
             return False
-        print("GroqClient: API key is present.")
+        logger.info("API key is present.")
         self._is_valid = True
         return True
 
@@ -54,9 +57,7 @@ class GroqClient(LLMClientInterface):
         if (
             not self._is_valid
         ):  # Relies on check_availability being called or key presence
-            print(
-                "GroqClient ERROR: API key is invalid or missing. Cannot process request."
-            )
+            logger.error("API key is invalid or missing. Cannot process request.")
             return None
 
         if not self._user_command_model:
@@ -80,7 +81,7 @@ class GroqClient(LLMClientInterface):
 
             if not actual_tools:  # If no tools were intended, process as text
                 processed_text = response.choices[0].message.content
-                print(f"OpenAIClient returned processed text: {processed_text}")
+                logger.info(f"Returned processed text: {processed_text}")
                 if processed_text:
                     # Remove markdown ```json ... ```
                     return re.sub(
@@ -94,21 +95,21 @@ class GroqClient(LLMClientInterface):
             else:
                 # If tools were used, return the full response object
                 # The caller (LLMHandler or its user) will handle this.
-                print("GroqClient returned tool call response object.")
+                logger.info("Returned tool call response object.")
                 return response
 
         except GroqError as e:
-            print(f"Groq API Error during LLM processing: {e}")
+            logger.error(f"API Error during LLM processing: {e}")
             if hasattr(e, "body") and e.body:
-                print(f"Error Body: {e.body}")
+                logger.error(f"Error Body: {e.body}")
             return None
         except Exception as e:
-            print(f"An unexpected error occurred during Groq LLM processing: {e}")
+            logger.error(f"An unexpected error occurred during LLM processing: {e}")
             import traceback
 
-            traceback.print_exc()
+            logger.error(traceback.format_exc())
             return None
-        
+
     def generate_response_with_audio(
         self,
         audio_buffer: bytes,
@@ -125,7 +126,7 @@ class GroqClient(LLMClientInterface):
     def transcribe_audio(self, audio_buffer: io.BytesIO) -> str:
         """Transcribes audio using the Groq API."""
         if not self._client:
-            print("Error: Groq client not initialized.")
+            logger.error("Groq client not initialized.")
             return ""
 
         if not self._asr_model:
@@ -148,11 +149,11 @@ class GroqClient(LLMClientInterface):
             return transcript.strip()
 
         except GroqError as e:
-            print(f"Groq API Error during transcription: {e}")
+            logger.error(f"API Error during transcription: {e}")
             return ""
         except Exception as e:
             # Catch broader exceptions during the API call
-            print(f"An unexpected error occurred during Groq transcription: {e}")
+            logger.error(f"An unexpected error occurred during transcription: {e}")
             return ""
 
     def format_system_user_messages(
@@ -192,4 +193,3 @@ class GroqClient(LLMClientInterface):
             )
 
         return result
-    

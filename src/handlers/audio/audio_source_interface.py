@@ -1,12 +1,14 @@
 from abc import ABC, abstractmethod
-import io
 import threading
 import time
-from typing import Callable, Any, Literal, Union
-import scipy.io.wavfile as wavfile
+from typing import Callable, Literal, Union
 import numpy as np
 import sounddevice as sd
 import asyncio
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 AudioChunk = Union[np.ndarray, bytes]
 # Define a callback type hint for clarity
@@ -25,23 +27,23 @@ class AudioSourceInterface(ABC):
             try:
                 self.device_index = int(raw_device_index_str)
             except (ValueError, TypeError):
-                print(
-                    f"Warning: Invalid device_index '{raw_device_index_str}' in config. Using default (None)."
+                logger.warning(
+                    f"Invalid device_index '{raw_device_index_str}' in config. Using default (None)."
                 )
 
         # Add validation for required values if needed
         if not isinstance(self.sample_rate, int) or self.sample_rate <= 0:
-            print(f"ERROR: Invalid sample_rate: {self.sample_rate}. Cannot continue.")
+            logger.error(f"Invalid sample_rate: {self.sample_rate}. Cannot continue.")
             raise ValueError("Invalid sample_rate")
         if not isinstance(self.channels, int) or self.channels <= 0:
-            print(f"ERROR: Invalid channels: {self.channels}. Cannot continue.")
+            logger.error(f"Invalid channels: {self.channels}. Cannot continue.")
             raise ValueError("Invalid channels")
 
         # Warm up the audio device
         self.warm_up_audio_device()
 
         # Print initialized values
-        print(
+        logger.info(
             f"AudioHandler Initialized: Rate={self.sample_rate}, Channels={self.channels}, Device={self.device_index}"
         )
 
@@ -51,12 +53,12 @@ class AudioSourceInterface(ABC):
             if self.device_index is None:
                 sd.query_devices()
                 default_input_idx = sd.default.device[0]
-                print(
+                logger.info(
                     f"No device index provided. Using default input device index: {default_input_idx}"
                 )
                 self.device_index = default_input_idx
 
-            print("Pre-warming audio device...")
+            logger.info("Pre-warming audio device...")
             # Time the operation
             start_time = time.monotonic()
             with sd.InputStream(
@@ -68,10 +70,10 @@ class AudioSourceInterface(ABC):
             ):  # use 'high' for faster pre-warm init
                 sd.sleep(10)  # Keep it open for a tiny moment (10ms)
             warmup_time = time.monotonic() - start_time
-            print(f"Audio device pre-warmed in {warmup_time * 1000:.1f}ms")
+            logger.info(f"Audio device pre-warmed in {warmup_time * 1000:.1f}ms")
 
         except Exception as e:
-            print(f"Could not pre-warm audio device: {e}")
+            logger.error(f"Could not pre-warm audio device: {e}")
 
     @abstractmethod
     def record_audio_stream_with_vad(self, stop_event, audio_queue, vad_config):

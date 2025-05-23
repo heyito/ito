@@ -1,8 +1,11 @@
 import platform
 import time
+import logging
 
 import pyautogui
 import pyperclip
+
+logger = logging.getLogger(__name__)
 
 
 def output_text(text: str, method: str = "typewrite"):
@@ -10,10 +13,10 @@ def output_text(text: str, method: str = "typewrite"):
     Outputs the given text using the specified method (typing or clipboard).
     """
     if not text:
-        print("Output Handler: Received empty text.")
+        logger.warning("Output Handler: Received empty text.")
         return
 
-    print(f"Outputting text using method: {method}")
+    logger.info(f"Outputting text using method: {method}")
     try:
         # Add a small delay to allow user to switch focus if needed,
         # or for the system to register the hotkey release properly.
@@ -30,10 +33,10 @@ def output_text(text: str, method: str = "typewrite"):
             else:  # Windows/Linux
                 pyautogui.hotkey("ctrl", "v")
         else:
-            print(f"Error: Unknown output method '{method}'")
+            logger.error(f"Unknown output method '{method}'")
 
     except Exception as e:
-        print(f"Error during output: {e}")
-        print(
+        logger.error(f"Error during output: {e}")
+        logger.warning(
             "Ensure the target window has focus and necessary permissions are granted (especially for macOS/Wayland)."
         )

@@ -1,4 +1,5 @@
 import sys
+import logging
 
 from PySide6.QtCore import Qt, QSettings, QPoint, QTimer
 from PySide6.QtWidgets import (
@@ -15,6 +16,9 @@ from src.ui.screens.onboarding.keyboard_setup_screen import KeyboardSetupScreen
 from src.ui.screens.onboarding.welcome_screen import WelcomeScreen
 from src.ui.screens.onboarding.completion_screen import CompletionScreen
 from src.ui.screens.onboarding.api_setup_screen import ApiSetupScreen
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class OnboardingWindow(QMainWindow):
@@ -66,7 +70,7 @@ class OnboardingWindow(QMainWindow):
         )
 
         if setup_complete:
-            print(
+            logger.info(
                 "Permissions setup previously completed. Transitioning to home screen."
             )
             # Import here to avoid circular imports
@@ -81,7 +85,7 @@ class OnboardingWindow(QMainWindow):
             # Use a timer to close this window after a short delay
             QTimer.singleShot(0, self.close)
         else:
-            print("Starting permissions setup flow.")
+            logger.info("Starting permissions setup flow.")
             # If setup not done, start with the welcome screen
             self.show_welcome_screen()
             # Now show the window
@@ -334,7 +338,7 @@ class OnboardingWindow(QMainWindow):
 
     def complete_setup(self):
         """Saves the setup complete flag if needed, then transitions to the home screen."""
-        print("Marking permissions setup as complete in settings.")
+        logger.info("Marking permissions setup as complete in settings.")
         # Save the flag indicating setup is done
         self.settings.setValue("permissionsSetupComplete", True)
 

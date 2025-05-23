@@ -1,9 +1,13 @@
 import sys
+import logging
 from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTimer
 from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QGraphicsOpacityEffect
 from src.types.status_messages import StatusMessage
 import queue
 import time
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 if sys.platform == "darwin":
     try:
@@ -21,7 +25,7 @@ if sys.platform == "darwin":
 
         _objc_available = True
     except ImportError:
-        print("PyObjC framework not found. Cannot apply native macOS styling.")
+        logger.warning("PyObjC framework not found. Cannot apply native macOS styling.")
         _objc_available = False
 else:
     _objc_available = False
@@ -117,10 +121,10 @@ class StatusWindow(QWidget):
                     ns_window.setMovableByWindowBackground_(False)
                     ns_window.setMovable_(False)
             except Exception as e:
-                print(f"Error applying native macOS window behavior: {e}")
+                logger.error(f"Error applying native macOS window behavior: {e}")
                 import traceback
 
-                traceback.print_exc()
+                logger.debug(traceback.format_exc())
 
         self.layout().activate()
         self.update_position()
@@ -160,7 +164,7 @@ class StatusWindow(QWidget):
         except queue.Empty:
             pass
         except Exception as e:
-            print(f"Error processing status queue: {e}")
+            logger.error(f"Error processing status queue: {e}")
 
     def _apply_pending_status(self):
         """Apply the pending status update and clear it."""

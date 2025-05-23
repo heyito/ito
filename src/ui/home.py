@@ -1,5 +1,6 @@
 import sys
 import traceback
+import logging
 
 from PySide6.QtCore import QPointF, QSettings, Qt, QTimer
 from PySide6.QtGui import QPixmap
@@ -19,6 +20,9 @@ from PySide6.QtWidgets import (
     QFrame,
     QGraphicsOpacityEffect,
 )
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 from src.application_manager import ApplicationManager
 from src.ui.onboarding import OnboardingWindow
@@ -1174,7 +1178,7 @@ class Home(QMainWindow):
             QMessageBox.critical(
                 self, "Timing Report Error", f"Failed to save timing report: {str(e)}"
             )
-            print(f"Error saving timing report: {traceback.format_exc()}")
+            logger.error(f"Error saving timing report: {traceback.format_exc()}")
 
     def handle_clear_timing_data(self):
         """Handles the click of the 'Clear Timing Data' button."""
@@ -1187,7 +1191,7 @@ class Home(QMainWindow):
             QMessageBox.critical(
                 self, "Timing Data Error", f"Failed to clear timing data: {str(e)}"
             )
-            print(f"Error clearing timing data: {traceback.format_exc()}")
+            logger.error(f"Error clearing timing data: {traceback.format_exc()}")
 
     def reset_all_settings(self):
         """Reset all settings and restart the onboarding process."""
@@ -1245,10 +1249,10 @@ class Home(QMainWindow):
 
     def _save_settings_impl(self):
         """Actual implementation of save_settings"""
-        print("[Saving Settings] Starting save process")
+        logger.info("[Saving Settings] Starting save process")
         try:
             llm_source_value = self.llm_source.currentText()
-            print(f"LLM Source: {llm_source_value}")
+            logger.debug(f"LLM Source: {llm_source_value}")
 
             current_llm_model_value = ""
             if llm_source_value == "ollama":
@@ -1338,10 +1342,6 @@ class Home(QMainWindow):
                     "channels": int(self.channels.currentText()),
                 },
                 "VAD": {
-                    # "enabled": self.vad_enabled.currentText() == "Enabled",
-                    # "aggressiveness": int(self.vad_aggressiveness.currentText()),
-                    # "silence_duration_ms": int(self.silence_duration.currentText()),
-                    # "frame_duration_ms": int(self.frame_duration.currentText()),
                     "enabled": False,
                     "aggressiveness": 1,
                     "silence_duration_ms": 500,
@@ -1358,7 +1358,9 @@ class Home(QMainWindow):
 
             # Validate new settings
             is_valid, error_msg = self.app_manager.validate_settings(new_settings)
-            print(f"[Saving Settings] Is valid: {is_valid}, Error message: {error_msg}")
+            logger.debug(
+                f"[Saving Settings] Is valid: {is_valid}, Error message: {error_msg}"
+            )
             if not is_valid:
                 self.handle_error(error_msg)
                 return
@@ -1376,7 +1378,7 @@ class Home(QMainWindow):
                         )
                         return
         except Exception as e:
-            print(f"[Saving Settings] Error: {str(e)}")
+            logger.error(f"[Saving Settings] Error: {str(e)}")
             self.handle_error(f"Failed to save settings: {str(e)}")
 
     def load_settings(self):
@@ -1435,16 +1437,6 @@ class Home(QMainWindow):
             self.sample_rate.setCurrentText(str(config["Audio"]["sample_rate"]))
             self.channels.setCurrentText(str(config["Audio"]["channels"]))
 
-            # Load VAD settings
-            # self.vad_enabled.setCurrentText(
-            #     "Enabled" if config["VAD"]["enabled"] else "Disabled"
-            # )
-            # self.vad_aggressiveness.setCurrentText(str(config["VAD"]["aggressiveness"]))
-            # self.silence_duration.setCurrentText(
-            #     str(config["VAD"]["silence_duration_ms"])
-            # )
-            # self.frame_duration.setCurrentText(str(config["VAD"]["frame_duration_ms"]))
-
             # Load Output settings
             self.output_method.setCurrentText(config["Output"]["method"])
 
@@ -1470,8 +1462,8 @@ class Home(QMainWindow):
             self._sync_active_llm_model_value()  # Ensure LLM model value is synced after rules are applied
 
         except Exception as e:
-            print(f"Error in load_settings: {str(e)}")
-            print(f"Error details: {traceback.format_exc()}")
+            logger.error(f"Error in load_settings: {str(e)}")
+            logger.error(f"Error details: {traceback.format_exc()}")
             self.handle_error(f"Failed to load settings: {str(e)}")
 
         # After all UI visibility/state changes, sync the active LLM model value field
@@ -1769,8 +1761,8 @@ class Home(QMainWindow):
             condition_widget = getattr(self, condition_cfg["widget_name"], None)
 
             if not condition_widget:
-                print(
-                    f"Warning: Condition widget '{condition_cfg['widget_name']}' not found for a UI rule."
+                logger.warning(
+                    f"Condition widget '{condition_cfg['widget_name']}' not found for a UI rule."
                 )
                 continue
 
@@ -1785,8 +1777,8 @@ class Home(QMainWindow):
                 current_value = condition_widget.isChecked()
             # Add more property types if needed
             else:
-                print(
-                    f"Warning: Property '{condition_cfg['property']}' not supported for widget '{condition_cfg['widget_name']}'."
+                logger.warning(
+                    f"Property '{condition_cfg['property']}' not supported for widget '{condition_cfg['widget_name']}'."
                 )
                 continue
 
@@ -1801,8 +1793,8 @@ class Home(QMainWindow):
             for action_detail in actions_to_apply:
                 target_widget = getattr(self, action_detail["target_widget_name"], None)
                 if not target_widget:
-                    print(
-                        f"Warning: Target widget '{action_detail['target_widget_name']}' not found for action."
+                    logger.warning(
+                        f"Target widget '{action_detail['target_widget_name']}' not found for action."
                     )
                     continue
 
@@ -1838,15 +1830,15 @@ class Home(QMainWindow):
                         ):
                             # Assuming rule_config is available in this scope from the outer loop
                             rule_condition_info = rule_config.get("condition", {})
-                            print(
+                            logger.debug(
                                 f"[DEBUG SRB] Rule condition: {rule_condition_info}. Applying set_enabled: {is_enabled} to speech_recognition_button. Condition met for this rule: {condition_met}"
                             )
                         target_widget.setEnabled(is_enabled)
 
                 # Add more widget types and actions as needed
                 else:
-                    print(
-                        f"Warning: Action '{action_type}' on target '{action_detail['target_widget_name']}' is for an unhandled widget type: {type(target_widget)}."
+                    logger.warning(
+                        f"Action '{action_type}' on target '{action_detail['target_widget_name']}' is for an unhandled widget type: {type(target_widget)}."
                     )
 
         # Unblock signals
@@ -1951,16 +1943,6 @@ class Home(QMainWindow):
             self.groq_model.blockSignals(False)
             self.gemini_model.blockSignals(False)
 
-    # def start_keyboard_listening(self):
-    #     """Start listening for keyboard input when keyboard page is shown"""
-    #     self.is_recording_hotkey = True
-    #     self._last_pressed_keys = None
-    #     self._hold_start_time = None
-    #     self.hold_timer.stop()
-    #     self.start_recording_hotkey.setPlaceholderText(
-    #         "Press and hold keys for 2 seconds to set hotkey..."
-    #     )
-
     def poll_pressed_keys(self):
         """Poll for pressed keys and handle hotkey recording"""
         if (
@@ -1993,7 +1975,7 @@ class Home(QMainWindow):
         self.keyboard_poll_timer.start(50)
 
     def stop_hotkey_recording(self):
-        print("Stopping hotkey recording")
+        logger.info("Stopping hotkey recording")
         self.is_recording_hotkey = False
         self.keyboard_poll_timer.stop()
         self.start_hotkey_button.setEnabled(True)

@@ -1,4 +1,5 @@
 from typing import Optional
+import logging
 from src.apps.browser import BrowserApp
 from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
@@ -6,6 +7,9 @@ from src.apps.text_edit import TextEditApp
 from src.types.apps import IntenApp
 from rich import print as rprint
 from src import platform_utils_macos as platform_utils
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class ProcessingEngine:
@@ -31,13 +35,13 @@ class ProcessingEngine:
         user_command_audio: Optional[bytes] = None,
     ):
         rprint(f"[bold blue]Processing action: '{user_text_command}'[/bold blue]")
-        print(f"On document context (length: {len(processing_text)} chars)")
+        logger.info(f"On document context (length: {len(processing_text)} chars)")
 
         # 1. Construct LLM Prompt
-        print("Constructing LLM prompt with distinct markers...")
+        logger.info("Constructing LLM prompt with distinct markers...")
 
         current_app = current_context.get("app_name").strip()
-        print(f"Current app: {repr(current_app)}")
+        logger.info(f"Current app: {repr(current_app)}")
 
         match current_app:
             case IntenApp.TEXTEDIT:

@@ -1,37 +1,25 @@
 from PySide6.QtCore import (
     Qt,
     QPoint,
-    QRect,
-    QSize,
-    QTimer,
-    QPropertyAnimation,
-    QEasingCurve,
     QRectF,
 )
 from PySide6.QtGui import (
-    QColor,
     QPainter,
     QPainterPath,
     QRegion,
-    QWindow,
-    QImage,
-    QPixmap,
-    QIcon,
 )
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
     QPushButton,
-    QLabel,
-    QGraphicsEffect,
-    QGraphicsDropShadowEffect,
-    QGraphicsBlurEffect,
-    QGraphicsColorizeEffect,
-    QSizePolicy,
 )
 import sys
+import logging
 from src.ui.theme.manager import ThemeManager
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Conditionally import macOS-specific libraries at the module level
 MAC_LIBS_AVAILABLE = False
@@ -59,8 +47,8 @@ if sys.platform == "darwin":
         NSColor = AppKitNSColor  # Assign to module-level var
         MAC_LIBS_AVAILABLE = True
     except ImportError as e:
-        print(
-            f"Warning: macOS specific libraries (AppKit, objc, ctypes) could not be imported. Blur effects will be disabled. Error: {e}"
+        logger.warning(
+            f"macOS specific libraries (AppKit, objc, ctypes) could not be imported. Blur effects will be disabled. Error: {e}"
         )
 
 
@@ -78,7 +66,7 @@ def MacBlur(
         TitleBar: Whether to configure the title bar for transparency.
     """
     if not MAC_LIBS_AVAILABLE:
-        print(
+        logger.warning(
             "MacBlur: Skipping because core macOS specific libraries are not available."
         )
         return
@@ -87,7 +75,7 @@ def MacBlur(
     if Material is None and NSVisualEffectMaterialPopover is not None:
         Material = NSVisualEffectMaterialPopover
     elif Material is None:  # Should not happen if NSVisualEffectMaterialPopover loaded
-        print(
+        logger.warning(
             "MacBlur: Skipping, no material specified and default (Popover) not available via AppKit."
         )
         return
@@ -95,7 +83,7 @@ def MacBlur(
     # Get the native window ID (NSView pointer) of the QWidget
     win_id_ptr = widget_instance.winId()
     if not win_id_ptr:
-        print(
+        logger.warning(
             "MacBlur: widget_instance.winId() is null. Cannot apply blur yet (widget might not be shown)."
         )
         return
@@ -106,7 +94,7 @@ def MacBlur(
     # Get the NSWindow object
     window_native_view = widget_native_view.window()
     if not window_native_view:
-        print(f"MacBlur: Could not get NSWindow for widget {widget_instance}")
+        logger.warning(f"MacBlur: Could not get NSWindow for widget {widget_instance}")
         return
 
     # --- Apply rounded corners and transparency to the NSWindow ---
@@ -151,7 +139,7 @@ def MacBlur(
     # Get the window's content view to add the blur view
     window_content_view = window_native_view.contentView()
     if not window_content_view:
-        print(
+        logger.warning(
             f"MacBlur: Could not get contentView for NSWindow of widget {widget_instance}"
         )
         # Clean up visualEffectView if it was created? Or let ARC handle it.

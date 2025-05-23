@@ -1,19 +1,21 @@
 import io
 import numpy as np
 import scipy.io.wavfile as wavfile
+import logging
+
 
 def save_wav_to_buffer(audio_data_numpy, sample_rate):
     """Save audio data to a WAV file in memory buffer.
-    
+
     Args:
         audio_data_numpy: NumPy array containing audio samples
         sample_rate: Sample rate in Hz
-        
+
     Returns:
         BytesIO buffer containing WAV file data, or None if failed
     """
     if not isinstance(audio_data_numpy, np.ndarray) or audio_data_numpy.size == 0:
-        print("Error: Invalid or empty audio data provided for saving.")
+        logging.error("Invalid or empty audio data provided for saving.")
         return None
     try:
         buffer = io.BytesIO()
@@ -26,8 +28,8 @@ def save_wav_to_buffer(audio_data_numpy, sample_rate):
                 audio_data_numpy = audio_data_numpy.astype(np.int16)
 
         wavfile.write(buffer, sample_rate, audio_data_numpy)
-        buffer.seek(0) # Rewind buffer to the beginning for reading
+        buffer.seek(0)  # Rewind buffer to the beginning for reading
         return buffer
     except Exception as e:
-        print(f"Error saving audio to WAV buffer: {e}")
+        logging.error(f"Error saving audio to WAV buffer: {e}")
         return None

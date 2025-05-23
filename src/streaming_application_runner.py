@@ -42,29 +42,29 @@ class StreamingApplicationRunner(ApplicationInterface):
 
     def _print_initial_info(self):
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        print(f"\n--- Inten Tool (Streaming Mode) ---")
-        print(f"Timestamp: {timestamp}")
+        logger.info("--- Inten Tool (Streaming Mode) ---")
+        logger.info(f"Timestamp: {timestamp}")
         # Add platform warning if needed
         # ASR info should come from the specific ASR processor config if needed
-        print("Inten background process running...")
+        logger.info("Inten background process running...")
 
     def trigger_interaction(self) -> None:
         """Queues the toggle action if preconditions met."""
         timestamp = time.strftime("%H:%M:%S")
         # Prevent toggling if a command *processing* is happening
         if self.command_processor.is_processing:
-            print(f"[{timestamp}] Trigger ignored: Command processor busy.")
+            logger.info(f"[{timestamp}] Trigger ignored: Command processor busy.")
             self._update_status("Processing busy, cannot toggle stream")
             return
 
-        print(f"[{timestamp}] Trigger received. Queuing toggle action.")
+        logger.info(f"[{timestamp}] Trigger received. Queuing toggle action.")
         self._action_queue.put("TOGGLE")
         next_state = "Stopping" if self.audio_streamer.is_streaming else "Starting"
         self._update_status(f"Hotkey pressed, {next_state} stream...")
 
     def run(self) -> None:
         """Main event loop processing toggle actions."""
-        print("Streaming Runner: Starting event loop...")
+        logger.info("Streaming Runner: Starting event loop...")
         if not self._asyncio_loop or not self._asyncio_loop.is_running():
             logger.error(
                 "Streaming Runner: Asyncio loop provided by AudioStreamer is not running!"
@@ -85,13 +85,13 @@ class StreamingApplicationRunner(ApplicationInterface):
                 continue  # Check stop event
             except Exception as e:
                 logger.error(f"Streaming Runner Error: {e}", exc_info=True)
-        print("Streaming Runner: Event loop stopped.")
+        logger.info("Streaming Runner: Event loop stopped.")
 
     def _handle_toggle(self):
         """Starts or stops the streaming process."""
         timestamp = time.strftime("%H:%M:%S")
         if self.audio_streamer.is_streaming:
-            print(f"[{timestamp}] Streaming Runner: Stopping stream...")
+            logger.info(f"[{timestamp}] Streaming Runner: Stopping stream...")
             # Stop consumer task first
             if (
                 self._transcript_consumer_task
@@ -104,10 +104,12 @@ class StreamingApplicationRunner(ApplicationInterface):
         else:
             # Don't start if command processor is busy (checked in trigger, but double-check)
             if self.command_processor.is_processing:
-                print(f"[{timestamp}] Streaming Runner: Cannot start, processor busy.")
+                logger.info(
+                    f"[{timestamp}] Streaming Runner: Cannot start, processor busy."
+                )
                 return
 
-            print(f"[{timestamp}] Streaming Runner: Starting stream...")
+            logger.info(f"[{timestamp}] Streaming Runner: Starting stream...")
             # Start audio streamer (starts capture, ASR) first for responsiveness
             if self.audio_streamer.start_streaming():
                 # Then fetch context in parallel
@@ -148,7 +150,7 @@ class StreamingApplicationRunner(ApplicationInterface):
                         end="",
                     )  # Clear line
                     if final_transcript:
-                        print(f"FINAL TRANSCRIPT: {final_transcript}")
+                        logger.info(f"FINAL TRANSCRIPT: {final_transcript}")
                         self._update_status("Final transcript received...")
 
                         # --- Trigger processing logic ---
@@ -180,7 +182,7 @@ class StreamingApplicationRunner(ApplicationInterface):
                         break
 
                     else:
-                        print("FINAL TRANSCRIPT: (empty)")
+                        logger.info("FINAL TRANSCRIPT: (empty)")
                     self._current_partial_transcript = ""
                 else:  # Partial
                     self._current_partial_transcript = text
@@ -210,12 +212,12 @@ class StreamingApplicationRunner(ApplicationInterface):
 
     def cleanup(self) -> None:
         """Cleans up streaming components."""
-        print("Streaming Runner: Cleaning up...")
+        logger.info("Streaming Runner: Cleaning up...")
         self._stop_event.set()  # Signal event loop
 
         # Cancel consumer task if running
         if self._transcript_consumer_task and not self._transcript_consumer_task.done():
-            print("Streaming Runner: Cancelling transcript consumer task...")
+            logger.info("Streaming Runner: Cancelling transcript consumer task...")
             self._transcript_consumer_task.cancel()
 
         # Cleanup components
@@ -234,4 +236,4 @@ class StreamingApplicationRunner(ApplicationInterface):
         # (e.g., potentially in ApplicationManager if it creates it, or let AudioStreamer manage it)
         # Let's assume AudioStreamer requires a running loop passed to it.
 
-        print("Streaming Runner: Cleanup finished.")
+        logger.info("Streaming Runner: Cleanup finished.")

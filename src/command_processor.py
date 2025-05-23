@@ -3,11 +3,15 @@ import queue
 import threading
 import time
 import traceback
+import logging
 from typing import Dict, Optional
 
 from src.engines.processing_engine import ProcessingEngine
 from src.types.status_messages import StatusMessage
 from src.types.modes import CommandMode
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class CommandProcessor:
@@ -32,8 +36,8 @@ class CommandProcessor:
             if self._is_processing and (
                 not self._processing_thread or not self._processing_thread.is_alive()
             ):
-                print(
-                    "Warning: is_processing=True but thread is dead. Resetting state."
+                logger.warning(
+                    "is_processing=True but thread is dead. Resetting state."
                 )
                 self._is_processing = False  # Auto-correct state
             return self._is_processing
@@ -55,7 +59,7 @@ class CommandProcessor:
         if (
             not user_text_command or not user_text_command.strip()
         ) and not user_command_audio:
-            print(f"[{timestamp}] CommandProcessor: Skipping empty command.")
+            logger.info(f"[{timestamp}] CommandProcessor: Skipping empty command.")
             self._update_status(StatusMessage.READY)
             return False
 
@@ -68,7 +72,7 @@ class CommandProcessor:
 
         with self._lock:
             if self._is_processing:
-                print(
+                logger.info(
                     f"[{timestamp}] CommandProcessor: Busy (is_processing is True). Skipping command: '{command_copy[:30]}...'"
                 )
                 self._update_status(StatusMessage.BUSY)
@@ -90,7 +94,7 @@ class CommandProcessor:
             )
 
         # Start the thread outside the lock
-        print(
+        logger.info(
             f"[{timestamp}] CommandProcessor: Starting processing thread for command: '{command_copy[:30]}...'"
         )
         self._processing_thread.start()
@@ -110,9 +114,9 @@ class CommandProcessor:
         error_msg = ""
         try:
             app_name_for_log = current_context.get("app_name", "N/A")
-            print(f"[{timestamp}] --- Starting Processing Pipeline ---")
-            print(f"[{timestamp}] Context App: {app_name_for_log}")
-            print(f"[{timestamp}] User Command: '{user_text_command}'")
+            logger.info(f"[{timestamp}] --- Starting Processing Pipeline ---")
+            logger.info(f"[{timestamp}] Context App: {app_name_for_log}")
+            logger.info(f"[{timestamp}] User Command: '{user_text_command}'")
 
             match mode:
                 case CommandMode.ACTION:
@@ -134,12 +138,14 @@ class CommandProcessor:
                         f"Unsupported CommandMode for CommandProcessor: {mode}"
                     )
 
-            print(f"[{timestamp}] Processing engine finished successfully.")
+            logger.info(f"[{timestamp}] Processing engine finished successfully.")
             success = True
 
         except Exception as e:
-            print(f"[{timestamp}] Error during processing pipeline execution: {e}")
-            traceback.print_exc()
+            logger.error(
+                f"[{timestamp}] Error during processing pipeline execution: {e}"
+            )
+            logger.error(traceback.format_exc())
             error_msg = str(e)
         finally:
             with self._lock:
@@ -148,7 +154,7 @@ class CommandProcessor:
                 self._processing_thread = None
             # The lock is automatically released by the 'with' statement.
 
-            print(f"[{timestamp}] --- Processing Pipeline Finished ---")
+            logger.info(f"[{timestamp}] --- Processing Pipeline Finished ---")
             final_status = (
                 "Processing successful" if success else f"Error processing: {error_msg}"
             )
@@ -162,26 +168,26 @@ class CommandProcessor:
             try:
                 self.status_queue.put_nowait(message)
             except queue.Full:
-                print(f"Warning: Status queue full. Dropping message: {message}")
+                logger.warning(f"Status queue full. Dropping message: {message}")
             except Exception as e:
-                print(f"Error putting status in queue: {e}")
+                logger.error(f"Error putting status in queue: {e}")
 
     def cleanup(self) -> None:
         """Cleans up the command processor resources."""
-        print("CommandProcessor: Cleaning up...")
+        logger.info("CommandProcessor: Cleaning up...")
         thread_to_join = None
         with self._lock:
             thread_to_join = self._processing_thread
 
         if thread_to_join and thread_to_join.is_alive():
-            print("CommandProcessor: Waiting for processing thread...")
+            logger.info("CommandProcessor: Waiting for processing thread...")
             thread_to_join.join(timeout=5.0)  # Allow reasonable time
 
         # Final check/release of lock just in case
         if self._lock.locked():
-            print("CommandProcessor: Releasing lock during cleanup.")
+            logger.info("CommandProcessor: Releasing lock during cleanup.")
             try:
                 self._lock.release()
             except RuntimeError:
                 pass
-        print("CommandProcessor: Cleanup finished.")
+        logger.info("CommandProcessor: Cleanup finished.")

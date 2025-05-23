@@ -223,18 +223,6 @@ def get_active_application():
         return None
 
 
-def send_message(message):
-    try:
-        print(f"Native host sending message: {message}")
-        # Your existing send_message code here
-        print("Message sent successfully")
-    except Exception as e:
-        print(f"Error sending message: {e}")
-        import traceback
-
-        traceback.print_exc()
-
-
 def main():
     setup_logging()
     logging.info("Native messaging host started")

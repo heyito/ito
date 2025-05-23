@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
@@ -7,13 +7,15 @@ from PySide6.QtWidgets import (
     QPushButton,
     QWidget,
     QMainWindow,
-    QSpacerItem,
-    QSizePolicy,
 )
 import platform
 import os
+import logging
 from src.ui.theme.manager import ThemeManager
 from src.ui.permission_checker import PermissionChecker
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class PermissionScreen:
@@ -303,7 +305,7 @@ class PermissionScreen:
             )
             QTimer.singleShot(3000, self.permission_checker.check_microphone)
         else:
-            print("Please grant microphone access in your system settings")
+            logger.info("Please grant microphone access in your system settings")
 
     def request_accessibility_permission(self):
         """Request accessibility permission"""
@@ -316,7 +318,7 @@ class PermissionScreen:
             )
             QTimer.singleShot(3000, self.permission_checker.check_accessibility)
         else:
-            print("Please grant accessibility access in your system settings")
+            logger.info("Please grant accessibility access in your system settings")
 
     def request_input_monitoring_permission(self):
         """Request input monitoring permission"""
@@ -329,7 +331,7 @@ class PermissionScreen:
             )
             QTimer.singleShot(3000, self.permission_checker.check_input_monitoring)
         else:
-            print("Please grant input monitoring access in your system settings")
+            logger.info("Please grant input monitoring access in your system settings")
 
     def check_all_permissions_and_proceed(self):
         """Check all permissions and proceed if all are granted"""

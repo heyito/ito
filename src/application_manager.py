@@ -4,6 +4,7 @@ import queue
 import threading
 import time
 import traceback
+import logging
 
 from typing import Any, Dict, Optional, Tuple
 
@@ -15,6 +16,9 @@ from src.types.modes import CommandMode
 from src.ui.keyboard_manager import KeyboardManager
 from src.ui.status_window import StatusWindow
 from src.types.status_messages import StatusMessage
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # --- Add pynput imports ---
 try:
@@ -218,13 +222,13 @@ class ApplicationManager(QObject):
 
         except Exception as e:
             error_msg = f"Failed to save settings: {str(e)}"
-            print(f"{error_msg}\n{traceback.format_exc()}")
+            logger.error(f"{error_msg}\n{traceback.format_exc()}")
             self.error_occurred.emit(error_msg)
             return False
 
     def start_application(self) -> bool:
         """Start the application background thread and the hotkey listener."""
-        print("Starting application...")
+        logger.info("Starting application...")
         if not _pynput_available:
             self.error_occurred.emit("Pynput library not found. Hotkeys disabled.")
             self.status_changed.emit(StatusMessage.ERROR.value)
@@ -232,7 +236,7 @@ class ApplicationManager(QObject):
 
         # Prevent double-start
         if self.app_thread and self.app_thread.is_alive():
-            print("Application thread already running. Not starting again.")
+            logger.info("Application thread already running. Not starting again.")
             self.status_changed.emit(StatusMessage.STARTED.value)
             return False
 
@@ -282,7 +286,7 @@ class ApplicationManager(QObject):
 
         except Exception as e:
             error_msg = f"Failed to start application: {str(e)}"
-            print(f"{error_msg}\n{traceback.format_exc()}")
+            logger.error(f"{error_msg}\n{traceback.format_exc()}")
             self.error_occurred.emit(error_msg)
             self.status_changed.emit(StatusMessage.ERROR.value)
             self.stop_application()
@@ -290,12 +294,12 @@ class ApplicationManager(QObject):
 
     def stop_application(self) -> None:
         """Stop the application background thread."""
-        print("Initiating application stop sequence...")
+        logger.info("Initiating application stop sequence...")
         stopped_thread = False
 
         # Signal and stop the background thread
         if self.app_thread and self.app_thread.is_alive():
-            print("Signaling background application thread to stop...")
+            logger.info("Signaling background application thread to stop...")
             if hasattr(self, "_stop_app_thread_event"):
                 self._stop_app_thread_event.set()
             if self.app_instance:
@@ -304,25 +308,27 @@ class ApplicationManager(QObject):
                 if hasattr(self.app_instance, "stop_application_event"):
                     self.app_instance.stop_application_event.set()
 
-            print("Waiting for background application thread to join...")
+            logger.info("Waiting for background application thread to join...")
             self.app_thread.join(timeout=2.0)  # Increased timeout
             if self.app_thread.is_alive():
-                print("Warning: Background application thread did not exit cleanly.")
+                logger.warning(
+                    "Warning: Background application thread did not exit cleanly."
+                )
             else:
-                print("Background application thread joined.")
+                logger.info("Background application thread joined.")
                 stopped_thread = True
             self.app_thread = None
             self.app_instance = None
         else:
-            print("No background application thread to stop.")
+            logger.info("No background application thread to stop.")
 
         # Stop asyncio loop if streaming mode might have used it
         if hasattr(self.container, "asyncio_loop_manager"):
-            print("Stopping asyncio loop manager...")
+            logger.info("Stopping asyncio loop manager...")
             self.container.asyncio_loop_manager().stop_loop()
 
         # Clear queues
-        print("Clearing queues...")
+        logger.info("Clearing queues...")
         while not self.error_queue.empty():
             try:
                 self.error_queue.get_nowait()
@@ -339,38 +345,38 @@ class ApplicationManager(QObject):
         import multiprocessing
 
         try:
-            print("Cleaning up multiprocessing resources...")
+            logger.info("Cleaning up multiprocessing resources...")
             # Get all active children
             children = multiprocessing.active_children()
             if children:
-                print(f"Found {len(children)} active multiprocessing children")
+                logger.info(f"Found {len(children)} active multiprocessing children")
                 # Try to terminate them gracefully
                 for child in children:
                     try:
                         child.terminate()
                         child.join(timeout=1.0)
                     except Exception as e:
-                        print(f"Error terminating child process: {e}")
+                        logger.error(f"Error terminating child process: {e}")
         except Exception as e:
-            print(f"Error cleaning up multiprocessing children: {e}")
+            logger.error(f"Error cleaning up multiprocessing children: {e}")
 
         if stopped_thread:
             self.status_changed.emit(StatusMessage.STOPPED.value)
-            print("Application stop sequence complete.")
+            logger.info("Application stop sequence complete.")
 
     def closeEvent(self, event):
         """Handle window close event"""
-        print("ApplicationManager closeEvent: Stopping application...")
+        logger.info("ApplicationManager closeEvent: Stopping application...")
         self.stop_application()  # This now stops asyncio loop too
         # Clean up keyboard manager
-        print("ApplicationManager closeEvent: Cleaning up keyboard manager...")
+        logger.info("ApplicationManager closeEvent: Cleaning up keyboard manager...")
         self.keyboard_manager.cleanup()
         # Optional: Explicitly shutdown container resources if needed
-        # print("ApplicationManager closeEvent: Shutting down container...")
+        # logger.info("ApplicationManager closeEvent: Shutting down container...")
         # self.container.shutdown_resources() # If using resource providers
-        print("ApplicationManager closeEvent: Calling super...")
+        logger.info("ApplicationManager closeEvent: Calling super...")
         super().closeEvent(event)
-        print("ApplicationManager closeEvent: Finished.")
+        logger.info("ApplicationManager closeEvent: Finished.")
 
     def restart_application(self) -> bool:
         """Restart the application with current settings"""
@@ -388,8 +394,10 @@ class ApplicationManager(QObject):
         Initializes and runs the AudioApplication.
         """
         try:
-            print("Background thread started.")
-            print(f"DEBUG: stop_event.is_set() at thread start: {stop_event.is_set()}")
+            logger.info("Background thread started.")
+            logger.debug(
+                f"DEBUG: stop_event.is_set() at thread start: {stop_event.is_set()}"
+            )
             # Configure container within the thread using the passed config
             self.container = Container()  # Create a new container instance
             self.container.config.from_dict(config)
@@ -406,22 +414,22 @@ class ApplicationManager(QObject):
             if hasattr(self.app_instance, "audio_recorder"):
                 self.app_instance.audio_recorder.status_queue = self.status_queue
 
-            print("Starting AudioApplication.run() in background thread...")
+            logger.info("Starting AudioApplication.run() in background thread...")
             # Run the application - it has its own event loop that will continue running
             # until the stop_event is set
             self.app_instance.run()
-            print("DEBUG: AudioApplication.run() exited normally.")
+            logger.debug("DEBUG: AudioApplication.run() exited normally.")
 
         except Exception as e:
             error_msg = (
                 f"Background Application Error: {str(e)}\n{traceback.format_exc()}"
             )
-            print(error_msg)
+            logger.error(error_msg)
             # Use signal to report error back to the main thread's UI
             self.error_occurred.emit(f"Background Thread Error: {str(e)}")
             self.status_changed.emit(StatusMessage.ERROR.value)
         finally:
-            print("Background application thread finished.")
+            logger.info("Background application thread finished.")
             # Clear the instance reference from the manager when the thread truly exits
             self.app_instance = None
 
@@ -433,7 +441,7 @@ class ApplicationManager(QObject):
         """
         timestamp = time.strftime("%H:%M:%S")
         # Check if the background application instance exists and is running
-        print(
+        logger.debug(
             f"self.app_instance: {self.app_instance}, self.app_thread: {self.app_thread}, self.app_thread.is_alive(): {self.app_thread.is_alive()}"
         )
         if (
@@ -441,7 +449,7 @@ class ApplicationManager(QObject):
             or not self.app_thread
             or not self.app_thread.is_alive()
         ):
-            print(
+            logger.info(
                 f"[{timestamp}] Hotkey '{hotkey_name}' detected, but application is not running."
             )
             self.status_changed.emit(StatusMessage.HOTKEY_IGNORED.value)
@@ -449,7 +457,7 @@ class ApplicationManager(QObject):
 
         with self.hotkey_thread_lock:
             if self.hotkey_thread.is_alive():
-                print("Hotkey thread is already running.")
+                logger.info("Hotkey thread is already running.")
                 return
             else:
                 self.hotkey_thread = threading.Timer(
@@ -459,25 +467,25 @@ class ApplicationManager(QObject):
 
     def _handle_hotkey_release(self, hotkey_name: str) -> None:
         if self.is_hotkey_long_hold:
-            print("Hotkey long hold released.")
+            logger.info("Hotkey long hold released.")
             self.app_instance.stop_interaction()
             self._reset_hotkey_state()
         else:
             if not self.is_hotkey_tap:
-                print("First hotkey tap detected.")
+                logger.info("First hotkey tap detected.")
                 self.is_hotkey_tap = True
                 self._trigger_interaction(CommandMode.ACTION, hotkey_name)
 
             else:
-                print("Second completion hotkey tap detected.")
-                print("Stopping interaction and resetting hotkey tap state.")
+                logger.info("Second completion hotkey tap detected.")
+                logger.info("Stopping interaction and resetting hotkey tap state.")
                 self.app_instance.stop_interaction()
                 self._reset_hotkey_state()
 
     def _hold_check(self) -> None:
         is_hotkey_on = self.keyboard_manager.check_hotkey_match()
         if is_hotkey_on and not self.is_hotkey_long_hold:
-            print("Hotkey is being held down.")
+            logger.info("Hotkey is being held down.")
             self.is_hotkey_long_hold = True
             self._trigger_interaction(
                 CommandMode.DICTATION, self.keyboard_manager._hotkey_str
@@ -490,18 +498,18 @@ class ApplicationManager(QObject):
 
     def _trigger_interaction(self, command_mode: CommandMode, hotkey_name) -> None:
         timestamp = time.strftime("%H:%M:%S")
-        print(
+        logger.info(
             f"[{timestamp}] Hotkey '{hotkey_name}' detected by manager. Queuing action for background app."
         )
         try:
             self.app_instance.trigger_interaction(command_mode)
             self.status_changed.emit("Hotkey pressed, initiating command...")
         except AttributeError:
-            print(
+            logger.error(
                 f"[{timestamp}] Error: Cannot queue action, app_instance or action_queue missing."
             )
         except Exception as e:
-            print(f"[{timestamp}] Error queuing action: {e}")
+            logger.error(f"[{timestamp}] Error queuing action: {e}")
             self.error_occurred.emit(f"Error sending action to background app: {e}")
 
     def validate_settings(self, new_settings: dict[str, Any]) -> tuple[bool, str]:
@@ -581,14 +589,14 @@ class ApplicationManager(QObject):
     def close_hotkey_listener(self) -> None:
         """Call this ONCE on final shutdown to stop the listener."""
         if self.hotkey_listener:
-            print("Stopping hotkey listener (final shutdown)...")
+            logger.info("Stopping hotkey listener (final shutdown)...")
             try:
                 if self.hotkey_listener.running:
                     self.hotkey_listener.stop()
                     self.hotkey_listener.join(timeout=1.0)
-                print("Hotkey listener stopped.")
+                logger.info("Hotkey listener stopped.")
             except Exception as e:
-                print(f"Error stopping hotkey listener: {e}")
+                logger.error(f"Error stopping hotkey listener: {e}")
             self.hotkey_listener = None
             self._listener_started = False
 
@@ -603,7 +611,7 @@ class ApplicationManager(QObject):
                 except queue.Empty:
                     continue
                 except Exception as e:
-                    print(f"Status queue monitor error: {e}")
+                    logger.error(f"Status queue monitor error: {e}")
                     break
 
         t = threading.Thread(target=monitor, daemon=True, name="StatusQueueMonitor")

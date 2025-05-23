@@ -73,8 +73,6 @@ class KeyboardManager(QObject):
                     error_msg = f"Error restarting keyboard listener: {str(e)}"
                     logger.error(error_msg)
                     self.listener_status_changed.emit(False, error_msg)
-            else:
-                logger.info("Keyboard listener is running")
 
             time.sleep(1)  # Check every second
 

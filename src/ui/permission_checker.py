@@ -1,8 +1,12 @@
 import platform
 import traceback
+import logging
 
 import sounddevice as sd
 from PySide6.QtCore import QObject, Signal
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class PermissionChecker(QObject):
@@ -13,15 +17,15 @@ class PermissionChecker(QObject):
             # Just try to query the default input device - this triggers permission check
             # without actually opening a stream
             device_info = sd.query_devices(kind="input")
-            print(
+            logger.info(
                 f"Microphone permission granted - found device: {device_info['name']}"
             )
             self.permission_checked.emit("microphone", True)
         except sd.PortAudioError as e:
-            print(f"Microphone permission error: {e}")
+            logger.error(f"Microphone permission error: {e}")
             self.permission_checked.emit("microphone", False)
         except Exception as e:
-            print(f"Unexpected error checking microphone: {e}")
+            logger.error(f"Unexpected error checking microphone: {e}")
             traceback.print_exc()
             self.permission_checked.emit("microphone", False)
 
@@ -30,19 +34,19 @@ class PermissionChecker(QObject):
             try:
                 from src import platform_utils_macos
 
-                print("Checking accessibility permissions...")
+                logger.info("Checking accessibility permissions...")
                 has_permission = platform_utils_macos.check_accessibility_permission()
-                print(f"Accessibility permission check result: {has_permission}")
+                logger.info(f"Accessibility permission check result: {has_permission}")
                 self.permission_checked.emit("accessibility", has_permission)
             except ImportError as e:
-                print(f"Error importing platform_utils_macos: {e}")
+                logger.error(f"Error importing platform_utils_macos: {e}")
                 self.permission_checked.emit("accessibility", False)
             except Exception as e:
-                print(f"Error checking accessibility permission: {e}")
+                logger.error(f"Error checking accessibility permission: {e}")
                 traceback.print_exc()
                 self.permission_checked.emit("accessibility", False)
         else:
-            print("Not on macOS, assuming accessibility permissions granted")
+            logger.info("Not on macOS, assuming accessibility permissions granted")
             self.permission_checked.emit("accessibility", True)
 
     def check_input_monitoring(self):
@@ -50,19 +54,21 @@ class PermissionChecker(QObject):
             try:
                 from src import platform_utils_macos
 
-                print("Checking input monitoring permissions...")
+                logger.info("Checking input monitoring permissions...")
                 has_permission = (
                     platform_utils_macos.check_input_monitoring_permission()
                 )
-                print(f"Input monitoring permission check result: {has_permission}")
+                logger.info(
+                    f"Input monitoring permission check result: {has_permission}"
+                )
                 self.permission_checked.emit("input_monitoring", has_permission)
             except ImportError as e:
-                print(f"Error importing platform_utils_macos: {e}")
+                logger.error(f"Error importing platform_utils_macos: {e}")
                 self.permission_checked.emit("input_monitoring", False)
             except Exception as e:
-                print(f"Error checking input monitoring permission: {e}")
+                logger.error(f"Error checking input monitoring permission: {e}")
                 traceback.print_exc()
                 self.permission_checked.emit("input_monitoring", False)
         else:
-            print("Not on macOS, assuming input monitoring permissions granted")
+            logger.info("Not on macOS, assuming input monitoring permissions granted")
             self.permission_checked.emit("input_monitoring", True)

@@ -5,25 +5,29 @@ import queue
 import threading
 import time
 import traceback
-
-try:
-    import vosk
-except ImportError:
-    print("Vosk library not found. Please install it: pip install vosk")
-    print("You also need to download a Vosk model: https://alphacephei.com/vosk/models")
-    raise
-
 import logging
 
 logger = logging.getLogger("VoskProcessor")
 
+try:
+    import vosk
+except ImportError:
+    logger.error("Vosk library not found. Please install it: pip install vosk")
+    logger.error(
+        "You also need to download a Vosk model: https://alphacephei.com/vosk/models"
+    )
+    raise
+
+
 class VoskProcessor:
-    def __init__(self,
-                 model_path: str,
-                 sample_rate: int,
-                 audio_input_queue: asyncio.Queue,
-                 transcript_output_queue: asyncio.Queue,
-                 loop: asyncio.AbstractEventLoop):
+    def __init__(
+        self,
+        model_path: str,
+        sample_rate: int,
+        audio_input_queue: asyncio.Queue,
+        transcript_output_queue: asyncio.Queue,
+        loop: asyncio.AbstractEventLoop,
+    ):
         """
         Initializes the Vosk processor.
 
@@ -49,12 +53,14 @@ class VoskProcessor:
             logger.info(f"Loading Vosk model from: {model_path}")
             self._model = vosk.Model(model_path)
             self._recognizer = vosk.KaldiRecognizer(self._model, self.sample_rate)
-            self._recognizer.SetWords(True) # Enable word timestamps if needed later
-            self._recognizer.SetPartialWords(True) # Enable partial word results
+            self._recognizer.SetWords(True)  # Enable word timestamps if needed later
+            self._recognizer.SetPartialWords(True)  # Enable partial word results
             logger.info("Vosk model loaded successfully.")
         except Exception as e:
-            logger.error(f"Failed to load Vosk model from '{model_path}': {e}", exc_info=True)
-            raise # Re-raise the exception to prevent starting
+            logger.error(
+                f"Failed to load Vosk model from '{model_path}': {e}", exc_info=True
+            )
+            raise  # Re-raise the exception to prevent starting
 
     def _processing_loop(self):
         """The main loop running in the background thread."""
@@ -62,26 +68,32 @@ class VoskProcessor:
         while not self.stop_event.is_set():
             loop_start_time = time.monotonic()
             try:
-                # print("VOSK_DIAG: Attempting to get data from audio_input_queue...") # DIAGNOSTIC PRINT - Removed for clarity
+                logger.debug("Attempting to get data from audio_input_queue...")
                 get_coro_start_time = time.monotonic()
-                future = asyncio.run_coroutine_threadsafe(self.audio_input_queue.get(), self.loop)
+                future = asyncio.run_coroutine_threadsafe(
+                    self.audio_input_queue.get(), self.loop
+                )
                 wait_start_time = time.monotonic()
                 data = None
                 try:
-                     data = future.result(timeout=0.1)
+                    data = future.result(timeout=0.1)
                 except TimeoutError:
-                     continue
+                    continue
                 except Exception as e:
-                     print(f"VOSK_DIAG: Error getting data from audio queue: {e}") # Kept for critical errors
-                     time.sleep(0.1)
-                     continue
+                    logger.error(f"Error getting data from audio queue: {e}")
+                    time.sleep(0.1)
+                    continue
 
                 if data is None:
-                    logger.info("Received None (EOS) from audio queue. Finalizing recognition.")
+                    logger.info(
+                        "Received None (EOS) from audio queue. Finalizing recognition."
+                    )
                     break
 
                 if not isinstance(data, bytes):
-                    print(f"VOSK_DIAG: Received non-bytes data from queue: {type(data)}. Skipping.")
+                    logger.warning(
+                        f"Received non-bytes data from queue: {type(data)}. Skipping."
+                    )
                     continue
 
                 accept_start_time = time.monotonic()
@@ -91,15 +103,21 @@ class VoskProcessor:
                 if is_final_result_detected:
                     result_get_start_time = time.monotonic()
                     final_result_json = self._recognizer.Result()
-                    result_get_duration = (time.monotonic() - result_get_start_time) * 1000
+                    result_get_duration = (
+                        time.monotonic() - result_get_start_time
+                    ) * 1000
                     final_result = json.loads(final_result_json)
                     if final_result.get("text"):
-                        print(f"VOSK_DIAG_FINAL: Base AcceptWaveform: {accept_duration:.2f}ms, Result() call: {result_get_duration:.2f}ms. Text: '{final_result['text']}'")
+                        logger.debug(
+                            f"Base AcceptWaveform: {accept_duration:.2f}ms, Result() call: {result_get_duration:.2f}ms. Text: '{final_result['text']}'"
+                        )
                         result_data = {"text": final_result["text"], "is_final": True}
                         put_start_time = time.monotonic()
-                        asyncio.run_coroutine_threadsafe(self.transcript_output_queue.put(result_data), self.loop)
+                        asyncio.run_coroutine_threadsafe(
+                            self.transcript_output_queue.put(result_data), self.loop
+                        )
                         put_duration = (time.monotonic() - put_start_time) * 1000
-                        print(f"VOSK_DIAG_FINAL: Put transcript took {put_duration:.2f} ms.")
+                        logger.debug(f"Put transcript took {put_duration:.2f} ms.")
 
                 pass
 
@@ -110,7 +128,7 @@ class VoskProcessor:
             except Exception as e:
                 logger.error(f"Error in Vosk processing loop: {e}")
                 traceback.print_exc()
-                time.sleep(0.1) # Avoid spamming logs on continuous error
+                time.sleep(0.1)  # Avoid spamming logs on continuous error
 
         # --- Loop finished ---
         logger.info("Processing loop finished. Getting final result.")
@@ -118,16 +136,17 @@ class VoskProcessor:
             final_result_json = self._recognizer.FinalResult()
             final_result = json.loads(final_result_json)
             if final_result.get("text"):
-                 logger.info(f"Vosk Final Result (at stop): {final_result['text']}")
-                 result_data = {"text": final_result["text"], "is_final": True}
-                 # Ensure final result is sent
-                 asyncio.run_coroutine_threadsafe(self.transcript_output_queue.put(result_data), self.loop)
+                logger.info(f"Vosk Final Result (at stop): {final_result['text']}")
+                result_data = {"text": final_result["text"], "is_final": True}
+                # Ensure final result is sent
+                asyncio.run_coroutine_threadsafe(
+                    self.transcript_output_queue.put(result_data), self.loop
+                )
 
         except Exception as e:
             logger.error(f"Error getting final Vosk result: {e}")
 
         logger.info("Vosk processing thread stopped.")
-
 
     def start(self):
         """Starts the background processing thread."""
@@ -135,12 +154,16 @@ class VoskProcessor:
             logger.warning("Vosk processor thread already running.")
             return
         if self._recognizer is None:
-             logger.error("Cannot start processor: Vosk Recognizer not initialized (check model path).")
-             return
+            logger.error(
+                "Cannot start processor: Vosk Recognizer not initialized (check model path)."
+            )
+            return
 
         logger.info("Starting Vosk processor thread...")
         self.stop_event.clear()
-        self._thread = threading.Thread(target=self._processing_loop, daemon=True, name="VoskProcessorThread")
+        self._thread = threading.Thread(
+            target=self._processing_loop, daemon=True, name="VoskProcessorThread"
+        )
         self._thread.start()
 
     def stop(self):
@@ -155,13 +178,19 @@ class VoskProcessor:
         # Put None into the audio queue to unblock the .get() call in the thread
         # Needs to be done from the loop the queue belongs to
         if self.loop.is_running():
-             asyncio.run_coroutine_threadsafe(self.audio_input_queue.put(None), self.loop)
+            asyncio.run_coroutine_threadsafe(
+                self.audio_input_queue.put(None), self.loop
+            )
         else:
-             logger.warning("Asyncio loop not running, cannot signal Vosk processor queue.")
+            logger.warning(
+                "Asyncio loop not running, cannot signal Vosk processor queue."
+            )
 
         self._thread.join(timeout=5.0)
         if self._thread.is_alive():
-            logger.warning("Vosk processor thread did not stop cleanly after 5 seconds.")
+            logger.warning(
+                "Vosk processor thread did not stop cleanly after 5 seconds."
+            )
         else:
             logger.info("Vosk processor thread joined successfully.")
         self._thread = None

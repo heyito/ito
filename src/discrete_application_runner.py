@@ -4,6 +4,7 @@ import threading
 import time
 import traceback
 from typing import Optional, Dict, Any
+import logging
 
 import numpy as np
 
@@ -18,7 +19,8 @@ from src.types.modes import CommandMode
 from src.types.status_messages import StatusMessage
 from src.utils.timing import time_method
 
-from rich import print as rprint
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class DiscreteApplicationRunner(ApplicationInterface):
@@ -51,33 +53,34 @@ class DiscreteApplicationRunner(ApplicationInterface):
 
     def _print_initial_info(self):
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        print(f"\n--- Inten Tool (Discrete Command Mode) ---")
-        print(f"Timestamp: {timestamp}")
+        logger.info("\n--- Inten Tool (Discrete Command Mode) ---")
+        logger.info(f"Timestamp: {timestamp}")
         # Add platform warning if needed
-        print(
+        logger.info(
             f"ASR Source: {self.config.asr_source} ({self.config.asr_model or self.config.asr_local_model_size})"
         )
-        print(f"VAD Enabled: {self.config.vad_enabled}")
+        logger.info(f"VAD Enabled: {self.config.vad_enabled}")
         if self.config.vad_enabled:
-            print(f"  Stops after {self.config.silence_duration_ms}ms silence.")
-        print(f"\nPress '{self.config.start_recording_hotkey}' to issue command.")
-        print("Inten background process running...")
+            logger.info(f"  Stops after {self.config.silence_duration_ms}ms silence.")
+        logger.info(f"\nPress '{self.config.start_recording_hotkey}' to issue command.")
+        logger.info("Inten background process running...")
 
     @time_method
-    def trigger_interaction(self, mode: CommandMode) -> None:
-        """Queues the start action if preconditions met."""
-        timestamp = time.strftime("%H:%M:%S")
-        rprint(f"[bold green] Triggering interaction with mode: {mode}...[/bold green]")
+    def trigger_interaction(self, mode: str):
+        """Trigger an interaction with the application."""
+        logger.info(
+            f"[bold green] Triggering interaction with mode: {mode}...[/bold green]"
+        )
         if self.command_processor.is_processing:
-            print(f"[{timestamp}] Trigger ignored: Command processor busy.")
+            logger.info("Trigger ignored: Command processor busy.")
             self._update_status(StatusMessage.PROCESSING_BUSY)
             return
         if self.audio_recorder.is_recording:
-            print(f"[{timestamp}] Trigger ignored: Already recording.")
+            logger.info("Trigger ignored: Already recording.")
             self._update_status(StatusMessage.ALREADY_RECORDING)
             return
 
-        print(f"[{timestamp}] Trigger received. Queuing start action.")
+        logger.info("Trigger received. Queuing start action.")
         self._action_queue.put(ApplicationAction.START)
         self._mode = mode
         self._update_status(StatusMessage.HOTKEY_PRESSED)
@@ -87,7 +90,7 @@ class DiscreteApplicationRunner(ApplicationInterface):
 
     def run(self) -> None:
         """Main event loop processing actions."""
-        print("Discrete Runner: Starting event loop...")
+        logger.info("Discrete Runner: Starting event loop...")
         while not self._stop_event.is_set():
             try:
                 action = self._action_queue.get(timeout=0.5)
@@ -96,31 +99,33 @@ class DiscreteApplicationRunner(ApplicationInterface):
                 elif action == ApplicationAction.STOP:
                     self._handle_stop_recording()
                 else:
-                    print(f"Unknown action: {action}")
+                    logger.warning(f"Unknown action: {action}")
             except queue.Empty:
                 continue  # Check stop event
             except Exception as e:
-                print(f"Discrete Runner Error: {e}")
+                logger.error(f"Discrete Runner Error: {e}")
                 traceback.print_exc()
-        print("Discrete Runner: Event loop stopped.")
+        logger.info("Discrete Runner: Event loop stopped.")
 
     def _handle_start_recording(self):
         """Initiates context fetch and audio recording."""
         timestamp = time.strftime("%H:%M:%S")
-        print(f"[{timestamp}] Discrete Runner: Handling start action...")
+        logger.info(f"[{timestamp}] Discrete Runner: Handling start action...")
 
         # Start context fetch (non-blocking)
         self.context_manager.fetch_context_async(mode=self._mode)
 
         # Start audio recording (non-blocking), provide callback
         if not self.audio_recorder.start_recording(self._process_recorded_audio):
-            print(f"[{timestamp}] Discrete Runner: Failed to start audio recorder.")
+            logger.error(
+                f"[{timestamp}] Discrete Runner: Failed to start audio recorder."
+            )
             # Reset state? AudioRecorder might already be recording from previous failed trigger.
 
     def _handle_stop_recording(self):
         """Stops the audio recording and processes the recorded audio."""
         timestamp = time.strftime("%H:%M:%S")
-        print(f"[{timestamp}] Discrete Runner: Handling stop action...")
+        logger.info(f"[{timestamp}] Discrete Runner: Handling stop action...")
 
         # Stop audio recording
         self.audio_recorder.stop_recording()
@@ -131,44 +136,43 @@ class DiscreteApplicationRunner(ApplicationInterface):
         Executed by AudioRecorder's monitor thread.
         Handles transcription, context waiting, and command processing.
         """
-        timestamp = time.strftime("%H:%M:%S")
-        print(f"[{timestamp}] Discrete Runner: Received audio buffer from recorder.")
+        logger.info("Discrete Runner: Received audio buffer from recorder.")
 
         if not audio_buffer:
-            print(f"[{timestamp}] Discrete Runner: No audio buffer received. Aborting.")
+            logger.warning(" Discrete Runner: No audio buffer received. Aborting.")
             # Status updated by AudioRecorder
             return
 
         # --- Transcribe ---
-        print(f"[{timestamp}] Discrete Runner: Transcribing...")
+        logger.info("Discrete Runner: Transcribing...")
         self._update_status(StatusMessage.TRANSCRIBING)
         user_text_command: Optional[str] = None
         try:
             user_text_command = self.asr_handler.transcribe_audio(audio_buffer)
             if not user_text_command or not user_text_command.strip():
-                print(f"[{timestamp}] Discrete Runner: Transcription empty.")
+                logger.warning("Discrete Runner: Transcription empty.")
                 raise ValueError("Transcription empty")
-            print(f"[{timestamp}] Discrete Runner: Transcribed: '{user_text_command}'")
+            logger.info(f"Discrete Runner: Transcribed: '{user_text_command}'")
             self._update_status(
                 StatusMessage.TRANSCRIBED.format(text=user_text_command[:40])
             )
         except Exception as e:
-            print(f"[{timestamp}] Discrete Runner: ASR Error: {e}")
+            logger.error(f"Discrete Runner: ASR Error: {e}")
             traceback.print_exc()
             self._update_status(StatusMessage.ERROR.format(error=str(e)))
             return
 
         # --- Wait for Context ---
-        print(f"[{timestamp}] Discrete Runner: Waiting for context...")
+        logger.info("Discrete Runner: Waiting for context...")
         self.context_manager.wait_for_context(timeout=5.0)
         # Get the full context dict (app_name + doc_text)
         current_context_data = self.context_manager.get_current_context()
-        print(
-            f"[{timestamp}] Discrete Runner: Context ready (App: {current_context_data.get('app_name')})."
+        logger.info(
+            f"Discrete Runner: Context ready (App: {current_context_data.get('app_name')})."
         )
 
         # --- Process Command ---
-        print(f"[{timestamp}] Discrete Runner: Initiating command processing...")
+        logger.info("Discrete Runner: Initiating command processing...")
         # CommandProcessor handles the processing lock and thread internally
         self.command_processor.process_command(current_context_data, user_text_command)
 
@@ -193,7 +197,7 @@ class DiscreteApplicationRunner(ApplicationInterface):
 
     def cleanup(self) -> None:
         """Cleans up all composed components."""
-        print("Discrete Runner: Cleaning up...")
+        logger.info("Discrete Runner: Cleaning up...")
         self._stop_event.set()  # Signal event loop
 
         # Cleanup components in reasonable order
@@ -208,4 +212,4 @@ class DiscreteApplicationRunner(ApplicationInterface):
             except queue.Empty:
                 break
 
-        print("Discrete Runner: Cleanup finished.")
+        logger.info("Discrete Runner: Cleanup finished.")

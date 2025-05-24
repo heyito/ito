@@ -30,5 +30,9 @@
     </array>
     <key>com.apple.security.temporary-exception.listen-event</key>
     <true/>
+    <key>com.apple.security.app-sandbox</key>
+    <false/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
 </dict>
 </plist>

@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QColor
@@ -106,22 +107,18 @@ class ThemeManager(QObject):
 
     def get_logo_path(self):
         """
-        Returns the correct logo path for the current theme.
+        Returns the correct logo path for the current theme, compatible with PyInstaller bundles.
         """
-        base_dir = os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        )
+        def resource_path(relative_path):
+            if hasattr(sys, '_MEIPASS'):
+                return os.path.join(sys._MEIPASS, relative_path)
+            return os.path.join(os.path.abspath("."), relative_path)
+
         if self.current_theme == "light":
-            candidates = [
-                "inten-logo-dark.png",
-                os.path.join(base_dir, "inten-logo-dark.png"),
-            ]
+            logo_file = "inten-logo-dark.png"
         else:
-            candidates = [
-                "inten-logo.png",
-                os.path.join(base_dir, "inten-logo.png"),
-            ]
-        for path in candidates:
-            if os.path.exists(path):
-                return path
-        return None  # Fallback if not found
+            logo_file = "inten-logo.png"
+        path = resource_path(logo_file)
+        if os.path.exists(path):
+            return path
+        return None

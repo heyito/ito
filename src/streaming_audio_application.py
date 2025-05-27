@@ -137,7 +137,7 @@ class StreamingAudioApplication(ApplicationInterface):
         logger.info(f"Audio Sample Rate: {self.audio_handler.sample_rate}")
         logger.info(f"Audio Channels: {self.audio_handler.channels}")
         logger.info(
-            f"\nPress '{self.config.start_recording_hotkey}' to START/STOP streaming transcription."
+            f"\nPress '{self.config.dictation_hotkey}' to START/STOP streaming transcription."
         )
         logger.info("Transcripts will be printed to the console.")
         logger.info("Press Ctrl+C in the console to quit.")
@@ -206,34 +206,47 @@ class StreamingAudioApplication(ApplicationInterface):
         Args:
             key: The key object from pynput (can be Key or KeyCode).
         """
-        hotkey_str = self.config.start_recording_hotkey
-        target_key: keyboard.Key | keyboard.KeyCode | None = None
+        dictation_hotkey_str = self.config.dictation_hotkey
+        action_hotkey_str = self.config.dictation_hotkey
 
-        # Attempt to parse the hotkey string into a pynput key object
-        try:
-            # Check if it's a special key (like Key.f9, Key.ctrl_l)
-            target_key = getattr(keyboard.Key, hotkey_str)
-        except AttributeError:
-            # If not a special key, treat it as a character key
-            if len(hotkey_str) == 1:
-                target_key = keyboard.KeyCode.from_char(hotkey_str)
-            else:
-                # Handle potential complex hotkey strings if needed in the future
-                # For now, log an error if it's not a recognized special key or single char
-                if not hasattr(self, "_logged_invalid_hotkey"):  # Log only once
-                    logger.error(
-                        f"Invalid or unsupported hotkey string in config: '{hotkey_str}'. Only single characters or names from keyboard.Key (e.g., 'fn', 'ctrl_l') are currently directly supported by this check."
-                    )
-                    self._logged_invalid_hotkey = True  # Prevent log flooding
-                return
+        def hotkey_str_to_key(
+            hotkey_str: str,
+        ) -> keyboard.Key | keyboard.KeyCode | None:
+            """
+            Converts a hotkey string to a pynput Key or KeyCode object.
+            Handles special keys and single character keys.
+            """
+            try:
+                target_key = getattr(keyboard.Key, hotkey_str)
+            except AttributeError:
+                if len(hotkey_str) == 1:
+                    target_key = keyboard.KeyCode.from_char(hotkey_str)
+                else:
+                    # Handle potential complex hotkey strings if needed in the future
+                    # For now, log an error if it's not a recognized special key or single char
+                    if not hasattr(self, "_logged_invalid_hotkey"):  # Log only once
+                        logger.error(
+                            f"Invalid or unsupported hotkey string in config: '{hotkey_str}'. Only single characters or names from keyboard.Key (e.g., 'fn', 'ctrl_l') are currently directly supported by this check."
+                        )
+                        self._logged_invalid_hotkey = True  # Prevent log flooding
+                    return None
 
-        # Compare the pressed key with the target hotkey
-        if key == target_key:
-            self._trigger_start_recording(
-                hotkey_str
-            )  # Pass the string representation for logging
+            return target_key
 
-    def _trigger_start_recording(self, hotkey_name: str) -> None:
+        dictation_target_key = hotkey_str_to_key(dictation_hotkey_str)
+        action_target_key = hotkey_str_to_key(action_hotkey_str)
+
+        target_key_str_pairs = [
+            (dictation_target_key, dictation_hotkey_str),
+            (action_target_key, action_hotkey_str),
+        ]
+
+        for target_key, key_str in target_key_str_pairs:
+            if key == target_key:
+                self._trigger_start_recording(key_str)
+                break
+
+    def _trigger_start_recording(self, hotkey_str: str) -> None:
         """
         Checks application state and queues the start recording action.
         This method is called from the keyboard listener thread, so it
@@ -246,7 +259,7 @@ class StreamingAudioApplication(ApplicationInterface):
         # Prevent queuing multiple start actions if already busy
 
         logger.info(
-            f"[{timestamp}] Hotkey '{hotkey_name}' detected. Queuing context check & start command."
+            f"[{timestamp}] Hotkey '{hotkey_str}' detected. Queuing context check & start command."
         )
         self.action_queue.put(_ACTION_TOGGLE_STREAMING)  # Signal the main loop
 
@@ -526,7 +539,7 @@ class StreamingAudioApplication(ApplicationInterface):
         logger.info(f"[{timestamp}] Transcript consumer task started.")
 
         logger.info(
-            f"[{timestamp}] Streaming started. Press '{self.config.start_recording_hotkey}' again to stop."
+            f"[{timestamp}] Streaming started. Release '{self.config.dictation_hotkey}' again to stop."
         )
 
     def _stop_streaming_process(self) -> None:

@@ -40,3 +40,6 @@ swift:
 
 clean:
 	rm -rf context-*
+
+start:
+	python -m src.main

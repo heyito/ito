@@ -2,12 +2,9 @@ import logging
 import sys
 
 from PySide6.QtCore import QPoint, QSettings, Qt, QTimer
-from PySide6.QtWidgets import (
-    QApplication,
-    QLabel,
-    QMainWindow,
-)
+from PySide6.QtWidgets import QApplication, QLabel, QMainWindow
 
+from src.types.modes import CommandMode
 from src.ui.components.inten_layout import IntenLayout
 from src.ui.keyboard_manager import KeyboardManager
 from src.ui.permission_checker import PermissionChecker
@@ -329,11 +326,13 @@ class OnboardingWindow(QMainWindow):
     def complete_keyboard_setup(self):
         if self.keyboard_setup_screen.current_hotkey:
             self.settings.setValue(
-                "Hotkeys/start_recording_hotkey",
+                "Hotkeys/dictation_hotkey",
                 self.keyboard_setup_screen.current_hotkey,
             )
             self.settings.sync()
-            self.keyboard_manager.set_hotkey(self.keyboard_setup_screen.current_hotkey)
+            self.keyboard_manager.set_hotkeys(
+                {CommandMode.DICTATION: self.keyboard_setup_screen.current_hotkey},
+            )
             self.keyboard_setup_screen.cleanup()
             self.show_completion_screen()
 

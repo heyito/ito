@@ -116,9 +116,8 @@ class AppConfig:
 
         # Hotkey settings
         hotkeys_section = config_dict.get("Hotkeys", {})
-        self.start_recording_hotkey: str = hotkeys_section.get(
-            "start_recording_hotkey", "fn"
-        )
+        self.dictation_hotkey: str = hotkeys_section.get("dictation_hotkey", "fn")
+        self.action_hotkey: str = hotkeys_section.get("action_hotkey", "f10")
 
         # Vosk settings (expected if streaming_mode is true)
         vosk_section = config_dict.get("Vosk", {})

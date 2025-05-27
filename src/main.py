@@ -6,13 +6,9 @@ import platform
 import signal
 import sys
 import traceback
-import threading
-import logging as minimal_logging
 
 import sounddevice as sd
 from PySide6.QtWidgets import QApplication
-from pynput.keyboard import Listener as MinimalListener
-
 
 from src.ui.keyboard_manager import KeyboardManager
 from src.ui.onboarding import OnboardingWindow

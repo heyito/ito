@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-lint
+        name: Ruff Lint
+        entry: poetry run ruff check .
+        language: system
+        types: [python]

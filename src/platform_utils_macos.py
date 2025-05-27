@@ -1,4 +1,5 @@
 # src/platform_utils_macos.py
+import ctypes
 import json
 import logging
 import os
@@ -10,10 +11,9 @@ import sys
 import time
 import uuid
 from pathlib import Path
-import logging
-import ctypes
+
 import objc
-from Foundation import NSDictionary, NSBundle
+from Foundation import NSBundle, NSDictionary
 
 # Configure logging
 logger = logging.getLogger(__name__)

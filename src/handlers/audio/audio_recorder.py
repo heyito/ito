@@ -2,7 +2,6 @@
 import logging
 import queue
 import threading
-import time
 import traceback
 from typing import Any
 
@@ -134,7 +133,7 @@ class AudioRecorder:
             try:
                 logger.info("AudioRecorder Monitor: Triggering processing callback.")
                 callback_to_call(audio_buffer)
-            except Exception as e:
+            except Exception:
                 logger.error("AudioRecorder Monitor: Error in processing callback: {e}")
                 traceback.print_exc()
         else:

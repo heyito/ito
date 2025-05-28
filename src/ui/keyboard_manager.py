@@ -94,12 +94,12 @@ class KeyboardManager(QObject):
         """Check for events from the keyboard listener process"""
         try:
             # Check status queue
-            while not self._status_queue.empty():
+            while self._status_queue and not self._status_queue.empty():
                 status, message = self._status_queue.get_nowait()
                 self.listener_status_changed.emit(status, message)
 
             # Check event queue
-            while not self._event_queue.empty():
+            while self._event_queue and not self._event_queue.empty():
                 event_type, key = self._event_queue.get_nowait()
                 if event_type == "press":
                     self._on_press(key)
@@ -196,12 +196,14 @@ class KeyboardManager(QObject):
         try:
             # Add the key object directly to the set
             self.pressed_keys.add(key)
+            # logger.info(f"Key pressed: {key}, {self.pressed_keys}, {self._hotkey_strs}")
 
             # Check if we have a hotkey match
             mode_match = self.check_hotkey_match()
 
             # If we have a match and weren't previously pressed, emit the signal
             if mode_match and not self._was_hotkey_pressed:
+                logger.info(f"Hotkey pressed: {mode_match}")
                 self._was_hotkey_pressed = True
                 self._active_mode = mode_match
                 self.hotkey_pressed.emit(mode_match)
@@ -218,6 +220,9 @@ class KeyboardManager(QObject):
         Handles special case for key 63 (Fn on macOS).
         """
         try:
+            # logger.info(
+            #     f"Key released: {key}, {self.pressed_keys}, {self._hotkey_strs}"
+            # )
             # Special handling for Fn key (keycode 63)
             if hasattr(key, "vk") and key.vk == 63:
                 if key not in self.pressed_keys:
@@ -228,6 +233,7 @@ class KeyboardManager(QObject):
                     if mode_match and not self._was_hotkey_pressed:
                         self._was_hotkey_pressed = True
                         self.hotkey_pressed.emit(mode_match)
+                        logger.info(f"Hotkey released: {mode_match}")
                     return
                 else:
                     # Second release event: treat as release

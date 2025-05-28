@@ -13,10 +13,13 @@ info_plist_dict = {
     'CFBundlePackageType': 'APPL',
     
     # Prevent app nap
-    'LSApplicationCategoryType': 'public.app-category.productivity',
+    'LSApplicationCategoryType': 'public.app-category.utilities',
     'NSAppTransportSecurity': {
         'NSAllowsArbitraryLoads': True
     },
+    'NSSupportsAutomaticTermination': 'false',
+    'NSSupportsSuddenTermination': 'false',
+    'NSAppSleepDisabled': True,
 
     # Privacy Usage Descriptions - CRITICAL for macOS privacy prompts
     'NSMicrophoneUsageDescription': 'Inten needs access to your microphone to record and process voice commands.',

@@ -76,6 +76,8 @@ class KeyboardListenerProcess(Process):
     def _on_press(self, key):
         """Handle key press events in the process"""
         try:
+            # logger.info(f"Key pressed: {key}")
+            # Forward the raw key press event
             self.event_queue.put(("press", key))
         except Exception as e:
             logger.error(f"Error in _on_press: {e}")
@@ -83,6 +85,8 @@ class KeyboardListenerProcess(Process):
     def _on_release(self, key):
         """Handle key release events in the process"""
         try:
+            # logger.info(f"Key released: {key}")
+            # Forward the raw key release event
             self.event_queue.put(("release", key))
         except Exception as e:
             logger.error(f"Error in _on_release: {e}")

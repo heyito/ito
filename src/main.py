@@ -12,6 +12,7 @@ import sounddevice as sd
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
+from src.application_manager import ApplicationManager
 from src.ui.keyboard_listener import KeyboardListenerProcess
 from src.ui.keyboard_manager import KeyboardManager
 from src.ui.onboarding import OnboardingWindow
@@ -434,6 +435,11 @@ if __name__ == "__main__":
         else:
             logger.error("Failed to initialize keyboard manager")
         logger.debug("Debug test message after keyboard initialization")
+
+        # Initialize ApplicationManager
+        app_manager = ApplicationManager(
+            OnboardingWindow.ORGANIZATION_NAME, OnboardingWindow.APPLICATION_NAME
+        )
 
         # Create and show the OnboardingWindow
         logger.info("Creating onboarding window...")

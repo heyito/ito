@@ -200,9 +200,7 @@ class Home(QMainWindow):
         self.save_settings_timer.timeout.connect(self._save_settings_impl)
 
         # Initialize ApplicationManager
-        self.app_manager = ApplicationManager(
-            OnboardingWindow.ORGANIZATION_NAME, OnboardingWindow.APPLICATION_NAME
-        )
+        self.app_manager = ApplicationManager.instance()
 
         # Connect signals
         self.app_manager.error_occurred.connect(self.handle_error)
@@ -759,15 +757,6 @@ class Home(QMainWindow):
         menu_container_layout.addWidget(menu_panel)
         main_layout.addWidget(menu_container)
         main_layout.addWidget(content_widget)
-
-        # Start application if settings are valid
-        current_settings = self.app_manager.load_settings()
-        if current_settings:  # Only validate if we have settings
-            is_valid, error_msg = self.app_manager.validate_settings(current_settings)
-            if is_valid:
-                self.app_manager.start_application()
-            else:
-                self.handle_error(error_msg)
 
         # --- Unified Global Styles for Home Window ---
         self.setStyleSheet(

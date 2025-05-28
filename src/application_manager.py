@@ -19,18 +19,11 @@ from src.ui.status_window import StatusWindow
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# --- Add pynput imports ---
-try:
-    from pynput import keyboard
-
-    _pynput_available = True
-except ImportError:
-    _pynput_available = False
-    keyboard = None  # Define to avoid NameError later
-# --- End Add pynput imports ---
-
 
 class ApplicationManager(QObject):
+    # Singleton instance
+    _instance = None
+
     # Signals for UI updates
     error_occurred = Signal(str)  # Emits error messages
     status_changed = Signal(str)  # Emits status updates
@@ -39,8 +32,19 @@ class ApplicationManager(QObject):
         str
     )  # NEW: Signal when hotkey is pressed, passes key string
 
+    @classmethod
+    def instance(cls):
+        if cls._instance is None:
+            raise Exception("ApplicationManager has not been initialized.")
+        return cls._instance
+
     def __init__(self, organization_name: str, application_name: str):
+        if ApplicationManager._instance is not None:
+            raise Exception(
+                "ApplicationManager is a singleton! Use ApplicationManager.instance()"
+            )
         super().__init__()
+        ApplicationManager._instance = self
         self.organization_name = organization_name
         self.application_name = application_name
         self.settings = QSettings(organization_name, application_name)
@@ -241,10 +245,6 @@ class ApplicationManager(QObject):
     def start_application(self) -> bool:
         """Start the application background thread and the hotkey listener."""
         logger.info("Starting application...")
-        if not _pynput_available:
-            self.error_occurred.emit("Pynput library not found. Hotkeys disabled.")
-            self.status_changed.emit(StatusMessage.ERROR.value)
-            return False
 
         # Prevent double-start
         if self.app_thread and self.app_thread.is_alive():

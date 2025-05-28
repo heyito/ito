@@ -2035,6 +2035,7 @@ class Home(QMainWindow):
                 self.recording_qline_edit.setText("")
 
     def start_hotkey_recording(self, start_button, stop_button, q_line_edit):
+        self.keyboard_manager.pause_hotkey_triggers()
         self.recording_qline_edit = q_line_edit
         start_button.setVisible(False)
         stop_button.setVisible(True)
@@ -2064,6 +2065,8 @@ class Home(QMainWindow):
         for button in self._all_start_recording_buttons:
             if button != start_button:
                 button.setEnabled(True)
+
+        self.keyboard_manager.resume_hotkey_triggers()
 
 
 def set_widget_hidden_but_take_space(widget: QWidget, hidden: bool):

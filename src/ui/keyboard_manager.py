@@ -46,15 +46,16 @@ class KeyboardManager(QObject):
         self._is_macos = False
         self._process_timer = None
         self.pressed_keys = set()
+        self._is_hotkey_paused = False
 
-    def check_hotkey_match(self) -> bool:
+    def check_hotkey_match(self) -> CommandMode | None:
         """
         Check if the currently pressed keys match the target hotkey.
         Returns the command mode of the hotkey if matched,
         otherwise returns None.
         """
-        if not self._target_hotkeys:
-            return False
+        if not self._target_hotkeys or self._is_hotkey_paused:
+            return None
 
         # Get symbols for currently pressed keys
         current_keys = set(self.get_pressed_keys())
@@ -89,6 +90,14 @@ class KeyboardManager(QObject):
             logger.error(traceback.format_exc())
             self.listener_status_changed.emit(False, error_msg)
             return False
+
+    def pause_hotkey_triggers(self):
+        """Pause the keyboard listener. This will stop processing events."""
+        self._is_hotkey_paused = True
+
+    def resume_hotkey_triggers(self):
+        """Resume the keyboard listener. This will start processing events again."""
+        self._is_hotkey_paused = False
 
     def _check_process_events(self):
         """Check for events from the keyboard listener process"""

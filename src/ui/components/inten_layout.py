@@ -207,21 +207,8 @@ class IntenLayout(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
         self._effective_top_margin = 40
-        self._close_button = None
-        self._close_callback = close_callback
-        self._show_close_button = show_close_button
         self._mac_titlebar_offset = 0
-
-        # --- Custom drag area for macOS (top 40px, full width) ---
-        if sys.platform == "darwin":
-            drag_area = MacDragArea(self)
-            drag_area.setFixedHeight(40)
-            drag_area.setMinimumWidth(1)
-            drag_area.setStyleSheet("background: transparent;")
-            drag_area.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
-            drag_area.setCursor(Qt.CursorShape.ArrowCursor)
-            self.layout.addWidget(drag_area)
-            # No children in drag_area, so native drag works
+        # No custom drag area or header; UI starts below native title bar
 
         # macOS titlebar offset logic
         if sys.platform == "darwin":
@@ -242,8 +229,6 @@ class IntenLayout(QWidget):
             except Exception:
                 self._mac_titlebar_offset = 0
         self._effective_top_margin = 40 + self._mac_titlebar_offset
-        if show_close_button:
-            self._add_close_button()
         self.setStyleSheet(self._generate_stylesheet())
 
     def _update_theme(self):
@@ -319,47 +304,6 @@ class IntenLayout(QWidget):
                 margin-left: 16px;
             }}
         """
-
-    def _add_close_button(self):
-        close_button_container = QWidget(self)
-        close_button_container.setGeometry(0, 0, 32, 32)
-        close_button_container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        close_button_layout = QHBoxLayout(close_button_container)
-        close_button_layout.setContentsMargins(12, 10, 0, 0)
-        close_button_layout.setSpacing(0)
-        close_button = QPushButton("")
-        close_button.setFixedSize(16, 16)
-
-        # Use error color from theme for close button
-        error_color = self.theme_manager.get_color("error")
-        error_color_hover = self.theme_manager.get_color("error_hover")
-
-        close_button.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {error_color};
-                border: none;
-                border-radius: 8px;
-            }}
-            QPushButton:hover {{
-                background-color: {error_color_hover};
-            }}
-        """)
-
-        close_button.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
-        if self._close_callback:
-            close_button.clicked.connect(self._close_callback)
-        else:
-            close_button.clicked.connect(self._default_close)
-        close_button_layout.addWidget(
-            close_button, alignment=Qt.AlignmentFlag.AlignLeft
-        )
-        close_button_container.raise_()
-        self._close_button = close_button
-
-    def _default_close(self):
-        # Try to close the parent window
-        if self.parent() and hasattr(self.parent(), "close"):
-            self.parent().close()
 
     def get_effective_top_margin(self):
         return self._effective_top_margin

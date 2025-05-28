@@ -190,8 +190,9 @@ class Home(QMainWindow):
         self.theme_manager.theme_changed.connect(self.update_styles)
         self.keyboard_manager = KeyboardManager.instance()
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setWindowFlags(self.windowFlags() | Qt.WindowType.FramelessWindowHint)
-        self.setWindowTitle("Inten")
+        # Remove FramelessWindowHint to restore native title bar
+        # self.setWindowFlags(self.windowFlags() | Qt.WindowType.FramelessWindowHint)
+        self.setWindowTitle("")
         self.setMinimumWidth(900)
         self.setMinimumHeight(600)
 

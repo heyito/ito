@@ -14,7 +14,6 @@ class StatusMessage(Enum):
     SETTINGS_SAVED = "Settings saved."
     SETTINGS_SAVED_RESTARTING = "Settings saved. Restarting application..."
     HOTKEY_IGNORED = "Hotkey ignored: Application not running."
-    HOTKEY_PRESSED = "Hotkey pressed, initiating command..."
     PROCESSING_BUSY = "Processing busy, please wait..."
     ALREADY_RECORDING = "Already recording..."
     LISTENING = "Listening for hotkey '{hotkey}'..."

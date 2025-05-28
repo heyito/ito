@@ -56,7 +56,9 @@ class ApplicationManager(QObject):
         self.keyboard_manager.hotkey_pressed.connect(self._handle_hotkey_press)
         self.keyboard_manager.hotkey_released.connect(self._handle_hotkey_release)
 
-        # self.hold_threshold = 0.5  # seconds, TODO: add to user config
+        # If wanting to add long hold vs tap back refer to
+        # https://github.com/demox-labs/inten/pull/9
+        # self.hold_threshold = 0.5
         # self.hotkey_thread = threading.Timer(self.hold_threshold, self._hold_check)
         # self.hotkey_thread_lock = threading.Lock()
         # self.is_hotkey_long_hold = False
@@ -178,9 +180,8 @@ class ApplicationManager(QObject):
 
         # Hotkey settings
         config["Hotkeys"] = {
-            "start_recording_hotkey": self.settings.value(
-                "Hotkeys/start_recording_hotkey", "fn"
-            )
+            "dictation_hotkey": self.settings.value("Hotkeys/dictation_hotkey", "fn"),
+            "action_hotkey": self.settings.value("Hotkeys/action_hotkey", "f10"),
         }
 
         config["Mode"] = {
@@ -190,7 +191,12 @@ class ApplicationManager(QObject):
         }
 
         # Set the hotkey in the keyboard manager
-        self.keyboard_manager.set_hotkey(config["Hotkeys"]["start_recording_hotkey"])
+        self.keyboard_manager.set_hotkeys(
+            {
+                CommandMode.DICTATION: config["Hotkeys"]["dictation_hotkey"],
+                CommandMode.ACTION: config["Hotkeys"]["action_hotkey"],
+            }
+        )
 
         return config
 
@@ -206,9 +212,16 @@ class ApplicationManager(QObject):
             self.settings_changed.emit()
 
             # Update hotkey if changed
-            new_hotkey = new_settings.get("Hotkeys", {}).get("start_recording_hotkey")
-            if new_hotkey:
-                self.keyboard_manager.set_hotkey(new_hotkey)
+            new_dictation_hotkey = new_settings.get("Hotkeys", {}).get(
+                "dictation_hotkey"
+            )
+            new_action_hotkey = new_settings.get("Hotkeys", {}).get("action_hotkey")
+            self.keyboard_manager.set_hotkeys(
+                {
+                    CommandMode.ACTION: new_action_hotkey,
+                    CommandMode.DICTATION: new_dictation_hotkey,
+                }
+            )
 
             # If application is running, restart it to apply new settings
             if self.app_thread and self.app_thread.is_alive():
@@ -250,8 +263,8 @@ class ApplicationManager(QObject):
                 self.error_occurred.emit(f"Invalid settings, cannot start: {error_msg}")
                 return False
 
-            # Check if keyboard manager has a valid hotkey
-            if not self.keyboard_manager._target_hotkey:
+            # Check if keyboard manager has valid hotkeys
+            if not self.keyboard_manager._target_hotkeys:
                 self.error_occurred.emit(
                     "Invalid or unsupported hotkey. Cannot start listener."
                 )
@@ -413,7 +426,7 @@ class ApplicationManager(QObject):
             # Clear the instance reference from the manager when the thread truly exits
             self.app_instance = None
 
-    def _handle_hotkey_press(self, hotkey_name: str) -> None:
+    def _handle_hotkey_press(self, command_mode: CommandMode) -> None:
         """
         Handles the hotkey_pressed signal. Runs on the main Qt thread.
         Checks application state and queues the start recording action
@@ -426,30 +439,17 @@ class ApplicationManager(QObject):
         )
         if not self.app_instance or not self.app_thread:
             logger.info(
-                f"[{timestamp}] Hotkey '{hotkey_name}' detected, but application is not running."
+                f"[{timestamp}] Hotkey Mode '{command_mode}' detected, but application is not running."
             )
             self.status_changed.emit(StatusMessage.HOTKEY_IGNORED.value)
             return
+        self._trigger_interaction(
+            command_mode,
+        )
 
-        # with self.hotkey_thread_lock:
-        #     if self.hotkey_thread.is_alive():
-        #         logger.info("Hotkey thread is already running.")
-        #         return
-        #     else:
-        self._trigger_interaction(CommandMode.DICTATION, hotkey_name)
+        self._trigger_interaction(CommandMode.DICTATION)
 
     def _handle_hotkey_release(self, hotkey_name: str) -> None:
-        # if self.is_hotkey_long_hold:
-        #     logger.info("Hotkey long hold released.")
-        #     self.app_instance.stop_interaction()
-        #     self._reset_hotkey_state()
-        # else:
-        #     if not self.is_hotkey_tap:
-        #         logger.info("First hotkey tap detected.")
-        #         self.is_hotkey_tap = True
-        #         self._trigger_interaction(CommandMode.ACTION, hotkey_name)
-
-        #     else:
         logger.info("Second completion hotkey tap detected.")
         logger.info("Stopping interaction and resetting hotkey tap state.")
         if not self.app_instance:
@@ -457,29 +457,13 @@ class ApplicationManager(QObject):
             return
 
         self.app_instance.stop_interaction()
-        # self._reset_hotkey_state()
 
-    def _hold_check(self) -> None:
-        is_hotkey_on = self.keyboard_manager.check_hotkey_match()
-        if is_hotkey_on and not self.is_hotkey_long_hold:
-            logger.info("Hotkey is being held down.")
-            self.is_hotkey_long_hold = True
-            self._trigger_interaction(
-                CommandMode.DICTATION, self.keyboard_manager._hotkey_str
-            )
-
-    # def _reset_hotkey_state(self) -> None:
-    #     self.hotkey_thread.cancel()
-    #     self.is_hotkey_long_hold = False
-    #     self.is_hotkey_tap = False
-
-    def _trigger_interaction(self, command_mode: CommandMode, hotkey_name) -> None:
+    def _trigger_interaction(self, command_mode: CommandMode) -> None:
         logger.info(
-            f"Hotkey '{hotkey_name}' detected by manager. Queuing action for background app."
+            f"Hotkey Mode '{command_mode}' detected by manager. Queuing action for background app."
         )
         try:
             self.app_instance.trigger_interaction(command_mode)
-            self.status_changed.emit("Hotkey pressed, initiating command...")
         except AttributeError:
             logger.error(
                 "Error: Cannot queue action, app_instance or action_queue missing."
@@ -551,9 +535,10 @@ class ApplicationManager(QObject):
                 return False, "Invalid number of channels"
 
             # Check Hotkey settings
-            hotkey = new_settings.get("Hotkeys", {}).get("start_recording_hotkey")
-            if not hotkey:
-                return False, "Start Recording Hotkey cannot be empty."
+            dictation_hotkey = new_settings.get("Hotkeys", {}).get("dictation_hotkey")
+            action_hotkey = new_settings.get("Hotkeys", {}).get("action_hotkey")
+            if not dictation_hotkey or not action_hotkey:
+                return False, "Hotkeys cannot be empty."
 
             return True, ""
 

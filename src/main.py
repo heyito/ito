@@ -9,7 +9,6 @@ import traceback
 
 import appnope
 import sounddevice as sd
-from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 

@@ -23,7 +23,7 @@ torchaudio = "2.6.0"
 PyYAML = "6.0.2"
 psutil = "7.0.0"
 coloredlogs = "15.0.1"
-pyobjc = "*"
+pyobjc-core = { version = "*", markers = "sys_platform == 'darwin'" }
 rubicon-objc = "*"
 py2app = "*"
 setuptools = "*"

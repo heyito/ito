@@ -72,7 +72,7 @@ class AudioSourceHandler(AudioSourceInterface):
         else:
             logger.info("VAD disabled. Listening for hotkey release.")
 
-            def _handle_hotkey_release(hotkey_str: str) -> None:
+            def _handle_hotkey_release(_: str) -> None:
                 if not vad_enabled:
                     logger.info("VAD disabled. Listening for hotkey release.")
                     stop_event.set()
@@ -248,7 +248,7 @@ class AudioSourceHandler(AudioSourceInterface):
         if not vad_enabled:
             logger.info("VAD disabled. Listening for hotkey release.")
 
-            def _handle_hotkey_release(hotkey_str: str) -> None:
+            def _handle_hotkey_release(_: str) -> None:
                 if not vad_enabled:
                     logger.info(
                         "VAD disabled for streaming mode. Listening for hotkey release."

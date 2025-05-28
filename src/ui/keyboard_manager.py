@@ -4,6 +4,8 @@ import traceback
 from pynput import keyboard
 from PySide6.QtCore import QObject, QTimer, Signal
 
+from src.types.modes import CommandMode
+
 # Configure logger
 logger = logging.getLogger(__name__)
 
@@ -13,9 +15,9 @@ class KeyboardManager(QObject):
     _instance = None
 
     # Signal when hotkey is pressed
-    hotkey_pressed = Signal(str)
+    hotkey_pressed = Signal(CommandMode)
     # Signal when hotkey is released
-    hotkey_released = Signal(str)
+    hotkey_released = Signal(CommandMode)
     # Signal when listener status changes
     listener_status_changed = Signal(bool, str)
 
@@ -33,16 +35,42 @@ class KeyboardManager(QObject):
         super().__init__()
         self._event_queue = None
         self._status_queue = None
-        self._target_hotkey = None
-        self._hotkey_str = None
+        self._listener: keyboard.Listener | None = None
+        self._target_hotkeys: dict[CommandMode, set] = None
+        self._hotkey_strs: dict[CommandMode, str] = None
+        self._listener_thread = None
+        self._listener_started = False
+        self._tap = None
+        self.pressed_keys = set()
         self._was_hotkey_pressed = False
         self._is_macos = False
         self._process_timer = None
         self.pressed_keys = set()
 
+    def check_hotkey_match(self) -> bool:
+        """
+        Check if the currently pressed keys match the target hotkey.
+        Returns the command mode of the hotkey if matched,
+        otherwise returns None.
+        """
+        if not self._target_hotkeys:
+            return False
+
+        # Get symbols for currently pressed keys
+        current_keys = set(self.get_pressed_keys())
+        for mode, hotkey in self._target_hotkeys.items():
+            if current_keys == hotkey:
+                return mode
+
+        return None
+
     def initialize(self, event_queue, status_queue) -> bool:
-        """Initialize the keyboard manager with queues from the keyboard listener process"""
-        logger.info("Initializing keyboard manager")
+        logger.info("Initializing keyboard listener")
+        """Initialize the keyboard listener once. This should only be called once when the application starts."""
+        if self._listener_started:
+            logger.info("Keyboard listener already initialized")
+            return True
+
         try:
             self._event_queue = event_queue
             self._status_queue = status_queue
@@ -81,19 +109,24 @@ class KeyboardManager(QObject):
         except Exception as e:
             logger.error(f"Error checking process events: {e}")
 
-    def set_hotkey(self, hotkey_str: str) -> bool:
-        """Set the target hotkey without restarting the listener.
-        hotkey_str should be in the format 'key1+key2+key3' where each key is in symbolic form.
+    def set_hotkeys(self, hotkeys: dict[CommandMode, str]) -> bool:
+        """Set the target hotkeys without restarting the listener.
+        hotkey strings should be in the format 'key1+key2+key3' where each key is in symbolic form.
         Example: '⌘+⇧+a' or 'ctrl+shift+a'
         """
         try:
-            # Store the symbolic string
-            self._hotkey_str = hotkey_str
+            # Store the symbolic strings
+            self._hotkey_strs = hotkeys
 
             # Convert to set of key symbols for comparison
-            self._target_hotkey = set(hotkey_str.split("+"))
+            target_hotkeys = {}
+            for mode, hotkey_str in hotkeys.items():
+                target_key = set(hotkey_str.split("+"))
+                target_hotkeys[mode] = target_key
+                logger.info(f"Hotkey updated to: {hotkey_str}")
 
-            logger.info(f"Hotkey updated to: {hotkey_str}")
+            self._target_hotkeys = target_hotkeys
+
             return True
 
         except Exception as e:
@@ -155,18 +188,6 @@ class KeyboardManager(QObject):
                 # pynput's default representation is often sufficient.
                 return str(key).replace("Key.", "")  # Remove 'Key.' prefix
 
-    def check_hotkey_match(self) -> bool:
-        """
-        Check if the currently pressed keys match the target hotkey.
-        Returns True if there's a match, False otherwise.
-        """
-        if not self._target_hotkey:
-            return False
-
-        # Get symbols for currently pressed keys
-        current_keys = set(self.get_pressed_keys())
-        return current_keys == self._target_hotkey
-
     def _on_press(self, key):
         """
         Callback function for key press events.
@@ -176,12 +197,14 @@ class KeyboardManager(QObject):
             # Add the key object directly to the set
             self.pressed_keys.add(key)
 
-            is_match = self.check_hotkey_match()
+            # Check if we have a hotkey match
+            mode_match = self.check_hotkey_match()
+
             # If we have a match and weren't previously pressed, emit the signal
-            if is_match and not self._was_hotkey_pressed:
-                logger.info(f"Hotkey pressed: {self._hotkey_str}")
+            if mode_match and not self._was_hotkey_pressed:
                 self._was_hotkey_pressed = True
-                self.hotkey_pressed.emit(self._hotkey_str)
+                self._active_mode = mode_match
+                self.hotkey_pressed.emit(mode_match)
 
         except Exception as e:
             error_msg = f"Error in _on_press: {str(e)}"
@@ -201,10 +224,10 @@ class KeyboardManager(QObject):
                     # First release event: treat as press
                     self.pressed_keys.add(key)
                     # Check for hotkey match after adding Fn
-                    is_match = self.check_hotkey_match()
-                    if is_match and not self._was_hotkey_pressed:
+                    mode_match = self.check_hotkey_match()
+                    if mode_match and not self._was_hotkey_pressed:
                         self._was_hotkey_pressed = True
-                        self.hotkey_pressed.emit(self._hotkey_str)
+                        self.hotkey_pressed.emit(mode_match)
                     return
                 else:
                     # Second release event: treat as release
@@ -212,16 +235,19 @@ class KeyboardManager(QObject):
                     # Check if we should emit release signal
                     if self._was_hotkey_pressed:
                         self._was_hotkey_pressed = False
-                        self.hotkey_released.emit(self._hotkey_str)
+                        self.hotkey_released.emit(self._active_mode)
+                        self._active_mode = None
                     return
 
             # Normal behavior for other keys
             if key in self.pressed_keys:
                 self.pressed_keys.remove(key)
                 # Check if we should emit release signal
-                if self._was_hotkey_pressed and not self.check_hotkey_match():
+                mode_match = self.check_hotkey_match()
+                if self._was_hotkey_pressed and not mode_match:
                     self._was_hotkey_pressed = False
-                    self.hotkey_released.emit(self._hotkey_str)
+                    self.hotkey_released.emit(self._active_mode)
+                    self._active_mode = None
 
         except KeyError:
             pass
@@ -251,8 +277,10 @@ class KeyboardManager(QObject):
 
         self._event_queue = None
         self._status_queue = None
-        self._target_hotkey = None
-        self._hotkey_str = None
+        self._listener_started = False
+        self._target_hotkeys = {}
+        self._hotkey_strs = {}
+        self._active_mode = None
         self._was_hotkey_pressed = False
         logger.info("Keyboard manager cleaned up")
         self.listener_status_changed.emit(False, "Manager cleaned up")

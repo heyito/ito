@@ -59,7 +59,7 @@ class DiscreteApplicationRunner(ApplicationInterface):
         logger.info(f"VAD Enabled: {self.config.vad_enabled}")
         if self.config.vad_enabled:
             logger.info(f"  Stops after {self.config.silence_duration_ms}ms silence.")
-        logger.info(f"\nPress '{self.config.start_recording_hotkey}' to issue command.")
+        logger.info(f"\nPress '{self.config.dictation_hotkey}' to issue command.")
         logger.info("Inten background process running...")
 
     @time_method
@@ -171,7 +171,9 @@ class DiscreteApplicationRunner(ApplicationInterface):
         # --- Process Command ---
         logger.info("Discrete Runner: Initiating command processing...")
         # CommandProcessor handles the processing lock and thread internally
-        self.command_processor.process_command(current_context_data, user_text_command)
+        self.command_processor.process_command(
+            current_context_data, user_text_command, mode=self._mode
+        )
 
     def _update_status(self, status: StatusMessage | str):
         """Update status, handling both enum values and custom messages."""

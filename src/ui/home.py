@@ -889,48 +889,108 @@ class Home(QMainWindow):
         keyboard_form_layout.addRow(output_method_container)
 
         # Hotkeys Section
-        self.start_recording_hotkey = QLineEdit()
-        self.start_recording_hotkey.setMaximumWidth(300)
-        self.set_line_edit_style(self.start_recording_hotkey)
-        self.start_recording_hotkey.setReadOnly(
+        self.dictation_hotkey = QLineEdit()
+        self.dictation_hotkey.setMaximumWidth(300)
+        self.set_line_edit_style(self.dictation_hotkey)
+        self.dictation_hotkey.setReadOnly(
             True
         )  # Make it read-only since we'll handle input differently
-        self.start_recording_hotkey.setPlaceholderText(
-            "Press and hold keys for 2 seconds to set hotkey..."
-        )
-        start_recording_hotkey_label = QLabel("Inten Hotkey")
-        self.set_label_style(start_recording_hotkey_label)
-        start_recording_hotkey_container = QWidget()
-        start_recording_hotkey_layout = QVBoxLayout(start_recording_hotkey_container)
-        start_recording_hotkey_layout.setContentsMargins(0, 0, 0, 0)
-        start_recording_hotkey_layout.setSpacing(4)
-        start_recording_hotkey_layout.addWidget(start_recording_hotkey_label)
-        start_recording_hotkey_layout.addWidget(self.start_recording_hotkey)
-        keyboard_form_layout.addRow(start_recording_hotkey_container)
+        dictation_hotkey_label = QLabel("Dictation Hotkey")
+        self.set_label_style(dictation_hotkey_label)
+        dictation_hotkey_container = QWidget()
+        dictation_hotkey_layout = QVBoxLayout(dictation_hotkey_container)
+        dictation_hotkey_layout.setContentsMargins(0, 0, 0, 0)
+        dictation_hotkey_layout.setSpacing(4)
+        dictation_hotkey_layout.addWidget(dictation_hotkey_label)
+        dictation_hotkey_layout.addWidget(self.dictation_hotkey)
+        keyboard_form_layout.addRow(dictation_hotkey_container)
 
         # Container for both start/stop buttons
-        hotkey_button_container = QWidget()
-        hotkey_button_layout = QHBoxLayout(hotkey_button_container)
-        hotkey_button_layout.setContentsMargins(0, 0, 0, 0)
-        hotkey_button_layout.setSpacing(10)
+        dictation_button_container = QWidget()
+        dictation_button_layout = QHBoxLayout(dictation_button_container)
+        dictation_button_layout.setContentsMargins(0, 0, 0, 0)
+        dictation_button_layout.setSpacing(10)
 
-        self.start_hotkey_button = QPushButton("Start Recording")
-        self.set_primary_button_style(self.start_hotkey_button)
-        self.start_hotkey_button.clicked.connect(self.start_hotkey_recording)
-        hotkey_button_layout.addWidget(self.start_hotkey_button)
+        self.start_recording_dictation = QPushButton("Start Recording")
+        self.set_primary_button_style(self.start_recording_dictation)
+        self.start_recording_dictation.clicked.connect(
+            lambda: self.start_hotkey_recording(
+                self.start_recording_dictation,
+                self.stop_recording_dictation,
+                self.dictation_hotkey,
+            )
+        )
+        dictation_button_layout.addWidget(self.start_recording_dictation)
 
-        self.stop_hotkey_button = QPushButton("Stop Recording")
-        self.set_primary_button_style(self.stop_hotkey_button)
-        self.stop_hotkey_button.setVisible(False)
-        self.stop_hotkey_button.clicked.connect(self.stop_hotkey_recording)
-        hotkey_button_layout.addWidget(self.stop_hotkey_button)
+        self.stop_recording_dictation = QPushButton("Stop Recording")
+        self.set_primary_button_style(self.stop_recording_dictation)
+        self.stop_recording_dictation.setVisible(False)
+        self.stop_recording_dictation.clicked.connect(
+            lambda: self.stop_hotkey_recording(
+                self.start_recording_dictation,
+                self.stop_recording_dictation,
+                self.dictation_hotkey,
+            )
+        )
+        dictation_button_layout.addWidget(self.stop_recording_dictation)
 
-        hotkey_button_layout.addStretch()
+        dictation_button_layout.addStretch()
 
-        keyboard_form_layout.addRow(hotkey_button_container)
+        keyboard_form_layout.addRow(dictation_button_container)
+
+        self.action_hotkey = QLineEdit()
+        self.action_hotkey.setMaximumWidth(300)
+        self.set_line_edit_style(self.action_hotkey)
+        self.action_hotkey.setReadOnly(
+            True
+        )  # Make it read-only since we'll handle input differently
+
+        action_hotkey_label = QLabel("Action Hotkey")
+        self.set_label_style(action_hotkey_label)
+        action_hotkey_container = QWidget()
+        action_hotkey_layout = QVBoxLayout(action_hotkey_container)
+        action_hotkey_layout.setContentsMargins(0, 0, 0, 0)
+        action_hotkey_layout.setSpacing(4)
+        action_hotkey_layout.addWidget(action_hotkey_label)
+        action_hotkey_layout.addWidget(self.action_hotkey)
+        keyboard_form_layout.addRow(action_hotkey_container)
+
+        # Container for both start/stop buttons
+        action_button_container = QWidget()
+        action_button_layout = QHBoxLayout(action_button_container)
+        action_button_layout.setContentsMargins(0, 0, 0, 0)
+        action_button_layout.setSpacing(10)
+
+        self.start_recording_action = QPushButton("Start Recording")
+        self.set_primary_button_style(self.start_recording_action)
+        self.start_recording_action.clicked.connect(
+            lambda: self.start_hotkey_recording(
+                self.start_recording_action,
+                self.stop_recording_action,
+                self.action_hotkey,
+            )
+        )
+        action_button_layout.addWidget(self.start_recording_action)
+
+        self.stop_recording_action = QPushButton("Stop Recording")
+        self.set_primary_button_style(self.stop_recording_action)
+        self.stop_recording_action.setVisible(False)
+        self.stop_recording_action.clicked.connect(
+            lambda: self.stop_hotkey_recording(
+                self.start_recording_action,
+                self.stop_recording_action,
+                self.action_hotkey,
+            )
+        )
+        action_button_layout.addWidget(self.stop_recording_action)
+
+        action_button_layout.addStretch()
+
+        keyboard_form_layout.addRow(action_button_container)
 
         # Add keyboard listening functionality
         self._last_pressed_keys = None
+        self.recording_qline_edit = self.dictation_hotkey
         self.keyboard_poll_timer = QTimer(self)
         self.keyboard_poll_timer.timeout.connect(self.poll_pressed_keys)
 
@@ -1052,7 +1112,8 @@ class Home(QMainWindow):
         self.output_method.selectionChanged.connect(self.save_settings)
 
         # Hotkey Settings
-        self.start_recording_hotkey.textChanged.connect(self.save_settings)
+        self.dictation_hotkey.textChanged.connect(self.save_settings)
+        self.action_hotkey.textChanged.connect(self.save_settings)
 
         # Mode Settings
         self.application_mode_selector.selectionChanged.connect(self._handle_ui_change)
@@ -1352,7 +1413,8 @@ class Home(QMainWindow):
                     "method": self.output_method.currentText(),
                 },
                 "Hotkeys": {
-                    "start_recording_hotkey": self.start_recording_hotkey.text(),
+                    "action_hotkey": self.action_hotkey.text(),
+                    "dictation_hotkey": self.dictation_hotkey.text(),
                 },
                 "Mode": {"application_mode": selected_application_mode},
             }
@@ -1432,9 +1494,9 @@ class Home(QMainWindow):
             self.output_method.setCurrentText(config["Output"]["method"])
 
             # Load Hotkey settings
-            self.start_recording_hotkey.setText(
-                config["Hotkeys"]["start_recording_hotkey"]
-            )
+            self.dictation_hotkey.setText(config["Hotkeys"]["dictation_hotkey"])
+
+            self.action_hotkey.setText(config["Hotkeys"]["action_hotkey"])
 
             # Load Mode settings
             mode_config = config.get("Mode", {})
@@ -1961,36 +2023,35 @@ class Home(QMainWindow):
         if len(key_symbols) > 0:
             if self._last_pressed_keys != key_symbols:
                 self._last_pressed_keys = key_symbols
-                self.start_recording_hotkey.setText("+".join(key_symbols))
+                self.recording_qline_edit.setText("+".join(key_symbols))
         else:
             # If no keys are pressed and we haven't locked in a combination
-            if not self.start_recording_hotkey.text():
+            if not self.recording_qline_edit.text():
                 self._last_pressed_keys = None
-                self.start_recording_hotkey.setText("")
+                self.recording_qline_edit.setText("")
 
-    def start_hotkey_recording(self):
-        self.start_hotkey_button.setVisible(False)
-        self.stop_hotkey_button.setVisible(True)
+    def start_hotkey_recording(self, start_button, stop_button, q_line_edit):
+        self.recording_qline_edit = q_line_edit
+        start_button.setVisible(False)
+        stop_button.setVisible(True)
         self.is_recording_hotkey = True
         self._last_pressed_keys = None
         self.keyboard_poll_timer.start(50)
 
-    def stop_hotkey_recording(self):
+    def stop_hotkey_recording(self, start_button, stop_button, q_line_edit):
         logger.info("Stopping hotkey recording")
         self.is_recording_hotkey = False
         self.keyboard_poll_timer.stop()
-        self.start_hotkey_button.setEnabled(True)
+        start_button.setEnabled(True)
 
         if self._last_pressed_keys:
             hotkey_str = "+".join(self._last_pressed_keys)
-            self.start_recording_hotkey.setText(hotkey_str)
-            self.start_recording_hotkey.setPlaceholderText(
-                "Press any other key to change"
-            )
+            q_line_edit.setText(hotkey_str)
+            q_line_edit.setPlaceholderText("Press any other key to change")
             # self.save_settings()  # Save the new hotkey setting
 
-        self.start_hotkey_button.setVisible(True)
-        self.stop_hotkey_button.setVisible(False)
+        start_button.setVisible(True)
+        stop_button.setVisible(False)
 
 
 def set_widget_hidden_but_take_space(widget: QWidget, hidden: bool):

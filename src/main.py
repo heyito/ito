@@ -9,7 +9,9 @@ import traceback
 
 import appnope
 import sounddevice as sd
-from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
 from src.ui.keyboard_listener import KeyboardListenerProcess
 from src.ui.keyboard_manager import KeyboardManager
@@ -378,6 +380,30 @@ if __name__ == "__main__":
         QApplication.setOrganizationName(OnboardingWindow.ORGANIZATION_NAME)
         QApplication.setApplicationName(OnboardingWindow.APPLICATION_NAME)
 
+        # Initialize theme manager
+        theme_manager = ThemeManager.instance()
+
+        # Create system tray icon
+        tray_icon = QSystemTrayIcon()
+        tray_icon.setToolTip("Inten")
+
+        # Create tray menu
+        tray_menu = QMenu()
+        quit_action = tray_menu.addAction("Quit")
+        quit_action.triggered.connect(app.quit)
+        tray_icon.setContextMenu(tray_menu)
+
+        # Set icon using theme manager
+        logo_path = theme_manager.get_logo_path()
+        if logo_path and os.path.exists(logo_path):
+            tray_icon.setIcon(QIcon(logo_path))
+        else:
+            # Use a default icon if logo is not found
+            tray_icon.setIcon(QIcon.fromTheme("application-x-executable"))
+
+        # Show the tray icon
+        tray_icon.show()
+
         # Check microphone permission before proceeding
         if not check_microphone_permission():
             logger.warning(
@@ -409,11 +435,6 @@ if __name__ == "__main__":
         else:
             logger.error("Failed to initialize keyboard manager")
         logger.debug("Debug test message after keyboard initialization")
-
-        # Initialize theme manager from the containers
-        logger.info("Initializing theme manager...")
-        theme_manager = ThemeManager.instance()
-        logger.info("Theme manager initialized")
 
         # Create and show the OnboardingWindow
         logger.info("Creating onboarding window...")

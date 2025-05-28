@@ -1,5 +1,6 @@
 import logging
 import traceback
+from datetime import datetime, timedelta
 
 from pynput import keyboard
 from PySide6.QtCore import QObject, QTimer, Signal
@@ -42,10 +43,12 @@ class KeyboardManager(QObject):
         self._listener_started = False
         self._tap = None
         self.pressed_keys = set()
+        self._key_press_times = {}  # Track when keys were pressed
         self._was_hotkey_pressed = False
         self._is_macos = False
         self._process_timer = None
-        self.pressed_keys = set()
+        self._safety_timer = None
+        self._active_mode = None
 
     def check_hotkey_match(self) -> bool:
         """
@@ -80,6 +83,11 @@ class KeyboardManager(QObject):
             self._process_timer.timeout.connect(self._check_process_events)
             self._process_timer.start(50)  # Check every 50ms
 
+            # Start a safety timer to clear stuck keys
+            self._safety_timer = QTimer()
+            self._safety_timer.timeout.connect(self._check_stuck_keys)
+            self._safety_timer.start(1000)  # Check every second
+
             logger.info("Keyboard manager initialized successfully")
             self.listener_status_changed.emit(True, "Manager initialized successfully")
             return True
@@ -108,6 +116,20 @@ class KeyboardManager(QObject):
 
         except Exception as e:
             logger.error(f"Error checking process events: {e}")
+
+    def _check_stuck_keys(self):
+        """Check for and clear any keys that have been pressed for too long"""
+        current_time = datetime.now()
+        stuck_keys = []
+
+        for key, press_time in self._key_press_times.items():
+            if current_time - press_time > timedelta(seconds=5):  # 5 second threshold
+                stuck_keys.append(key)
+                logger.warning(f"Clearing stuck key: {key}")
+
+        for key in stuck_keys:
+            self._key_press_times.pop(key, None)
+            self.pressed_keys.discard(key)
 
     def set_hotkeys(self, hotkeys: dict[CommandMode, str]) -> bool:
         """Set the target hotkeys without restarting the listener.
@@ -182,10 +204,7 @@ class KeyboardManager(QObject):
                 return "←"
             elif key == keyboard.Key.right:
                 return "→"
-            # Add more mappings for other special keys as needed
             else:
-                # For other special keys (like F1-F12, page_up, home, etc.),
-                # pynput's default representation is often sufficient.
                 return str(key).replace("Key.", "")  # Remove 'Key.' prefix
 
     def _on_press(self, key):
@@ -194,9 +213,9 @@ class KeyboardManager(QObject):
         Adds the pressed key to the set and checks for hotkey match.
         """
         try:
-            # Add the key object directly to the set
-            self.pressed_keys.add(key)
-            # logger.info(f"Key pressed: {key}, {self.pressed_keys}, {self._hotkey_strs}")
+            key_symbol = self.get_key_symbol(key)
+            self.pressed_keys.add(key_symbol)
+            self._key_press_times[key_symbol] = datetime.now()
 
             # Check if we have a hotkey match
             mode_match = self.check_hotkey_match()
@@ -220,24 +239,25 @@ class KeyboardManager(QObject):
         Handles special case for key 63 (Fn on macOS).
         """
         try:
-            # logger.info(
-            #     f"Key released: {key}, {self.pressed_keys}, {self._hotkey_strs}"
-            # )
+            key_symbol = self.get_key_symbol(key)
+
             # Special handling for Fn key (keycode 63)
-            if hasattr(key, "vk") and key.vk == 63:
-                if key not in self.pressed_keys:
+            if key_symbol == "fn":
+                if key_symbol not in self.pressed_keys:
                     # First release event: treat as press
-                    self.pressed_keys.add(key)
+                    self.pressed_keys.add(key_symbol)
+                    self._key_press_times[key_symbol] = datetime.now()
                     # Check for hotkey match after adding Fn
                     mode_match = self.check_hotkey_match()
                     if mode_match and not self._was_hotkey_pressed:
                         self._was_hotkey_pressed = True
                         self.hotkey_pressed.emit(mode_match)
-                        logger.info(f"Hotkey released: {mode_match}")
+                        logger.info(f"Hotkey pressed: {mode_match}")
                     return
                 else:
                     # Second release event: treat as release
-                    self.pressed_keys.remove(key)
+                    self.pressed_keys.discard(key_symbol)
+                    self._key_press_times.pop(key_symbol, None)
                     # Check if we should emit release signal
                     if self._was_hotkey_pressed:
                         self._was_hotkey_pressed = False
@@ -246,17 +266,19 @@ class KeyboardManager(QObject):
                     return
 
             # Normal behavior for other keys
-            if key in self.pressed_keys:
-                self.pressed_keys.remove(key)
+            else:
+                self.pressed_keys.discard(key_symbol)
+                self._key_press_times.pop(key_symbol, None)
                 # Check if we should emit release signal
                 mode_match = self.check_hotkey_match()
+                logger.info(
+                    f"Key released: {key_symbol}, {self.pressed_keys}, {self._hotkey_strs}, {self._was_hotkey_pressed}, {mode_match}"
+                )
                 if self._was_hotkey_pressed and not mode_match:
                     self._was_hotkey_pressed = False
                     self.hotkey_released.emit(self._active_mode)
                     self._active_mode = None
 
-        except KeyError:
-            pass
         except Exception as e:
             error_msg = f"Error in _on_release: {str(e)}"
             logger.error(error_msg)
@@ -268,8 +290,8 @@ class KeyboardManager(QObject):
         Returns a list of symbols for the currently pressed keys,
         up to a maximum of 3, in a consistent sorted order.
         """
-        # Convert the set of key objects to their symbols
-        key_symbols = [self.get_key_symbol(k) for k in self.pressed_keys]
+        # The pressed_keys set now contains symbols directly
+        key_symbols = list(self.pressed_keys)
         # Sort the symbols to ensure consistent order
         key_symbols.sort()
         # Return up to 3 keys
@@ -281,6 +303,10 @@ class KeyboardManager(QObject):
             self._process_timer.stop()
             self._process_timer = None
 
+        if self._safety_timer:
+            self._safety_timer.stop()
+            self._safety_timer = None
+
         self._event_queue = None
         self._status_queue = None
         self._listener_started = False
@@ -288,5 +314,7 @@ class KeyboardManager(QObject):
         self._hotkey_strs = {}
         self._active_mode = None
         self._was_hotkey_pressed = False
+        self.pressed_keys.clear()
+        self._key_press_times.clear()
         logger.info("Keyboard manager cleaned up")
         self.listener_status_changed.emit(False, "Manager cleaned up")

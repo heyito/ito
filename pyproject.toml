@@ -38,6 +38,7 @@ google-genai = "^1.14.0"
 pyside6 = "^6.9.0"
 rich = "^14.0.0"
 watchdog = "^6.0.0"
+appnope = "^0.1.4"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

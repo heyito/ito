@@ -19,6 +19,7 @@
         <string>com.apple.Terminal</string>
         <string>com.apple.systempreferences</string>
         <string>com.apple.systemevents</string>
+        <string>com.apple.systemuiserver</string>
     </array>
     <key>com.apple.security.automation.accessibility</key>
     <true/>

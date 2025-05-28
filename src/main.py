@@ -7,6 +7,7 @@ import signal
 import sys
 import traceback
 
+import appnope
 import sounddevice as sd
 from PySide6.QtWidgets import QApplication
 
@@ -103,6 +104,15 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+# Import NSProcessInfo for app nap prevention
+if platform.system() == "Darwin":
+    try:
+        from Foundation import NSProcessInfo
+    except ImportError:
+        logger.warning(
+            "Failed to import NSProcessInfo. App nap prevention will not be available."
+        )
 
 multiprocessing.freeze_support()
 
@@ -328,6 +338,17 @@ signal.signal(signal.SIGTERM, signal_handler)  # Termination signal
 
 # --- Main Execution Block ---
 if __name__ == "__main__":
+    # Prevent app nap on macOS
+    if platform.system() == "Darwin":
+        try:
+            process_info = NSProcessInfo.processInfo()
+            process_info.disableSuddenTermination()
+            process_info.disableAutomaticTermination()
+            appnope.nope()
+            logger.info("App nap prevention enabled")
+        except Exception as e:
+            logger.warning(f"Failed to prevent app nap: {e}")
+
     dev_mode = os.getenv("DEV")
     if dev_mode:
         logger.info("Dev mode enabled")

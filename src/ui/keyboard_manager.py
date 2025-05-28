@@ -173,15 +173,13 @@ class KeyboardManager(QObject):
         Adds the pressed key to the set and checks for hotkey match.
         """
         try:
-            logger.info(f"Key pressed: {key}")
             # Add the key object directly to the set
             self.pressed_keys.add(key)
 
-            # Check if we have a hotkey match
             is_match = self.check_hotkey_match()
-
             # If we have a match and weren't previously pressed, emit the signal
             if is_match and not self._was_hotkey_pressed:
+                logger.info(f"Hotkey pressed: {self._hotkey_str}")
                 self._was_hotkey_pressed = True
                 self.hotkey_pressed.emit(self._hotkey_str)
 
@@ -200,7 +198,6 @@ class KeyboardManager(QObject):
             # Special handling for Fn key (keycode 63)
             if hasattr(key, "vk") and key.vk == 63:
                 if key not in self.pressed_keys:
-                    logger.info(f"Fn key released: {key}")
                     # First release event: treat as press
                     self.pressed_keys.add(key)
                     # Check for hotkey match after adding Fn
@@ -210,7 +207,6 @@ class KeyboardManager(QObject):
                         self.hotkey_pressed.emit(self._hotkey_str)
                     return
                 else:
-                    logger.info(f"Fn key released: {key}")
                     # Second release event: treat as release
                     self.pressed_keys.remove(key)
                     # Check if we should emit release signal
@@ -221,7 +217,6 @@ class KeyboardManager(QObject):
 
             # Normal behavior for other keys
             if key in self.pressed_keys:
-                logger.info(f"Key released: {key}")
                 self.pressed_keys.remove(key)
                 # Check if we should emit release signal
                 if self._was_hotkey_pressed and not self.check_hotkey_match():

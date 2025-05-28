@@ -90,10 +90,9 @@ class AudioRecorder:
 
     def _monitor_target(self):
         """Waits for stop signal, collects audio, prepares buffer, and calls callback."""
-        timestamp = time.strftime("%H:%M:%S")
-        logger.info(f"[{timestamp}] AudioRecorder Monitor: Waiting for stop signal...")
+        logger.info("AudioRecorder Monitor: Waiting for stop signal...")
         self._stop_event.wait()  # Wait for VAD or manual stop
-        logger.info(f"[{timestamp}] AudioRecorder Monitor: Stop signal received.")
+        logger.info("AudioRecorder Monitor: Stop signal received.")
 
         callback_to_call = None
         with self._lock:
@@ -101,16 +100,14 @@ class AudioRecorder:
             callback_to_call = self._processing_callback  # Get callback under lock
 
         # --- Collect Audio ---
-        logger.info(f"[{timestamp}] AudioRecorder Monitor: Collecting chunks...")
+        logger.info("AudioRecorder Monitor: Collecting chunks...")
         chunks = []
         while not self._audio_queue.empty():
             try:
                 chunks.append(self._audio_queue.get_nowait())
             except queue.Empty:
                 break
-        logger.info(
-            f"[{timestamp}] AudioRecorder Monitor: Collected {len(chunks)} chunks."
-        )
+        logger.info(f"AudioRecorder Monitor: Collected {len(chunks)} chunks.")
 
         # --- Prepare Buffer ---
         audio_buffer: bytes | None = None
@@ -121,35 +118,27 @@ class AudioRecorder:
                 if not audio_buffer:
                     raise ValueError("Buffer creation failed.")
                 logger.info(
-                    f"[{timestamp}] AudioRecorder Monitor: Audio buffer created ({audio_buffer.__sizeof__()} bytes)."
+                    f"AudioRecorder Monitor: Audio buffer created ({audio_buffer.__sizeof__()} bytes)."
                 )
             except Exception as e:
-                logger.error(
-                    f"[{timestamp}] AudioRecorder Monitor: Error preparing buffer: {e}"
-                )
+                logger.error(f"AudioRecorder Monitor: Error preparing buffer: {e}")
                 traceback.print_exc()  # Added for more detailed error information
                 self._update_status(StatusMessage.ERROR_RECORDING.value)
                 audio_buffer = None  # Ensure it's None on error
         else:
-            logger.info(f"[{timestamp}] AudioRecorder Monitor: No audio collected.")
+            logger.info("AudioRecorder Monitor: No audio collected.")
             self._update_status(StatusMessage.READY.value)
 
         # --- Trigger Callback ---
         if callback_to_call:
             try:
-                logger.info(
-                    f"[{timestamp}] AudioRecorder Monitor: Triggering processing callback."
-                )
+                logger.info("AudioRecorder Monitor: Triggering processing callback.")
                 callback_to_call(audio_buffer)
             except Exception as e:
-                logger.error(
-                    f"[{timestamp}] AudioRecorder Monitor: Error in processing callback: {e}"
-                )
+                logger.error("AudioRecorder Monitor: Error in processing callback: {e}")
                 traceback.print_exc()
         else:
-            logger.info(
-                f"[{timestamp}] AudioRecorder Monitor: No processing callback set."
-            )
+            logger.info("AudioRecorder Monitor: No processing callback set.")
 
     def stop_recording(self):
         """Manually stops the recording."""

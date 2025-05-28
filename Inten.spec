@@ -11,6 +11,12 @@ info_plist_dict = {
     'CFBundleIdentifier': 'ai.inten.inten', # This should match bundle_identifier in BUNDLE
     'CFBundleName': 'Inten',
     'CFBundlePackageType': 'APPL',
+    
+    # Prevent app nap
+    'LSApplicationCategoryType': 'public.app-category.productivity',
+    'NSAppTransportSecurity': {
+        'NSAllowsArbitraryLoads': True
+    },
 
     # Privacy Usage Descriptions - CRITICAL for macOS privacy prompts
     'NSMicrophoneUsageDescription': 'Inten needs access to your microphone to record and process voice commands.',

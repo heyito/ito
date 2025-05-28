@@ -1,5 +1,6 @@
 import logging
 import traceback
+import sys
 
 from PySide6.QtCore import QPointF, QSettings, Qt, QTimer
 from PySide6.QtGui import QPixmap
@@ -193,6 +194,20 @@ class Home(QMainWindow):
         self.setWindowTitle("Inten")
         self.setMinimumWidth(900)
         self.setMinimumHeight(600)
+
+        # Enable native window dragging on macOS
+        if sys.platform == "darwin":
+            try:
+                import objc
+                from ctypes import c_void_p
+                from AppKit import NSWindow
+                win = self.winId()
+                ns_view = objc.objc_object(c_void_p(int(win)))
+                ns_window = ns_view.window()
+                if ns_window:
+                    ns_window.setMovableByWindowBackground_(True)
+            except Exception as e:
+                logger.warning(f"Failed to enable native window dragging: {e}")
 
         # Add debounce timer for settings
         self.save_settings_timer = QTimer()

@@ -165,6 +165,28 @@ def MacBlur(
         )
 
 
+# --- Mac-specific drag area for native window dragging ---
+if sys.platform == "darwin":
+    from PySide6.QtWidgets import QWidget
+    class MacDragArea(QWidget):
+        def mousePressEvent(self, event):
+            try:
+                import objc
+                from ctypes import c_void_p
+                from AppKit import NSApp
+                win = self.window().winId()
+                ns_view = objc.objc_object(c_void_p(int(win)))
+                ns_window = ns_view.window()
+                if ns_window:
+                    # Convert Qt event to NSEvent
+                    # Use the current event from NSApp
+                    nsevent = NSApp.currentEvent()
+                    ns_window.performWindowDragWithEvent_(nsevent)
+            except Exception as e:
+                logger.warning(f"Failed to perform native window drag: {e}")
+            super().mousePressEvent(event)
+
+
 class IntenLayout(QWidget):
     def __init__(
         self,
@@ -190,9 +212,16 @@ class IntenLayout(QWidget):
         self._show_close_button = show_close_button
         self._mac_titlebar_offset = 0
 
-        # Initialize dragging variables
-        self._dragging = False
-        self._drag_start_position = QPoint()
+        # --- Custom drag area for macOS (top 40px, full width) ---
+        if sys.platform == "darwin":
+            drag_area = MacDragArea(self)
+            drag_area.setFixedHeight(40)
+            drag_area.setMinimumWidth(1)
+            drag_area.setStyleSheet("background: transparent;")
+            drag_area.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
+            drag_area.setCursor(Qt.CursorShape.ArrowCursor)
+            self.layout.addWidget(drag_area)
+            # No children in drag_area, so native drag works
 
         # macOS titlebar offset logic
         if sys.platform == "darwin":
@@ -363,28 +392,3 @@ class IntenLayout(QWidget):
 
     def _make_background_color(self, rect):
         return self.theme_manager.get_qcolor("background")
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            if event.position().y() < self._effective_top_margin:
-                self._dragging = True
-                self._drag_start_position = event.globalPosition()
-                event.accept()
-                return
-        super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event):
-        if self._dragging and event.buttons() & Qt.MouseButton.LeftButton:
-            delta = event.globalPosition() - self._drag_start_position
-            self.window().move(self.window().pos() + delta.toPoint())
-            self._drag_start_position = event.globalPosition()
-            event.accept()
-            return
-        super().mouseMoveEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._dragging = False
-            event.accept()
-            return
-        super().mouseReleaseEvent(event)

@@ -10,6 +10,7 @@ import traceback
 import sounddevice as sd
 from PySide6.QtWidgets import QApplication
 
+from src.ui.keyboard_listener import KeyboardListenerProcess
 from src.ui.keyboard_manager import KeyboardManager
 from src.ui.onboarding import OnboardingWindow
 from src.ui.theme.manager import ThemeManager
@@ -365,14 +366,27 @@ if __name__ == "__main__":
                 "Please grant microphone access in System Settings > Privacy & Security > Microphone"
             )
 
-        # Initialize keyboard manager (without setting hotkey yet)
+        # Create multiprocessing queues and event for keyboard listener
+        event_queue = multiprocessing.Queue()
+        status_queue = multiprocessing.Queue()
+        stop_event = multiprocessing.Event()
+
+        # Create and start the keyboard listener process
+        logger.info("Creating keyboard listener process...")
+        keyboard_listener = KeyboardListenerProcess(
+            event_queue, status_queue, stop_event
+        )
+        keyboard_listener.start()
+        logger.info("Keyboard listener process started")
+
+        # Initialize keyboard manager with the queues
         logger.info("Initializing keyboard manager...")
         keyboard_manager = KeyboardManager.instance()
         logger.info("Keyboard manager instance created")
-        if keyboard_manager.initialize_listener():
-            logger.info("Keyboard listener initialized successfully")
+        if keyboard_manager.initialize(event_queue, status_queue):
+            logger.info("Keyboard manager initialized successfully")
         else:
-            logger.error("Failed to initialize keyboard listener")
+            logger.error("Failed to initialize keyboard manager")
         logger.debug("Debug test message after keyboard initialization")
 
         # Initialize theme manager from the containers
@@ -391,4 +405,17 @@ if __name__ == "__main__":
 
         # Start the event loop
         logger.info("Starting application event loop...")
-        sys.exit(app.exec())
+        try:
+            sys.exit(app.exec())
+        finally:
+            # Clean up keyboard listener process
+            logger.info("Cleaning up keyboard listener process...")
+            stop_event.set()
+            keyboard_listener.join(timeout=1.0)
+            if keyboard_listener.is_alive():
+                keyboard_listener.terminate()
+            keyboard_listener.join()
+            logger.info("Keyboard listener process cleaned up")
+
+            # Clean up keyboard manager
+            keyboard_manager.cleanup()

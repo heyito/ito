@@ -340,25 +340,6 @@ class ApplicationManager(QObject):
             except queue.Empty:
                 break
 
-        # Multiprocessing cleanup
-        import multiprocessing
-
-        try:
-            logger.info("Cleaning up multiprocessing resources...")
-            # Get all active children
-            children = multiprocessing.active_children()
-            if children:
-                logger.info(f"Found {len(children)} active multiprocessing children")
-                # Try to terminate them gracefully
-                for child in children:
-                    try:
-                        child.terminate()
-                        child.join(timeout=1.0)
-                    except Exception as e:
-                        logger.error(f"Error terminating child process: {e}")
-        except Exception as e:
-            logger.error(f"Error cleaning up multiprocessing children: {e}")
-
         if stopped_thread:
             self.status_changed.emit(StatusMessage.STOPPED.value)
             logger.info("Application stop sequence complete.")
@@ -441,13 +422,9 @@ class ApplicationManager(QObject):
         timestamp = time.strftime("%H:%M:%S")
         # Check if the background application instance exists and is running
         logger.debug(
-            f"self.app_instance: {self.app_instance}, self.app_thread: {self.app_thread}, self.app_thread.is_alive(): {self.app_thread.is_alive()}"
+            f"self.app_instance: {self.app_instance}, self.app_thread: {self.app_thread}"
         )
-        if (
-            not self.app_instance
-            or not self.app_thread
-            or not self.app_thread.is_alive()
-        ):
+        if not self.app_instance or not self.app_thread:
             logger.info(
                 f"[{timestamp}] Hotkey '{hotkey_name}' detected, but application is not running."
             )
@@ -475,6 +452,10 @@ class ApplicationManager(QObject):
         #     else:
         logger.info("Second completion hotkey tap detected.")
         logger.info("Stopping interaction and resetting hotkey tap state.")
+        if not self.app_instance:
+            logger.info("No app instance to stop interaction.")
+            return
+
         self.app_instance.stop_interaction()
         # self._reset_hotkey_state()
 

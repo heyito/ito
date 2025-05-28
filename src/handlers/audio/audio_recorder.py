@@ -133,8 +133,10 @@ class AudioRecorder:
             try:
                 logger.info("AudioRecorder Monitor: Triggering processing callback.")
                 callback_to_call(audio_buffer)
-            except Exception:
-                logger.error("AudioRecorder Monitor: Error in processing callback: {e}")
+            except Exception as e:
+                logger.error(
+                    f"AudioRecorder Monitor: Error in processing callback: {e}"
+                )
                 traceback.print_exc()
         else:
             logger.info("AudioRecorder Monitor: No processing callback set.")

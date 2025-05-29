@@ -878,6 +878,8 @@ class Home(QMainWindow):
         keyboard_form_layout.addRow(output_method_container)
 
         # Hotkeys Section
+        self._hotkey_recording = None
+
         self.dictation_hotkey = QLineEdit()
         self.dictation_hotkey.setMaximumWidth(300)
         self.set_line_edit_style(self.dictation_hotkey)
@@ -976,6 +978,10 @@ class Home(QMainWindow):
         action_button_layout.addStretch()
 
         keyboard_form_layout.addRow(action_button_container)
+        self._all_start_recording_buttons = [
+            self.start_recording_dictation,
+            self.start_recording_action,
+        ]
 
         # Add keyboard listening functionality
         self._last_pressed_keys = None
@@ -1101,8 +1107,6 @@ class Home(QMainWindow):
         self.output_method.selectionChanged.connect(self.save_settings)
 
         # Hotkey Settings
-        self.dictation_hotkey.textChanged.connect(self.save_settings)
-        self.action_hotkey.textChanged.connect(self.save_settings)
 
         # Mode Settings
         self.application_mode_selector.selectionChanged.connect(self._handle_ui_change)
@@ -2020,12 +2024,17 @@ class Home(QMainWindow):
                 self.recording_qline_edit.setText("")
 
     def start_hotkey_recording(self, start_button, stop_button, q_line_edit):
+        self.keyboard_manager.pause_hotkey_triggers()
         self.recording_qline_edit = q_line_edit
         start_button.setVisible(False)
         stop_button.setVisible(True)
         self.is_recording_hotkey = True
         self._last_pressed_keys = None
         self.keyboard_poll_timer.start(50)
+
+        for button in self._all_start_recording_buttons:
+            if button != start_button:
+                button.setEnabled(False)
 
     def stop_hotkey_recording(self, start_button, stop_button, q_line_edit):
         logger.info("Stopping hotkey recording")
@@ -2037,10 +2046,16 @@ class Home(QMainWindow):
             hotkey_str = "+".join(self._last_pressed_keys)
             q_line_edit.setText(hotkey_str)
             q_line_edit.setPlaceholderText("Press any other key to change")
-            # self.save_settings()  # Save the new hotkey setting
+            self.save_settings()
 
         start_button.setVisible(True)
         stop_button.setVisible(False)
+
+        for button in self._all_start_recording_buttons:
+            if button != start_button:
+                button.setEnabled(True)
+
+        self.keyboard_manager.resume_hotkey_triggers()
 
 
 def set_widget_hidden_but_take_space(widget: QWidget, hidden: bool):

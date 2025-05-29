@@ -30,6 +30,7 @@ from src.handlers.audio.openai_asr_handler import OpenAIASRHandler
 from src.handlers.llm_handler import LLMHandler
 from src.one_shot_application_runner import OneShotApplicationRunner
 
+
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
 

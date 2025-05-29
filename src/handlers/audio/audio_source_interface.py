@@ -1,7 +1,6 @@
 import logging
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 
 import numpy as np
 import sounddevice as sd

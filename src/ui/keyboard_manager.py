@@ -280,9 +280,6 @@ class KeyboardManager(QObject):
                 self._key_press_times.pop(key_symbol, None)
                 # Check if we should emit release signal
                 mode_match = self.check_hotkey_match()
-                logger.info(
-                    f"Key released: {key_symbol}, {self.pressed_keys}, {self._hotkey_strs}, {self._was_hotkey_pressed}, {mode_match}"
-                )
                 if self._was_hotkey_pressed and not mode_match:
                     self._was_hotkey_pressed = False
                     self.hotkey_released.emit(self._active_mode)

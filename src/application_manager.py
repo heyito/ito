@@ -1,6 +1,5 @@
 # application_manager.py
 import logging
-import pathlib
 import queue
 import threading
 import time

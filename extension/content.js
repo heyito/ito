@@ -1,3 +1,5 @@
+console.log("Inten content script loaded");
+
 /**
  * Simulates keydown and keyup events for a given key combination on an element,
  * including additional properties often needed for complex web apps.
@@ -97,7 +99,7 @@ const SKIP_RANGE_SELECTION_DOMAINS = [
  */
 function shouldSkipRangeSelection() {
   const currentDomain = window.location.hostname.toLowerCase();
-  return SKIP_RANGE_SELECTION_DOMAINS.some(domain => 
+  return SKIP_RANGE_SELECTION_DOMAINS.some(domain =>
     currentDomain.includes(domain)
   );
 }
@@ -125,7 +127,7 @@ function storeSelectionState(activeElement) {
 async function restoreSelectionState(activeElement, storedState) {
   const { ranges: originalRanges, hadFocus } = storedState;
   const selection = window.getSelection();
-  
+
   console.log("[restoreSelection] Restoring selection state...");
   selection.removeAllRanges();
   if (originalRanges.length > 0) {
@@ -176,11 +178,12 @@ async function selectAllContent(element) {
     try {
       const range = document.createRange();
       range.selectNodeContents(element);
-      
+
       selection.removeAllRanges();
       selection.addRange(range);
-      
-      if (selection.toString()) {
+
+      console.log("[selectAllContent] selection.toString():", selection.toString());
+      if (selection.toString() != null) {
         console.log("[selectAllContent] Range selection successful");
         return true;
       }
@@ -245,7 +248,7 @@ async function getPageContext() {
 
     if (activeElement.isContentEditable) {
       console.log("[getContext] Getting content via selection...");
-      
+
       // Store original state
       const storedState = storeSelectionState(activeElement);
 
@@ -260,7 +263,7 @@ async function getPageContext() {
         // Simulate Copy
         const copyCommandSuccess = document.execCommand("copy");
         console.log(`[getContext] document.execCommand('copy') returned: ${copyCommandSuccess}`);
-        
+
         if (!copyCommandSuccess) {
           console.warn("[getContext] Copy command failed or was blocked");
           // Backing up to innerText
@@ -271,8 +274,8 @@ async function getPageContext() {
             console.log(`[getContext] Content read from clipboard (${context.activeElementContent.length} chars)`);
           } catch (clipboardError) {
             console.error("[getContext] Clipboard read failed:", clipboardError);
-            context.activeElementContent = clipboardError.name === "NotAllowedError" 
-              ? "[Clipboard permission denied]" 
+            context.activeElementContent = clipboardError.name === "NotAllowedError"
+              ? "[Clipboard permission denied]"
               : "[Clipboard read error]";
           }
         }
@@ -330,7 +333,7 @@ async function insertText(text, replaceAll = true) {
       inputElement.dispatchEvent(new Event("input", { bubbles: true, cancelable: true }));
       inputElement.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
       return true;
-    } 
+    }
     else if (activeElement.isContentEditable) {
       console.log("Attempting action in contentEditable element.");
 
@@ -342,12 +345,15 @@ async function insertText(text, replaceAll = true) {
           return false;
         }
 
-        // Simulate Delete key
-        await simulateKeyPress(activeElement, {
-          key: "Delete",
-          code: "Delete",
-          keyCode: 46
-        });
+        // Directly clear content if replacing all
+        if (["INPUT", "TEXTAREA"].includes(activeElement.tagName)) {
+          activeElement.value = '';
+          activeElement.dispatchEvent(new Event("input", { bubbles: true, cancelable: true }));
+          activeElement.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+        } else if (activeElement.isContentEditable) {
+          activeElement.innerHTML = '';
+          activeElement.dispatchEvent(new Event("input", { bubbles: true }));
+        }
 
         await new Promise(resolve => setTimeout(resolve, 100));
       }
@@ -400,6 +406,7 @@ async function insertText(text, replaceAll = true) {
 
 // Listen for messages from the background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log("Content script received message:", request);
   // Optional: Log received messages for easier debugging
   console.log("Message received in content script:", request);
 

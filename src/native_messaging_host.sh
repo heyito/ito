@@ -31,9 +31,9 @@ fi
 if [ "$DEV" = "true" ]; then
     log "Running in DEV mode"
     # Activate venv if needed
-    if [ -d "venv/bin" ]; then
+    if [ -d ".venv/bin" ]; then
         log "Activating virtual environment"
-        source "venv/bin/activate"
+        source ".venv/bin/activate"
         log "Virtual environment activated"
     else
         log "No virtual environment found"

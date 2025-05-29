@@ -207,22 +207,6 @@ def write_message(message):
         logging.error(f"Error writing message: {e}")
         logging.error(traceback.format_exc())
 
-
-def get_active_application():
-    """Get the name of the active application."""
-    if not is_macos():
-        return None
-
-    script = 'tell application "System Events" to get name of first application process whose frontmost is true'
-    try:
-        from src.platform_utils_macos import run_applescript_one_line
-
-        return run_applescript_one_line(script)
-    except Exception as e:
-        logging.error(f"Error getting active application: {e}")
-        return None
-
-
 def main():
     setup_logging()
     logging.info("Native messaging host started")

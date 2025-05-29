@@ -69,7 +69,13 @@ class GeminiClient(LLMClientInterface):
         if not self._user_command_model:
             raise ValueError("Gemini user command model is required.")
 
-        tools = types.Tool(function_declarations=tool_functions)
+        # handle tool_functions being None
+        if tool_functions:
+            tools = [types.Tool(function_declarations=tool_functions)]
+        else:
+            tools = None
+
+        logger.info(f"GeminiClient: Tools: {tools}")
         contents = self.format_system_user_messages(system_prompt, text)
 
         try:
@@ -77,7 +83,7 @@ class GeminiClient(LLMClientInterface):
                 model=self._user_command_model,
                 contents=messages_override if messages_override else contents,
                 config=types.GenerateContentConfig(
-                    tools=[tools],
+                    tools=tools,
                     temperature=temperature,
                     max_output_tokens=max_tokens,
                     system_instruction=system_prompt,

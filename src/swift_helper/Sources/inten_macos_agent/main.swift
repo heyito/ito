@@ -1,15 +1,14 @@
-import Foundation
-import Cocoa
 import ApplicationServices
+import Cocoa
+import Foundation
 import Vision
 
 /**
 TODO:
-Potential trimming on context: 
-- The roles need to be used in order to get the associated data from the element, 
+Potential trimming on context:
+- The roles need to be used in order to get the associated data from the element,
 but we can key those roles with shorthand for the llm. I.e. StaticText -> stx,
 **/
-
 
 // --- Keys ---
 let frameKey = "fr"
@@ -36,7 +35,7 @@ let placeholderKey = "plc"
 let kAXLinkRole = "AXLink"
 let kAXStatusBarRole = "AXStatusBar"
 let kAXWebAreaRole = "AXWebArea"
-      
+
 let interestingRoles: Set<String> = [
     kAXButtonRole,
     kAXTextFieldRole,
@@ -45,29 +44,29 @@ let interestingRoles: Set<String> = [
     kAXImageRole,
     kAXCheckBoxRole,
     kAXRadioButtonRole,
-    kAXPopUpButtonRole,        // Often used for dropdowns
-    kAXMenuButtonRole,         // Similar to popups
+    kAXPopUpButtonRole,  // Often used for dropdowns
+    kAXMenuButtonRole,  // Similar to popups
     kAXMenuItemRole,
     kAXLinkRole,
-    kAXGroupRole,              // General container, often has a title/desc
+    kAXGroupRole,  // General container, often has a title/desc
     kAXToolbarRole,
-    kAXScrollAreaRole,         // Important for scrollable content
-    kAXWebAreaRole,            // CRITICAL for Electron/web-based UI content
+    kAXScrollAreaRole,  // Important for scrollable content
+    kAXWebAreaRole,  // CRITICAL for Electron/web-based UI content
     kAXListRole,
     kAXTableRole,
     kAXOutlineRole,
     kAXTabGroupRole,
     kAXSplitGroupRole,
     kAXDisclosureTriangleRole,
-    kAXValueIndicatorRole,     // e.g., sliders, progress bars
-    kAXIncrementorRole,        // Stepper controls
+    kAXValueIndicatorRole,  // e.g., sliders, progress bars
+    kAXIncrementorRole,  // Stepper controls
     // kAXWindowRole (if you want to list sub-windows/dialogs explicitly)
     // kAXSheetRole, kAXDrawerRole, kAXPopoverRole (if you want to detail these)
 ]
 
 let specialContextRoles: Set<String> = [
     kAXSheetRole,
-    kAXPopoverRole
+    kAXPopoverRole,
 ]
 
 let kAXVisibleAttribute = "AXVisible"
@@ -79,8 +78,8 @@ let kAXDescriptionAttribute = "AXDescription"
 let kAXIdentifierAttribute = "AXIdentifier"
 let kAXPlaceholderValueAttribute = "AXPlaceholderValue"
 let kAXFocusedAttribute = "AXFocused"
-let kAXSelectedAttribute = "AXSelected" 
-let kAXValueAttribute = "AXValue"       
+let kAXSelectedAttribute = "AXSelected"
+let kAXValueAttribute = "AXValue"
 
 // --- Helpers ---
 
@@ -90,7 +89,8 @@ func saveScreenshot(image: CGImage, filename: String = "capture-inten.png") {
         print("Failed to create PNG data")
         return
     }
-    let url = URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent(filename)
+    let url = URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent(
+        filename)
     do {
         try pngData.write(to: url)
     } catch {
@@ -104,16 +104,16 @@ func getLabels(for element: AXUIElement) -> [String: String] {
         (helpKey, kAXHelpAttribute),
         (descriptionKey, kAXDescriptionAttribute),
         (identifierKey, kAXIdentifierAttribute),
-        (placeholderKey, kAXPlaceholderValueAttribute)
+        (placeholderKey, kAXPlaceholderValueAttribute),
     ]
 
     var result: [String: String] = [:]
 
-
     for (key, attr) in attributes {
         var value: AnyObject?
         if AXUIElementCopyAttributeValue(element, attr as CFString, &value) == .success,
-           let str = value as? String, !str.isEmpty { 
+            let str = value as? String, !str.isEmpty
+        {
             result[key] = str
         }
     }
@@ -122,30 +122,36 @@ func getLabels(for element: AXUIElement) -> [String: String] {
 
 func getFrame(for element: AXUIElement) -> [String: Int]? {
     var frameValue: AnyObject?
-    if AXUIElementCopyAttributeValue(element, kAXFrameAttribute as CFString, &frameValue) == .success,
-       let frameValue = frameValue, CFGetTypeID(frameValue) == AXValueGetTypeID() {
-        
+    if AXUIElementCopyAttributeValue(element, kAXFrameAttribute as CFString, &frameValue)
+        == .success,
+        let frameValue = frameValue, CFGetTypeID(frameValue) == AXValueGetTypeID()
+    {
+
         let axValue = frameValue as! AXValue
         var frame = CGRect.zero
         AXValueGetValue(axValue, .cgRect, &frame)
-        
+
         return [
             "x": Int(frame.origin.x),
             "y": Int(frame.origin.y),
             "w": Int(frame.size.width),
             "h": Int(frame.size.height),
-            // "center_x": Int(frame.origin.x + frame.size.width / 2), LLM derives these now 
+            // "center_x": Int(frame.origin.x + frame.size.width / 2), LLM derives these now
             // "center_y": Int(frame.origin.y + frame.size.height / 2)
         ]
     }
     return nil
 }
 
-func walkChildren(element: AXUIElement, output: inout [[String: Any]], depth: Int = 0, maxDepth: Int = 1000) {
+func walkChildren(
+    element: AXUIElement, output: inout [[String: Any]], depth: Int = 0, maxDepth: Int = 1000
+) {
     if depth > maxDepth { return }
 
     var children: AnyObject?
-    if AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children) != .success {
+    if AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children)
+        != .success
+    {
         return
     }
 
@@ -153,14 +159,19 @@ func walkChildren(element: AXUIElement, output: inout [[String: Any]], depth: In
 
     for child in childElements {
         var roleObj: AnyObject?
-        guard AXUIElementCopyAttributeValue(child, kAXRoleAttribute as CFString, &roleObj) == .success,
-              let role = roleObj as? String else {
+        guard
+            AXUIElementCopyAttributeValue(child, kAXRoleAttribute as CFString, &roleObj)
+                == .success,
+            let role = roleObj as? String
+        else {
             continue
         }
-        
+
         var visibleObj: AnyObject?
         var isActuallyVisible = true
-        if AXUIElementCopyAttributeValue(child, kAXVisibleAttribute as CFString, &visibleObj) == .success {
+        if AXUIElementCopyAttributeValue(child, kAXVisibleAttribute as CFString, &visibleObj)
+            == .success
+        {
             if let visible = visibleObj as? Bool, !visible {
                 isActuallyVisible = false
             }
@@ -168,11 +179,11 @@ func walkChildren(element: AXUIElement, output: inout [[String: Any]], depth: In
         if !isActuallyVisible {
             continue
         }
-        
+
         if interestingRoles.contains(role) {
             var elementInfo: [String: Any] = [
                 roleKey: role.replacingOccurrences(of: "AX", with: ""),
-                frameKey: getFrame(for: child) ?? [:]
+                frameKey: getFrame(for: child) ?? [:],
             ]
 
             let labels = getLabels(for: child)
@@ -181,8 +192,10 @@ func walkChildren(element: AXUIElement, output: inout [[String: Any]], depth: In
             }
 
             var axEnabled: AnyObject?
-            var isEnabled = true 
-            if AXUIElementCopyAttributeValue(child, kAXEnabledAttribute as CFString, &axEnabled) == .success {
+            var isEnabled = true
+            if AXUIElementCopyAttributeValue(child, kAXEnabledAttribute as CFString, &axEnabled)
+                == .success
+            {
                 if let enabledBool = axEnabled as? Bool {
                     isEnabled = enabledBool
                 }
@@ -192,7 +205,9 @@ func walkChildren(element: AXUIElement, output: inout [[String: Any]], depth: In
 
             var axFocused: AnyObject?
             var isFocused = false
-            if AXUIElementCopyAttributeValue(child, kAXFocusedAttribute as CFString, &axFocused) == .success {
+            if AXUIElementCopyAttributeValue(child, kAXFocusedAttribute as CFString, &axFocused)
+                == .success
+            {
                 if let focusedBool = axFocused as? Bool {
                     isFocused = focusedBool
                 }
@@ -201,7 +216,9 @@ func walkChildren(element: AXUIElement, output: inout [[String: Any]], depth: In
 
             var axSelected: AnyObject?
             var isSelected = false
-            if AXUIElementCopyAttributeValue(child, kAXSelectedAttribute as CFString, &axSelected) == .success {
+            if AXUIElementCopyAttributeValue(child, kAXSelectedAttribute as CFString, &axSelected)
+                == .success
+            {
                 if let selectedBool = axSelected as? Bool {
                     isSelected = selectedBool
                 }
@@ -209,17 +226,19 @@ func walkChildren(element: AXUIElement, output: inout [[String: Any]], depth: In
             elementInfo[selectedKey] = isSelected
 
             var axValue: AnyObject?
-            if AXUIElementCopyAttributeValue(child, kAXValueAttribute as CFString, &axValue) == .success {
+            if AXUIElementCopyAttributeValue(child, kAXValueAttribute as CFString, &axValue)
+                == .success
+            {
                 if let strValue = axValue as? String {
                     elementInfo[valueKey] = strValue
                 } else if let numValue = axValue as? NSNumber {
-                    elementInfo[valueKey] = numValue // Store as original NSNumber (can be Int, Float, Bool)
+                    elementInfo[valueKey] = numValue  // Store as original NSNumber (can be Int, Float, Bool)
                     if role == kAXCheckBoxRole || role == kAXRadioButtonRole {
-                        elementInfo[valueKey] = numValue.boolValue // NSNumber.boolValue is (value != 0)
+                        elementInfo[valueKey] = numValue.boolValue  // NSNumber.boolValue is (value != 0)
                     }
-                } else if let boolValue = axValue as? Bool { // kAXValue can sometimes directly be a Bool
-                     elementInfo[valueKey] = boolValue
-                     if role == kAXCheckBoxRole || role == kAXRadioButtonRole { // Or other toggle-like roles
+                } else if let boolValue = axValue as? Bool {  // kAXValue can sometimes directly be a Bool
+                    elementInfo[valueKey] = boolValue
+                    if role == kAXCheckBoxRole || role == kAXRadioButtonRole {  // Or other toggle-like roles
                         elementInfo[checkedKey] = boolValue
                     }
                 }
@@ -228,11 +247,13 @@ func walkChildren(element: AXUIElement, output: inout [[String: Any]], depth: In
                 // If you need to handle other types from kAXValueAttribute, you'd add more checks.
             }
 
-            if (role == kAXCheckBoxRole || role == kAXRadioButtonRole) && elementInfo[checkedKey] == nil {
+            if (role == kAXCheckBoxRole || role == kAXRadioButtonRole)
+                && elementInfo[checkedKey] == nil
+            {
                 elementInfo[checkedKey] = false
             }
 
-            // Covert boolean values to t/f for JSON 
+            // Covert boolean values to t/f for JSON
             if let boolValue = elementInfo[enabledKey] as? Bool {
                 elementInfo[enabledKey] = boolValue ? "t" : "f"
             }
@@ -246,7 +267,9 @@ func walkChildren(element: AXUIElement, output: inout [[String: Any]], depth: In
                 elementInfo[checkedKey] = boolValue ? "t" : "f"
             }
 
-            if([kAXGroupRole, kAXListRole, kAXOutlineRole, kAXSplitGroupRole].contains(role) && (elementInfo[labelsKey] as? [String: String])?["title"] == nil) {
+            if [kAXGroupRole, kAXListRole, kAXOutlineRole, kAXSplitGroupRole].contains(role)
+                && (elementInfo[labelsKey] as? [String: String])?["title"] == nil
+            {
                 // Don't add groups without a title
             } else {
                 output.append(elementInfo)
@@ -284,22 +307,24 @@ func captureOCRText(focusedWindow: AXUIElement) -> [[String: Any]] {
     let windowRect = CGRect(origin: windowOrigin, size: windowSize)
 
     // Capture just the window image, not the full screen
-    guard let windowImage = CGWindowListCreateImage(
-        windowRect, // Rect is in points
-        [.optionOnScreenOnly],
-        kCGNullWindowID,
-        [.bestResolution, .boundsIgnoreFraming] // Image result is in pixels
-    ) else {
+    guard
+        let windowImage = CGWindowListCreateImage(
+            windowRect,  // Rect is in points
+            [.optionOnScreenOnly],
+            kCGNullWindowID,
+            [.bestResolution, .boundsIgnoreFraming]  // Image result is in pixels
+        )
+    else {
         print("Failed to capture window image")
-        return [] // Return empty array on failure
+        return []  // Return empty array on failure
     }
 
     // Determine the scale factor
     // Find the screen containing the window's top-left corner
-    let mainScreenScale = NSScreen.main?.backingScaleFactor ?? 1.0 // Fallback
+    let mainScreenScale = NSScreen.main?.backingScaleFactor ?? 1.0  // Fallback
     var windowScreenScale = mainScreenScale
     for screen in NSScreen.screens {
-        if screen.frame.contains(windowRect.origin) { // screen.frame is also in points
+        if screen.frame.contains(windowRect.origin) {  // screen.frame is also in points
             windowScreenScale = screen.backingScaleFactor
             break
         }
@@ -329,11 +354,11 @@ func captureOCRText(focusedWindow: AXUIElement) -> [[String: Any]] {
     for observation in observations {
         guard let candidate = observation.topCandidates(1).first else { continue }
         let text = candidate.string
-        let boundingBox = observation.boundingBox // Normalized, bottom-left origin
+        let boundingBox = observation.boundingBox  // Normalized, bottom-left origin
 
         // Calculate dimensions in PIXELS relative to the image
         let localX_pixels = boundingBox.minX * windowImageWidth
-        let localY_pixels = (1 - boundingBox.maxY) * windowImageHeight // Top-left origin now
+        let localY_pixels = (1 - boundingBox.maxY) * windowImageHeight  // Top-left origin now
         let localWidth_pixels = boundingBox.width * windowImageWidth
         let localHeight_pixels = boundingBox.height * windowImageHeight
 
@@ -353,7 +378,7 @@ func captureOCRText(focusedWindow: AXUIElement) -> [[String: Any]] {
                 "x": globalX,
                 "y": globalY,
                 "w": Int(localWidth_points),
-                "h": Int(localHeight_points)
+                "h": Int(localHeight_points),
             ],
             confidenceKey: candidate.confidence,
         ])
@@ -368,7 +393,8 @@ func enrichOCRTextsInPlace(ocrTexts: inout [[String: Any]], elements: [[String: 
     for i in 0..<ocrTexts.count {
         // ocrTexts[i] is the dictionary we want to potentially modify
         guard let bounds = ocrTexts[i][boundsKey] as? [String: Int],
-              let _ = ocrTexts[i][textKey] as? String else {
+            ocrTexts[i][textKey] as? String != nil
+        else {
             continue
         }
 
@@ -423,7 +449,8 @@ if command == "get-window-info" {
         let appElement = AXUIElementCreateApplication(pid)
 
         var focusedWindowRef: AnyObject?
-        let result = AXUIElementCopyAttributeValue(appElement, kAXFocusedWindowAttribute as CFString, &focusedWindowRef)
+        let result = AXUIElementCopyAttributeValue(
+            appElement, kAXFocusedWindowAttribute as CFString, &focusedWindowRef)
 
         guard result == .success, let focusedWindow = focusedWindowRef else {
             print("Failed to get focused window")
@@ -435,8 +462,10 @@ if command == "get-window-info" {
         var windowTitleObj: AnyObject?
         var windowTitle = "Unknown Window"
 
-        if AXUIElementCopyAttributeValue(axWindow, kAXTitleAttribute as CFString, &windowTitleObj) == .success,
-           let titleString = windowTitleObj as? String {
+        if AXUIElementCopyAttributeValue(axWindow, kAXTitleAttribute as CFString, &windowTitleObj)
+            == .success,
+            let titleString = windowTitleObj as? String
+        {
             windowTitle = titleString
         }
 
@@ -452,12 +481,13 @@ if command == "get-window-info" {
             "ocr_texts": ocrResults,
             "screen_dimensions": [
                 "w": Int(NSScreen.main?.frame.width ?? 0),
-                "h": Int(NSScreen.main?.frame.height ?? 0)
-            ]
+                "h": Int(NSScreen.main?.frame.height ?? 0),
+            ],
         ]
 
         if let jsonData = try? JSONSerialization.data(withJSONObject: dict, options: []),
-           let jsonString = String(data: jsonData, encoding: .utf8) {
+            let jsonString = String(data: jsonData, encoding: .utf8)
+        {
             print(jsonString)
         }
     }

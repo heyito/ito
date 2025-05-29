@@ -1,8 +1,8 @@
 import logging
 import os
-import platform
 import sys
 import traceback
+
 
 def setup_logging():
   # Configure logging to write to both stderr and a file

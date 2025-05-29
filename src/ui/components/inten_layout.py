@@ -2,7 +2,6 @@ import logging
 import sys
 
 from PySide6.QtCore import (
-    QPoint,
     QRectF,
     Qt,
 )
@@ -11,7 +10,7 @@ from PySide6.QtGui import (
     QPainterPath,
     QRegion,
 )
-from PySide6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from src.ui.theme.manager import ThemeManager
 
@@ -171,8 +170,9 @@ if sys.platform == "darwin":
     class MacDragArea(QWidget):
         def mousePressEvent(self, event):
             try:
-                import objc
                 from ctypes import c_void_p
+
+                import objc
                 from AppKit import NSApp
                 win = self.window().winId()
                 ns_view = objc.objc_object(c_void_p(int(win)))

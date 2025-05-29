@@ -1,0 +1,22 @@
+{
+  "configurations": [
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:inten}/src/swift_helper",
+      "name": "Debug inten_macos_agent (src/swift_helper)",
+      "program": "${workspaceFolder:inten}/src/swift_helper/.build/debug/inten_macos_agent",
+      "preLaunchTask": "swift: Build Debug inten_macos_agent (src/swift_helper)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:inten}/src/swift_helper",
+      "name": "Release inten_macos_agent (src/swift_helper)",
+      "program": "${workspaceFolder:inten}/src/swift_helper/.build/release/inten_macos_agent",
+      "preLaunchTask": "swift: Build Release inten_macos_agent (src/swift_helper)"
+    }
+  ]
+}

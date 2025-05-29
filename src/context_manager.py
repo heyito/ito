@@ -6,6 +6,7 @@ import traceback
 
 from src import platform_utils_macos as platform_utils  # Or abstract this more
 from src.engines.context_engine import ContextEngine
+from src.types.context import Context
 from src.types.modes import CommandMode
 
 # Configure logging
@@ -17,16 +18,17 @@ class ContextManager:
 
     def __init__(self, context_engine: ContextEngine):
         self.context_engine = context_engine
-        self._current_context: dict[str, str | None] = {
+        self._current_context: Context = {
             "app_name": None,
-            "doc_text": None,
+            "primary_context": None,
+            "page_context": None,
         }
         self._fetch_thread: threading.Thread | None = None
         self._lock = (
             threading.Lock()
         )  # Protects access to _current_context and _fetch_thread
 
-    def get_current_context(self) -> dict[str, str | None]:
+    def get_current_context(self) -> Context:
         """Returns the last fetched context data."""
         with self._lock:
             # Return a copy to prevent external modification
@@ -41,7 +43,11 @@ class ContextManager:
 
             logger.info("ContextManager: Checking active window...")
             # Reset context before fetching
-            self._current_context = {"app_name": None, "doc_text": None}
+            self._current_context = {
+                "app_name": None,
+                "primary_context": None,
+                "page_context": None,
+            }
             active_window_info = platform_utils.get_active_window_info()
 
             if not active_window_info or not active_window_info.get("app_name"):
@@ -66,26 +72,30 @@ class ContextManager:
     def _fetch_target(self, app_name: str, mode: CommandMode) -> None:
         """Internal target for the context fetching thread."""
         fetch_start_time = time.time()
-        fetched_context: str | None = None
+        primary_context: str | None = None
         error_occurred = False
         try:
             # Create context dict for the engine call *within the thread*
-            context_for_engine = {"app_name": app_name, "doc_text": None}
-            fetched_context = None
+            context_for_engine = {"app_name": app_name, "primary_context": None}
+            primary_context = None
+            page_context = None
             match mode:
                 case CommandMode.ACTION:
-                    fetched_context = self.context_engine.get_full_app_context(
+                    primary_context = self.context_engine.get_full_app_context(
                         context_for_engine
                     )
                 case CommandMode.DICTATION:
-                    fetched_context = self.context_engine.get_focused_cursor_context(
+                    primary_context = self.context_engine.get_focused_cursor_context(
+                        context_for_engine
+                    )
+                    page_context = self.context_engine.get_full_app_context(
                         context_for_engine
                     )
                 case _:
                     raise ValueError(
                         f"Unsupported CommandMode for ContextManager: {mode}"
                     )
-            if fetched_context is None:
+            if primary_context is None:
                 logger.warning(
                     f"[{time.strftime('%H:%M:%S')}] ContextManager: Engine returned None for '{app_name}'."
                 )
@@ -100,8 +110,9 @@ class ContextManager:
                 # Update context *only if* this thread is the current fetch thread
                 # (Handles potential race condition if fetch_context_async is called rapidly)
                 if threading.current_thread() == self._fetch_thread:
-                    # Only update doc_text, app_name was set before thread start
-                    self._current_context["doc_text"] = fetched_context
+                    # Only update primary_context, app_name was set before thread start
+                    self._current_context["primary_context"] = primary_context
+                    self._current_context["page_context"] = page_context
                 else:
                     logger.info(
                         f"[{time.strftime('%H:%M:%S')}] ContextManager: Stale fetch result ignored."
@@ -109,7 +120,7 @@ class ContextManager:
 
             fetch_duration = time.time() - fetch_start_time
             status = (
-                "failed" if error_occurred or fetched_context is None else "succeeded"
+                "failed" if error_occurred or primary_context is None else "succeeded"
             )
             logger.info(
                 f"[{time.strftime('%H:%M:%S')}] ContextManager: Fetch thread finished ({status}, {fetch_duration:.3f}s)."
@@ -134,9 +145,9 @@ class ContextManager:
                 # Don't clear self._fetch_thread here, let it finish/error out
                 return None  # Indicate timeout
 
-        # Return the potentially updated doc_text
+        # Return the potentially updated primary_context
         with self._lock:
-            return self._current_context.get("doc_text")
+            return self._current_context.get("primary_context")
 
     def cleanup(self) -> None:
         """Cleans up the context manager resources."""

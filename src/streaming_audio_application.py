@@ -17,6 +17,7 @@ from src.engines.processing_engine import ProcessingEngine  # Added
 from src.handlers.audio.audio_source_handler import AudioSourceHandler
 from src.handlers.llm_handler import LLMHandler  # Added
 from src.handlers.vosk_processor import VoskProcessor
+from src.types.context import Context
 from src.types.status_messages import StatusMessage
 
 # Actions for the queue (can be simplified)
@@ -88,9 +89,9 @@ class StreamingAudioApplication(ApplicationInterface):
         self._current_partial_transcript: str = ""  # Store the latest partial line
 
         # --- Current Context (Simplified for streaming example) ---
-        self.current_context_data: dict[str, Any] = {
+        self.current_context_data: Context = {
             "app_name": None,
-            "doc_text": None,
+            "primary_context": None,
         }  # Modified to match discrete
 
         self.raw_config = raw_config
@@ -424,11 +425,13 @@ class StreamingAudioApplication(ApplicationInterface):
             # Decide if we should proceed without context or abort
             # For now, we proceed but log the issue
             self.current_context_data["app_name"] = "Unknown"
-            self.current_context_data["doc_text"] = None
+            self.current_context_data["primary_context"] = None
         else:
             app_name = active_window_info.get("app_name", "Unknown")
             self.current_context_data["app_name"] = app_name
-            self.current_context_data["doc_text"] = None  # Clear previous context
+            self.current_context_data["primary_context"] = (
+                None  # Clear previous context
+            )
             logger.info(f"[{timestamp}] Active application: {app_name}")
 
             # 2. Define context fetching target function
@@ -461,7 +464,7 @@ class StreamingAudioApplication(ApplicationInterface):
                 finally:
                     # Store the result (even if None) back into current_context_data
                     # Ensure this update is thread-safe if needed, though assignment is often atomic
-                    self.current_context_data["doc_text"] = fetched_context
+                    self.current_context_data["primary_context"] = fetched_context
                     fetch_end_time = time.time()  # Add overall end time
                     fetch_duration = fetch_end_time - fetch_start_time
                     logger.info(
@@ -672,9 +675,9 @@ class StreamingAudioApplication(ApplicationInterface):
                 )
         self.context_fetch_thread_handle = None  # Clear the handle
 
-        # Context should now be available in self.current_context_data['doc_text']
+        # Context should now be available in self.current_context_data['primary_context']
         # Retrieve it (it might be None if fetching failed or timed out)
-        retrieved_doc_context = self.current_context_data.get("doc_text")
+        retrieved_doc_context = self.current_context_data.get("primary_context")
 
         # Start the actual processing in a separate thread
         logger.info(f"[{timestamp}] Starting LLM processing thread...")
@@ -709,7 +712,7 @@ class StreamingAudioApplication(ApplicationInterface):
 
         # Clear the stored context text after retrieving it for this run
         # Prevents accidental reuse if context fetching fails next time
-        self.current_context_data["doc_text"] = None
+        self.current_context_data["primary_context"] = None
 
         try:
             # Call the main processing logic in the ProcessingEngine

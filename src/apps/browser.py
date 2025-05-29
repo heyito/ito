@@ -5,9 +5,9 @@ import socket
 import threading
 
 from src import platform_utils_macos as platform_utils
-from src import prompt_templates
 from src.constants import SOCKET_PATH
 from src.handlers.llm_handler import LLMHandler
+from src.prompts import prompt_templates
 
 logger = logging.getLogger(__name__)
 

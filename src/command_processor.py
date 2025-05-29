@@ -6,6 +6,7 @@ import time
 import traceback
 
 from src.engines.processing_engine import ProcessingEngine
+from src.types.context import Context
 from src.types.modes import CommandMode
 from src.types.status_messages import StatusMessage
 
@@ -43,7 +44,7 @@ class CommandProcessor:
 
     def process_command(
         self,
-        context_data: dict[str, str | None],
+        context_data: Context,
         user_text_command: str,
         user_command_audio: bytes | None = None,
         mode: CommandMode | None = CommandMode.default_mode,
@@ -65,9 +66,6 @@ class CommandProcessor:
         # Make copies of data outside the lock to minimize lock holding time
         context_copy = context_data.copy()
         command_copy = user_text_command
-        doc_text_copy = context_copy.get(
-            "doc_text"
-        )  # Extract doc_text for processing engine
 
         with self._lock:
             if self._is_processing:
@@ -83,7 +81,6 @@ class CommandProcessor:
                 target=self._processing_thread_target,
                 args=(
                     context_copy,
-                    doc_text_copy,
                     command_copy,
                     mode,
                     user_command_audio,
@@ -101,8 +98,7 @@ class CommandProcessor:
 
     def _processing_thread_target(
         self,
-        current_context: dict[str, str | None],
-        processing_text: str | None,
+        current_context: Context,
         user_text_command: str,
         mode: CommandMode,
         user_command_audio: bytes | None = None,
@@ -112,7 +108,7 @@ class CommandProcessor:
         success = False
         error_msg = ""
         try:
-            app_name_for_log = current_context.get("app_name", "N/A")
+            app_name_for_log = current_context["app_name"] or "Unknown"
             logger.info(f"[{timestamp}] --- Starting Processing Pipeline ---")
             logger.info(f"[{timestamp}] Context App: {app_name_for_log}")
             logger.info(f"[{timestamp}] User Command: '{user_text_command}'")
@@ -121,14 +117,12 @@ class CommandProcessor:
                 case CommandMode.ACTION:
                     self.processing_engine.process_action(
                         current_context=current_context,
-                        processing_text=processing_text,
                         user_text_command=user_text_command,
                         user_command_audio=user_command_audio,
                     )
                 case CommandMode.DICTATION:
                     self.processing_engine.process_dictation(
                         current_context=current_context,
-                        processing_text=processing_text,
                         user_text_command=user_text_command,
                         user_command_audio=user_command_audio,
                     )

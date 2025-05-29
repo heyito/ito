@@ -1,8 +1,8 @@
 import logging
 
 from src import platform_utils_macos as platform_utils
-from src import prompt_templates
 from src.handlers.llm_handler import LLMHandler
+from src.prompts import prompt_templates
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -16,12 +16,12 @@ class TextEditApp:
 
     def process_command(
         self,
-        processing_text: str,
+        primary_context: str,
         user_text_command: str,
         user_command_audio: bytes | None = None,
     ):
         full_llm_input = prompt_templates.create_general_document_body_prompt(
-            application="TextEdit", content=processing_text, command=user_text_command
+            application="TextEdit", content=primary_context, command=user_text_command
         )
 
         new_doc_text = self.llm_handler.process_input_with_llm(

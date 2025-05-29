@@ -7,6 +7,7 @@ from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
 from src.types.apps import IntenApp
+from src.types.context import Context
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -29,13 +30,13 @@ class ProcessingEngine:
 
     def process_action(
         self,
-        current_context: dict,
-        processing_text: str,
+        current_context: Context,
         user_text_command: str,
         user_command_audio: bytes | None = None,
     ):
+        primary_context = current_context["primary_context"]
         rprint(f"[bold blue]Processing action: '{user_text_command}'[/bold blue]")
-        logger.info(f"On document context (length: {len(processing_text)} chars)")
+        logger.info(f"On document context (length: {len(primary_context)} chars)")
 
         # 1. Construct LLM Prompt
         logger.info("Constructing LLM prompt with distinct markers...")
@@ -46,37 +47,39 @@ class ProcessingEngine:
         match current_app:
             case IntenApp.TEXTEDIT:
                 self.text_edit_app.process_command(
-                    processing_text, user_text_command, user_command_audio
+                    primary_context, user_text_command, user_command_audio
                 )
             case IntenApp.CHROME | IntenApp.BRAVE:
                 self.browser_app.process_command(
-                    processing_text, user_text_command, user_command_audio
+                    primary_context, user_text_command, user_command_audio
                 )
             case _:
                 self.macos_app.process_action(
-                    current_app, processing_text, user_text_command, user_command_audio
+                    current_app, primary_context, user_text_command, user_command_audio
                 )
 
     def process_dictation(
         self,
-        current_context: dict,
-        processing_text: str,
+        current_context: Context,
         user_text_command: str,
         user_command_audio: bytes | None = None,
     ):
         rprint(f"[bold blue]Processing dictation: '{user_text_command}'[/bold blue]")
         current_app = current_context.get("app_name").strip()
+        primary_context = current_context["primary_context"]
 
         match current_app:
             case IntenApp.CHROME | IntenApp.BRAVE:
                 self.browser_app.process_command(
-                    processing_text, user_text_command, user_command_audio
+                    primary_context, user_text_command, user_command_audio
                 )
             case IntenApp.TEXTEDIT:
                 self.text_edit_app.process_command(
-                    processing_text, user_text_command, user_command_audio
+                    primary_context, user_text_command, user_command_audio
                 )
             case _:
                 self.macos_app.process_dictation(
-                    current_app, processing_text, user_text_command, user_command_audio
+                    current_context,
+                    user_text_command,
+                    user_command_audio,
                 )

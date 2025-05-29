@@ -6,6 +6,7 @@ from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
 from src.types.apps import IntenApp
+from src.types.context import Context
 
 
 class ContextEngine:
@@ -21,7 +22,7 @@ class ContextEngine:
         self.notes_app = notes_app
         self.macos_app = macos_app
 
-    def get_full_app_context(self, current_context: dict):
+    def get_full_app_context(self, current_context: Context):
         app_name = current_context.get("app_name", None)
         if platform_utils.is_macos():
             match app_name:
@@ -45,7 +46,6 @@ class ContextEngine:
                 case IntenApp.TEXTEDIT:
                     return self.text_edit_app.get_context()
                 case _:
-                    # context = platform_utils.get_active_body(app_name)
                     context = self.macos_app.get_focused_cursor_context()
                     rprint(
                         f"[bold magenta]Focused cursor context: {context} [/bold magenta]"

@@ -5,9 +5,10 @@ import time
 from deepdiff import DeepDiff
 from google.genai import types
 
-from src import prompt_templates
 from src.engines.macos_engine import MacOSEngine
 from src.handlers.llm_handler import LLMHandler
+from src.prompts import prompt_templates
+from src.types.context import Context
 
 logger = logging.getLogger(__name__)
 
@@ -122,13 +123,12 @@ class MacOSapp:
 
     def process_action(
         self,
-        app_name: str,
-        processing_text: str,
+        primary_context: str,
         user_text_command: str,
         user_command_audio: bytes | None = None,
     ):
         full_llm_input = prompt_templates.create_macos_ax_ocr_prompt(
-            context=processing_text, command=user_text_command
+            context=primary_context, command=user_text_command
         )
 
         def tool_name_resolver(tool_name, **args):
@@ -145,7 +145,7 @@ class MacOSapp:
             else:
                 return self._run_atomic({"action": tool_name, **args})
 
-        old_context = processing_text
+        old_context = primary_context
 
         def run_after_step(state: dict):
             new_context = self.get_context()
@@ -169,27 +169,29 @@ class MacOSapp:
 
     def process_dictation(
         self,
-        app_name: str,
-        processing_text: str,
+        context: Context,
         user_text_command: str,
         user_command_audio: bytes | None = None,
     ):
         full_llm_input = prompt_templates.create_general_document_body_prompt(
-            app_name, processing_text, user_text_command
+            context["app_name"],
+            context["primary_context"],
+            user_text_command,
+            context["page_context"],
         )
-        new_doc_text = self.llm_handler.process_input_with_llm(
+        new_primary_context = self.llm_handler.process_input_with_llm(
             text=full_llm_input,
             audio_buffer=user_command_audio,
             system_prompt_override=self.dictation_system_prompt,
         )
 
-        if new_doc_text is None:  # Check for None specifically
+        if new_primary_context is None:  # Check for None specifically
             logger.error("LLM processing failed or did not return content.")
             # is_processing is released in finally block
             return
         logger.info(
-            f"LLM returned new document content (length: {len(new_doc_text)} chars)."
+            f"LLM returned new document content (length: {len(new_primary_context)} chars)."
         )
 
-        logger.info(f"New document content:\n---\n{new_doc_text[:200]}...\n---")
-        self.macos_engine.paste_text_to_active_app(new_doc_text)
+        logger.info(f"New document content:\n---\n{new_primary_context[:200]}...\n---")
+        self.macos_engine.paste_text_to_active_app(new_primary_context)

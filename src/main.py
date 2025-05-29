@@ -17,7 +17,6 @@ from src.ui.keyboard_listener import KeyboardListenerProcess
 from src.ui.keyboard_manager import KeyboardManager
 from src.ui.onboarding import OnboardingWindow
 from src.ui.theme.manager import ThemeManager
-
 from src.utils.logging import setup_logging
 
 setup_logging()

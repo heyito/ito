@@ -1,6 +1,6 @@
 import logging
-import traceback
 import sys
+import traceback
 
 from PySide6.QtCore import QPointF, QSettings, Qt, QTimer
 from PySide6.QtGui import QPixmap
@@ -199,9 +199,9 @@ class Home(QMainWindow):
         # Enable native window dragging on macOS
         if sys.platform == "darwin":
             try:
-                import objc
                 from ctypes import c_void_p
-                from AppKit import NSWindow
+
+                import objc
                 win = self.winId()
                 ns_view = objc.objc_object(c_void_p(int(win)))
                 ns_window = ns_view.window()

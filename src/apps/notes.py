@@ -1,9 +1,9 @@
 import logging
 
 import src.platform_utils_macos as platform_utils
-from src import prompt_templates
 from src.engines.intent_engine import IntentEngine
 from src.handlers.llm_handler import LLMHandler
+from src.prompts import prompt_templates
 
 # Configure logging
 logger = logging.getLogger(__name__)

@@ -34,19 +34,16 @@ a = Analysis(
     pathex=['src'],
     binaries=[
         ('/opt/homebrew/opt/portaudio/lib/libportaudio.dylib', '.'),
-        ('./.venv/lib/python3.12/site-packages/vosk/libvosk.dyld', 'vosk'),
     ],
     datas=[
         ('inten-logo.png', '.'),
         ('inten-logo-dark.png', '.'),
         ('src/bin/inten_macos_agent', '.'),
-        ('src/models/vosk-model-en-us-0.22-lgraph', 'models/vosk-model-en-us-0.22-lgraph'),
     ],
     hiddenimports=[
       'native_messaging_host',
       'dependency_injector.errors',
       'dependency_injector.wiring',
-      'vosk'
     ],
     hookspath=[],
     hooksconfig={},

@@ -19,7 +19,6 @@ from src.ui.status_window import StatusWindow
 # Configure logging
 logger = logging.getLogger(__name__)
 
-
 class ApplicationManager(QObject):
     # Singleton instance
     _instance = None
@@ -160,24 +159,6 @@ class ApplicationManager(QObject):
             ),
             "frame_duration_ms": int(self.settings.value("VAD/frame_duration_ms", 30)),
         }
-
-        # --- Vosk settings ---
-        # Calculate default path inside the method
-        default_vosk_model_dir = (
-            "src/models/vosk-model-en-us-0.22-lgraph"  # Adjust if needed
-        )
-        current_file_path = pathlib.Path(__file__).resolve()
-        project_root = current_file_path.parent.parent
-        default_vosk_model_path_str = str(project_root / default_vosk_model_dir)
-
-        # Read from QSettings, check if empty, apply calculated default if needed
-        vosk_path_from_settings = self.settings.value("Vosk/model_path", "")
-        final_vosk_path = (
-            vosk_path_from_settings
-            if vosk_path_from_settings
-            else default_vosk_model_path_str
-        )
-        config["Vosk"] = {"model_path": final_vosk_path}
 
         # Output settings
         config["Output"] = {"method": self.settings.value("Output/method", "typewrite")}
@@ -334,11 +315,6 @@ class ApplicationManager(QObject):
         else:
             logger.info("No background application thread to stop.")
 
-        # Stop asyncio loop if streaming mode might have used it
-        if hasattr(self.container, "asyncio_loop_manager"):
-            logger.info("Stopping asyncio loop manager...")
-            self.container.asyncio_loop_manager().stop_loop()
-
         # Clear queues
         logger.info("Clearing queues...")
         while not self.error_queue.empty():
@@ -360,7 +336,7 @@ class ApplicationManager(QObject):
     def closeEvent(self, event):
         """Handle window close event"""
         logger.info("ApplicationManager closeEvent: Stopping application...")
-        self.stop_application()  # This now stops asyncio loop too
+        self.stop_application()
         # Clean up keyboard manager
         logger.info("ApplicationManager closeEvent: Cleaning up keyboard manager...")
         self.keyboard_manager.cleanup()

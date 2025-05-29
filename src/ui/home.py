@@ -60,32 +60,6 @@ class Home(QMainWindow):
                 {"target_widget_name": "llm_source", "action": "enable_all_options"}
             ],
         },
-        {  # STREAMING mode: show Vosk path, disable Speech Rec tab
-            "condition": {
-                "widget_name": "application_mode_selector",
-                "property": "currentText",
-                "value": "streaming",
-            },
-            "then_actions": [
-                {
-                    "target_widget_name": "vosk_model_path_container",
-                    "action": "set_visibility_and_space",
-                    "visible": True,
-                },
-                {  # ADDED: Disable Speech Rec tab
-                    "target_widget_name": "speech_recognition_button",
-                    "action": "set_enabled",
-                    "enabled": False,
-                },
-            ],
-            "else_actions": [  # Only manage vosk_model_path_container here
-                {
-                    "target_widget_name": "vosk_model_path_container",
-                    "action": "set_visibility_and_space",
-                    "visible": False,
-                }
-            ],
-        },
         # --- Rules for LLM Provider Model Container Visibility ---
         {
             "condition": {
@@ -706,25 +680,10 @@ class Home(QMainWindow):
         application_mode_layout.setSpacing(4)
         application_mode_layout.addWidget(application_mode_label)
         self.application_mode_selector = SegmentedButtonGroup(
-            ["discrete", "streaming", "oneshot"]
+            ["discrete", "oneshot"]
         )
         application_mode_layout.addWidget(self.application_mode_selector)
         mode_layout.addWidget(application_mode_container)
-
-        # Vosk Section
-        self.vosk_model_path_edit = QLineEdit()
-        self.vosk_model_path_edit.setMaximumWidth(300)
-        self.set_line_edit_style(self.vosk_model_path_edit)
-        vosk_model_path_label = QLabel("Model Path")
-        self.set_label_style(vosk_model_path_label)
-        self.vosk_model_path_container = QWidget()
-        self.vosk_model_path_container.setObjectName("vosk_model_path_container")
-        vosk_model_path_layout = QVBoxLayout(self.vosk_model_path_container)
-        vosk_model_path_layout.setContentsMargins(0, 0, 0, 0)
-        vosk_model_path_layout.setSpacing(4)
-        vosk_model_path_layout.addWidget(vosk_model_path_label)
-        vosk_model_path_layout.addWidget(self.vosk_model_path_edit)
-        mode_layout.addWidget(self.vosk_model_path_container)
 
         mode_layout.addStretch()
         self.stacked_widget.addWidget(self.mode_page)
@@ -1126,7 +1085,6 @@ class Home(QMainWindow):
 
         # Mode Settings
         self.application_mode_selector.selectionChanged.connect(self._handle_ui_change)
-        self.vosk_model_path_edit.textChanged.connect(self.save_settings)
 
         # Load settings after UI is fully initialized
         QTimer.singleShot(100, self.load_settings)
@@ -1335,14 +1293,7 @@ class Home(QMainWindow):
             elif llm_source_value == "gemini_api":
                 current_llm_model_value = self.gemini_model.currentText()
 
-            vosk_model_path_value = self.vosk_model_path_edit.text()
             selected_application_mode = self.application_mode_selector.currentText()
-
-            if selected_application_mode == "streaming" and not vosk_model_path_value:
-                self.handle_error(
-                    "Vosk Model Path cannot be empty when Streaming Mode is enabled."
-                )
-                return
 
             asr_source_value = self.asr_source.currentText()
             current_asr_provider_model_value = ""
@@ -1401,7 +1352,6 @@ class Home(QMainWindow):
                     "device": self.asr_device.currentText(),
                     "compute_type": self.asr_compute_type.currentText(),
                 },
-                "Vosk": {"model_path": vosk_model_path_value},
                 "LLM": {
                     "source": llm_source_value,
                     "model": current_llm_model_value,
@@ -1511,13 +1461,6 @@ class Home(QMainWindow):
             mode_config = config.get("Mode", {})
             self.application_mode_selector.setCurrentText(
                 mode_config.get("application_mode", "discrete")
-            )
-
-            # Load Vosk settings (Path is now guaranteed by ApplicationManager)
-            vosk_config = config.get("Vosk", {})
-            vosk_path_from_config = vosk_config.get("model_path")
-            self.vosk_model_path_edit.setText(
-                vosk_path_from_config if vosk_path_from_config else ""
             )
 
             self._apply_ui_restrictions()

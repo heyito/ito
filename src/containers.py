@@ -8,13 +8,11 @@ from src.apps.browser import BrowserApp
 from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
-from src.asyncio_loop_manager import AsyncioLoopManager
 from src.clients.gemini_client import GeminiClient
 from src.clients.groq_client import GroqClient
 from src.clients.llm_client_interface import LLMClientInterface
 from src.clients.ollama_client import OllamaClient
 from src.clients.openai_client import OpenAIClient
-from src.clients.openai_webrtc_client import OpenAIWebRTCClient
 from src.command_processor import CommandProcessor
 from src.context_manager import ContextManager
 from src.discrete_application_runner import DiscreteApplicationRunner
@@ -25,16 +23,12 @@ from src.engines.processing_engine import ProcessingEngine
 from src.handlers.audio.asr_handler_interface import ASRHandlerInterface
 from src.handlers.audio.audio_recorder import AudioRecorder
 from src.handlers.audio.audio_source_handler import AudioSourceHandler
-from src.handlers.audio.audio_streamer import AudioStreamer
 from src.handlers.audio.faster_whisper_asr_handler import FasterWhisperASRHandler
 from src.handlers.audio.gemini_asr_handler import GeminiASRHandler
 from src.handlers.audio.groq_asr_handler import GroqASRHandler
 from src.handlers.audio.openai_asr_handler import OpenAIASRHandler
 from src.handlers.llm_handler import LLMHandler
-from src.handlers.vosk_processor import VoskProcessor
 from src.one_shot_application_runner import OneShotApplicationRunner
-from src.streaming_application_runner import StreamingApplicationRunner
-
 
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
@@ -42,11 +36,6 @@ class Container(containers.DeclarativeContainer):
     # --- Shared UI Queue ---
     # Provide a single queue instance for status updates
     status_queue = providers.Singleton(queue.Queue)
-
-    # --- Asyncio Loop Manager (Singleton) ---
-    asyncio_loop_manager = providers.Singleton(AsyncioLoopManager)
-    # Provide the loop instance itself via the manager
-    asyncio_loop = providers.Callable(lambda m: m.get_loop(), asyncio_loop_manager)
 
     # --- LLM Clients ---
     openai_llm_client_provider = providers.Singleton(
@@ -97,13 +86,6 @@ class Container(containers.DeclarativeContainer):
         channels=config.Audio.channels.as_int(),
         # Inject base provider for optional int - handled in __init__
         device_index=config.Audio.device_index,
-    )
-
-    # --- Clients --- Added section for clients
-    openai_webrtc_client = providers.Singleton(
-        OpenAIWebRTCClient,
-        api_key=config.APIKeys.openai_api_key,
-        # The session_url uses the default value in the client's __init__
     )
 
     intent_engine = providers.Singleton(IntentEngine, llm_handler=llm_handler)
@@ -186,26 +168,6 @@ class Container(containers.DeclarativeContainer):
         status_queue=status_queue,
     )
 
-    # --- Streaming Mode Components ---
-    # Real-time ASR Processor selector (if multiple options later)
-    # For now, just Vosk
-    vosk_config_provider = providers.Dict(
-        model_path=config.Vosk.model_path,
-    )
-
-    # Provide the VoskProcessor class itself for AudioStreamer
-    # The streamer will instantiate it
-    realtime_asr_processor_cls = providers.Object(VoskProcessor)
-
-    audio_streamer = providers.Singleton(
-        AudioStreamer,
-        audio_handler=audio_source_handler,
-        asr_processor_cls=realtime_asr_processor_cls,
-        asr_config=vosk_config_provider,
-        vad_config=vad_config_provider,
-        loop=asyncio_loop,  # Inject the loop from the manager
-    )
-
     discrete_runner = (
         providers.Factory(  # Factory ensures new instance if container reset
             DiscreteApplicationRunner,
@@ -216,15 +178,6 @@ class Container(containers.DeclarativeContainer):
             asr_handler=discrete_asr_handler,
             status_queue=status_queue,
         )
-    )
-
-    streaming_runner = providers.Factory(
-        StreamingApplicationRunner,
-        config=app_config,
-        context_manager=context_manager,
-        command_processor=command_processor,
-        audio_streamer=audio_streamer,
-        status_queue=status_queue,
     )
 
     one_shot_runner = providers.Factory(
@@ -239,7 +192,6 @@ class Container(containers.DeclarativeContainer):
     # --- Main Application Selector ---
     application: providers.Provider[ApplicationInterface] = providers.Selector(
         config.Mode.application_mode,  # Use the helper returning 'true'/'false'
-        streaming=streaming_runner,
         discrete=discrete_runner,
         oneshot=one_shot_runner,
     )

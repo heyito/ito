@@ -1,10 +1,7 @@
-import asyncio
 import logging
-import threading
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import Literal
 
 import numpy as np
 import sounddevice as sd
@@ -13,10 +10,6 @@ import sounddevice as sd
 logger = logging.getLogger(__name__)
 
 AudioChunk = np.ndarray | bytes
-# Define a callback type hint for clarity
-AudioCallback = Callable[[AudioChunk], None]  # Simple callback
-AsyncAudioCallback = Callable[[AudioChunk], asyncio.Future]  # Async callback
-
 
 class AudioSourceInterface(ABC):
     def __init__(self, sample_rate: int, channels: int, device_index: int):
@@ -93,16 +86,4 @@ class AudioSourceInterface(ABC):
 
         Takes signal from stop_event to terminate
         """
-        pass
-
-    @abstractmethod
-    def stream_audio_to_async_queue(
-        self,
-        stop_event: threading.Event,
-        async_queue: asyncio.Queue,
-        loop: asyncio.AbstractEventLoop,
-        vad_config,
-        output_format: Literal["numpy", "bytes"] = "bytes",
-    ):  # Default to bytes for Vosk
-        """Starts streaming audio chunks into the provided asyncio Queue."""
         pass

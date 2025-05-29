@@ -10,10 +10,8 @@ from src.utils.timing import time_method
 # Configure logging
 logger = logging.getLogger(__name__)
 
-
 # Default System Prompt (can be configured or overridden)
 DEFAULT_LLM_SYSTEM_PROMPT = "You are a helpful AI assistant."
-
 
 class LLMHandler:
     def __init__(self, client: LLMClientInterface):

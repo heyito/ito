@@ -119,10 +119,6 @@ class AppConfig:
         self.dictation_hotkey: str = hotkeys_section.get("dictation_hotkey", "fn")
         self.action_hotkey: str = hotkeys_section.get("action_hotkey", "f10")
 
-        # Vosk settings (expected if streaming_mode is true)
-        vosk_section = config_dict.get("Vosk", {})
-        self.vosk_model_path: str = vosk_section.get("model_path", "")
-
         # Mode settings
         mode_section = config_dict.get("Mode", {})
         self.application_mode: str = mode_section.get(

@@ -12,7 +12,6 @@ from src.types.modes import CommandMode
 # Configure logging
 logger = logging.getLogger(__name__)
 
-
 class ContextManager:
     """Handles fetching and storing application context."""
 

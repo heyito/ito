@@ -18,8 +18,6 @@ soundfile = "0.13.1"
 requests = "2.32.3"
 scipy = "1.15.2"
 faster-whisper = "1.1.1"
-torch = "2.6.0"
-torchaudio = "2.6.0"
 PyYAML = "6.0.2"
 psutil = "7.0.0"
 coloredlogs = "15.0.1"
@@ -28,9 +26,6 @@ rubicon-objc = "*"
 py2app = "*"
 setuptools = "*"
 wheel = "*"
-aiortc = "^1.11.0"
-aiohttp = "^3.11.18"
-webrtcvad = "^2.0.10"
 dependency-injector = "^4.46.0"
 deepdiff = "^8.4.2"
 groq = "^0.24.0"
@@ -39,6 +34,7 @@ pyside6 = "^6.9.0"
 rich = "^14.0.0"
 watchdog = "^6.0.0"
 appnope = "^0.1.4"
+webrtcvad = "^2.0.10"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
@@ -55,11 +51,11 @@ build-backend = "poetry.core.masonry.api"
 line-length = 88
 target-version = "py312"
 extend-select = [
-    "I",
-    "UP",
-    "F",
-    "B",
-    "A",
+  "I",
+  "UP",
+  "F",
+  "B",
+  "A",
 ] # I = isort, UP = pyupgrade, F = pyflakes, B = bugbear, A = flake8-annotations
 exclude = ["dist", "build"]
 fix = true

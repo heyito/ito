@@ -63,7 +63,7 @@ class DiscreteApplicationRunner(ApplicationInterface):
         logger.info("Inten background process running...")
 
     @time_method
-    def trigger_interaction(self, mode: str):
+    def trigger_interaction(self, mode: CommandMode):
         """Trigger an interaction with the application."""
         logger.info(
             f"[bold green] Triggering interaction with mode: {mode}...[/bold green]"

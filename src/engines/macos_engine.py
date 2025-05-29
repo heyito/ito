@@ -357,6 +357,7 @@ class MacOSEngine:
 
         time.sleep(0.1)
 
+        self._send_shortcut(["command"], KEY_MAP["a"])
         self._send_shortcut(["command"], KEY_MAP["v"])
 
         # Allow a moment for paste to occur

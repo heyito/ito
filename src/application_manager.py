@@ -423,8 +423,6 @@ class ApplicationManager(QObject):
             command_mode,
         )
 
-        self._trigger_interaction(CommandMode.DICTATION)
-
     def _handle_hotkey_release(self, hotkey_name: str) -> None:
         logger.info("Second completion hotkey tap detected.")
         logger.info("Stopping interaction and resetting hotkey tap state.")

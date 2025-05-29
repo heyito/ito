@@ -13,6 +13,7 @@ class StatusMessage(Enum):
     BUSY = "Busy processing previous command"
     SETTINGS_SAVED = "Settings saved."
     SETTINGS_SAVED_RESTARTING = "Settings saved. Restarting application..."
+    HOTKEY_PRESSED = "Hotkey pressed, starting command processing..."
     HOTKEY_IGNORED = "Hotkey ignored: Application not running."
     PROCESSING_BUSY = "Processing busy, please wait..."
     ALREADY_RECORDING = "Already recording..."

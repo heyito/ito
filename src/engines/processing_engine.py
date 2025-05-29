@@ -55,7 +55,7 @@ class ProcessingEngine:
                 )
             case _:
                 self.macos_app.process_action(
-                    current_app, primary_context, user_text_command, user_command_audio
+                    primary_context, user_text_command, user_command_audio
                 )
 
     def process_dictation(

@@ -16,8 +16,6 @@ from aiortc import (
 )
 from aiortc.mediastreams import AudioFrame, MediaStreamError  # Added AudioFrame
 
-# Configure logging for aiortc and our client
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("OpenAIWebRTCClient")
 
 AUDIO_PTIME = 0.020  # Packetization time (20ms) -> Default for aiortc AudioFrame

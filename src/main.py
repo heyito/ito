@@ -18,94 +18,17 @@ from src.ui.keyboard_manager import KeyboardManager
 from src.ui.onboarding import OnboardingWindow
 from src.ui.theme.manager import ThemeManager
 
-# Configure logging to write to both stderr and a file
-try:
-    # Try to write to user's home directory first
-    log_dir = os.path.expanduser("~/Library/Logs/Inten")
-    log_file = os.path.join(log_dir, "inten.log")
+from src.utils.logging import setup_logging
 
-    # Try to create directory and verify we can write to it
-    try:
-        os.makedirs(log_dir, exist_ok=True)
-        # Test write access
-        with open(log_file, "a") as f:
-            f.write("=== Log file initialized ===\n")
-    except Exception as e:
-        # If we can't write to ~/Library/Logs, try /tmp
-        print(f"Could not write to {log_dir}: {e}")
-        log_dir = "/tmp/Inten"
-        log_file = os.path.join(log_dir, "inten.log")
-        os.makedirs(log_dir, exist_ok=True)
-        with open(log_file, "a") as f:
-            f.write("=== Log file initialized (using /tmp) ===\n")
+setup_logging()
 
-    print(f"Log file location: {log_file}")  # Print to stderr for immediate visibility
-
-    # Create a file handler
-    file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(logging.DEBUG)
-    file_handler.setFormatter(
-        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    )
-
-    # Create a stream handler for stderr
-    stream_handler = logging.StreamHandler(sys.stderr)
-    stream_handler.setLevel(logging.DEBUG)
-    stream_handler.setFormatter(
-        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    )
-
-    # Configure root logger
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
-    root_logger.addHandler(file_handler)
-    root_logger.addHandler(stream_handler)
-
-    # Configure specific loggers
-    loggers = [
-        "ai.inten.inten.main",
-        "ai.inten.inten.keyboard",
-        "ai.inten.inten.native_messaging",
-        "StreamingApp",
-        "StreamingRunner",
-    ]
-
-    for logger_name in loggers:
-        logger = logging.getLogger(logger_name)
-        logger.setLevel(logging.DEBUG)
-        # Don't propagate to root logger to avoid duplicate messages
-        logger.propagate = False
-        logger.addHandler(file_handler)
-        logger.addHandler(stream_handler)
-
-    # Create logger for the main module and log immediately
-    logger = logging.getLogger("ai.inten.inten.main")
-    logger.info("=== Application starting ===")
-    logger.info(f"Python version: {sys.version}")
-    logger.info(f"Platform: {platform.platform()}")
-    logger.info(f"Current directory: {os.getcwd()}")
-    logger.info(f"Script path: {os.path.abspath(__file__)}")
-    logger.info(f"Log file: {log_file}")
-    logger.debug("Debug logging enabled")
-
-except Exception as e:
-    # If logging setup fails, at least print to stderr
-    print(f"Failed to setup logging: {e}")
-    print(f"Error details: {traceback.format_exc()}")
-    # Fall back to basic stderr logging
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        stream=sys.stderr,
-    )
-    logger = logging.getLogger("ai.inten.inten.main")
-    logger.error(f"Failed to setup file logging: {e}")
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
+logger.info("=== Application starting ===")
+logger.info(f"Python version: {sys.version}")
+logger.info(f"Platform: {platform.platform()}")
+logger.info(f"Current directory: {os.getcwd()}")
+logger.info(f"Script path: {os.path.abspath(__file__)}")
+logger.debug("Debug logging enabled")
 
 # Import NSProcessInfo for app nap prevention
 if platform.system() == "Darwin":
@@ -210,7 +133,7 @@ def check_microphone_permission() -> bool:
 
 def run_native_messaging_host():
     """Run the native messaging host functionality"""
-    from native_messaging_host import main as native_messaging_main
+    from src.native_messaging_host import main as native_messaging_main
 
     native_messaging_main()
 
@@ -219,7 +142,6 @@ def ensure_native_messaging_host_registered(native_messaging_script_path):
     """Ensure the native messaging host manifest is registered with Chrome"""
     try:
         # Log environment information
-        logger = logging.getLogger("ai.inten.inten.native_messaging")
         logger.info("=== Native Messaging Host Registration ===")
         logger.info(f"Current working directory: {os.getcwd()}")
         logger.info(f"User: {os.getenv('USER')}")
@@ -312,7 +234,6 @@ def ensure_native_messaging_host_registered(native_messaging_script_path):
                 logger.error(f"Failed to clean up temporary file: {e}")
 
     except Exception as e:
-        logger = logging.getLogger("ai.inten.inten.native_messaging")
         logger.error(f"Failed to register native messaging host manifest: {e}")
         logger.error("Chrome integration may not work properly")
         # Don't raise the exception - this is not critical for the app to function

@@ -84,9 +84,7 @@ class Container(containers.DeclarativeContainer):
         AudioSourceHandler,
         # Inject required typed values
         sample_rate=config.Audio.sample_rate.as_int(),
-        channels=config.Audio.channels.as_int(),
-        # Inject base provider for optional int - handled in __init__
-        device_index=config.Audio.device_index,
+        channels=config.Audio.channels.as_int()
     )
 
     intent_engine = providers.Singleton(IntentEngine, llm_handler=llm_handler)
@@ -152,20 +150,9 @@ class Container(containers.DeclarativeContainer):
 
     app_config = providers.Factory(AppConfig, config_dict=config)
 
-    # VAD Config provider - using Callable instead of Dict
-    vad_config_provider = providers.Dict(
-        enabled=providers.AttributeGetter(app_config, "vad_enabled"),
-        aggressiveness=providers.AttributeGetter(app_config, "vad_aggressiveness"),
-        silence_duration_ms=providers.AttributeGetter(
-            app_config, "silence_duration_ms"
-        ),
-        frame_duration_ms=providers.AttributeGetter(app_config, "frame_duration_ms"),
-    )
-
     audio_recorder = providers.Singleton(
         AudioRecorder,
         audio_handler=audio_source_handler,
-        vad_config=vad_config_provider,
         status_queue=status_queue,
     )
 

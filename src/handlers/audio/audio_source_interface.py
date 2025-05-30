@@ -11,19 +11,10 @@ logger = logging.getLogger(__name__)
 AudioChunk = np.ndarray | bytes
 
 class AudioSourceInterface(ABC):
-    def __init__(self, sample_rate: int, channels: int, device_index: int):
+    def __init__(self, sample_rate: int, channels: int):
         self.sample_rate = sample_rate
         self.channels = channels
-        # Retrieve optional device_index from source
-        raw_device_index_str = device_index
         self.device_index = None  # Default to None
-        if raw_device_index_str:
-            try:
-                self.device_index = int(raw_device_index_str)
-            except (ValueError, TypeError):
-                logger.warning(
-                    f"Invalid device_index '{raw_device_index_str}' in config. Using default (None)."
-                )
 
         # Add validation for required values if needed
         if not isinstance(self.sample_rate, int) or self.sample_rate <= 0:
@@ -68,15 +59,6 @@ class AudioSourceInterface(ABC):
 
         except Exception as e:
             logger.error(f"Could not pre-warm audio device: {e}")
-
-    @abstractmethod
-    def record_audio_stream_with_vad(self, stop_event, audio_queue, vad_config):
-        """
-        Continuously records audio, putting chunks into a queue.
-        Uses VAD to set stop_event after a period of silence.
-        Accepts VAD configuration dictionary.
-        """
-        pass
 
     @abstractmethod
     def record_audio_stream(self, stop_event, audio_queue):

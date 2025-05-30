@@ -34,7 +34,6 @@ pyside6 = "^6.9.0"
 rich = "^14.0.0"
 watchdog = "^6.0.0"
 appnope = "^0.1.4"
-webrtcvad = "^2.0.10"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

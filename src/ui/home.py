@@ -427,16 +427,6 @@ class Home(QMainWindow):
         self.groq_asr_model_container.hide()
         self.gemini_asr_model_container.hide()
 
-        self.asr_device = SegmentedButtonGroup(["auto"])
-        self.asr_device_label = QLabel("Device")
-        self.set_label_style(self.asr_device_label)
-        self.asr_device_container = QWidget()
-        asr_device_layout = QVBoxLayout(self.asr_device_container)
-        asr_device_layout.setContentsMargins(0, 0, 0, 0)
-        asr_device_layout.setSpacing(4)
-        asr_device_layout.addWidget(self.asr_device_label)
-        asr_device_layout.addWidget(self.asr_device)
-        asr_form_layout.addRow(self.asr_device_container)
 
         self.asr_compute_type = SegmentedButtonGroup(
             ["default", "int8", "int8_float16", "float16"]
@@ -759,66 +749,6 @@ class Home(QMainWindow):
         """
         )
 
-        # --- Voice Detection PAGE ---
-        # self.voice_detection_page = QWidget()
-        # voice_detection_layout = QVBoxLayout(self.voice_detection_page)
-        # voice_detection_layout.setContentsMargins(0, 0, 0, 0)
-        # self.voice_detection_title = QLabel("Voice Detection")
-        # self.set_page_title_style(self.voice_detection_title)
-        # voice_detection_layout.addWidget(
-        #     self.voice_detection_title, alignment=Qt.AlignmentFlag.AlignLeft
-        # )
-
-        # # VAD Section (migrated from Settings page)
-        # self.vad_enabled = SegmentedButtonGroup(["Enabled", "Disabled"])
-        # vad_enabled_label = QLabel("Voice Activity Detection")
-        # self.set_label_style(vad_enabled_label)
-        # vad_enabled_container = QWidget()
-        # vad_enabled_layout = QVBoxLayout(vad_enabled_container)
-        # vad_enabled_layout.setContentsMargins(0, 0, 0, 0)
-        # vad_enabled_layout.setSpacing(4)
-        # vad_enabled_layout.addWidget(vad_enabled_label)
-        # vad_enabled_layout.addWidget(self.vad_enabled)
-        # voice_detection_layout.addWidget(vad_enabled_container)
-
-        # self.vad_aggressiveness = SegmentedButtonGroup(["0", "1", "2", "3"])
-        # vad_aggressiveness_label = QLabel("Aggressiveness")
-        # self.set_label_style(vad_aggressiveness_label)
-        # vad_aggressiveness_container = QWidget()
-        # vad_aggressiveness_layout = QVBoxLayout(vad_aggressiveness_container)
-        # vad_aggressiveness_layout.setContentsMargins(0, 0, 0, 0)
-        # vad_aggressiveness_layout.setSpacing(4)
-        # vad_aggressiveness_layout.addWidget(vad_aggressiveness_label)
-        # vad_aggressiveness_layout.addWidget(self.vad_aggressiveness)
-        # voice_detection_layout.addWidget(vad_aggressiveness_container)
-
-        # self.silence_duration = SegmentedButtonGroup(
-        #     ["100", "500", "1000", "2000", "5000"]
-        # )
-        # silence_duration_label = QLabel("Silence Duration (ms)")
-        # self.set_label_style(silence_duration_label)
-        # silence_duration_container = QWidget()
-        # silence_duration_layout = QVBoxLayout(silence_duration_container)
-        # silence_duration_layout.setContentsMargins(0, 0, 0, 0)
-        # silence_duration_layout.setSpacing(4)
-        # silence_duration_layout.addWidget(silence_duration_label)
-        # silence_duration_layout.addWidget(self.silence_duration)
-        # voice_detection_layout.addWidget(silence_duration_container)
-
-        # self.frame_duration = SegmentedButtonGroup(["10", "20", "30"])
-        # frame_duration_label = QLabel("Frame Duration (ms)")
-        # self.set_label_style(frame_duration_label)
-        # frame_duration_container = QWidget()
-        # frame_duration_layout = QVBoxLayout(frame_duration_container)
-        # frame_duration_layout.setContentsMargins(0, 0, 0, 0)
-        # frame_duration_layout.setSpacing(4)
-        # frame_duration_layout.addWidget(frame_duration_label)
-        # frame_duration_layout.addWidget(self.frame_duration)
-        # voice_detection_layout.addWidget(frame_duration_container)
-
-        # voice_detection_layout.addStretch()
-        # self.stacked_widget.addWidget(self.voice_detection_page)
-
         # --- Keyboard PAGE ---
         self.keyboard_page = QWidget()
         keyboard_layout = QVBoxLayout(self.keyboard_page)
@@ -839,18 +769,6 @@ class Home(QMainWindow):
         keyboard_form_layout.setFormAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
-
-        # Output Section
-        self.output_method = SegmentedButtonGroup(["typewrite"])
-        output_method_label = QLabel("Output Method")
-        self.set_label_style(output_method_label)
-        output_method_container = QWidget()
-        output_method_layout = QVBoxLayout(output_method_container)
-        output_method_layout.setContentsMargins(0, 0, 0, 0)
-        output_method_layout.setSpacing(4)
-        output_method_layout.addWidget(output_method_label)
-        output_method_layout.addWidget(self.output_method)
-        keyboard_form_layout.addRow(output_method_container)
 
         # Hotkeys Section
         self._hotkey_recording = None
@@ -1056,7 +974,6 @@ class Home(QMainWindow):
         self.gemini_asr_model.selectionChanged.connect(self.save_settings)
         self.groq_asr_model.selectionChanged.connect(self.save_settings)
         self.faster_whisper_model.selectionChanged.connect(self.save_settings)
-        self.asr_device.selectionChanged.connect(self.save_settings)
         self.asr_compute_type.selectionChanged.connect(self.save_settings)
 
         # LLM Settings
@@ -1071,17 +988,6 @@ class Home(QMainWindow):
         # Audio Settings
         self.sample_rate.selectionChanged.connect(self.save_settings)
         self.channels.selectionChanged.connect(self.save_settings)
-
-        # VAD Settings
-        # self.vad_enabled.selectionChanged.connect(self.save_settings)
-        # self.vad_aggressiveness.selectionChanged.connect(self.save_settings)
-        # self.silence_duration.selectionChanged.connect(self.save_settings)
-        # self.frame_duration.selectionChanged.connect(self.save_settings)
-
-        # Output Settings
-        self.output_method.selectionChanged.connect(self.save_settings)
-
-        # Hotkey Settings
 
         # Mode Settings
         self.application_mode_selector.selectionChanged.connect(self._handle_ui_change)
@@ -1349,7 +1255,6 @@ class Home(QMainWindow):
                     "source": asr_source_value,
                     "model": current_asr_provider_model_value,
                     "local_model_size": current_asr_local_model_size,
-                    "device": self.asr_device.currentText(),
                     "compute_type": self.asr_compute_type.currentText(),
                 },
                 "LLM": {
@@ -1361,15 +1266,6 @@ class Home(QMainWindow):
                 "Audio": {
                     "sample_rate": int(self.sample_rate.currentText()),
                     "channels": int(self.channels.currentText()),
-                },
-                "VAD": {
-                    "enabled": False,
-                    "aggressiveness": 1,
-                    "silence_duration_ms": 500,
-                    "frame_duration_ms": 30,
-                },
-                "Output": {
-                    "method": self.output_method.currentText(),
                 },
                 "Hotkeys": {
                     "action_hotkey": self.action_hotkey.text(),
@@ -1428,7 +1324,6 @@ class Home(QMainWindow):
                 asr_config.get("local_model_size", "base.en")
             )
 
-            self.asr_device.setCurrentText(asr_config.get("device", "auto"))
             self.asr_compute_type.setCurrentText(
                 asr_config.get("compute_type", "default")
             )
@@ -1448,9 +1343,6 @@ class Home(QMainWindow):
             # Load Audio settings
             self.sample_rate.setCurrentText(str(config["Audio"]["sample_rate"]))
             self.channels.setCurrentText(str(config["Audio"]["channels"]))
-
-            # Load Output settings
-            self.output_method.setCurrentText(config["Output"]["method"])
 
             # Load Hotkey settings
             self.dictation_hotkey.setText(config["Hotkeys"]["dictation_hotkey"])
@@ -1580,7 +1472,6 @@ class Home(QMainWindow):
 
     def update_setting_visibility(self):
         is_local_asr = self.asr_source.currentText() == "faster_whisper"
-        set_widget_hidden_but_take_space(self.asr_device_container, not is_local_asr)
         set_widget_hidden_but_take_space(
             self.asr_compute_type_container, not is_local_asr
         )

@@ -45,7 +45,6 @@ class AppConfig:
         asr_section: dict[str, Any] = config_dict.get("ASR", {})
         self.asr_source: str = asr_section.get("source", "openai_api")
         self.asr_local_model_size: str = asr_section.get("local_model_size", "base.en")
-        self.asr_device: str = asr_section.get("device", "auto")
         self.asr_compute_type: str = asr_section.get("compute_type", "default")
 
         # Specific ASR models from their respective sections used as fallbacks or for client init
@@ -95,24 +94,6 @@ class AppConfig:
         audio_section = config_dict.get("Audio", {})
         self.sample_rate: int = int(audio_section.get("sample_rate", 16000))
         self.channels: int = int(audio_section.get("channels", 1))
-
-        # VAD settings
-        vad_section = config_dict.get("VAD", {})
-        vad_enabled = vad_section.get("enabled", False)
-        if isinstance(vad_enabled, str):
-            self.vad_enabled: bool = vad_enabled.lower() == "true"
-        else:
-            self.vad_enabled: bool = bool(vad_enabled)
-
-        self.vad_aggressiveness: int = int(vad_section.get("aggressiveness", 1))
-        self.silence_duration_ms: int = int(
-            vad_section.get("silence_duration_ms", 1000)
-        )
-        self.frame_duration_ms: int = int(vad_section.get("frame_duration_ms", 30))
-
-        # Output settings
-        output_section = config_dict.get("Output", {})
-        self.output_method: str = output_section.get("method", "typewrite")
 
         # Hotkey settings
         hotkeys_section = config_dict.get("Hotkeys", {})

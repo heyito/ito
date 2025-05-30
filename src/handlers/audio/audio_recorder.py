@@ -17,16 +17,12 @@ logger = logging.getLogger(__name__)
 
 
 class AudioRecorder:
-    """Handles discrete audio recording with VAD."""
-
     def __init__(
         self,
         audio_handler: AudioSourceHandler,
-        vad_config: dict[str, Any],
         status_queue: queue.Queue | None,
     ):
         self.audio_handler = audio_handler
-        self.vad_config = vad_config
         self.status_queue = status_queue
         self._is_recording = False
         self._stop_event = threading.Event()
@@ -80,7 +76,7 @@ class AudioRecorder:
                 name="AudioRecordingThread",
             )
             self._monitor_thread = threading.Thread(
-                target=self._monitor_target, daemon=True, name="VADMonitorThread"
+                target=self._monitor_target, daemon=True, name="AudioMonitorThread"
             )
 
             self._recording_thread.start()
@@ -90,7 +86,7 @@ class AudioRecorder:
     def _monitor_target(self):
         """Waits for stop signal, collects audio, prepares buffer, and calls callback."""
         logger.info("AudioRecorder Monitor: Waiting for stop signal...")
-        self._stop_event.wait()  # Wait for VAD or manual stop
+        self._stop_event.wait()
         logger.info("AudioRecorder Monitor: Stop signal received.")
 
         callback_to_call = None

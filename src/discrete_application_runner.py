@@ -56,9 +56,6 @@ class DiscreteApplicationRunner(ApplicationInterface):
         logger.info(
             f"ASR Source: {self.config.asr_source} ({self.config.asr_model or self.config.asr_local_model_size})"
         )
-        logger.info(f"VAD Enabled: {self.config.vad_enabled}")
-        if self.config.vad_enabled:
-            logger.info(f"  Stops after {self.config.silence_duration_ms}ms silence.")
         logger.info(f"\nPress '{self.config.dictation_hotkey}' to issue command.")
         logger.info("Inten background process running...")
 

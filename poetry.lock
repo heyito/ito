@@ -2500,20 +2500,6 @@ files = [
 watchmedo = ["PyYAML (>=3.10)"]
 
 [[package]]
-name = "webrtcvad"
-version = "2.0.10"
-description = "Python interface to the Google WebRTC Voice Activity Detector (VAD)"
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "webrtcvad-2.0.10.tar.gz", hash = "sha256:f1bed2fb25b63fb7b1a55d64090c993c9c9167b28485ae0bcdd81cf6ede96aea"},
-]
-
-[package.extras]
-dev = ["check-manifest", "memory_profiler", "nose", "psutil", "unittest2", "zest.releaser"]
-
-[[package]]
 name = "websockets"
 version = "15.0.1"
 description = "An implementation of the WebSocket Protocol (RFC 6455 & 7692)"
@@ -2610,4 +2596,4 @@ test = ["pytest (>=6.0.0)", "setuptools (>=65)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "f6d731101571d1b33a6bc263c0543e049ffd7580e7b8b54712d5df586b5095e8"
+content-hash = "6301240ead54cb79c030a69e8f18a637735ff14b74fbdb978d9d3db5f800f757"

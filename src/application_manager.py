@@ -125,7 +125,6 @@ class ApplicationManager(QObject):
             "source": self.settings.value("ASR/source", "openai_api"),
             "model": self.settings.value("ASR/model", "whisper-1"),
             "local_model_size": self.settings.value("ASR/local_model_size", "base.en"),
-            "device": self.settings.value("ASR/device", "auto"),
             "compute_type": self.settings.value("ASR/compute_type", "default"),
         }
 
@@ -142,25 +141,6 @@ class ApplicationManager(QObject):
             "sample_rate": int(self.settings.value("Audio/sample_rate", 16000)),
             "channels": int(self.settings.value("Audio/channels", 1)),
         }
-
-        # VAD settings - Convert string to boolean properly
-        vad_enabled = self.settings.value("VAD/enabled", "False")
-        if isinstance(vad_enabled, str):
-            vad_enabled = vad_enabled.lower() == "true"
-        else:
-            vad_enabled = bool(vad_enabled)
-
-        config["VAD"] = {
-            "enabled": vad_enabled,
-            "aggressiveness": int(self.settings.value("VAD/aggressiveness", 1)),
-            "silence_duration_ms": int(
-                self.settings.value("VAD/silence_duration_ms", 1000)
-            ),
-            "frame_duration_ms": int(self.settings.value("VAD/frame_duration_ms", 30)),
-        }
-
-        # Output settings
-        config["Output"] = {"method": self.settings.value("Output/method", "typewrite")}
 
         # Hotkey settings
         config["Hotkeys"] = {

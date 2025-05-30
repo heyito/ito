@@ -438,7 +438,6 @@ class ApiSetupScreen:
                 "source": "faster_whisper",  # Default, will be updated based on selection
                 "model": "medium",
                 "local_model_size": "base.en",
-                "device": "auto",
                 "compute_type": "default",
             },
             "LLM": {"source": "", "max_tokens": 2000, "temperature": 0.7},

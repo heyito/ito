@@ -33,7 +33,7 @@ function setupPingInterval() {
     pingInterval = setInterval(() => {
         if (isConnected && port) {
             try {
-                port.postMessage({type: 'ping'});
+                port.postMessage({ type: 'ping' });
                 lastMessageTime = Date.now();
             } catch (e) {
                 console.error('Error sending ping:', e);
@@ -47,7 +47,7 @@ function handleDisconnect() {
     console.log('Handling disconnect...');
     isConnected = false;
     cleanupConnection();
-    
+
     if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
         reconnectAttempts++;
         console.log(`Reconnection attempt ${reconnectAttempts} of ${MAX_RECONNECT_ATTEMPTS}`);
@@ -66,7 +66,7 @@ function connect() {
         isConnected = true;
         reconnectAttempts = 0;
         lastMessageTime = Date.now();
-        
+
         port.onDisconnect.addListener(() => {
             const error = chrome.runtime.lastError;
             console.log('Disconnected from native host:', error ? error.message : 'No error message');
@@ -76,14 +76,14 @@ function connect() {
         port.onMessage.addListener((response) => {
             console.log('Received from native host:', response);
             lastMessageTime = Date.now();
-            
+
             if (response.type === 'startup') {
                 console.log('Native host startup complete');
                 setupPingInterval();
                 // Send a test message to verify the connection
                 setTimeout(() => {
                     try {
-                        port.postMessage({type: 'test'});
+                        port.postMessage({ type: 'test' });
                     } catch (e) {
                         console.error('Error sending test message:', e);
                         handleDisconnect();
@@ -95,15 +95,15 @@ function connect() {
                 console.log('Received pong from native host');
             } else if (response.type === 'request_context') {
                 startProcessingIndicator();
-                chrome.tabs.query({active: true, currentWindow: true}, async (tabs) => {
+                chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
                     if (tabs[0]) {
                         try {
                             // Now try to get context with retries
                             let retryCount = 0;
                             const maxRetries = 3;
-                            
+
                             function tryGetContext() {
-                                chrome.tabs.sendMessage(tabs[0].id, {type: 'getContext'}, (context) => {
+                                chrome.tabs.sendMessage(tabs[0].id, { type: 'getContext' }, (context) => {
                                     if (chrome.runtime.lastError) {
                                         console.error('Error getting context (attempt ' + (retryCount + 1) + '):', chrome.runtime.lastError);
                                         if (retryCount < maxRetries) {
@@ -125,7 +125,7 @@ function connect() {
                                     }
                                 });
                             }
-                            
+
                             tryGetContext();
                         } catch (error) {
                             console.error('Failed to inject content script:', error);
@@ -138,14 +138,22 @@ function connect() {
                 });
             } else if (response.type === 'insert_text') {
                 stopProcessingIndicator();
-                // Insert text into the active element
-                chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-                    if (tabs[0]) {
-                        chrome.tabs.sendMessage(tabs[0].id, {
-                            type: 'insertText',
-                            text: response.text
-                        });
-                    }
+                // Insert text into the active element in all focused windows across all profiles
+                chrome.windows.getAll({ populate: true }, function (windows) {
+                    windows.forEach(function (window) {
+                        if (window.focused) {
+                            chrome.tabs.query({ active: true, windowId: window.id }, (tabs) => {
+                                if (tabs[0]) {
+                                    chrome.tabs.sendMessage(tabs[0].id, {
+                                        type: 'insertText',
+                                        text: response.text
+                                    });
+                                }
+                            });
+                        } else {
+                            console.log('Window', window.id, 'is not focused, skipping insertText command.');
+                        }
+                    });
                 });
             } else if (response.type === 'error') {
                 stopProcessingIndicator();
@@ -173,13 +181,13 @@ connect();
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'checkConnection') {
         console.log('Connection check requested. Current status:', isConnected);
-        sendResponse({connected: isConnected});
+        sendResponse({ connected: isConnected });
         return true;
     }
 
     if (!isConnected || !port) {
         console.log('Cannot send message: Not connected to content script');
-        sendResponse({status: 'error', message: 'Not connected to content script'});
+        sendResponse({ status: 'error', message: 'Not connected to content script' });
         return true;
     }
 
@@ -187,10 +195,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.log('Sending message to content script:', message);
         port.postMessage(message);
         lastMessageTime = Date.now();
-        sendResponse({status: 'Message sent to content script'});
+        sendResponse({ status: 'Message sent to content script' });
     } catch (error) {
         console.error('Error sending message:', error);
-        sendResponse({status: 'error', message: 'Failed to send message to content script'});
+        sendResponse({ status: 'error', message: 'Failed to send message to content script' });
     }
     return true;
 });
@@ -198,11 +206,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 function startProcessingIndicator() {
     // Set initial badge color
     chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' });
-    
+
     if (processingInterval) {
         clearInterval(processingInterval);
     }
-    
+
     // Create array of opacity levels for smooth fade
     const opacitySteps = [
         [144, 238, 144, 255], // Light green
@@ -214,12 +222,12 @@ function startProcessingIndicator() {
         [144, 238, 144, 150],
         [144, 238, 144, 200]
     ];
-    
+
     let stepIndex = 0;
     processingInterval = setInterval(() => {
         chrome.action.setBadgeText({ text: '⋯' });
         chrome.action.setBadgeBackgroundColor({ color: opacitySteps[stepIndex] });
-        
+
         // Move to next opacity step
         stepIndex = (stepIndex + 1) % opacitySteps.length;
     }, 200); // Each step takes 200ms, full cycle is 1.6s

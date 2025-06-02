@@ -46,7 +46,6 @@ class ProviderSelectButton(QFrame):
 
         # Left bar
         self.left_bar = QFrame()
-        self.left_bar.setFixedWidth(4)
         self.left_bar.setStyleSheet("background: transparent; border-radius: 2px;")
         self.outer_layout.addWidget(self.left_bar)
 
@@ -135,6 +134,7 @@ class KeyHelperButton(QWidget):
         )
         layout.addWidget(self.url_label, alignment=Qt.AlignmentFlag.AlignRight)
         self.mousePressEvent = self.open_url_event
+        self.setStyleSheet("background: transparent; border: none;")
 
     def open_url_event(self, event):
         QDesktopServices.openUrl(QUrl(self.url))
@@ -219,15 +219,14 @@ class ApiSetupScreen:
         # Main centering container
         outer_container = QWidget()
         outer_layout = QHBoxLayout(outer_container)
-        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setContentsMargins(0, 12, 0, 0)
         outer_layout.setSpacing(0)
         outer_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # Left: Provider menu (sidebar)
         left_widget = QWidget()
-        left_widget.setFixedWidth(300)
+        left_widget.setFixedWidth(240)
         left_layout = QVBoxLayout(left_widget)
-        left_layout.setContentsMargins(32, 32, 32, 32)
         left_layout.setSpacing(4)
         left_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
@@ -266,7 +265,7 @@ class ApiSetupScreen:
         self.continue_button = QPushButton("Continue")
         self.continue_button.setObjectName("onboarding-primary")
         self.continue_button.setFixedHeight(44)
-        self.continue_button.setFixedWidth(120)
+        self.continue_button.setFixedWidth(240)
         self.continue_button.setEnabled(False)
         left_layout.addStretch()
         left_layout.addWidget(self.continue_button)
@@ -274,34 +273,31 @@ class ApiSetupScreen:
         # Right: Input and helper
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
-        right_layout.setContentsMargins(32, 32, 32, 32)
         right_layout.setSpacing(24)
         right_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.right_title = QLabel()
         self.right_title.setStyleSheet(
-            f"font-size: 20px; font-weight: 600; color: {self.theme_manager.get_color('text_primary')}; margin-bottom: 8px;"
+            f"font-size: 20px; font-weight: 600; color: {self.theme_manager.get_color('text_primary')}; margin-bottom: 8px; background-color: transparent;"
         )
         right_layout.addWidget(self.right_title)
-        right_widget.setStyleSheet("""
-            #key_helper_button {
-                border: 2px solid red;
-                border-radius: 14px;
-                background: transparent;
-            }
-        """)
+        right_widget.setStyleSheet(
+            f"background-color: {self.theme_manager.get_color('background')}; border-top-left-radius: 18px; border: none;"
+        )
 
         self.api_key_input = QLineEdit()
         self.api_key_input.setPlaceholderText("Enter your API key")
         self.api_key_input.setStyleSheet(
-            """
-            QLineEdit {
+            f"""
+            QLineEdit {{
                 background-color: rgba(255, 255, 255, 0.15);
                 padding: 8px 12px;
                 border-radius: 8px;
-                color: #fff;
+                color: {self.theme_manager.get_color("text_primary")};
                 font-size: 14px;
-            }
+                selection-color: {self.theme_manager.get_color("text_primary")};
+                selection-background-color: {self.theme_manager.get_color("text_primary")};
+            }}
             """
         )
         self.api_key_input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)

@@ -54,9 +54,8 @@ class OnboardingWindow(QMainWindow):
         main_widget.setObjectName("main_widget")
         self.setCentralWidget(main_widget)
         self.layout = main_widget.layout
-        self._effective_top_margin = main_widget.get_effective_top_margin()
-        self.layout.setContentsMargins(40, self._effective_top_margin, 40, 40)
-        self.layout.setSpacing(20)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(0)
 
         # --- Initialize Permission Checker ---
         print("DEBUG: Initializing PermissionChecker")
@@ -285,7 +284,6 @@ class OnboardingWindow(QMainWindow):
         self.settings.setValue(
             "ASR/local_model_size", config["ASR"]["local_model_size"]
         )
-        self.settings.setValue("ASR/device", config["ASR"]["device"])
         self.settings.setValue("ASR/compute_type", config["ASR"]["compute_type"])
 
         # Save API keys for all providers

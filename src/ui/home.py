@@ -205,7 +205,6 @@ class Home(QMainWindow):
         # Add these variables for dragging functionality
         self._dragging = False
         self._drag_start_position = QPointF()
-        self._effective_top_margin = 40  # Same as onboarding window
 
         # Main widget and layout
         main_widget = IntenLayout(
@@ -217,8 +216,7 @@ class Home(QMainWindow):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
         main_widget.layout.addLayout(main_layout)
-        self._effective_top_margin = main_widget.get_effective_top_margin()
-        main_widget.layout.setContentsMargins(20, self._effective_top_margin, 20, 20)
+        main_widget.layout.setContentsMargins(0, 0, 0, 0)
         main_widget.layout.setSpacing(20)
 
         # Left menu panel
@@ -228,6 +226,8 @@ class Home(QMainWindow):
         menu_layout = QVBoxLayout(menu_panel)
         menu_layout.setContentsMargins(0, 0, 0, 0)
         menu_layout.setSpacing(0)
+        # Set the background color to transparent
+        menu_panel.setStyleSheet("background-color: transparent;")
 
         # Logo container at the top of menu
         logo_container = QWidget()
@@ -334,11 +334,14 @@ class Home(QMainWindow):
         content_widget.setObjectName("content_widget")
         content_layout = QVBoxLayout(content_widget)
         content_layout.setContentsMargins(36, 20, 8, 8)
-        content_widget.setStyleSheet("background: transparent; border: none;")
+        content_widget.setStyleSheet(
+            f"background-color: {self.theme_manager.get_color('background')}; border-top-left-radius: 18px; border: none;"
+        )
 
         # Stacked widget to handle different pages
         self.stacked_widget = QStackedWidget()
         content_layout.addWidget(self.stacked_widget)
+        self.stacked_widget.setStyleSheet("background-color: transparent;")
 
         # --- Speech Recognition Settings page (no scroll area) ---
         self.speech_recognition_page = QWidget()

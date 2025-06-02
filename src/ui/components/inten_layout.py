@@ -1,15 +1,8 @@
 import logging
 import sys
 
-from PySide6.QtCore import (
-    QRectF,
-    Qt,
-)
-from PySide6.QtGui import (
-    QPainter,
-    QPainterPath,
-    QRegion,
-)
+from PySide6.QtCore import QRectF, Qt
+from PySide6.QtGui import QPainter, QPainterPath, QRegion
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from src.ui.theme.manager import ThemeManager
@@ -25,22 +18,16 @@ NSColor = None  # Placeholder for NSColor
 if sys.platform == "darwin":
     try:
         import objc
-        from AppKit import (
-            NSColor as AppKitNSColor,  # Import NSColor
-        )
+        from AppKit import NSColor as AppKitNSColor  # Import NSColor
         from AppKit import (
             NSFullSizeContentViewWindowMask,
             NSMakeRect,
             NSViewHeightSizable,
             NSViewWidthSizable,
             NSVisualEffectBlendingModeBehindWindow,
-            NSVisualEffectStateActive,
-            NSVisualEffectView,
-            NSWindowBelow,
         )
-        from AppKit import (
-            NSVisualEffectMaterialPopover as AppKitPopoverConst,
-        )
+        from AppKit import NSVisualEffectMaterialPopover as AppKitPopoverConst
+        from AppKit import NSVisualEffectStateActive, NSVisualEffectView, NSWindowBelow
 
         NSVisualEffectMaterialPopover = AppKitPopoverConst  # Assign to module-level var
         NSColor = AppKitNSColor  # Assign to module-level var
@@ -156,7 +143,6 @@ def MacBlur(
             visualEffectView, NSWindowBelow, widget_native_view
         )
 
-    # Configure title bar transparency if requested
     if TitleBar:
         window_native_view.setTitlebarAppearsTransparent_(True)
         window_native_view.setStyleMask_(
@@ -167,6 +153,7 @@ def MacBlur(
 # --- Mac-specific drag area for native window dragging ---
 if sys.platform == "darwin":
     from PySide6.QtWidgets import QWidget
+
     class MacDragArea(QWidget):
         def mousePressEvent(self, event):
             try:
@@ -174,6 +161,7 @@ if sys.platform == "darwin":
 
                 import objc
                 from AppKit import NSApp
+
                 win = self.window().winId()
                 ns_view = objc.objc_object(c_void_p(int(win)))
                 ns_window = ns_view.window()
@@ -206,29 +194,6 @@ class IntenLayout(QWidget):
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
-        self._effective_top_margin = 40
-        self._mac_titlebar_offset = 0
-        # No custom drag area or header; UI starts below native title bar
-
-        # macOS titlebar offset logic
-        if sys.platform == "darwin":
-            try:
-                from ctypes import c_void_p
-
-                import objc
-                from AppKit import NSFullSizeContentViewWindowMask
-
-                win = self.window().winId() if self.window() else None
-                if win:
-                    ns_view = objc.objc_object(c_void_p(int(win)))
-                    ns_window = ns_view.window()
-                    if ns_window and (
-                        ns_window.styleMask() & NSFullSizeContentViewWindowMask
-                    ):
-                        self._mac_titlebar_offset = 30
-            except Exception:
-                self._mac_titlebar_offset = 0
-        self._effective_top_margin = 40 + self._mac_titlebar_offset
         self.setStyleSheet(self._generate_stylesheet())
 
     def _update_theme(self):
@@ -305,20 +270,6 @@ class IntenLayout(QWidget):
             }}
         """
 
-    def get_effective_top_margin(self):
-        return self._effective_top_margin
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        rect = self.rect()
-        path = QPainterPath()
-        path.addRoundedRect(QRectF(rect), self.radius, self.radius)
-        painter.setClipPath(path)
-        grad = self._make_background_color(rect)
-        painter.fillPath(path, grad)
-        painter.end()
-
     def resizeEvent(self, event):
         super().resizeEvent(event)
         # Set rounded mask for the window if this is a top-level window
@@ -333,6 +284,3 @@ class IntenLayout(QWidget):
         super().showEvent(event)
         if not event.spontaneous():  # Apply on first "real" show
             MacBlur(self, self.radius)
-
-    def _make_background_color(self, rect):
-        return self.theme_manager.get_qcolor("background")

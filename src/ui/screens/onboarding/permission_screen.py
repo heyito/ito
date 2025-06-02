@@ -107,7 +107,7 @@ class PermissionScreen:
         # Create a container widget for all content
         self.content_widget = QWidget()
         content_layout = QVBoxLayout(self.content_widget)
-        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setContentsMargins(12, 12, 12, 12)
         content_layout.setSpacing(0)
 
         # Store the layout reference

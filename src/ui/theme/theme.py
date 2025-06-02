@@ -3,7 +3,7 @@ from PySide6.QtGui import QColor
 THEME = {
     "dark": {
         # Base colors
-        "background": QColor(0, 0, 0, 20),
+        "background": QColor(0, 0, 0, 36),
         "surface": QColor(30, 30, 30, 255),
         "primary": QColor(98, 0, 238, 255),
         "secondary": QColor(3, 218, 197, 255),

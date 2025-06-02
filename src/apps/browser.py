@@ -8,6 +8,7 @@ from src import platform_utils_macos as platform_utils
 from src.constants import SOCKET_PATH
 from src.handlers.llm_handler import LLMHandler
 from src.prompts import prompt_templates
+from src.engines.macos_engine import MacOSEngine
 
 logger = logging.getLogger(__name__)
 
@@ -72,15 +73,39 @@ class BrowserApp:
         try:
             # Connect to the native messaging host socket
             client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            client.settimeout(1.0) # 1 second timeout. Use fallback if no ack received from extension
             client.connect(SOCKET_PATH)
 
             # Send the message to update text
             message = {"type": "insert_text", "text": new_doc_text}
             client.send(json.dumps(message).encode())
-            client.close()
-            logger.info("Successfully sent text update to Browser extension")
+
+            # Wait for ack (with timeout)
+            ack_received = False
+            try:
+                ack_data = client.recv(4096)
+                if ack_data:
+                    ack_msg = json.loads(ack_data.decode())
+                    if ack_msg.get("type") == "insert_text_ack" and ack_msg.get("success"):
+                        logger.info("Received insert_text_ack from extension: success")
+                        ack_received = True
+                    else:
+                        logger.warning(f"Received insert_text_ack but not successful: {ack_msg}")
+            except socket.timeout:
+                logger.warning("Timeout waiting for insert_text_ack from extension.")
+            finally:
+                client.close()
+            if not ack_received:
+                raise Exception("No successful insert_text_ack received from extension")
         except Exception as e:
             logger.error(f"Error sending text update to Browser extension: {e}")
+            logger.info("Falling back to generic handler (paste to active app)...")
+            engine = MacOSEngine()
+            success = engine.paste_text_to_active_app(new_doc_text)
+            if success:
+                logger.info("Fallback: Successfully pasted text to active app using macOS engine.")
+            else:
+                logger.error("Fallback: Failed to paste text to active app using macOS engine.")
 
     def get_context(self):
         logger.info("Getting content from Browser...")

@@ -115,12 +115,20 @@ class NativeHost:
         logging.info(f"Received message from Chrome: {message}")
 
         # Forward message to all connected sockets
-        for conn in self.connections:
-            try:
-                conn.send(json.dumps(message).encode())
-                logging.info("Forwarded Chrome message to socket connection")
-            except Exception as e:
-                logging.error(f"Error forwarding message to socket: {e}")
+        if message.get("type") == "insert_text_ack":
+            for conn in self.connections:
+                try:
+                    conn.send(json.dumps(message).encode())
+                    logging.info("Forwarded insert_text_ack to socket connection")
+                except Exception as e:
+                    logging.error(f"Error forwarding insert_text_ack to socket: {e}")
+        else:
+            for conn in self.connections:
+                try:
+                    conn.send(json.dumps(message).encode())
+                    logging.info("Forwarded Chrome message to socket connection")
+                except Exception as e:
+                    logging.error(f"Error forwarding message to socket: {e}")
 
     def start(self):
         self.setup_local_server()

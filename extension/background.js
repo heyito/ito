@@ -147,6 +147,13 @@ function connect() {
                                     chrome.tabs.sendMessage(tabs[0].id, {
                                         type: 'insertText',
                                         text: response.text
+                                    }, function (contentResponse) {
+                                        // Send ack back to native host
+                                        port.postMessage({
+                                            type: 'insert_text_ack',
+                                            success: "true",
+                                            tabId: tabs[0].id
+                                        });
                                     });
                                 }
                             });

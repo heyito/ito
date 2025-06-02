@@ -97,7 +97,9 @@ class GeminiClient(LLMClientInterface):
         except Exception as e:
             # Catch broader exceptions during the API call
             logger.error(f"An unexpected error occurred during Gemini response: {e}")
-            return ""  # Return empty string on unexpected errors
+            raise Exception(
+                f"Unexpected error during Gemini response generation: {e}"
+            ) from e
 
     @time_method
     def generate_response_with_audio(
@@ -164,7 +166,7 @@ class GeminiClient(LLMClientInterface):
             logger.error(
                 f"An unexpected error occurred during Gemini transcription: {e}"
             )
-            return ""  # Return empty string on unexpected errors
+            raise Exception(f"Error during Gemini transcription: {e}") from e
 
     @time_method
     def transcribe_audio(self, audio_buffer: io.BytesIO) -> str:

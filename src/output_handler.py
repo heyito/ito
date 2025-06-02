@@ -1,4 +1,5 @@
 import logging
+
 import pyautogui
 
 logger = logging.getLogger(__name__)

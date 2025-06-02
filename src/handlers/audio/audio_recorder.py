@@ -3,7 +3,6 @@ import logging
 import queue
 import threading
 import traceback
-from typing import Any
 
 import numpy as np
 

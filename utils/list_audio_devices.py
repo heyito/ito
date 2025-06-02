@@ -1,5 +1,6 @@
 import sounddevice as sd
 
+
 def list_audio_devices():
     """Prints available audio input and output devices."""
     print("Available audio devices:")

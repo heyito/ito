@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 # Default System Prompt (can be configured or overridden)
 DEFAULT_LLM_SYSTEM_PROMPT = "You are a helpful AI assistant."
 
+
 class LLMHandler:
     def __init__(self, client: LLMClientInterface):
         """
@@ -111,9 +112,10 @@ class LLMHandler:
             if response is not None:
                 pass  # Response is already in desired format from client
             else:
-                logger.warning(
+                logger.error(
                     f"LLMHandler: Received no response or an error from {self.client.source_name}."
                 )
+                raise Exception(f"No response from {self.client.source_name}.")
 
             end_time = time.time()
             logger.info(
@@ -128,7 +130,7 @@ class LLMHandler:
             import traceback
 
             logger.error(traceback.format_exc())
-            return None
+            raise Exception(f"Error processing input with LLM: {e}") from e
 
     def run_tool_call_process(
         self,

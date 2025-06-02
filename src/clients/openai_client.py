@@ -107,7 +107,7 @@ class OpenAIClient(LLMClientInterface):
             logger.error(f"OpenAI API Error during LLM processing: {e}")
             if hasattr(e, "body") and e.body:
                 logger.error(f"Error Body: {e.body}")
-            return None
+            raise Exception(f"Error during OpenAI LLM processing: {e}") from e
         except Exception as e:
             logger.error(
                 f"An unexpected error occurred during OpenAI LLM processing: {e}"
@@ -115,7 +115,7 @@ class OpenAIClient(LLMClientInterface):
             import traceback
 
             logger.error(traceback.format_exc())
-            return None
+            raise Exception(f"Error during OpenAI LLM processing: {e}") from e
 
     def generate_response_with_audio(
         self,

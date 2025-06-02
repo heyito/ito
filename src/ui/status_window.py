@@ -2,6 +2,7 @@ import logging
 import queue
 import sys
 import time
+from ctypes import c_void_p
 
 from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer
 from PySide6.QtWidgets import QGraphicsOpacityEffect, QLabel, QVBoxLayout, QWidget
@@ -37,12 +38,12 @@ else:
 class StatusWindow(QWidget):
     DOT_SIZE = 40
     PILL_WIDTH = 300
-    ANIMATION_DURATION = 150
+    ANIMATION_DURATION = 250
     BORDER_WIDTH = 1
     DOT_OPACITY = 0
     PILL_OPACITY = 1.0  # 100% opacity for pill
-    STATUS_DELAY = 350  # Delay between non-READY status changes in ms
-    ERROR_RESET_DELAY = 2000  # 2 seconds delay before resetting error status
+    STATUS_DELAY = 1000  # Delay between non-READY status changes in ms
+    ERROR_RESET_DELAY = 3000  # 3 seconds delay before resetting error status
 
     def __init__(self):
         super().__init__()
@@ -68,6 +69,7 @@ class StatusWindow(QWidget):
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.opacity_effect = QGraphicsOpacityEffect(self.status_label)
         self.status_label.setGraphicsEffect(self.opacity_effect)
+        self.status_label.setWordWrap(True)
         self.container_layout.addWidget(self.status_label)
 
         layout = QVBoxLayout(self)
@@ -209,13 +211,8 @@ class StatusWindow(QWidget):
                 font-size: 13px;
                 background-color: #242322;
                 font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                min-width: {width}px;
-                max-width: {width}px;
-                min-height: {self.DOT_SIZE + 2 * self.BORDER_WIDTH}px;
-                max-height: {self.DOT_SIZE + 2 * self.BORDER_WIDTH}px;
                 border-radius: {border_radius}px;
-                padding-left: 0px;
-                padding-right: 0px;
+                padding: 4px 8px;
             }}
         """)
 
@@ -247,11 +244,25 @@ class StatusWindow(QWidget):
 
     def show_pill(self, text):
         self.status_label.setText(text)
-        pill_total = self.PILL_WIDTH + 2 * self.BORDER_WIDTH
-        self.status_label.setMinimumWidth(pill_total)
-        self.status_label.setMaximumWidth(pill_total)
-        self._set_label_style(pill_total, 10)
-        self.setFixedWidth(pill_total)
+        self.status_label.setWordWrap(True)
+
+        max_width = 600
+        padding = 20
+        metrics = self.status_label.fontMetrics()
+        lines = text.split("\n")
+        longest_line = max(lines, key=len)
+
+        text_width = min(metrics.horizontalAdvance(longest_line) + padding, max_width)
+        text_height = metrics.height() + (text.count("\n") * metrics.height())
+
+        self.status_label.setMinimumWidth(text_width)
+        self.status_label.setMaximumWidth(max_width)
+        self.status_label.setMinimumHeight(text_height + 10)
+        self.status_label.setMaximumHeight(text_height + 50)
+
+        self._set_label_style(text_width, 10)
+        self.setFixedWidth(text_width + 2 * self.BORDER_WIDTH)
+        self.setFixedHeight(text_height + self.DOT_SIZE)
         self.opacity_effect.setOpacity(self.PILL_OPACITY)
         self.update_position()
 

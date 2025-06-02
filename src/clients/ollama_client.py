@@ -224,7 +224,7 @@ class OllamaClient(LLMClientInterface):
             import traceback
 
             logger.error(traceback.format_exc())
-            return None
+            raise Exception(f"Error during Ollama LLM processing: {e}") from e
         except Exception as e:  # Catch other potential errors
             logger.error(
                 f"An unexpected error occurred during Ollama LLM processing: {e}"
@@ -232,7 +232,7 @@ class OllamaClient(LLMClientInterface):
             import traceback
 
             logger.error(traceback.format_exc())
-            return None
+            raise Exception(f"Error during Ollama LLM processing: {e}") from e
 
     def generate_response_with_audio(
         self,

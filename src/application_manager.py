@@ -18,6 +18,7 @@ from src.ui.status_window import StatusWindow
 # Configure logging
 logger = logging.getLogger(__name__)
 
+
 class ApplicationManager(QObject):
     # Singleton instance
     _instance = None

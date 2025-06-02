@@ -100,16 +100,18 @@ class GroqClient(LLMClientInterface):
                 return response
 
         except GroqError as e:
-            logger.error(f"API Error during LLM processing: {e}")
+            logger.error(f"API Error during Groq LLM processing: {e}")
             if hasattr(e, "body") and e.body:
                 logger.error(f"Error Body: {e.body}")
-            return None
+            raise Exception(f"Error during Groq LLM processing: {e}") from e
         except Exception as e:
-            logger.error(f"An unexpected error occurred during LLM processing: {e}")
+            logger.error(
+                f"An unexpected error occurred during Groq LLM processing: {e}"
+            )
             import traceback
 
             logger.error(traceback.format_exc())
-            return None
+            raise Exception(f"Error during Groq LLM processing: {e}") from e
 
     def generate_response_with_audio(
         self,
@@ -150,12 +152,12 @@ class GroqClient(LLMClientInterface):
             return transcript.strip()
 
         except GroqError as e:
-            logger.error(f"API Error during transcription: {e}")
-            return ""
+            logger.error(f"API Error during Groq transcription: {e}")
+            raise Exception(f"Error during Groq transcription: {e}") from e
         except Exception as e:
             # Catch broader exceptions during the API call
-            logger.error(f"An unexpected error occurred during transcription: {e}")
-            return ""
+            logger.error(f"An unexpected error occurred during Groq transcription: {e}")
+            raise Exception(f"Error during Groq transcription: {e}") from e
 
     def format_system_user_messages(
         self, system_prompt: str, user_prompt: str

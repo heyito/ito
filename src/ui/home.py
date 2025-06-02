@@ -176,6 +176,7 @@ class Home(QMainWindow):
                 from ctypes import c_void_p
 
                 import objc
+
                 win = self.winId()
                 ns_view = objc.objc_object(c_void_p(int(win)))
                 ns_window = ns_view.window()
@@ -276,27 +277,33 @@ class Home(QMainWindow):
         menu_layout.addWidget(logo_container)
 
         # Menu buttons
-        self.speech_recognition_button = MenuButton("Speech Recognition", 0)
+        self.speech_recognition_button = MenuButton(
+            "Speech Recognition", 0, theme_manager=self.theme_manager
+        )
         self.speech_recognition_button.setChecked(True)
         self.speech_recognition_button.clicked.connect(lambda: self.select_menu(0))
         menu_layout.addWidget(self.speech_recognition_button)
 
         # Add Language Model Settings button
-        self.language_model_button = MenuButton("Language Model", 1)
+        self.language_model_button = MenuButton(
+            "Language Model", 1, theme_manager=self.theme_manager
+        )
         self.language_model_button.clicked.connect(lambda: self.select_menu(1))
         menu_layout.addWidget(self.language_model_button)
 
         # Add API Keys button
-        self.api_keys_button = MenuButton("API Keys", 2)
+        self.api_keys_button = MenuButton(
+            "API Keys", 2, theme_manager=self.theme_manager
+        )
         self.api_keys_button.clicked.connect(lambda: self.select_menu(2))
         menu_layout.addWidget(self.api_keys_button)
 
-        self.mode_button = MenuButton("Mode", 3)
+        self.mode_button = MenuButton("Mode", 3, theme_manager=self.theme_manager)
         self.mode_button.clicked.connect(lambda: self.select_menu(3))
         menu_layout.addWidget(self.mode_button)
 
         # Add Audio button
-        self.audio_button = MenuButton("Audio", 4)
+        self.audio_button = MenuButton("Audio", 4, theme_manager=self.theme_manager)
         self.audio_button.clicked.connect(lambda: self.select_menu(4))
         menu_layout.addWidget(self.audio_button)
 
@@ -306,12 +313,16 @@ class Home(QMainWindow):
         # menu_layout.addWidget(self.voice_detection_button)
 
         # Add Keyboard button
-        self.keyboard_button = MenuButton("Keyboard", 5)
+        self.keyboard_button = MenuButton(
+            "Keyboard", 5, theme_manager=self.theme_manager
+        )
         self.keyboard_button.clicked.connect(lambda: self.select_menu(5))
         menu_layout.addWidget(self.keyboard_button)
 
         # Add Developer button
-        self.developer_button = MenuButton("Developer", 6)
+        self.developer_button = MenuButton(
+            "Developer", 6, theme_manager=self.theme_manager
+        )
         self.developer_button.clicked.connect(lambda: self.select_menu(6))
         menu_layout.addWidget(self.developer_button)
 
@@ -407,7 +418,7 @@ class Home(QMainWindow):
         faster_whisper_model_layout.addWidget(self.faster_whisper_model)
 
         self.groq_asr_model = SegmentedButtonGroup(
-            ["distil-whisper-large-v3-en", "whisper-large-v3-turbo", "whisper-large-v3"]
+            ["whisper-large-v3", "whisper-large-v3-turbo", "distil-whisper-large-v3-en"]
         )
         groq_asr_model_label = QLabel("Groq Model")
         self.set_label_style(groq_asr_model_label)
@@ -426,7 +437,6 @@ class Home(QMainWindow):
         self.faster_whisper_model_container.hide()
         self.groq_asr_model_container.hide()
         self.gemini_asr_model_container.hide()
-
 
         self.asr_compute_type = SegmentedButtonGroup(
             ["default", "int8", "int8_float16", "float16"]
@@ -669,9 +679,7 @@ class Home(QMainWindow):
         application_mode_layout.setContentsMargins(0, 0, 0, 0)
         application_mode_layout.setSpacing(4)
         application_mode_layout.addWidget(application_mode_label)
-        self.application_mode_selector = SegmentedButtonGroup(
-            ["discrete", "oneshot"]
-        )
+        self.application_mode_selector = SegmentedButtonGroup(["discrete", "oneshot"])
         application_mode_layout.addWidget(self.application_mode_selector)
         mode_layout.addWidget(application_mode_container)
 
@@ -1041,7 +1049,6 @@ class Home(QMainWindow):
             self.api_keys_title,
             self.mode_title,
             self.audio_title,
-            self.voice_detection_title,
             self.keyboard_title,
             self.developer_title,
         ]:

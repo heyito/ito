@@ -6,6 +6,8 @@ let reconnectTimer = null;
 let lastMessageTime = Date.now();
 let pingInterval = null;
 let processingInterval = null;
+let extensionConnected = false;
+let pingIntervalId = null;
 
 function cleanupConnection() {
     if (port) {
@@ -92,7 +94,7 @@ function connect() {
             } else if (response.type === 'test_response') {
                 console.log('Test response received, connection is working');
             } else if (response.type === 'pong') {
-                console.log('Received pong from native host');
+                handlePong();
             } else if (response.type === 'request_context') {
                 startProcessingIndicator();
                 chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
@@ -170,10 +172,17 @@ function connect() {
                 setTimeout(() => {
                     chrome.action.setBadgeText({ text: '' });
                 }, 2000);
+            } else if (response.type === 'ping') {
+                // Respond to ping from the native host (application)
+                if (port) {
+                    port.postMessage({ type: 'pong' });
+                }
             } else {
                 console.log('Received unknown message from native host:', response);
             }
         });
+
+        startPing();
 
     } catch (error) {
         console.error('Error connecting to native host:', error);
@@ -251,4 +260,22 @@ function stopProcessingIndicator() {
         processingInterval = null;
     }
     chrome.action.setBadgeText({ text: '' });
+}
+
+function startPing() {
+    if (pingIntervalId) clearInterval(pingIntervalId);
+    pingIntervalId = setInterval(() => {
+        if (port) {
+            try {
+                port.postMessage({ type: 'ping' });
+            } catch (e) {
+                extensionConnected = false;
+            }
+        }
+    }, 2000); // Ping every 2 seconds
+}
+
+function handlePong() {
+    extensionConnected = true;
+    // Optionally update UI here
 } 

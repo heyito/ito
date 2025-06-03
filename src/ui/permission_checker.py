@@ -5,7 +5,7 @@ import traceback
 import sounddevice as sd
 from PySide6.QtCore import QObject, Signal
 
-logger = logging.getLogger("ai.inten.inten.ui")
+logger = logging.getLogger("ai.ito.ito.ui")
 
 
 class PermissionChecker(QObject):

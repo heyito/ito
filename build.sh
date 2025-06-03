@@ -6,7 +6,7 @@ set -e
 # Source the .env file
 source .env
 
-echo "🚀 Starting build process for Inten..."
+echo "🚀 Starting build process for Ito..."
 
 # --- Check PortAudio ---
 echo "🔍 Checking PortAudio installation..."
@@ -18,7 +18,7 @@ fi
 echo "✅ PortAudio found at $PORTAUDIO_PATH"
 
 # --- Build Swift Helper ---
-echo "🛠️ Building Swift helper (inten_macos_agent)..."
+echo "🛠️ Building Swift helper (ito_macos_agent)..."
 (cd ./src/swift_helper && swift build -c release --arch arm64 --arch x86_64)
 
 if [ ! -f "$SWIFT_HELPER_BUILD_PATH" ]; then
@@ -29,18 +29,18 @@ echo "✅ Swift helper built successfully."
 
 echo "📦 Preparing Swift helper for packaging..."
 mkdir -p src/bin
-cp "$SWIFT_HELPER_BUILD_PATH" src/bin/inten_macos_agent
-chmod +x src/bin/inten_macos_agent
+cp "$SWIFT_HELPER_BUILD_PATH" src/bin/ito_macos_agent
+chmod +x src/bin/ito_macos_agent
 
 # --- Create Application Icon ---
 echo "🎨 Creating application icon..."
 mkdir -p icon.iconset
-cp extension/public/inten-logo-16.png icon.iconset/icon_16x16.png
-cp extension/public/inten-logo-48.png icon.iconset/icon_32x32@2x.png
-cp extension/public/inten-logo-128.png icon.iconset/icon_128x128.png
-sips -z 32 32 extension/public/inten-logo-48.png --out icon.iconset/icon_32x32.png
-sips -z 256 256 extension/public/inten-logo-128.png --out icon.iconset/icon_256x256.png
-sips -z 512 512 extension/public/inten-logo-128.png --out icon.iconset/icon_512x512.png
+cp extension/public/ito-logo-16.png icon.iconset/icon_16x16.png
+cp extension/public/ito-logo-48.png icon.iconset/icon_32x32@2x.png
+cp extension/public/ito-logo-128.png icon.iconset/icon_128x128.png
+sips -z 32 32 extension/public/ito-logo-48.png --out icon.iconset/icon_32x32.png
+sips -z 256 256 extension/public/ito-logo-128.png --out icon.iconset/icon_256x256.png
+sips -z 512 512 extension/public/ito-logo-128.png --out icon.iconset/icon_512x512.png
 iconutil -c icns icon.iconset
 
 # --- Clean Previous Builds ---
@@ -49,7 +49,7 @@ rm -rf dist/ build/
 
 # --- Build App with PyInstaller ---
 echo "🔨 Building application..."
-pyinstaller Inten.spec --noconfirm
+pyinstaller Ito.spec --noconfirm
 
 # --- Check Bundle ID ---
 ACTUAL_BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$DIST_DIR/$APP_NAME/Contents/Info.plist")
@@ -82,7 +82,7 @@ find "$DIST_DIR/$APP_NAME/Contents/Resources" -type f -exec codesign "${CODESIGN
 # Sign main executable with entitlements
 codesign "${CODESIGN_FLAGS[@]}" \
   --entitlements entitlements.plist \
-  "$DIST_DIR/$APP_NAME/Contents/MacOS/Inten"
+  "$DIST_DIR/$APP_NAME/Contents/MacOS/Ito"
 
 # Sign entire .app bundle with entitlements
 codesign "${CODESIGN_FLAGS[@]}" \
@@ -109,17 +109,17 @@ rsync -a "$DIST_DIR/$APP_NAME" dist/dmg-contents/
 
 echo "💿 Building DMG installer..."
 create-dmg \
-  --volname "Inten Installer" \
+  --volname "Ito Installer" \
   --volicon "icon.icns" \
   --window-pos 200 120 \
   --window-size 600 400 \
   --icon-size 128 \
-  --icon "Inten.app" 150 200 \
+  --icon "Ito.app" 150 200 \
   --app-drop-link 450 200 \
-  "dist/Inten-Installer.dmg" \
+  "dist/Ito-Installer.dmg" \
   "dist/dmg-contents/"
 
 # --- Cleanup ---
 rm -rf icon.iconset icon.icns
 
-echo "✅ Build complete! DMG is ready at: dist/Inten-Installer.dmg"
+echo "✅ Build complete! DMG is ready at: dist/Ito-Installer.dmg"

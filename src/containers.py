@@ -84,7 +84,7 @@ class Container(containers.DeclarativeContainer):
         AudioSourceHandler,
         # Inject required typed values
         sample_rate=config.Audio.sample_rate.as_int(),
-        channels=config.Audio.channels.as_int()
+        channels=config.Audio.channels.as_int(),
     )
 
     intent_engine = providers.Singleton(IntentEngine, llm_handler=llm_handler)

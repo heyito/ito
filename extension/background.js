@@ -62,7 +62,7 @@ function connect() {
 
     try {
         console.log('Attempting to connect to native host...');
-        port = chrome.runtime.connectNative('ai.inten.app');
+        port = chrome.runtime.connectNative('ai.ito.app');
         isConnected = true;
         reconnectAttempts = 0;
         lastMessageTime = Date.now();

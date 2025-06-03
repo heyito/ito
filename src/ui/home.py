@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QSpacerItem,
     QSpinBox,
     QStackedWidget,
     QVBoxLayout,
@@ -22,7 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from src.application_manager import ApplicationManager
-from src.ui.components.inten_layout import IntenLayout
+from src.ui.components.ito_layout import ItoLayout
 from src.ui.components.menu_button import MenuButton
 from src.ui.components.segmented_button_group import SegmentedButtonGroup
 from src.ui.keyboard_manager import KeyboardManager
@@ -207,7 +208,7 @@ class Home(QMainWindow):
         self._drag_start_position = QPointF()
 
         # Main widget and layout
-        main_widget = IntenLayout(
+        main_widget = ItoLayout(
             self, radius=8, show_close_button=True, theme_manager=self.theme_manager
         )
         main_widget.setObjectName("main_widget")
@@ -239,7 +240,7 @@ class Home(QMainWindow):
         center_container = QWidget()
         center_layout = QHBoxLayout(center_container)
         center_layout.setContentsMargins(0, 0, 0, 0)
-        center_layout.setSpacing(16)
+        center_layout.setSpacing(8)  # Reduced from 16 to 8
 
         # Logo
         self.logo_label = QLabel()
@@ -264,17 +265,20 @@ class Home(QMainWindow):
         center_layout.addWidget(self.logo_label)
 
         # App name
-        self.app_name = QLabel("Inten")
+        self.app_name = QLabel("ito")
         self.app_name.setStyleSheet(f"""
             font-size: 24px; 
             font-weight: 600; 
             color: {self.theme_manager.get_color("text_primary")};
+            margin-top: 4px;
         """)
         center_layout.addWidget(self.app_name)
 
         # Add the centered container to the main logo layout
         logo_layout.addWidget(center_container, alignment=Qt.AlignmentFlag.AlignCenter)
         menu_layout.addWidget(logo_container)
+
+        menu_layout.addSpacerItem(QSpacerItem(20, 20))
 
         # Menu buttons
         self.speech_recognition_button = MenuButton(
@@ -333,7 +337,7 @@ class Home(QMainWindow):
         content_widget = QWidget()
         content_widget.setObjectName("content_widget")
         content_layout = QVBoxLayout(content_widget)
-        content_layout.setContentsMargins(36, 20, 8, 8)
+        content_layout.setContentsMargins(36, 36, 8, 8)
         content_widget.setStyleSheet(
             f"background-color: {self.theme_manager.get_color('background')}; border-top-left-radius: 18px; border: none;"
         )

@@ -1,4 +1,4 @@
-console.log("Inten content script loaded");
+console.log("Ito content script loaded");
 
 /**
  * Simulates keydown and keyup events for a given key combination on an element,

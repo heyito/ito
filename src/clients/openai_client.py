@@ -84,7 +84,7 @@ class OpenAIClient(LLMClientInterface):
                 tool_choice="required" if len(actual_tools) != 0 else "none",
             )
 
-            if not actual_tools:  # If no tools were intended, process as text
+            if not actual_tools:  # If no tools were itoded, process as text
                 processed_text = response.choices[0].message.content
                 logger.info(f"OpenAIClient returned processed text: {processed_text}")
                 if processed_text:

@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "inten"
+name = "ito"
 version = "0.1.0"
 description = ""
 authors = ["Demox Labs <support@demoxlabs.xyz>"]

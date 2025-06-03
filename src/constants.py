@@ -1,1 +1,1 @@
-SOCKET_PATH = "/tmp/inten_native_host.sock"
+SOCKET_PATH = "/tmp/ito_native_host.sock"

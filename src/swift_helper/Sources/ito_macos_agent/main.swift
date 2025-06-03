@@ -83,7 +83,7 @@ let kAXValueAttribute = "AXValue"
 
 // --- Helpers ---
 
-func saveScreenshot(image: CGImage, filename: String = "capture-inten.png") {
+func saveScreenshot(image: CGImage, filename: String = "capture-ito.png") {
     let bitmapRep = NSBitmapImageRep(cgImage: image)
     guard let pngData = bitmapRep.representation(using: .png, properties: [:]) else {
         print("Failed to create PNG data")

@@ -50,14 +50,14 @@ class DiscreteApplicationRunner(ApplicationInterface):
 
     def _print_initial_info(self):
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        logger.info("\n--- Inten Tool (Discrete Command Mode) ---")
+        logger.info("\n--- Ito Tool (Discrete Command Mode) ---")
         logger.info(f"Timestamp: {timestamp}")
         # Add platform warning if needed
         logger.info(
             f"ASR Source: {self.config.asr_source} ({self.config.asr_model or self.config.asr_local_model_size})"
         )
         logger.info(f"\nPress '{self.config.dictation_hotkey}' to issue command.")
-        logger.info("Inten background process running...")
+        logger.info("Ito background process running...")
 
     @time_method
     def trigger_interaction(self, mode: CommandMode):

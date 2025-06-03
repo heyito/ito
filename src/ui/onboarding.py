@@ -5,7 +5,7 @@ from PySide6.QtCore import QPoint, QSettings, Qt, QTimer
 from PySide6.QtWidgets import QApplication, QLabel, QMainWindow
 
 from src.types.modes import CommandMode
-from src.ui.components.inten_layout import IntenLayout
+from src.ui.components.ito_layout import ItoLayout
 from src.ui.keyboard_manager import KeyboardManager
 from src.ui.permission_checker import PermissionChecker
 from src.ui.screens.onboarding.api_setup_screen import ApiSetupScreen
@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 class OnboardingWindow(QMainWindow):
-    ORGANIZATION_NAME = "Inten"  # CHANGE THIS
-    APPLICATION_NAME = "Inten"
+    ORGANIZATION_NAME = "Ito"  # CHANGE THIS
+    APPLICATION_NAME = "Ito"
     _accessibility_dialog_open = False
 
     @classmethod
@@ -48,7 +48,7 @@ class OnboardingWindow(QMainWindow):
         self._drag_start_position = QPoint()
 
         # --- Main widget and layout ---
-        main_widget = IntenLayout(
+        main_widget = ItoLayout(
             self, radius=8, show_close_button=True, theme_manager=self.theme_manager
         )
         main_widget.setObjectName("main_widget")
@@ -185,14 +185,14 @@ class OnboardingWindow(QMainWindow):
                     letter-spacing: -0.5px;
                 """)
             elif widget.text() in [
-                "Inten needs a few permissions to help you be more productive",
-                "You're all set to start using Inten!",
+                "Ito needs a few permissions to help you be more productive",
+                "You're all set to start using Ito!",
             ]:
                 widget.setStyleSheet(f"""
-                    font-size: {15 if widget.text() == "Inten needs a few permissions to help you be more productive" else 16}px;
+                    font-size: {15 if widget.text() == "Ito needs a few permissions to help you be more productive" else 16}px;
                     color: {self.theme_manager.get_color("text_secondary")};
                     font-weight: 400;
-                    margin-bottom: {40 if widget.text() == "Inten needs a few permissions to help you be more productive" else 10}px;
+                    margin-bottom: {40 if widget.text() == "Ito needs a few permissions to help you be more productive" else 10}px;
                     letter-spacing: 0.1px;
                 """)
 

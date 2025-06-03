@@ -80,7 +80,7 @@ class GroqClient(LLMClientInterface):
                 tool_choice="required" if len(tool_functions) != 0 else "none",
             )
 
-            if not actual_tools:  # If no tools were intended, process as text
+            if not actual_tools:  # If no tools were itoded, process as text
                 processed_text = response.choices[0].message.content
                 logger.info(f"Returned processed text: {processed_text}")
                 if processed_text:

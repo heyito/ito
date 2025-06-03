@@ -336,7 +336,7 @@ def send_native_message(message):
 def check_accessibility_permission():
     """Check if the app has accessibility permissions and request them if needed."""
     try:
-        logger = logging.getLogger("ai.inten.inten.accessibility")
+        logger = logging.getLogger("ai.ito.ito.accessibility")
         logger.info("Checking accessibility permissions...")
 
         bundle_id = NSBundle.mainBundle().bundleIdentifier()
@@ -369,7 +369,7 @@ def check_accessibility_permission():
             return False
 
     except Exception as e:
-        logger = logging.getLogger("ai.inten.inten.accessibility")
+        logger = logging.getLogger("ai.ito.ito.accessibility")
         logger.error(f"Error checking/requesting accessibility permissions: {str(e)}")
         logger.error(f"Error type: {type(e).__name__}")
         import traceback

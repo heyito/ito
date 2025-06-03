@@ -1,7 +1,7 @@
 from enum import StrEnum
 
 
-class IntenApp(StrEnum):
+class ItoApp(StrEnum):
     CHROME = "Google Chrome"
     BRAVE = "Brave Browser"
     TEXTEDIT = "TextEdit"

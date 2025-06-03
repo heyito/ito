@@ -127,7 +127,7 @@ class GeminiClient(LLMClientInterface):
 
         if tools or messages_override:
             logger.warning(
-                "Inten hasn't implemented tool support or messages_override for GeminiClient."
+                "Ito hasn't implemented tool support or messages_override for GeminiClient."
             )
             return None
 

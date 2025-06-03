@@ -6,7 +6,7 @@ from src.apps.browser import BrowserApp
 from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
-from src.types.apps import IntenApp
+from src.types.apps import ItoApp
 from src.types.context import Context
 
 # Configure logging
@@ -45,11 +45,11 @@ class ProcessingEngine:
         logger.info(f"Current app: {repr(current_app)}")
 
         match current_app:
-            case IntenApp.TEXTEDIT:
+            case ItoApp.TEXTEDIT:
                 self.text_edit_app.process_command(
                     primary_context, user_text_command, user_command_audio
                 )
-            case IntenApp.CHROME | IntenApp.BRAVE:
+            case ItoApp.CHROME | ItoApp.BRAVE:
                 self.browser_app.process_command(
                     primary_context, user_text_command, user_command_audio
                 )
@@ -69,11 +69,11 @@ class ProcessingEngine:
         primary_context = current_context["primary_context"]
 
         match current_app:
-            case IntenApp.CHROME | IntenApp.BRAVE:
+            case ItoApp.CHROME | ItoApp.BRAVE:
                 self.browser_app.process_command(
                     primary_context, user_text_command, user_command_audio
                 )
-            case IntenApp.TEXTEDIT:
+            case ItoApp.TEXTEDIT:
                 self.text_edit_app.process_command(
                     primary_context, user_text_command, user_command_audio
                 )

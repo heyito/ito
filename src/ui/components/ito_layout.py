@@ -25,9 +25,11 @@ if sys.platform == "darwin":
             NSViewHeightSizable,
             NSViewWidthSizable,
             NSVisualEffectBlendingModeBehindWindow,
+            NSVisualEffectStateActive,
+            NSVisualEffectView,
+            NSWindowBelow,
         )
         from AppKit import NSVisualEffectMaterialPopover as AppKitPopoverConst
-        from AppKit import NSVisualEffectStateActive, NSVisualEffectView, NSWindowBelow
 
         NSVisualEffectMaterialPopover = AppKitPopoverConst  # Assign to module-level var
         NSColor = AppKitNSColor  # Assign to module-level var
@@ -175,7 +177,7 @@ if sys.platform == "darwin":
             super().mousePressEvent(event)
 
 
-class IntenLayout(QWidget):
+class ItoLayout(QWidget):
     def __init__(
         self,
         parent=None,

@@ -18,7 +18,7 @@ from src.platform_utils_macos import is_macos
 def setup_logging():
     try:
         # Use /tmp directory which should be writable by Chrome's native messaging host
-        log_file = "/tmp/inten_native_messaging.log"
+        log_file = "/tmp/ito_native_messaging.log"
 
         # Configure logging
         logging.basicConfig(
@@ -214,6 +214,7 @@ def write_message(message):
     except Exception as e:
         logging.error(f"Error writing message: {e}")
         logging.error(traceback.format_exc())
+
 
 def main():
     setup_logging()

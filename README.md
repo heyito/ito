@@ -1,4 +1,4 @@
-# Inten Tool
+# Ito Tool
 
 This tool listens for voice input via a hotkey, transcribes the speech, processes the transcription with an LLM to understand the user's _intent_, and then types the refined output at the current cursor location.
 
@@ -6,7 +6,7 @@ This tool listens for voice input via a hotkey, transcribes the speech, processe
 
 - **Hotkey Activated:** Press a configurable hotkey to start recording, press again to stop and process.
 - **Speech Recognition:** Transcribes spoken audio using selected ASR source (initially OpenAI Whisper API).
-- **Intent Processing:** Uses an LLM (initially OpenAI GPT API) to refine the raw transcription into intended written text (e.g., correcting grammar, removing filler words, formatting).
+- **Intent Processing:** Uses an LLM (initially OpenAI GPT API) to refine the raw transcription into itoded written text (e.g., correcting grammar, removing filler words, formatting).
 - **Automatic Typing:** Simulates keyboard input to type the final text into any application.
 
 ## Prerequisites
@@ -23,8 +23,8 @@ This tool listens for voice input via a hotkey, transcribes the speech, processe
 1.  **Clone the repository:**
 
     ```bash
-    git clone https://github.com/demox-labs/inten.git
-    cd inten
+    git clone https://github.com/demox-labs/ito.git
+    cd ito
     ```
 
 1.  **Install poetry (for dependency management):**
@@ -74,7 +74,7 @@ This tool listens for voice input via a hotkey, transcribes the speech, processe
     ```bash
     python3 dev.py
     ```
-3.  The script will print "Inten tool running. Press [Your Hotkey] to toggle recording."
+3.  The script will print "Ito tool running. Press [Your Hotkey] to toggle recording."
 4.  Go to any text field (text editor, browser, etc.).
 5.  Press your configured hotkey. You'll see "Recording started...".
 6.  Speak clearly.
@@ -131,7 +131,7 @@ brew install portaudio
 
 This will create a `dist` directory containing your `.app` bundle.
 
-Replace "Inten" with your desired app name.
+Replace "Ito" with your desired app name.
 
 ### Debugging the App Bundle
 
@@ -141,7 +141,7 @@ If the app fails to launch, you can debug it from the command line:
 
 ```bash
 cd dist
-./Inten.app/Contents/MacOS/Inten
+./Ito.app/Contents/MacOS/Ito
 ```
 
 2. Check the Console app for detailed logs:
@@ -155,17 +155,17 @@ cd dist
 - Missing modules: Use `--hidden-import` with PyInstaller to include additional modules
 - Permission issues: Ensure the app is executable:
   ```bash
-  chmod +x dist/Inten.app/Contents/MacOS/Inten
+  chmod +x dist/Ito.app/Contents/MacOS/Ito
   ```
 
 ### Customizing the App Bundle
 
-Customize the build through the `./Inten.spec` file:
+Customize the build through the `./Ito.spec` file:
 
 Example bundle identifier format:
 
 ```
-ai.inten.inten
+ai.ito.ito
 ```
 
 Replace with your desired bundle identifier.

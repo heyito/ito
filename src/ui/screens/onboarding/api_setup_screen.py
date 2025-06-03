@@ -186,7 +186,7 @@ class ApiSetupScreen:
 
         if self.subtitle:
             self.subtitle.setText(
-                f'<div style="line-height: 1.5; font-size: 15px; color: {self.theme_manager.get_color("text_secondary")}; font-weight: 400; letter-spacing: 0.1px;">Connect Inten to your preferred LLM by adding the API key</div>'
+                f'<div style="line-height: 1.5; font-size: 15px; color: {self.theme_manager.get_color("text_secondary")}; font-weight: 400; letter-spacing: 0.1px;">Connect Ito to your preferred LLM by adding the API key</div>'
             )
 
         # Update provider buttons
@@ -244,7 +244,7 @@ class ApiSetupScreen:
 
         self.subtitle = QLabel()
         self.subtitle.setText(
-            f'<div style="line-height: 1.5; font-size: 15px; color: {self.theme_manager.get_color("text_secondary")}; font-weight: 400; letter-spacing: 0.1px;">Connect Inten to your preferred LLM by adding the API key</div>'
+            f'<div style="line-height: 1.5; font-size: 15px; color: {self.theme_manager.get_color("text_secondary")}; font-weight: 400; letter-spacing: 0.1px;">Connect Ito to your preferred LLM by adding the API key</div>'
         )
         self.subtitle.setWordWrap(True)
         self.subtitle.setStyleSheet("margin-bottom: 24px;")

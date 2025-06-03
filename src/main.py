@@ -136,6 +136,7 @@ def run_native_messaging_host():
 
     native_messaging_main()
 
+
 def ensure_native_messaging_host_registered(native_messaging_script_path):
     """Ensure the native messaging host manifest is registered with Chrome"""
     try:
@@ -161,8 +162,8 @@ def ensure_native_messaging_host_registered(native_messaging_script_path):
 
         # Create manifest content
         manifest = {
-            "name": "ai.inten.app",
-            "description": "Inten native messaging host",
+            "name": "ai.ito.app",
+            "description": "Ito native messaging host",
             "path": native_messaging_script_path,
             "type": "stdio",
             "allowed_origins": ["chrome-extension://jgfjmabgdpbccfecnilbjnjoglnholem/"],
@@ -180,7 +181,7 @@ def ensure_native_messaging_host_registered(native_messaging_script_path):
 
         # Try to create manifest directory and copy file
         try:
-            manifest_path = os.path.join(manifest_dir, "ai.inten.app.json")
+            manifest_path = os.path.join(manifest_dir, "ai.ito.app.json")
 
             # First try without sudo
             try:
@@ -236,6 +237,7 @@ def ensure_native_messaging_host_registered(native_messaging_script_path):
         logger.error("Chrome integration may not work properly")
         # Don't raise the exception - this is not critical for the app to function
 
+
 # --- Signal Handlers ---
 def signal_handler(signum, frame):
     """Handle termination signals gracefully."""
@@ -279,7 +281,7 @@ if __name__ == "__main__":
     else:
         logger.info("Dev mode disabled")
         native_messaging_script_path = (
-            "/Applications/Inten.app/Contents/Resources/native_messaging_host.sh"
+            "/Applications/Ito.app/Contents/Resources/native_messaging_host.sh"
         )
 
     if len(sys.argv) > 1 and sys.argv[1] == "--native-messaging-host":
@@ -303,7 +305,7 @@ if __name__ == "__main__":
 
         # Create system tray icon
         tray_icon = QSystemTrayIcon()
-        tray_icon.setToolTip("Inten")
+        tray_icon.setToolTip("Ito")
 
         # Create tray menu
         tray_menu = QMenu()

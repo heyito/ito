@@ -109,15 +109,16 @@ class ThemeManager(QObject):
         """
         Returns the correct logo path for the current theme, compatible with PyInstaller bundles.
         """
+
         def resource_path(relative_path):
-            if hasattr(sys, '_MEIPASS'):
+            if hasattr(sys, "_MEIPASS"):
                 return os.path.join(sys._MEIPASS, relative_path)
             return os.path.join(os.path.abspath("."), relative_path)
 
         if self.current_theme == "light":
-            logo_file = "inten-logo-dark.png"
+            logo_file = "ito-logo-dark.png"
         else:
-            logo_file = "inten-logo.png"
+            logo_file = "ito-logo.png"
         path = resource_path(logo_file)
         if os.path.exists(path):
             return path

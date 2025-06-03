@@ -6,10 +6,10 @@ info_plist_dict = {
     # These keys are often better explicitly set here to ensure they appear
     # even if PyInstaller generates them differently or with older values.
     'CFBundleShortVersionString': '1.0.0',
-    'CFBundleDisplayName': 'Inten',
-    'CFBundleExecutable': 'Inten',
-    'CFBundleIdentifier': 'ai.inten.inten', # This should match bundle_identifier in BUNDLE
-    'CFBundleName': 'Inten',
+    'CFBundleDisplayName': 'Ito',
+    'CFBundleExecutable': 'Ito',
+    'CFBundleIdentifier': 'ai.ito.ito', # This should match bundle_identifier in BUNDLE
+    'CFBundleName': 'Ito',
     'CFBundlePackageType': 'APPL',
     
     # Prevent app nap
@@ -22,11 +22,11 @@ info_plist_dict = {
     'NSAppSleepDisabled': True,
 
     # Privacy Usage Descriptions - CRITICAL for macOS privacy prompts
-    'NSMicrophoneUsageDescription': 'Inten needs access to your microphone to record and process voice commands.',
-    'NSAppleEventsUsageDescription': 'Inten needs access to control other applications to perform actions.',
-    'NSAccessibilityUsageDescription': 'Inten needs accessibility permissions to control other applications.',
-    'NSScreenCaptureUsageDescription': 'Inten needs screen recording permission to capture and process window content.',
-    'NSKeyboardUsageDescription': 'Inten needs keyboard access to process keyboard input and commands.',
+    'NSMicrophoneUsageDescription': 'Ito needs access to your microphone to record and process voice commands.',
+    'NSAppleEventsUsageDescription': 'Ito needs access to control other applications to perform actions.',
+    'NSAccessibilityUsageDescription': 'Ito needs accessibility permissions to control other applications.',
+    'NSScreenCaptureUsageDescription': 'Ito needs screen recording permission to capture and process window content.',
+    'NSKeyboardUsageDescription': 'Ito needs keyboard access to process keyboard input and commands.',
 }
 
 a = Analysis(
@@ -36,9 +36,9 @@ a = Analysis(
         ('/opt/homebrew/opt/portaudio/lib/libportaudio.dylib', '.'),
     ],
     datas=[
-        ('inten-logo.png', '.'),
-        ('inten-logo-dark.png', '.'),
-        ('src/bin/inten_macos_agent', '.'),
+        ('ito-logo.png', '.'),
+        ('ito-logo-dark.png', '.'),
+        ('src/bin/ito_macos_agent', '.'),
     ],
     hiddenimports=[
       'native_messaging_host',
@@ -59,7 +59,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='Inten',
+    name='Ito',
     debug=True,
     bootloader_ignore_signals=False,
     strip=False,
@@ -79,13 +79,13 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name='Inten',
+    name='Ito',
 )
 app = BUNDLE(
     coll,
-    name='Inten.app',
+    name='Ito.app',
     icon='icon.icns',
-    bundle_identifier='ai.inten.inten',
+    bundle_identifier='ai.ito.ito',
     info_plist=info_plist_dict,
     entitlements_file='entitlements.plist',
 )

@@ -93,7 +93,7 @@ class CompletionScreen:
         content_layout.addWidget(self.title_label)
 
         # Subtitle
-        self.desc_label = QLabel("You're all set to start using Inten!")
+        self.desc_label = QLabel("You're all set to start using Ito!")
         self.desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         content_layout.addWidget(self.desc_label)
         content_layout.addSpacing(8)
@@ -106,7 +106,7 @@ class CompletionScreen:
         button_layout.setSpacing(0)
 
         # Start Button
-        self.start_button = QPushButton("Start Using Inten")
+        self.start_button = QPushButton("Start Using Ito")
         self.start_button.setObjectName("onboarding-primary")
         self.start_button.setFixedHeight(38)
         self.start_button.setMinimumWidth(140)

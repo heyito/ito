@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set up logging
-LOG_FILE="/tmp/inten_native_messaging_host.log"
+LOG_FILE="/tmp/ito_native_messaging_host.log"
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE"
 }
@@ -47,13 +47,13 @@ if [ "$DEV" = "true" ]; then
 else
     log "Running in production mode"
     # Ensure the path is correct for production builds
-    if [ -f "/Applications/Inten.app/Contents/MacOS/Inten" ]; then
-        log "Starting production Inten app"
-        "/Applications/Inten.app/Contents/MacOS/Inten" --native-messaging-host
+    if [ -f "/Applications/Ito.app/Contents/MacOS/Ito" ]; then
+        log "Starting production Ito app"
+        "/Applications/Ito.app/Contents/MacOS/Ito" --native-messaging-host
         EXIT_CODE=$?
-        log "Inten app exited with code: $EXIT_CODE"
+        log "Ito app exited with code: $EXIT_CODE"
     else
-        log "ERROR: Inten app not found at /Applications/Inten.app/Contents/MacOS/Inten"
+        log "ERROR: Ito app not found at /Applications/Ito.app/Contents/MacOS/Ito"
         exit 1
     fi
 fi

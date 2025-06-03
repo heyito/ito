@@ -120,7 +120,7 @@ class PermissionScreen:
 
         # Description
         self.desc_label = QLabel(
-            "Inten needs a few permissions to help you be more productive"
+            "Ito needs a few permissions to help you be more productive"
         )
         self.desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         content_layout.addWidget(self.desc_label)

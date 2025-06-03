@@ -93,7 +93,7 @@ class WelcomeScreen:
         content_layout.addWidget(self.logo_label)
 
         # Title
-        self.title_label = QLabel("Welcome to Inten")
+        self.title_label = QLabel("Welcome to Ito")
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         content_layout.addWidget(self.title_label)
 

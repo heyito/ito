@@ -5,7 +5,7 @@ from src.apps.browser import BrowserApp
 from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
-from src.types.apps import IntenApp
+from src.types.apps import ItoApp
 from src.types.context import Context
 
 
@@ -26,9 +26,9 @@ class ContextEngine:
         app_name = current_context.get("app_name", None)
         if platform_utils.is_macos():
             match app_name:
-                case IntenApp.TEXTEDIT:
+                case ItoApp.TEXTEDIT:
                     return self.text_edit_app.get_context()
-                case IntenApp.CHROME | IntenApp.BRAVE:
+                case ItoApp.CHROME | ItoApp.BRAVE:
                     return self.browser_app.get_context()
                 case _:
                     return self.macos_app.get_context()
@@ -43,7 +43,7 @@ class ContextEngine:
         app_name = current_context.get("app_name", None)
         if platform_utils.is_macos():
             match app_name:
-                case IntenApp.TEXTEDIT:
+                case ItoApp.TEXTEDIT:
                     return self.text_edit_app.get_context()
                 case _:
                     context = self.macos_app.get_focused_cursor_context()

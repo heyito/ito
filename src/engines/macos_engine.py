@@ -52,11 +52,11 @@ class MacOSEngine:
                 "apple",
                 "Products",
                 "Release",
-                "inten_macos_agent",
+                "ito_macos_agent",
             )
         else:
             self.swift_helper_path = (
-                "/Applications/Inten.app/Contents/Resources/inten_macos_agent"
+                "/Applications/Ito.app/Contents/Resources/ito_macos_agent"
             )
 
     def _click_at(self, x, y):

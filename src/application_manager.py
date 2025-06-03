@@ -60,7 +60,7 @@ class ApplicationManager(QObject):
         self.keyboard_manager.hotkey_released.connect(self._handle_hotkey_release)
 
         # If wanting to add long hold vs tap back refer to
-        # https://github.com/demox-labs/inten/pull/9
+        # https://github.com/demox-labs/ito/pull/9
         # self.hold_threshold = 0.5
         # self.hotkey_thread = threading.Timer(self.hold_threshold, self._hold_check)
         # self.hotkey_thread_lock = threading.Lock()

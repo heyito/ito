@@ -33,7 +33,9 @@ def count_key_occurrences(data, target_key, counts_aggregator):
 
 
 if __name__ == "__main__":
-    json_file_path = "/Users/juliangomez/work/inten/context-1e1114b3-b2a6-42df-bdfc-63472cb64c3f.json"
+    json_file_path = (
+        "/Users/juliangomez/work/ito/context-1e1114b3-b2a6-42df-bdfc-63472cb64c3f.json"
+    )
     key_to_find = "role"  # The key you want to count occurrences for
     try:
         with open(

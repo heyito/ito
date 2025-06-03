@@ -43,6 +43,8 @@ class ContextEngine:
         app_name = current_context.get("app_name", None)
         if platform_utils.is_macos():
             match app_name:
+                case ItoApp.CHROME | ItoApp.BRAVE:
+                    return ""
                 case ItoApp.TEXTEDIT:
                     return self.text_edit_app.get_context()
                 case _:

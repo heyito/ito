@@ -6,9 +6,9 @@ import threading
 
 from src import platform_utils_macos as platform_utils
 from src.constants import SOCKET_PATH
+from src.engines.macos_engine import MacOSEngine
 from src.handlers.llm_handler import LLMHandler
 from src.prompts import prompt_templates
-from src.engines.macos_engine import MacOSEngine
 
 logger = logging.getLogger(__name__)
 
@@ -21,32 +21,33 @@ class BrowserApp:
 
     def process_command(
         self,
-        processing_text: str,
+        browser_context: str,
         user_text_command: str,
         user_command_audio: bytes | None = None,
     ):
         # Parse the text as JSON if it's from Browser
         full_llm_input = ""
         try:
-            logger.info(f"Processing text: {processing_text}")
-            browser_context = json.loads(processing_text)
-            logger.info(f"Browser context: {browser_context}")
+            logger.info(f"Processing object: {browser_context}")
 
-            # Get the active element content
-            content = prompt_templates.get_active_element_content(browser_context)
+            # Handle contenteditable elements
+            active_element_content = browser_context["activeElementContent"]
+
+            print("active_element_content", active_element_content)
+            print("browser_context", browser_context)
 
             # Create the prompt using the template
             full_llm_input = prompt_templates.create_browser_prompt(
                 url=browser_context.get("url", ""),
                 title=browser_context.get("title", ""),
-                content=content,
+                content=active_element_content,
                 command=user_text_command,
-                selected_text=browser_context.get("selectedText"),
             )
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
             # Fallback if the text isn't valid JSON
+            logger.warning("Falling back to generic handler for browser...", e)
             full_llm_input = f"""[START CURRENT DOCUMENT CONTENT]
-                {processing_text}
+                {browser_context}
                 [END CURRENT DOCUMENT CONTENT]
 
                 [USER COMMAND]
@@ -54,6 +55,7 @@ class BrowserApp:
             """
 
         # 2. Process with LLM
+        print("full_llm_input", full_llm_input)
         new_doc_text = self.llm_handler.process_input_with_llm(
             text=full_llm_input,
             audio_buffer=user_command_audio,
@@ -73,7 +75,9 @@ class BrowserApp:
         try:
             # Connect to the native messaging host socket
             client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            client.settimeout(1.0) # 1 second timeout. Use fallback if no ack received from extension
+            client.settimeout(
+                1.0
+            )  # 1 second timeout. Use fallback if no ack received from extension
             client.connect(SOCKET_PATH)
 
             # Send the message to update text
@@ -86,11 +90,15 @@ class BrowserApp:
                 ack_data = client.recv(4096)
                 if ack_data:
                     ack_msg = json.loads(ack_data.decode())
-                    if ack_msg.get("type") == "insert_text_ack" and ack_msg.get("success"):
+                    if ack_msg.get("type") == "insert_text_ack" and ack_msg.get(
+                        "success"
+                    ):
                         logger.info("Received insert_text_ack from extension: success")
                         ack_received = True
                     else:
-                        logger.warning(f"Received insert_text_ack but not successful: {ack_msg}")
+                        logger.warning(
+                            f"Received insert_text_ack but not successful: {ack_msg}"
+                        )
             except socket.timeout:
                 logger.warning("Timeout waiting for insert_text_ack from extension.")
             finally:
@@ -103,9 +111,13 @@ class BrowserApp:
             engine = MacOSEngine()
             success = engine.paste_text_to_active_app(new_doc_text)
             if success:
-                logger.info("Fallback: Successfully pasted text to active app using macOS engine.")
+                logger.info(
+                    "Fallback: Successfully pasted text to active app using macOS engine."
+                )
             else:
-                logger.error("Fallback: Failed to paste text to active app using macOS engine.")
+                logger.error(
+                    "Fallback: Failed to paste text to active app using macOS engine."
+                )
 
     def get_context(self):
         logger.info("Getting content from Browser...")
@@ -125,9 +137,9 @@ class BrowserApp:
             context_thread.daemon = True
             context_thread.start()
 
-            # Wait for the result with a 5-second timeout
+            # Wait for the result with a 3-second timeout
             try:
-                result = result_queue.get(timeout=5)
+                result = result_queue.get(timeout=3)
                 if isinstance(result, Exception):
                     raise result
 
@@ -140,45 +152,7 @@ class BrowserApp:
 
                 # Print the browser context
                 logger.info(f"Browser context: {browser_context}")
-                # Combine relevant context from Browser
-                original_doc_text_for_command = ""
-
-                # Application context
-                original_doc_text_for_command += "[APPLICATION]\nWebBrowser\n\n"
-
-                # Page context
-                if browser_context.get("url") or browser_context.get("title"):
-                    original_doc_text_for_command += "[PAGE]\n"
-                    if browser_context.get("url"):
-                        original_doc_text_for_command += f"{browser_context['url']}\n"
-                    if browser_context.get("title"):
-                        original_doc_text_for_command += f"{browser_context['title']}\n"
-                    original_doc_text_for_command += "\n"
-
-                # Content context
-                original_doc_text_for_command += "[START CURRENT DOCUMENT CONTENT]\n"
-
-                # Handle contenteditable elements
-                if browser_context.get("activeElement", {}).get("isContentEditable"):
-                    if browser_context.get("activeElementValue"):
-                        original_doc_text_for_command += (
-                            f"{browser_context['activeElementValue']}\n"
-                        )
-
-                # Handle regular input/textarea elements
-                elif browser_context.get("activeElement", {}).get("isTextInput"):
-                    if browser_context.get("activeElement", {}).get("value"):
-                        original_doc_text_for_command += (
-                            f"{browser_context['activeElement']['value']}\n"
-                        )
-
-                original_doc_text_for_command += "\n[END CURRENT DOCUMENT CONTENT]\n"
-
-                logger.info(
-                    f"Obtained Browser context (length: {len(original_doc_text_for_command)} chars)."
-                )
-
-                return original_doc_text_for_command
+                return browser_context
 
             except queue.Empty:
                 logger.error(

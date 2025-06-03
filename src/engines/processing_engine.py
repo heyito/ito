@@ -71,7 +71,9 @@ class ProcessingEngine:
         match current_app:
             case ItoApp.CHROME | ItoApp.BRAVE:
                 self.browser_app.process_command(
-                    primary_context, user_text_command, user_command_audio
+                    current_context["page_context"],
+                    user_text_command,
+                    user_command_audio,
                 )
             case ItoApp.TEXTEDIT:
                 self.text_edit_app.process_command(

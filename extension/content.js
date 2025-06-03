@@ -1,5 +1,8 @@
 console.log("Ito content script loaded");
 
+const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+const ModifierProp = isMac ? "metaKey" : "ctrlKey";
+
 /**
  * Simulates keydown and keyup events for a given key combination on an element,
  * including additional properties often needed for complex web apps.
@@ -165,8 +168,6 @@ async function restoreSelectionState(activeElement, storedState) {
  * @returns {Promise<boolean>} True if selection was successful
  */
 async function selectAllContent(element) {
-  const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-  const modifierProp = isMac ? "metaKey" : "ctrlKey";
   const selection = window.getSelection();
 
   // Ensure focus
@@ -197,7 +198,7 @@ async function selectAllContent(element) {
 
   // Fallback to key simulation
   const selectAllOptions = { key: "a", code: "KeyA", keyCode: 65 };
-  selectAllOptions[modifierProp] = true;
+  selectAllOptions[ModifierProp] = true;
   await simulateKeyPress(element, selectAllOptions);
   await simulateKeyPress(element, selectAllOptions); // Double-tap for Notion-like editors
 
@@ -346,7 +347,19 @@ async function insertText(text, replaceAll = true) {
         }
 
         // Directly clear content if replacing all
-        if (["INPUT", "TEXTAREA"].includes(activeElement.tagName)) {
+        if (shouldSkipRangeSelection()) {
+          const selectAllOptions = { key: "a", code: "KeyA", keyCode: 65 };
+          selectAllOptions[ModifierProp] = true;
+          await simulateKeyPress(activeElement, selectAllOptions);
+          await simulateKeyPress(activeElement, selectAllOptions);
+
+          // Simulate Delete key
+          await simulateKeyPress(activeElement, {
+            key: "Delete",
+            code: "Delete",
+            keyCode: 46
+          });
+        } else if (["INPUT", "TEXTAREA"].includes(activeElement.tagName)) {
           activeElement.value = '';
           activeElement.dispatchEvent(new Event("input", { bubbles: true, cancelable: true }));
           activeElement.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
@@ -354,9 +367,9 @@ async function insertText(text, replaceAll = true) {
           activeElement.innerHTML = '';
           activeElement.dispatchEvent(new Event("input", { bubbles: true }));
         }
-
-        await new Promise(resolve => setTimeout(resolve, 100));
       }
+
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Insert new text
       let insertionSuccess = false;

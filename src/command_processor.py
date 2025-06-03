@@ -55,11 +55,10 @@ class CommandProcessor:
         Returns:
             bool: True if processing was initiated, False otherwise (e.g., busy).
         """
-        timestamp = time.strftime("%H:%M:%S")
         if (
             not user_text_command or not user_text_command.strip()
         ) and not user_command_audio:
-            logger.info(f"[{timestamp}] CommandProcessor: Skipping empty command.")
+            logger.info("CommandProcessor: Skipping empty command.")
             self._update_status(StatusMessage.READY)
             return False
 
@@ -70,7 +69,7 @@ class CommandProcessor:
         with self._lock:
             if self._is_processing:
                 logger.info(
-                    f"[{timestamp}] CommandProcessor: Busy (is_processing is True). Skipping command: '{command_copy[:30]}...'"
+                    f"CommandProcessor: Busy (is_processing is True). Skipping command: '{command_copy[:30]}...'"
                 )
                 self._update_status(StatusMessage.BUSY)
                 return False
@@ -91,7 +90,7 @@ class CommandProcessor:
 
         # Start the thread outside the lock
         logger.info(
-            f"[{timestamp}] CommandProcessor: Starting processing thread for command: '{command_copy[:30]}...'"
+            f"CommandProcessor: Starting processing thread for command: '{command_copy[:30]}...'"
         )
         self._processing_thread.start()
         return True
@@ -109,9 +108,9 @@ class CommandProcessor:
         error_msg = ""
         try:
             app_name_for_log = current_context["app_name"] or "Unknown"
-            logger.info(f"[{timestamp}] --- Starting Processing Pipeline ---")
-            logger.info(f"[{timestamp}] Context App: {app_name_for_log}")
-            logger.info(f"[{timestamp}] User Command: '{user_text_command}'")
+            logger.info("--- Starting Processing Pipeline ---")
+            logger.info(f"Context App: {app_name_for_log}")
+            logger.info(f"User Command: '{user_text_command}'")
 
             match mode:
                 case CommandMode.ACTION:

@@ -62,9 +62,7 @@ class DiscreteApplicationRunner(ApplicationInterface):
     @time_method
     def trigger_interaction(self, mode: CommandMode):
         """Trigger an interaction with the application."""
-        logger.info(
-            f"[bold green] Triggering interaction with mode: {mode}...[/bold green]"
-        )
+        logger.info(f"Triggering interaction with mode: {mode}...")
         if self.command_processor.is_processing:
             logger.info("Trigger ignored: Command processor busy.")
             self._update_status(StatusMessage.PROCESSING_BUSY)

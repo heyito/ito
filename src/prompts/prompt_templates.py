@@ -196,12 +196,12 @@ class PromptTemplate:
 
 
 # Define the base templates
-CHROME_PROMPT_TEMPLATE = PromptTemplate(
+BROWSER_PROMPT_TEMPLATE = PromptTemplate(
     {
         "application": f"{APPLICATION_MARKER}\n{{application}}",
         "page": f"{PAGE_MARKER}\n{{url}}\n{{title}}",
         "selected_content": f"{START_SELECTED_CONTENT_MARKER}\n{{selected_content}}\n{END_SELECTED_CONTENT_MARKER}",
-        "command": "{USER_COMMAND_MARKER}\n{command}",
+        "command": f"{USER_COMMAND_MARKER}\n{{command}}",
     }
 )
 
@@ -227,17 +227,13 @@ def create_notes_prompt(content: str, command: str) -> str:
     return NOTES_PROMPT_TEMPLATE.format(content=content, command=command)
 
 
-def create_chrome_prompt(
-    url: str, title: str, content: str, command: str, selected_text: str | None = None
-) -> str:
-    """Create a prompt for Chrome context."""
-    content_with_selection = content
-
-    return CHROME_PROMPT_TEMPLATE.format(
-        application="Google Chrome",
+def create_browser_prompt(url: str, title: str, content: str, command: str) -> str:
+    """Create a prompt for Web Browser context."""
+    return BROWSER_PROMPT_TEMPLATE.format(
+        application="Web Browser",
         url=url,
         title=title,
-        selected_content=content_with_selection,
+        selected_content=content,
         command=command,
     )
 
@@ -257,12 +253,3 @@ def create_general_document_body_prompt(
 def create_macos_ax_ocr_prompt(context: dict, command: str) -> str:
     """Create a prompt for MacOS context."""
     return json.dumps({"ui_full": context, "user_command": command})
-
-
-def get_active_element_content(chrome_context: dict) -> str:
-    """Extract the content from the active element in Chrome context."""
-    if chrome_context.get("activeElement", {}).get("isContentEditable"):
-        return chrome_context.get("activeElementValue", "")
-    elif chrome_context.get("activeElement", {}).get("isTextInput"):
-        return chrome_context.get("activeElement", {}).get("value", "")
-    return ""

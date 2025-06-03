@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from src.application_manager import ApplicationManager
+from src.constants import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
 from src.ui.components.ito_layout import ItoLayout
 from src.ui.components.menu_button import MenuButton
 from src.ui.components.segmented_button_group import SegmentedButtonGroup
@@ -554,7 +555,7 @@ class Home(QMainWindow):
         # Max Tokens (define as self.max_tokens, then use in container)
         self.max_tokens = QSpinBox()
         self.max_tokens.setRange(1, 25000)
-        self.max_tokens.setValue(2000)
+        self.max_tokens.setValue(DEFAULT_MAX_TOKENS)
         self.max_tokens.setStyleSheet("""
             QSpinBox {
                 background-color: rgba(255, 255, 255, 0.07);
@@ -579,7 +580,7 @@ class Home(QMainWindow):
         self.temperature = QDoubleSpinBox()
         self.temperature.setRange(0.0, 1.0)
         self.temperature.setSingleStep(0.1)
-        self.temperature.setValue(0.7)
+        self.temperature.setValue(DEFAULT_TEMPERATURE)
         self.temperature.setStyleSheet("""
             QDoubleSpinBox {
                 background-color: rgba(255, 255, 255, 0.07);

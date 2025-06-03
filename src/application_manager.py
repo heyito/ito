@@ -9,6 +9,7 @@ from typing import Any
 from PySide6.QtCore import QObject, QSettings, QTimer, Signal
 
 from src.application_interface import ApplicationInterface
+from src.constants import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
 from src.containers import Container
 from src.types.modes import CommandMode
 from src.types.status_messages import StatusMessage
@@ -133,8 +134,12 @@ class ApplicationManager(QObject):
         config["LLM"] = {
             "source": self.settings.value("LLM/source", "openai_api"),
             "model": self.settings.value("LLM/model", "gpt-4.1"),
-            "max_tokens": int(self.settings.value("LLM/max_tokens", 2000)),
-            "temperature": float(self.settings.value("LLM/temperature", 0.7)),
+            "max_tokens": int(
+                self.settings.value("LLM/max_tokens", DEFAULT_MAX_TOKENS)
+            ),
+            "temperature": float(
+                self.settings.value("LLM/temperature", DEFAULT_TEMPERATURE)
+            ),
         }
 
         # Audio settings

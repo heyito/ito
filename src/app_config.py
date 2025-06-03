@@ -1,5 +1,7 @@
 from typing import Any
 
+from src.constants import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
+
 
 class AppConfig:
     """
@@ -87,8 +89,10 @@ class AppConfig:
             self.llm_model: str = self.groq_user_command_model
         else:
             self.llm_model: str = self.openai_user_command_model
-        self.max_tokens: int = int(llm_section.get("max_tokens", 2000))
-        self.temperature: float = float(llm_section.get("temperature", 0.7))
+        self.max_tokens: int = int(llm_section.get("max_tokens", DEFAULT_MAX_TOKENS))
+        self.temperature: float = float(
+            llm_section.get("temperature", DEFAULT_TEMPERATURE)
+        )
 
         # Audio settings
         audio_section = config_dict.get("Audio", {})

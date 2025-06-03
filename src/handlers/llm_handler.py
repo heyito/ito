@@ -5,6 +5,7 @@ from collections.abc import Callable
 from typing import Any
 
 from src.clients.llm_client_interface import LLMClientInterface
+from src.constants import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
 from src.utils.timing import time_method
 
 # Configure logging
@@ -41,8 +42,8 @@ class LLMHandler:
         text: str,
         audio_buffer: bytes,
         system_prompt_override: str | None = None,  # Use Optional
-        max_tokens: int = 4096,
-        temperature: float = 0.7,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        temperature: float = DEFAULT_TEMPERATURE,
         tool_functions: list[dict] | None = None,  # Use Optional
         messages_override: list[dict] | None = None,  # Use Optional
     ) -> Any:  # Return type depends on client (string or OpenAI response object)
@@ -155,8 +156,8 @@ class LLMHandler:
             resp = self.client.generate_response(
                 text="",
                 system_prompt="",
-                max_tokens=4096,
-                temperature=0.7,
+                max_tokens=DEFAULT_MAX_TOKENS,
+                temperature=DEFAULT_TEMPERATURE,
                 tool_functions=tool_functions,
                 messages_override=messages,
             )

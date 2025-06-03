@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from src.constants import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
 from src.ui.theme.manager import ThemeManager
 
 
@@ -436,7 +437,11 @@ class ApiSetupScreen:
                 "local_model_size": "base.en",
                 "compute_type": "default",
             },
-            "LLM": {"source": "", "max_tokens": 2000, "temperature": 0.7},
+            "LLM": {
+                "source": "",
+                "max_tokens": DEFAULT_MAX_TOKENS,
+                "temperature": DEFAULT_TEMPERATURE,
+            },
         }
 
         # Update API keys for all providers

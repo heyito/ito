@@ -6,6 +6,8 @@ let reconnectTimer = null;
 let lastMessageTime = Date.now();
 let pingInterval = null;
 let processingInterval = null;
+let extensionConnected = false;
+let pingIntervalId = null;
 
 function cleanupConnection() {
     if (port) {
@@ -170,6 +172,11 @@ function connect() {
                 setTimeout(() => {
                     chrome.action.setBadgeText({ text: '' });
                 }, 2000);
+            } else if (response.type === 'ping') {
+                // Respond to ping from the native host (application)
+                if (port) {
+                    port.postMessage({ type: 'pong' });
+                }
             } else {
                 console.log('Received unknown message from native host:', response);
             }
@@ -251,4 +258,4 @@ function stopProcessingIndicator() {
         processingInterval = null;
     }
     chrome.action.setBadgeText({ text: '' });
-} 
+}

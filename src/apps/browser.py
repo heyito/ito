@@ -3,6 +3,7 @@ import logging
 import queue
 import socket
 import threading
+import time
 
 from src import platform_utils_macos as platform_utils
 from src.constants import SOCKET_PATH
@@ -18,6 +19,41 @@ class BrowserApp:
 
     def __init__(self, llm_handler: LLMHandler):
         self.llm_handler = llm_handler
+        self.extension_connected = False
+        self._last_pong_time = 0
+        self._ping_thread = threading.Thread(target=self._ping_loop, daemon=True)
+        self._ping_thread.start()
+
+    def _ping_loop(self):
+        while True:
+            try:
+                client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                client.settimeout(1.0)
+                client.connect(SOCKET_PATH)
+                client.send(json.dumps({"type": "ping"}).encode())
+                try:
+                    data = client.recv(4096)
+                    if data:
+                        msg = json.loads(data.decode())
+                        if msg.get("type") == "pong":
+                            self.extension_connected = True
+                            self._last_pong_time = time.time()
+                        else:
+                            # Not a pong, treat as not connected
+                            if time.time() - self._last_pong_time > 3:
+                                self.extension_connected = False
+                    else:
+                        if time.time() - self._last_pong_time > 3:
+                            self.extension_connected = False
+                except socket.timeout:
+                    if time.time() - self._last_pong_time > 3:
+                        self.extension_connected = False
+                finally:
+                    client.close()
+            except Exception:
+                if time.time() - self._last_pong_time > 3:
+                    self.extension_connected = False
+            time.sleep(2)
 
     def process_command(
         self,
@@ -72,39 +108,31 @@ class BrowserApp:
         logger.debug(f"LLM Output Snippet:\n---\n{new_doc_text[:200]}...\n---")
 
         logger.info("Sending text update to Browser extension...")
+        if not self.extension_connected:
+            logger.info(
+                "Extension not connected (ping/pong state), using fallback handler."
+            )
+            engine = MacOSEngine()
+            success = engine.paste_text_to_active_app(new_doc_text)
+            if success:
+                logger.info(
+                    "Fallback: Successfully pasted text to active app using macOS engine."
+                )
+            else:
+                logger.error(
+                    "Fallback: Failed to paste text to active app using macOS engine."
+                )
+            return
         try:
             # Connect to the native messaging host socket
             client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            client.settimeout(
-                1.0
-            )  # 1 second timeout. Use fallback if no ack received from extension
             client.connect(SOCKET_PATH)
-
-            # Send the message to update text
             message = {"type": "insert_text", "text": new_doc_text}
             client.send(json.dumps(message).encode())
-
-            # Wait for ack (with timeout)
-            ack_received = False
-            try:
-                ack_data = client.recv(4096)
-                if ack_data:
-                    ack_msg = json.loads(ack_data.decode())
-                    if ack_msg.get("type") == "insert_text_ack" and ack_msg.get(
-                        "success"
-                    ):
-                        logger.info("Received insert_text_ack from extension: success")
-                        ack_received = True
-                    else:
-                        logger.warning(
-                            f"Received insert_text_ack but not successful: {ack_msg}"
-                        )
-            except socket.timeout:
-                logger.warning("Timeout waiting for insert_text_ack from extension.")
-            finally:
-                client.close()
-            if not ack_received:
-                raise Exception("No successful insert_text_ack received from extension")
+            client.close()
+            logger.info(
+                "Sent text update to Browser extension (extension_connected=True)"
+            )
         except Exception as e:
             logger.error(f"Error sending text update to Browser extension: {e}")
             logger.info("Falling back to generic handler (paste to active app)...")

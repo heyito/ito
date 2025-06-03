@@ -92,6 +92,12 @@ class NativeHost:
                             "text": message.get("text", ""),
                         }
                         self.send_to_chrome(chrome_message)
+                    elif message.get("type") == "ping":
+                        # Forward ping from socket to Chrome
+                        self.send_to_chrome({"type": "ping"})
+                    elif message.get("type") == "pong":
+                        # Forward pong from socket to Chrome
+                        self.send_to_chrome({"type": "pong"})
                     else:
                         self.send_to_chrome(message)
                 except json.JSONDecodeError as e:
@@ -122,6 +128,22 @@ class NativeHost:
                     logging.info("Forwarded insert_text_ack to socket connection")
                 except Exception as e:
                     logging.error(f"Error forwarding insert_text_ack to socket: {e}")
+        elif message.get("type") == "ping":
+            # Forward ping from Chrome to all sockets
+            for conn in self.connections:
+                try:
+                    conn.send(json.dumps({"type": "ping"}).encode())
+                    logging.info("Forwarded ping to socket connection")
+                except Exception as e:
+                    logging.error(f"Error forwarding ping to socket: {e}")
+        elif message.get("type") == "pong":
+            # Forward pong from Chrome to all sockets
+            for conn in self.connections:
+                try:
+                    conn.send(json.dumps({"type": "pong"}).encode())
+                    logging.info("Forwarded pong to socket connection")
+                except Exception as e:
+                    logging.error(f"Error forwarding pong to socket: {e}")
         else:
             for conn in self.connections:
                 try:

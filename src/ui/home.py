@@ -1125,6 +1125,8 @@ class Home(QMainWindow):
 
     def reset_all_settings(self):
         """Reset all settings and restart the onboarding process."""
+        self.app_manager.stop_application()
+
         # Clear all settings
         settings = QSettings(
             OnboardingWindow.ORGANIZATION_NAME, OnboardingWindow.APPLICATION_NAME

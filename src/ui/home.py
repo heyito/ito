@@ -1371,14 +1371,6 @@ class Home(QMainWindow):
             self.app_manager.status_window.hide()
         super().closeEvent(event)
 
-    # def hideEvent(self, event):
-    #     """Handle window hide event"""
-    #     logger.info("Hiding Home window")
-    #     self.app_manager.stop_application()
-    #     if hasattr(self.app_manager, "status_window"):
-    #         self.app_manager.status_window.hide()
-    #     super().hideEvent(event)
-
     def _update_llm_provider_fields(self, current_llm_source_text=None):
         """Update model fields based on the selected LLM source."""
         # Block signals from model widgets during programmatic update

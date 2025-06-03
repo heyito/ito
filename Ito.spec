@@ -39,6 +39,10 @@ a = Analysis(
         ('ito-logo.png', '.'),
         ('ito-logo-dark.png', '.'),
         ('src/bin/ito_macos_agent', '.'),
+        ('src/ui/font/fonts/Inter-Regular.ttf', './fonts'),
+        ('src/ui/font/fonts/Inter-Medium.ttf', './fonts'),
+        ('src/ui/font/fonts/Inter-SemiBold.ttf', './fonts'),
+        ('src/ui/font/fonts/Inter-Bold.ttf', './fonts'),
     ],
     hiddenimports=[
       'native_messaging_host',

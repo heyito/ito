@@ -214,7 +214,7 @@ class ItoLayout(QWidget):
         surface = self.theme_manager.get_color("surface")
         return f"""
             QWidget, QMainWindow {{
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                font-family: 'Inter 18pt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             }}
             QLabel {{ 
                 color: {text_primary}; 

@@ -9,10 +9,11 @@ import traceback
 
 import appnope
 import sounddevice as sd
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
 from src.application_manager import ApplicationManager
+from src.ui.font.load_fonts import load_fonts
 from src.ui.keyboard_listener import KeyboardListenerProcess
 from src.ui.keyboard_manager import KeyboardManager
 from src.ui.onboarding import OnboardingWindow
@@ -299,6 +300,19 @@ if __name__ == "__main__":
         app = QApplication(sys.argv)
         QApplication.setOrganizationName(OnboardingWindow.ORGANIZATION_NAME)
         QApplication.setApplicationName(OnboardingWindow.APPLICATION_NAME)
+
+        # Load and register fonts
+        if load_fonts():
+            # Set default font for the entire application
+            font = QFont("Inter 18pt", 13)  # Use the actual font family name
+            font.setStyleHint(QFont.StyleHint.SansSerif)
+            app.setFont("Inter 18pt")
+        else:
+            logger.warning("Using system default font as Inter font loading failed")
+            # Set a system font as fallback
+            font = QFont()
+            font.setStyleHint(QFont.StyleHint.SansSerif)
+            app.setFont(font)
 
         # Initialize theme manager
         theme_manager = ThemeManager.instance()

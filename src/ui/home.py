@@ -1176,7 +1176,7 @@ class Home(QMainWindow):
             color: {color or self.theme_manager.get_color("text_primary")};
             margin-top: 24px;
             margin-bottom: 8px;
-            font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Inter 18pt', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         """)
         layout.addRow(header)
 

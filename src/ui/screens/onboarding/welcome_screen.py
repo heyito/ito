@@ -1,5 +1,6 @@
 from PySide6.QtCore import QEasingCurve, QPoint, QPropertyAnimation, Qt, QTimer
 from PySide6.QtGui import QPixmap
+from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (
     QGraphicsOpacityEffect,
     QLabel,
@@ -56,51 +57,57 @@ class WelcomeScreen:
         if self._is_cleaned_up or not self.logo_label:
             return
 
-        logo_path = self.theme_manager.get_logo_path()
-        if logo_path:
-            logo_pixmap = QPixmap(logo_path)
-            if not logo_pixmap.isNull():
-                scaled_pixmap = logo_pixmap.scaled(
-                    140,
-                    140,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-                self.logo_label.setPixmap(scaled_pixmap)
-                self.logo_label.setText("")
-                return
-        # Fallback
-        self.logo_label.setPixmap(QPixmap())
-        self.logo_label.setText("🎯")
-        self.logo_label.setStyleSheet(
-            "font-size: 80px; background-color: transparent; margin-bottom: 8px;"
-        )
+        logo_fill = "white" if self.theme_manager.current_theme == "dark" else "black"
+        logo_svg = self.theme_manager.get_logo_svg_content(logo_fill)
+        if logo_svg and isinstance(self.logo_label, QSvgWidget):
+            self.logo_label.load(bytearray(logo_svg, encoding="utf-8"))
+            self.logo_label.setVisible(True)
+        elif isinstance(self.logo_label, QLabel):
+            self.logo_label.setPixmap(QPixmap())
+            self.logo_label.setText("🎯")
+            self.logo_label.setStyleSheet(
+                "font-size: 80px; background-color: transparent; margin-bottom: 8px;"
+            )
+            self.logo_label.setVisible(True)
 
     def create(self, parent_layout):
         # --- Centered Layout ---
         content_layout = QVBoxLayout()
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(36)
+        content_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # Create a container widget for the content
         self.content_widget = QWidget()
         self.content_widget.setLayout(content_layout)
 
         # Logo
-        self.logo_label = QLabel()
-        self.logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.update_logo_pixmap()
-        content_layout.addWidget(self.logo_label)
+        logo_fill = "white" if self.theme_manager.current_theme == "dark" else "black"
+        logo_svg = self.theme_manager.get_logo_svg_content(logo_fill)
+        if logo_svg:
+            self.logo_label = QSvgWidget()
+            self.logo_label.setFixedSize(140, 140)
+            self.logo_label.load(bytearray(logo_svg, encoding="utf-8"))
+        else:
+            self.logo_label = QLabel("🎯")
+            self.logo_label.setStyleSheet(
+                "font-size: 80px; background-color: transparent; margin-bottom: 8px;"
+            )
+        content_layout.addWidget(
+            self.logo_label, alignment=Qt.AlignmentFlag.AlignCenter
+        )
 
         # Title
         self.title_label = QLabel("Welcome to Ito")
-        self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        content_layout.addWidget(self.title_label)
+        content_layout.addWidget(
+            self.title_label, alignment=Qt.AlignmentFlag.AlignCenter
+        )
 
         # Subtitle
         self.desc_label = QLabel("Let's set up your permissions to get started.")
-        self.desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        content_layout.addWidget(self.desc_label)
+        content_layout.addWidget(
+            self.desc_label, alignment=Qt.AlignmentFlag.AlignCenter
+        )
 
         # Create a container for the button to ensure proper spacing
         button_container = QWidget()
@@ -108,17 +115,18 @@ class WelcomeScreen:
         button_layout = QVBoxLayout(button_container)
         button_layout.setContentsMargins(0, 0, 0, 0)
         button_layout.setSpacing(0)
+        button_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # Get Started Button
         self.start_button = QPushButton("Get Started")
         self.start_button.setObjectName("onboarding-primary")
         self.start_button.setFixedHeight(44)
         self.start_button.setMinimumWidth(180)
-        button_layout.addWidget(
-            self.start_button, alignment=Qt.AlignmentFlag.AlignCenter
-        )
+        button_layout.addWidget(self.start_button)
 
-        content_layout.addWidget(button_container)
+        content_layout.addWidget(
+            button_container, alignment=Qt.AlignmentFlag.AlignCenter
+        )
 
         # --- Center the content in the main layout ---
         parent_layout.addStretch(2)

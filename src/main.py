@@ -9,7 +9,9 @@ import traceback
 
 import appnope
 import sounddevice as sd
-from PySide6.QtGui import QFont, QIcon
+from PySide6.QtCore import QByteArray, Qt
+from PySide6.QtGui import QFont, QIcon, QPainter, QPixmap
+from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
 from src.application_manager import ApplicationManager
@@ -327,12 +329,26 @@ if __name__ == "__main__":
         quit_action.triggered.connect(app.quit)
         tray_icon.setContextMenu(tray_menu)
 
-        # Set icon using theme manager
-        logo_path = theme_manager.get_logo_path()
-        if logo_path and os.path.exists(logo_path):
-            tray_icon.setIcon(QIcon(logo_path))
+        # Set icon using theme manager's SVG
+        fill_color = "white" if theme_manager.current_theme == "dark" else "black"
+        svg_content = theme_manager.get_logo_svg_content(fill_color)
+        if svg_content:
+            # Create a QByteArray from the SVG content
+            svg_data = QByteArray(svg_content.encode("utf-8"))
+
+            # Create a renderer and pixmap
+            renderer = QSvgRenderer(svg_data)
+            pixmap = QPixmap(32, 32)  # Standard tray icon size
+            pixmap.fill(Qt.transparent)
+
+            # Render the SVG onto the pixmap
+            painter = QPainter(pixmap)
+            renderer.render(painter)
+            painter.end()
+
+            tray_icon.setIcon(QIcon(pixmap))
         else:
-            # Use a default icon if logo is not found
+            # Use a default icon if SVG processing fails
             tray_icon.setIcon(QIcon.fromTheme("application-x-executable"))
 
         # Show the tray icon

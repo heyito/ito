@@ -3,7 +3,7 @@ import sys
 import traceback
 
 from PySide6.QtCore import QPointF, QSettings, Qt, QTimer
-from PySide6.QtGui import QPixmap
+from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFormLayout,
@@ -243,25 +243,16 @@ class Home(QMainWindow):
         center_layout.setSpacing(8)  # Reduced from 16 to 8
 
         # Logo
-        self.logo_label = QLabel()
-        # Use theme manager to get the correct logo path
-        logo_path = self.theme_manager.get_logo_path()
-        logo_pixmap = None
-        if logo_path:
-            logo_pixmap = QPixmap(logo_path)
-            if not logo_pixmap.isNull():
-                scaled_pixmap = logo_pixmap.scaled(
-                    32,
-                    32,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-                self.logo_label.setPixmap(scaled_pixmap)
-                self.logo_label.setText("")
-            else:
-                self.logo_label.setText("🎯")
+        self.logo_label = QSvgWidget()
+        self.logo_label.setFixedSize(32, 32)
+        logo_fill = "white" if self.theme_manager.current_theme == "dark" else "black"
+        logo_svg = self.theme_manager.get_logo_svg_content(logo_fill)
+        if logo_svg:
+            self.logo_label.load(bytearray(logo_svg, encoding="utf-8"))
         else:
-            self.logo_label.setText("🎯")
+            fallback_label = QLabel("🎯")
+            center_layout.addWidget(fallback_label)
+            self.logo_label = fallback_label
         center_layout.addWidget(self.logo_label)
 
         # App name
@@ -1023,24 +1014,14 @@ class Home(QMainWindow):
     def update_styles(self, new_theme):
         """Update the styles of the window"""
         # Update logo
-        logo_path = self.theme_manager.get_logo_path()
-        if logo_path:
-            logo_pixmap = QPixmap(logo_path)
-            if not logo_pixmap.isNull():
-                scaled_pixmap = logo_pixmap.scaled(
-                    32,
-                    32,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-                self.logo_label.setPixmap(scaled_pixmap)
-                self.logo_label.setText("")
-            else:
-                self.logo_label.setPixmap(QPixmap())
-                self.logo_label.setText("🎯")
-        else:
-            self.logo_label.setPixmap(QPixmap())
+        logo_fill = "white" if self.theme_manager.current_theme == "dark" else "black"
+        logo_svg = self.theme_manager.get_logo_svg_content(logo_fill)
+        if logo_svg and isinstance(self.logo_label, QSvgWidget):
+            self.logo_label.load(bytearray(logo_svg, encoding="utf-8"))
+            self.logo_label.setVisible(True)
+        elif isinstance(self.logo_label, QLabel):
             self.logo_label.setText("🎯")
+            self.logo_label.setVisible(True)
 
         # Update app name color
         self.app_name.setStyleSheet(f"""

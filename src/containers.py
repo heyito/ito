@@ -21,6 +21,7 @@ from src.engines.intent_engine import IntentEngine
 from src.engines.macos_engine import MacOSEngine
 from src.engines.processing_engine import ProcessingEngine
 from src.handlers.audio.asr_handler_interface import ASRHandlerInterface
+from src.handlers.audio.audio_device_manager import AudioDeviceManager
 from src.handlers.audio.audio_recorder import AudioRecorder
 from src.handlers.audio.audio_source_handler import AudioSourceHandler
 from src.handlers.audio.faster_whisper_asr_handler import FasterWhisperASRHandler
@@ -29,7 +30,6 @@ from src.handlers.audio.groq_asr_handler import GroqASRHandler
 from src.handlers.audio.openai_asr_handler import OpenAIASRHandler
 from src.handlers.llm_handler import LLMHandler
 from src.one_shot_application_runner import OneShotApplicationRunner
-
 
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
@@ -76,13 +76,14 @@ class Container(containers.DeclarativeContainer):
         groq_api=groq_llm_client_provider,
     )
 
-    # --- Core Handlers/Services ---
-
     llm_handler = providers.Singleton(LLMHandler, client=selected_llm_client)
+
+    audio_device_manager = providers.Singleton(
+        lambda: AudioDeviceManager.instance()
+    )
 
     audio_source_handler = providers.Singleton(
         AudioSourceHandler,
-        # Inject required typed values
         sample_rate=config.Audio.sample_rate.as_int(),
         channels=config.Audio.channels.as_int(),
     )
@@ -91,7 +92,6 @@ class Container(containers.DeclarativeContainer):
 
     macos_engine = providers.Singleton(MacOSEngine)
 
-    # --- App-Specific Logic ---
     browser_app = providers.Singleton(BrowserApp, llm_handler=llm_handler)
 
     text_edit_app = providers.Singleton(TextEditApp, llm_handler=llm_handler)

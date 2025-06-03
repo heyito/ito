@@ -24,6 +24,7 @@
   ],
   "icons": {
     "16": "public/ito-logo-16.png",
+    "32": "public/ito-logo-32.png",
     "48": "public/ito-logo-48.png",
     "128": "public/ito-logo-128.png"
   }

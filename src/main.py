@@ -165,7 +165,7 @@ def ensure_native_messaging_host_registered(native_messaging_script_path):
 
         # Create manifest content
         manifest = {
-            "name": "ai.ito.app",
+            "name": "ai.ito.ito",
             "description": "Ito native messaging host",
             "path": native_messaging_script_path,
             "type": "stdio",
@@ -184,7 +184,7 @@ def ensure_native_messaging_host_registered(native_messaging_script_path):
 
         # Try to create manifest directory and copy file
         try:
-            manifest_path = os.path.join(manifest_dir, "ai.ito.app.json")
+            manifest_path = os.path.join(manifest_dir, "ai.ito.ito.json")
 
             # First try without sudo
             try:

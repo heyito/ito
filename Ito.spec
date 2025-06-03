@@ -8,7 +8,7 @@ info_plist_dict = {
     'CFBundleShortVersionString': '1.0.0',
     'CFBundleDisplayName': 'Ito',
     'CFBundleExecutable': 'Ito',
-    'CFBundleIdentifier': 'ai.ito.ito', # This should match bundle_identifier in BUNDLE
+    'CFBundleIdentifier': 'ai.ito.ito',
     'CFBundleName': 'Ito',
     'CFBundlePackageType': 'APPL',
     

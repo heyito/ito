@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import traceback
 
 from PySide6.QtGui import QFontDatabase
@@ -11,12 +12,15 @@ logger = logging.getLogger(__name__)
 def load_fonts():
     """Load and register the Inter font files."""
     try:
-        # Get the directory containing the font files
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        fonts_dir = os.path.join(current_dir, "fonts")
+        # Get the base directory - handle both local and PyInstaller builds
+        if hasattr(sys, "_MEIPASS"):
+            # Running in PyInstaller bundle
+            base_dir = sys._MEIPASS
+        else:
+            # Running in normal Python environment
+            base_dir = os.path.dirname(os.path.abspath(__file__))
 
-        # Create fonts directory if it doesn't exist
-        os.makedirs(fonts_dir, exist_ok=True)
+        fonts_dir = os.path.join(base_dir, "fonts")
 
         # List of required font files
         font_files = [

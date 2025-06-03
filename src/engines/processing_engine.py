@@ -50,9 +50,18 @@ class ProcessingEngine:
                     primary_context, user_text_command, user_command_audio
                 )
             case ItoApp.CHROME | ItoApp.BRAVE:
-                self.browser_app.process_command(
-                    primary_context, user_text_command, user_command_audio
-                )
+                if self.browser_app.extension_available:
+                    self.browser_app.process_command(
+                        current_context["page_context"],
+                        user_text_command,
+                        user_command_audio,
+                    )
+                else:
+                    self.macos_app.process_action(
+                        current_context,
+                        user_text_command,
+                        user_command_audio,
+                    )
             case _:
                 self.macos_app.process_action(
                     primary_context, user_text_command, user_command_audio
@@ -70,11 +79,18 @@ class ProcessingEngine:
 
         match current_app:
             case ItoApp.CHROME | ItoApp.BRAVE:
-                self.browser_app.process_command(
-                    current_context["page_context"],
-                    user_text_command,
-                    user_command_audio,
-                )
+                if self.browser_app.extension_available:
+                    self.browser_app.process_command(
+                        current_context["page_context"],
+                        user_text_command,
+                        user_command_audio,
+                    )
+                else:
+                    self.macos_app.process_dictation(
+                        current_context,
+                        user_text_command,
+                        user_command_audio,
+                    )
             case ItoApp.TEXTEDIT:
                 self.text_edit_app.process_command(
                     primary_context, user_text_command, user_command_audio

@@ -118,7 +118,6 @@ class BrowserApp:
         try:
             # Connect to the native messaging host socket
             client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            client.settimeout(1.0)
             client.connect(SOCKET_PATH)
             message = {"type": "insert_text", "text": new_doc_text}
             client.send(json.dumps(message).encode())

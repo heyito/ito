@@ -94,7 +94,7 @@ function connect() {
             } else if (response.type === 'test_response') {
                 console.log('Test response received, connection is working');
             } else if (response.type === 'pong') {
-                handlePong();
+                console.log('Received pong from native host');
             } else if (response.type === 'request_context') {
                 startProcessingIndicator();
                 chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
@@ -182,8 +182,6 @@ function connect() {
             }
         });
 
-        startPing();
-
     } catch (error) {
         console.error('Error connecting to native host:', error);
         handleDisconnect();
@@ -261,21 +259,3 @@ function stopProcessingIndicator() {
     }
     chrome.action.setBadgeText({ text: '' });
 }
-
-function startPing() {
-    if (pingIntervalId) clearInterval(pingIntervalId);
-    pingIntervalId = setInterval(() => {
-        if (port) {
-            try {
-                port.postMessage({ type: 'ping' });
-            } catch (e) {
-                extensionConnected = false;
-            }
-        }
-    }, 2000); // Ping every 2 seconds
-}
-
-function handlePong() {
-    extensionConnected = true;
-    // Optionally update UI here
-} 

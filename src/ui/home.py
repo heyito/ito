@@ -909,32 +909,37 @@ class Home(QMainWindow):
         )
 
         # Developer Timing Tools Section
-        self.add_section_header(
-            developer_form_layout,
-            "Developer Timing Tools",
-            color=self.theme_manager.get_color("text_primary"),
-        )
+        dev_mode = os.getenv("DEV")
+        logger.info(f"Dev mode: {dev_mode}")
+        if dev_mode:
+            self.add_section_header(
+                developer_form_layout,
+                "Developer Timing Tools",
+                color=self.theme_manager.get_color("text_primary"),
+            )
 
-        # Timing report buttons container
-        timing_buttons_widget = QWidget()
-        timing_button_layout = QHBoxLayout(timing_buttons_widget)
-        timing_button_layout.setContentsMargins(0, 0, 0, 0)
-        timing_button_layout.setSpacing(10)
+            # Timing report buttons container
+            timing_buttons_widget = QWidget()
+            timing_button_layout = QHBoxLayout(timing_buttons_widget)
+            timing_button_layout.setContentsMargins(0, 0, 0, 0)
+            timing_button_layout.setSpacing(10)
 
-        self.save_timing_report_button = QPushButton("Save Timing Report")
-        self.set_primary_button_style(self.save_timing_report_button)
-        self.save_timing_report_button.clicked.connect(self.handle_save_timing_report)
-        timing_button_layout.addWidget(self.save_timing_report_button)
+            self.save_timing_report_button = QPushButton("Save Timing Report")
+            self.set_primary_button_style(self.save_timing_report_button)
+            self.save_timing_report_button.clicked.connect(
+                self.handle_save_timing_report
+            )
+            timing_button_layout.addWidget(self.save_timing_report_button)
 
-        self.clear_timing_data_button = QPushButton("Clear Timing Data")
-        self.set_primary_button_style(self.clear_timing_data_button)
-        self.clear_timing_data_button.clicked.connect(self.handle_clear_timing_data)
-        timing_button_layout.addWidget(self.clear_timing_data_button)
+            self.clear_timing_data_button = QPushButton("Clear Timing Data")
+            self.set_primary_button_style(self.clear_timing_data_button)
+            self.clear_timing_data_button.clicked.connect(self.handle_clear_timing_data)
+            timing_button_layout.addWidget(self.clear_timing_data_button)
 
-        timing_button_layout.addStretch()
+            timing_button_layout.addStretch()
 
-        # Add the widget containing the buttons to the form layout
-        developer_form_layout.addRow(timing_buttons_widget)
+            # Add the widget containing the buttons to the form layout
+            developer_form_layout.addRow(timing_buttons_widget)
 
         # Log Management Section
         self.add_section_header(
@@ -1070,12 +1075,17 @@ class Home(QMainWindow):
 
         # Update all primary buttons in developer page
         for button in [
-            self.save_timing_report_button,
-            self.clear_timing_data_button,
+            self.save_timing_report_button
+            if hasattr(self, "save_timing_report_button")
+            else None,
+            self.clear_timing_data_button
+            if hasattr(self, "clear_timing_data_button")
+            else None,
             self.save_log_button,
             self.clear_log_button,
         ]:
-            self.set_primary_button_style(button)
+            if button:  # Only update if button exists
+                self.set_primary_button_style(button)
         # Find and update the reset button in the developer page
         for widget in self.developer_page.findChildren(QPushButton):
             if widget.text() == "Reset All":

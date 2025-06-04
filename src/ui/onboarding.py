@@ -62,7 +62,12 @@ class OnboardingWindow(QMainWindow):
         self.permission_checker = PermissionChecker()
 
         # --- Initialize Permission States ---
-        self.permission_states = {"microphone": False, "accessibility": False}
+        self.permission_states = {
+            "microphone": False,
+            "accessibility": False,
+            "automation": False,
+            "input_monitoring": False,
+        }
 
         # --- Initialize Keyboard Manager ---
         self.keyboard_manager = KeyboardManager.instance()
@@ -238,7 +243,7 @@ class OnboardingWindow(QMainWindow):
         self.permission_screen.permission_states = self.permission_states
 
         # Create the screen and get the buttons
-        mic_button, acc_button, auto_button, continue_button = (
+        mic_button, acc_button, auto_button, input_button, continue_button = (
             self.permission_screen.create(self.layout)
         )
 
@@ -250,9 +255,10 @@ class OnboardingWindow(QMainWindow):
         auto_button.clicked.connect(
             self.permission_screen.request_automation_permission
         )
-        continue_button.clicked.connect(
-            self.permission_screen.check_all_permissions_and_proceed
+        input_button.clicked.connect(
+            self.permission_screen.request_input_monitoring_permission
         )
+        continue_button.clicked.connect(self.permission_screen._check_all_permissions)
 
         # Connect permission checker signal
         self.permission_checker.permission_checked.connect(

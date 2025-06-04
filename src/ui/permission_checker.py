@@ -1,7 +1,9 @@
+import ctypes
 import logging
 import platform
 import subprocess
 import traceback
+from ctypes import CFUNCTYPE, POINTER, c_int, c_uint32, c_uint64, c_void_p, cdll
 
 import sounddevice as sd
 from PySide6.QtCore import QObject, Signal
@@ -88,3 +90,71 @@ class PermissionChecker(QObject):
         except Exception as e:
             logger.error(f"Error requesting automation permission: {e}")
             self.permission_checked.emit("automation", False)
+
+    def check_input_monitoring(self):
+        """
+        Check if the application has input monitoring permissions on macOS using CGEventTapCreate.
+        This will trigger the system permission dialog if not already granted.
+        """
+        if platform.system() != "Darwin":
+            logger.info("Not on macOS, assuming input monitoring permissions granted")
+            self.permission_checked.emit("input_monitoring", True)
+            return
+
+        try:
+            # Load the CoreGraphics framework
+            cg = cdll.LoadLibrary(
+                "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics"
+            )
+
+            # Define the callback function type
+            CGEventTapCallBack = CFUNCTYPE(c_void_p, c_int, c_void_p, c_void_p)
+
+            # Define the callback function
+            def callback(proxy, type, event, refcon):
+                return event
+
+            # Create the callback
+            callback_func = CGEventTapCallBack(callback)
+
+            # Constants for CGEventTapCreate
+            kCGSessionEventTap = 0
+            kCGHeadInsertEventTap = 0
+            kCGEventTapOptionDefault = 0
+            kCGEventMaskForAllEvents = 0xFFFFFFFFFFFFFFFF
+
+            # Set up function signatures
+            cg.CGEventTapCreate.argtypes = [
+                c_int,
+                c_int,
+                c_int,
+                c_uint64,
+                CGEventTapCallBack,
+                c_void_p,
+            ]
+            cg.CGEventTapCreate.restype = c_void_p
+            cg.CFMachPortInvalidate.argtypes = [c_void_p]
+            cg.CFMachPortInvalidate.restype = None
+
+            # Try to create an event tap
+            tap = cg.CGEventTapCreate(
+                kCGSessionEventTap,
+                kCGHeadInsertEventTap,
+                kCGEventTapOptionDefault,
+                kCGEventMaskForAllEvents,
+                callback_func,
+                None,
+            )
+
+            # If tap is None, permission was denied
+            has_permission = tap is not None
+            if tap is not None:
+                cg.CFMachPortInvalidate(tap)
+
+            logger.info(f"Input monitoring permission check result: {has_permission}")
+            self.permission_checked.emit("input_monitoring", has_permission)
+
+        except Exception as e:
+            logger.error(f"Error checking input monitoring permission: {e}")
+            logger.error(traceback.format_exc())
+            self.permission_checked.emit("input_monitoring", False)

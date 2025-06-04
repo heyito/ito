@@ -185,6 +185,7 @@ class Home(QMainWindow):
         self.save_settings_timer = QTimer()
         self.save_settings_timer.setSingleShot(True)
         self.save_settings_timer.timeout.connect(self._save_settings_impl)
+        self.initial_load_complete = False
 
         # Initialize ApplicationManager
         self.app_manager = ApplicationManager.instance()
@@ -910,7 +911,6 @@ class Home(QMainWindow):
 
         # Developer Timing Tools Section
         dev_mode = os.getenv("DEV")
-        logger.info(f"Dev mode: {dev_mode}")
         if dev_mode:
             self.add_section_header(
                 developer_form_layout,
@@ -1279,7 +1279,8 @@ class Home(QMainWindow):
 
     def save_settings(self):
         """Debounced version of save_settings that waits for user to stop typing"""
-        self.save_settings_timer.start(500)  # 500ms delay
+        if self.initial_load_complete:
+            self.save_settings_timer.start(500)  # 500ms delay
 
     def _save_settings_impl(self):
         """Actual implementation of save_settings"""
@@ -1456,6 +1457,9 @@ class Home(QMainWindow):
 
             self._apply_ui_restrictions()
             self._sync_active_llm_model_value()  # Ensure LLM model value is synced after rules are applied
+
+            # Set initial load complete flag
+            self.initial_load_complete = True
 
         except Exception as e:
             logger.error(f"Error in load_settings: {str(e)}")

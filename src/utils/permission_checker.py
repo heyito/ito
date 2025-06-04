@@ -1,4 +1,3 @@
-import ctypes
 import logging
 import platform
 import subprocess

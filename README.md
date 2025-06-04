@@ -21,6 +21,8 @@ Ito is a voice-activated productivity tool that transcribes your speech, interpr
 
 <!-- Insert GIF or screenshot here -->
 
+🔨 Work in progress
+
 ---
 
 ## Installation

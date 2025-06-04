@@ -9,6 +9,7 @@ from PySide6.QtCore import QPointF, QSettings, Qt, QTimer
 from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (
     QDoubleSpinBox,
+    QFileDialog,
     QFormLayout,
     QFrame,
     QGraphicsOpacityEffect,
@@ -23,7 +24,6 @@ from PySide6.QtWidgets import (
     QStackedWidget,
     QVBoxLayout,
     QWidget,
-    QFileDialog,
 )
 
 from src.application_manager import ApplicationManager
@@ -1148,40 +1148,50 @@ class Home(QMainWindow):
             logger.error(f"Error clearing timing data: {traceback.format_exc()}")
 
     def handle_save_log_file(self):
-      """Handles the click of the 'Save Log File' button."""
-      source_log_path = get_log_file_path()
-      if not source_log_path or not os.path.exists(source_log_path):
-          QMessageBox.warning(
-              self, "Save Log Error", f"Log file not found or path not configured: {source_log_path}"
-          )
-          logger.error(f"Attempted to save log, but path not found/configured: {source_log_path}")
-          return
+        """Handles the click of the 'Save Log File' button."""
+        source_log_path = get_log_file_path()
+        if not source_log_path or not os.path.exists(source_log_path):
+            QMessageBox.warning(
+                self,
+                "Save Log Error",
+                f"Log file not found or path not configured: {source_log_path}",
+            )
+            logger.error(
+                f"Attempted to save log, but path not found/configured: {source_log_path}"
+            )
+            return
 
-      timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-      suggested_filename = f"ito_log_{timestamp}.log"
-      
-      default_dir = os.path.expanduser("~/Downloads")
-      if not os.path.isdir(default_dir):
-          default_dir = os.path.expanduser("~") # Fallback to home if Downloads doesn't exist
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        suggested_filename = f"ito_log_{timestamp}.log"
 
-      destination_path, _ = QFileDialog.getSaveFileName(
-          self,
-          "Save Log File As",
-          os.path.join(default_dir, suggested_filename), # Full suggested path
-          "Log files (*.log);;All files (*.*)"
-      )
+        default_dir = os.path.expanduser("~/Downloads")
+        if not os.path.isdir(default_dir):
+            default_dir = os.path.expanduser(
+                "~"
+            )  # Fallback to home if Downloads doesn't exist
 
-      if destination_path:
-          try:
-              shutil.copy2(source_log_path, destination_path)
-              logger.info(f"Log file copied from {source_log_path} to {destination_path}")
-          except Exception as e:
-              QMessageBox.critical(
-                  self, "Save Log Error", f"Failed to save log file: {str(e)}"
-              )
-              logger.error(f"Error saving log file to {destination_path}: {traceback.format_exc()}")
-      else:
-          logger.info("Save log file operation cancelled by user.")
+        destination_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Log File As",
+            os.path.join(default_dir, suggested_filename),  # Full suggested path
+            "Log files (*.log);;All files (*.*)",
+        )
+
+        if destination_path:
+            try:
+                shutil.copy2(source_log_path, destination_path)
+                logger.info(
+                    f"Log file copied from {source_log_path} to {destination_path}"
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self, "Save Log Error", f"Failed to save log file: {str(e)}"
+                )
+                logger.error(
+                    f"Error saving log file to {destination_path}: {traceback.format_exc()}"
+                )
+        else:
+            logger.info("Save log file operation cancelled by user.")
 
     def handle_clear_log_file(self):
         try:
@@ -1192,14 +1202,18 @@ class Home(QMainWindow):
                 logger.info("Log file cleared via UI action.")
             else:
                 QMessageBox.critical(
-                    self, "Clear Log Error", "Failed to clear log file. Please check the application logs (stderr) for more details."
+                    self,
+                    "Clear Log Error",
+                    "Failed to clear log file. Please check the application logs (stderr) for more details.",
                 )
                 # logger.error is called within clear_log_file_contents on failure
-        except Exception as e: # Catch any unexpected error during the call
+        except Exception as e:  # Catch any unexpected error during the call
             QMessageBox.critical(
                 self, "Clear Log Error", f"An unexpected error occurred: {str(e)}"
             )
-            logger.error(f"Unexpected error in handle_clear_log_file: {traceback.format_exc()}")
+            logger.error(
+                f"Unexpected error in handle_clear_log_file: {traceback.format_exc()}"
+            )
 
     def reset_all_settings(self):
         """Reset all settings and restart the onboarding process."""

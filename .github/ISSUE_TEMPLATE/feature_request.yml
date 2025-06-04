@@ -1,0 +1,28 @@
+name: Feature Request
+description: Suggest a new idea or enhancement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your idea! Help us understand your feature request better.
+  - type: input
+    id: title
+    attributes:
+      label: Feature Title
+      placeholder: "Add support for..."
+  - type: textarea
+    id: description
+    attributes:
+      label: What problem does this solve?
+      placeholder: "As a person who uses the tool, I want to be able to..."
+  - type: textarea
+    id: solution
+    attributes:
+      label: Describe the proposed solution
+      placeholder: "MCP integration for..."
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional Context
+      placeholder: "Sketches, CLI examples, related tools, etc."

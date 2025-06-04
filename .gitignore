@@ -44,3 +44,4 @@ dmg-layout.applescript
 capture-*.png
 src/bin
 timing_report.json
+.ruff_cache

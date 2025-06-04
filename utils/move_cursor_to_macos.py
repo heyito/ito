@@ -9,7 +9,7 @@ Useful for debugging the coordinate mapping from MacOS
 """
 
 
-def move_mouse_to(x, y, radius=10, duration=2):
+def move_cursor_to_macos(x, y, radius=10, duration=2):
     # Create a new event tap to inject into the system
 
     # Create a red dot
@@ -49,10 +49,10 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) != 3:
-        print("Usage: python3 move_mouse_to.py <x> <y>")
+        print("Usage: python3 move_cursor_to_macos.py <x> <y>")
         sys.exit(1)
 
     x = int(sys.argv[1])
     y = int(sys.argv[2])
 
-    move_mouse_to(x, y)
+    move_cursor_to_macos(x, y)

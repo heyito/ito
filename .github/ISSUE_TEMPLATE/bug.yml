@@ -1,0 +1,41 @@
+name: Bug Report
+description: Report something that isn't working as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill out the details below.
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      placeholder: "e.g. macOS 14.5, Windows 11"
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe what went wrong. Include error messages, logs, or screenshots if possible.
+      placeholder: "When I press the hotkey, nothing happens..."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this bug?
+      placeholder: |
+        1. Start the tool
+        2. Press hotkey
+        3. Speak a command
+        4. Observe output
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      placeholder: "It should transcribe and type the response into my editor."
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional Context
+      placeholder: "Any other details or logs that might help us debug?"

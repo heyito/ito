@@ -49,7 +49,7 @@ class Home(QMainWindow):
             "condition": {
                 "widget_name": "application_mode_selector",
                 "property": "currentText",
-                "value": "oneshot",
+                "value": "oneshot (gemini)",
             },
             "then_actions": [
                 {
@@ -673,7 +673,9 @@ class Home(QMainWindow):
         application_mode_layout.setContentsMargins(0, 0, 0, 0)
         application_mode_layout.setSpacing(4)
         application_mode_layout.addWidget(application_mode_label)
-        self.application_mode_selector = SegmentedButtonGroup(["discrete", "oneshot"])
+        self.application_mode_selector = SegmentedButtonGroup(
+            ["discrete", "oneshot (gemini)"]
+        )
         application_mode_layout.addWidget(self.application_mode_selector)
         mode_layout.addWidget(application_mode_container)
 
@@ -1300,6 +1302,9 @@ class Home(QMainWindow):
                 current_llm_model_value = self.gemini_model.currentText()
 
             selected_application_mode = self.application_mode_selector.currentText()
+            # Convert "oneshot (gemini)" to "oneshot" for settings storage
+            if selected_application_mode == "oneshot (gemini)":
+                selected_application_mode = "oneshot"
 
             asr_source_value = self.asr_source.currentText()
             current_asr_provider_model_value = ""
@@ -1451,9 +1456,11 @@ class Home(QMainWindow):
 
             # Load Mode settings
             mode_config = config.get("Mode", {})
-            self.application_mode_selector.setCurrentText(
-                mode_config.get("application_mode", "discrete")
-            )
+            stored_mode = mode_config.get("application_mode", "discrete")
+            # Convert "oneshot" to "oneshot (gemini)" for UI display
+            if stored_mode == "oneshot":
+                stored_mode = "oneshot (gemini)"
+            self.application_mode_selector.setCurrentText(stored_mode)
 
             self._apply_ui_restrictions()
             self._sync_active_llm_model_value()  # Ensure LLM model value is synced after rules are applied

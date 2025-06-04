@@ -96,6 +96,11 @@ class ProcessingEngine:
                     primary_context, user_text_command, user_command_audio
                 )
             case _:
+                # Remove accessibility elements and OCR texts from page context
+                # Currently too many input tokens for the LLM
+                current_context["page_context"].pop("accessibility_elements", None)
+                current_context["page_context"].pop("ocr_texts", None)
+
                 self.macos_app.process_dictation(
                     current_context,
                     user_text_command,

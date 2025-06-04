@@ -43,52 +43,6 @@ if platform.system() == "Darwin":
 
 multiprocessing.freeze_support()
 
-if platform.system() == "Darwin":
-    try:
-        from src import platform_utils_macos as platform_utils
-    except ImportError:
-        logger.warning(
-            "Running on macOS but failed to import 'platform_utils_macos'. OS interaction will fail."
-        )
-
-        class PlatformUtilsDummy:
-            def is_macos(self):
-                return True
-
-            def get_active_window_info(self):
-                logger.error("platform_utils_macos import failed.")
-                return None
-
-            def get_textedit_content(self):
-                logger.error("platform_utils_macos import failed.")
-                return None
-
-            def set_textedit_content(self, text):
-                logger.error("platform_utils_macos import failed.")
-                return False
-
-        platform_utils = PlatformUtilsDummy()
-else:
-    logger.warning(f"Running on {platform.system()}. OS-specific interactions limited.")
-
-    class PlatformUtilsDummy:
-        def is_macos(self):
-            return False
-
-        def get_active_window_info(self):
-            logger.warning("OS interaction not supported on this platform.")
-            return None
-
-        def get_textedit_content(self):
-            logger.warning("TextEdit interaction not supported.")
-            return None
-
-        def set_textedit_content(self, text):
-            logger.warning("TextEdit interaction not supported.")
-            return False
-
-    platform_utils = PlatformUtilsDummy()
-
 
 def check_accessibility_permission() -> bool:
     """Check if the application has accessibility permissions on macOS."""

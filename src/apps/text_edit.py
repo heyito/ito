@@ -1,6 +1,6 @@
 import logging
 
-from src import platform_utils_macos as platform_utils
+from src.utils import platform_utils_macos as platform_utils
 from src.handlers.llm_handler import LLMHandler
 from src.prompts import prompt_templates
 

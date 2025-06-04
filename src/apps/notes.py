@@ -1,7 +1,6 @@
 import logging
 
-import src.platform_utils_macos as platform_utils
-from src.engines.intent_engine import IntentEngine
+import src.utils.platform_utils_macos as platform_utils
 from src.handlers.llm_handler import LLMHandler
 from src.prompts import prompt_templates
 
@@ -12,9 +11,8 @@ logger = logging.getLogger(__name__)
 class NotesApp:
     system_prompt = prompt_templates.PAGE_EDITOR_SYSTEM_PROMPT
 
-    def __init__(self, llm_handler: LLMHandler, intent_engine: IntentEngine):
+    def __init__(self, llm_handler: LLMHandler):
         self.llm_handler = llm_handler
-        self.intent_engine = intent_engine
 
     def get_context(self):
         logger.info("NotesApp: Getting context")
@@ -27,9 +25,6 @@ class NotesApp:
         user_text_command: str,
         user_command_audio: bytes | None = None,
     ):
-        intent = self.intent_engine.get_intent(user_text_command)
-        logger.info(f"NotesApp: Intent: {intent}")
-
         full_llm_input = prompt_templates.create_notes_prompt(
             content=processing_text, command=user_text_command
         )

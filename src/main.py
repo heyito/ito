@@ -13,9 +13,9 @@ from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
 from src.application_manager import ApplicationManager
+from src.keyboard.keyboard_listener import KeyboardListenerProcess
+from src.keyboard.keyboard_manager import KeyboardManager
 from src.ui.font.load_fonts import load_fonts
-from src.ui.keyboard_listener import KeyboardListenerProcess
-from src.ui.keyboard_manager import KeyboardManager
 from src.ui.onboarding import OnboardingWindow
 from src.ui.theme.manager import ThemeManager
 from src.utils.logging import setup_logging

@@ -3,7 +3,7 @@ import logging
 import platform
 import subprocess
 import traceback
-from ctypes import CFUNCTYPE, POINTER, c_int, c_uint32, c_uint64, c_void_p, cdll
+from ctypes import CFUNCTYPE, c_int, c_uint64, c_void_p, cdll
 
 import sounddevice as sd
 from PySide6.QtCore import QObject, Signal
@@ -44,7 +44,7 @@ class PermissionChecker(QObject):
     def check_accessibility(self):
         if platform.system() == "Darwin":
             try:
-                from src import platform_utils_macos
+                from src.utils import platform_utils_macos
 
                 logger.info("Checking accessibility permissions...")
                 has_permission = platform_utils_macos.check_accessibility_permission()

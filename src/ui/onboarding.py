@@ -4,10 +4,10 @@ import sys
 from PySide6.QtCore import QPoint, QSettings, Qt, QTimer
 from PySide6.QtWidgets import QApplication, QLabel, QMainWindow
 
+from src.keyboard.keyboard_manager import KeyboardManager
 from src.types.modes import CommandMode
 from src.ui.components.ito_layout import ItoLayout
-from src.ui.keyboard_manager import KeyboardManager
-from src.ui.permission_checker import PermissionChecker
+from src.utils.permission_checker import PermissionChecker
 from src.ui.screens.onboarding.api_setup_screen import ApiSetupScreen
 from src.ui.screens.onboarding.completion_screen import CompletionScreen
 from src.ui.screens.onboarding.keyboard_setup_screen import KeyboardSetupScreen

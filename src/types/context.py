@@ -1,6 +1,5 @@
 from typing import TypedDict
 
-
 class Context(TypedDict):
     app_name: str
 

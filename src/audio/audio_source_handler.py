@@ -6,8 +6,8 @@ from typing import Any, Optional
 import numpy as np
 import sounddevice as sd
 
-from src.handlers.audio.audio_source_interface import AudioSourceInterface # Assuming path is correct
-from src.handlers.audio.audio_device_manager import AudioDeviceManager, DeviceChangeListener
+from src.audio.audio_source_interface import AudioSourceInterface
+from src.audio.audio_device_manager import AudioDeviceManager, DeviceChangeListener
 
 logger = logging.getLogger(__name__)
 class AudioSourceHandler(AudioSourceInterface, DeviceChangeListener):

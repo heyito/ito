@@ -1,4 +1,3 @@
-# src/discrete_application_runner.py
 import logging
 import queue
 import threading
@@ -9,8 +8,8 @@ from src.app_config import AppConfig
 from src.application_interface import ApplicationInterface
 from src.command_processor import CommandProcessor
 from src.context_manager import ContextManager
-from src.handlers.audio.asr_handler_interface import ASRHandlerInterface
-from src.handlers.audio.audio_recorder import AudioRecorder
+from src.audio.asr_handler_interface import ASRHandlerInterface
+from src.audio.audio_recorder import AudioRecorder
 from src.types.actions import ApplicationAction
 from src.types.modes import CommandMode
 from src.types.status_messages import StatusMessage
@@ -19,13 +18,12 @@ from src.utils.timing import time_method
 # Configure logging
 logger = logging.getLogger(__name__)
 
-
 class DiscreteApplicationRunner(ApplicationInterface):
     """Orchestrates the discrete command workflow using composed components."""
 
     def __init__(
         self,
-        config: AppConfig,  # Use AppConfig directly
+        config: AppConfig,
         context_manager: ContextManager,
         command_processor: CommandProcessor,
         audio_recorder: AudioRecorder,
@@ -37,7 +35,7 @@ class DiscreteApplicationRunner(ApplicationInterface):
         self.command_processor = command_processor
         self.audio_recorder = audio_recorder
         self.asr_handler = asr_handler
-        self.status_queue = status_queue  # Attached by ApplicationManager
+        self.status_queue = status_queue
 
         self._mode = CommandMode.default_mode
         self._action_queue: queue.Queue[ApplicationAction] = queue.Queue()

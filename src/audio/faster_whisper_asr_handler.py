@@ -3,7 +3,7 @@ import logging
 import time
 import traceback
 
-from src.handlers.audio.asr_handler_interface import ASRHandlerInterface
+from src.audio.asr_handler_interface import ASRHandlerInterface
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ class FasterWhisperASRHandler(ASRHandlerInterface):
             f"FasterWhisperASRHandler Initialized: Size={self.local_model_size}, Device={self.device}, Compute={self.compute_type}"
         )
 
-    def _load_model(self) -> WhisperModel | None:
+    def _load_model(self) -> WhisperModel | None: # type: ignore
         """Loads the faster-whisper model, utilizing a class-level cache."""
         if not WhisperModel:  # Check if import failed
             return None

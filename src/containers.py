@@ -8,6 +8,14 @@ from src.apps.browser import BrowserApp
 from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
+from src.audio.asr_handler_interface import ASRHandlerInterface
+from src.audio.audio_device_manager import AudioDeviceManager
+from src.audio.audio_recorder import AudioRecorder
+from src.audio.audio_source_handler import AudioSourceHandler
+from src.audio.faster_whisper_asr_handler import FasterWhisperASRHandler
+from src.audio.gemini_asr_handler import GeminiASRHandler
+from src.audio.groq_asr_handler import GroqASRHandler
+from src.audio.openai_asr_handler import OpenAIASRHandler
 from src.clients.gemini_client import GeminiClient
 from src.clients.groq_client import GroqClient
 from src.clients.llm_client_interface import LLMClientInterface
@@ -17,17 +25,8 @@ from src.command_processor import CommandProcessor
 from src.context_manager import ContextManager
 from src.discrete_application_runner import DiscreteApplicationRunner
 from src.engines.context_engine import ContextEngine
-from src.engines.intent_engine import IntentEngine
 from src.engines.macos_engine import MacOSEngine
 from src.engines.processing_engine import ProcessingEngine
-from src.handlers.audio.asr_handler_interface import ASRHandlerInterface
-from src.handlers.audio.audio_device_manager import AudioDeviceManager
-from src.handlers.audio.audio_recorder import AudioRecorder
-from src.handlers.audio.audio_source_handler import AudioSourceHandler
-from src.handlers.audio.faster_whisper_asr_handler import FasterWhisperASRHandler
-from src.handlers.audio.gemini_asr_handler import GeminiASRHandler
-from src.handlers.audio.groq_asr_handler import GroqASRHandler
-from src.handlers.audio.openai_asr_handler import OpenAIASRHandler
 from src.handlers.llm_handler import LLMHandler
 from src.one_shot_application_runner import OneShotApplicationRunner
 
@@ -88,17 +87,13 @@ class Container(containers.DeclarativeContainer):
         channels=config.Audio.channels.as_int(),
     )
 
-    intent_engine = providers.Singleton(IntentEngine, llm_handler=llm_handler)
-
     macos_engine = providers.Singleton(MacOSEngine)
 
     browser_app = providers.Singleton(BrowserApp, llm_handler=llm_handler)
 
     text_edit_app = providers.Singleton(TextEditApp, llm_handler=llm_handler)
 
-    notes_app = providers.Singleton(
-        NotesApp, llm_handler=llm_handler, intent_engine=intent_engine
-    )
+    notes_app = providers.Singleton(NotesApp, llm_handler=llm_handler)
 
     macos_app = providers.Singleton(
         MacOSapp, llm_handler=llm_handler, macos_engine=macos_engine

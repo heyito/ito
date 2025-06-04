@@ -31,7 +31,7 @@ from src.constants import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
 from src.ui.components.ito_layout import ItoLayout
 from src.ui.components.menu_button import MenuButton
 from src.ui.components.segmented_button_group import SegmentedButtonGroup
-from src.ui.keyboard_manager import KeyboardManager
+from src.keyboard.keyboard_manager import KeyboardManager
 from src.ui.onboarding import OnboardingWindow
 from src.ui.theme.manager import ThemeManager
 from src.utils.logging import clear_log_file_contents, get_log_file_path

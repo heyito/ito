@@ -1,13 +1,12 @@
 from rich import print as rprint
 
-from src import platform_utils_macos as platform_utils
+from src.utils import platform_utils_macos as platform_utils
 from src.apps.browser import BrowserApp
 from src.apps.macos import MacOSapp
 from src.apps.notes import NotesApp
 from src.apps.text_edit import TextEditApp
 from src.types.apps import ItoApp
 from src.types.context import Context
-
 
 class ContextEngine:
     def __init__(

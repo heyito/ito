@@ -9,9 +9,7 @@ from src.apps.text_edit import TextEditApp
 from src.types.apps import ItoApp
 from src.types.context import Context
 
-# Configure logging
 logger = logging.getLogger(__name__)
-
 
 class ProcessingEngine:
     def __init__(

@@ -1,5 +1,5 @@
 from src.clients.gemini_client import GeminiClient
-from src.handlers.audio.asr_handler_interface import ASRHandlerInterface
+from src.audio.asr_handler_interface import ASRHandlerInterface
 from src.utils.timing import time_method
 
 

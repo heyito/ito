@@ -4,7 +4,7 @@ import threading
 import time
 import traceback
 
-from src import platform_utils_macos as platform_utils  # Or abstract this more
+from src.utils import platform_utils_macos as platform_utils  # Or abstract this more
 from src.engines.context_engine import ContextEngine
 from src.types.context import Context
 from src.types.modes import CommandMode

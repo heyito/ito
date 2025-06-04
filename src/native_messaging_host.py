@@ -12,8 +12,7 @@ import time
 import traceback
 
 from src.constants import SOCKET_PATH
-from src.platform_utils_macos import is_macos
-
+from src.utils.platform_utils_macos import is_macos
 
 def setup_logging():
     try:
@@ -38,7 +37,6 @@ def setup_logging():
             format="%(asctime)s - %(levelname)s - %(message)s",
         )
         logging.error(f"Failed to setup file logging: {e}")
-
 
 class NativeHost:
     def __init__(self):

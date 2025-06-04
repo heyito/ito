@@ -5,7 +5,7 @@ import socket
 import threading
 import time
 
-from src import platform_utils_macos as platform_utils
+from src.utils import platform_utils_macos as platform_utils
 from src.constants import SOCKET_PATH
 from src.engines.macos_engine import MacOSEngine
 from src.handlers.llm_handler import LLMHandler

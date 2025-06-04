@@ -1,7 +1,7 @@
 import io
 
 from src.clients.openai_client import OpenAIClient
-from src.handlers.audio.asr_handler_interface import ASRHandlerInterface
+from src.audio.asr_handler_interface import ASRHandlerInterface
 from src.utils.timing import time_method
 
 

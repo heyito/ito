@@ -31,88 +31,36 @@ Thanks for your interest in contributing to Ito! Whether you're fixing bugs, sug
 
 5. **Enable pre-commit hooks:**
 
-    We use [pre-commit](https://pre-commit.com/) to enforce code style and catch errors early.
-
-    After setting up the project, run:
+    We use [pre-commit](https://pre-commit.com/) to enforce code style and catch issues before they land.
 
     ```bash
     poetry run pre-commit install
     ```
 
-    To run all hooks manually on all files:
+    To run all hooks manually:
 
     ```bash
     poetry run pre-commit run --all-files
     ```
 
-
 ---
 
-## Types of Contributions
+## Development
 
-- Bug fixes
-- Documentation improvements
-- New features (please open an issue first)
-- Tests or QA improvements
-- Build/packaging enhancements
+### Formatting & Linting
 
----
-
-## Guidelines
-
-### Code Style
-
-- Use [Ruff](https://docs.astral.sh/ruff/) for linting:
-
+- Run linter:
     ```bash
     make lint
     ```
-
-- Format code using:
-
+- Auto-format code:
     ```bash
     make format
     ```
+- VS Code users: install the [Ruff extension](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff) for real-time linting.
 
-- Follow existing file structure and conventions
+### Adding Dependencies
 
-### Branching
-
-- Use descriptive branch names:
-    - `fix/hotkey-delay`
-    - `feature/groq-support`
-    - `docs/update-readme`
-
-### Commit Messages
-
-- Keep messages clear and concise
-- Examples:
-    - `fix: handle hotkey registration error`
-    - `docs: update setup instructions`
-
-### Pull Requests
-
-- Keep PRs small and focused
-- Reference related issues in the description
-- Include context or screenshots for UI changes
-- Be respectful and collaborative in code reviews
-
----
-
-## Reporting Issues
-
-If you find a bug or usability issue:
-
-1. Check existing [issues](https://github.com/demox-labs/ito/issues)
-2. If it's not listed, open a new issue with:
-    - Steps to reproduce
-    - Expected vs. actual behavior
-    - OS/environment details
-    - Logs or screenshots, if applicable
-
-
----
-
-## Questions?
-
-Start a [Discussion](https://github.com/demox-labs/ito/discussions) or reach out at [hi@demoxlabs.xyz](mailto:hi@demoxlabs.xyz).
+Use Poetry to add dependencies:
+```bash
+poetry add <dependency-name>

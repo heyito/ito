@@ -1,3 +1,8 @@
+![Python Version](https://img.shields.io/badge/python-3.12+-blue)
+![Poetry](https://img.shields.io/badge/poetry-managed-4B6C8C?logo=python&logoColor=white)
+![Pre-commit Enabled](https://img.shields.io/badge/pre--commit-enabled-brightgreen)
+![Issues Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen)
+
 # Ito Tool
 
 Ito is a voice-activated productivity tool that transcribes your speech, interprets your intent using an LLM, and types the refined result directly at your cursor. It's designed for fluid voice-to-text interaction—whether you're writing, coding, or capturing quick thoughts.
@@ -6,8 +11,9 @@ Ito is a voice-activated productivity tool that transcribes your speech, interpr
 
 ## Features
 
-- **Dictation:** Takes audio command and outputs, using LLM, either an edited document, transcription, etc. Matches intent
-- **Action**: Take audio command and takes action on your behalf on the page i.e. clicking, typing, hitting enter. 
+**Dictation:** Speak freely—your voice is transcribed, intent-matched via LLM, and output as clean, structured text.
+
+**Action:** Voice commands can simulate keyboard input or click/submit actions to drive UI interactions.
 
 ---
 
@@ -26,7 +32,7 @@ Ito is a voice-activated productivity tool that transcribes your speech, interpr
   - macOS: `brew install portaudio`
   - Ubuntu/Debian: `sudo apt-get install libportaudio2 libportaudiocpp0 portaudio19-dev`
   - Windows: usually included or downloadable
-- Either Groq, Gemini, or OpenAI API Keys
+- One of: Groq, Gemini, or OpenAI API keys (required for LLM processing)
 
 ### Setup Steps
 
@@ -68,7 +74,7 @@ Ito is a voice-activated productivity tool that transcribes your speech, interpr
     **Prerequisites**:
     * [Xcode](https://apps.apple.com/us/app/xcode/id497799835) installed 
     * Run `xcode-select --install` 
-    * Verify install with `swift --verison` 
+    * Verify install with `swift --version`
 
     ```bash
     make swift
@@ -98,27 +104,9 @@ Ito is a voice-activated productivity tool that transcribes your speech, interpr
 
 ---
 
+## Community
 
-## Development
-
-### Formatting & Linting
-
-- Run linter:
-    ```bash
-    make lint
-    ```
-- Auto-format code:
-    ```bash
-    make format
-    ```
-- VS Code users: Install the [Ruff](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff) extension.
-
-### Adding Dependencies
-
-Use Poetry to add new dependencies:
-```bash
-poetry add <dependency-name>
-```
+Have questions, ideas, or feedback? Join the discussion in [GitHub Discussions](https://github.com/demox-labs/ito/discussions) or open an issue.
 
 ## Contributing
 

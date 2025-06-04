@@ -5,10 +5,8 @@ import os
 import platform
 import signal
 import sys
-import traceback
 
 import appnope
-import sounddevice as sd
 from PySide6.QtCore import QByteArray, Qt
 from PySide6.QtGui import QFont, QIcon, QPainter, QPixmap
 from PySide6.QtSvg import QSvgRenderer
@@ -42,49 +40,6 @@ if platform.system() == "Darwin":
         )
 
 multiprocessing.freeze_support()
-
-
-def check_accessibility_permission() -> bool:
-    """Check if the application has accessibility permissions on macOS."""
-    if platform.system() != "Darwin":
-        return True
-
-    try:
-        from src.platform_utils_macos import check_accessibility_permission as check_ax
-
-        return check_ax()
-    except Exception as e:
-        logger.error(f"Error checking accessibility permissions: {e}")
-        logger.error(traceback.format_exc())
-        return False
-
-
-def check_microphone_permission() -> bool:
-    """Check if the application has microphone permissions."""
-    try:
-        logger.info("Checking microphone permissions...")
-        devices = sd.query_devices()
-        input_devices = [d for d in devices if d["max_input_channels"] > 0]
-        if not input_devices:
-            logger.error("No input devices found")
-            return False
-
-        # Try to open a test stream to verify permissions
-        try:
-            with sd.InputStream(
-                samplerate=16000, channels=1, blocksize=128, latency="low"
-            ):
-                logger.info(
-                    "Successfully opened test audio stream - permissions granted"
-                )
-                return True
-        except sd.PortAudioError as e:
-            logger.error(f"Failed to open test audio stream: {e}")
-            return False
-
-    except Exception as e:
-        logger.error(f"Error checking microphone permissions: {e}")
-        return False
 
 
 def run_native_messaging_host():
@@ -306,15 +261,6 @@ if __name__ == "__main__":
 
         # Show the tray icon
         tray_icon.show()
-
-        # Check microphone permission before proceeding
-        if not check_microphone_permission():
-            logger.warning(
-                "Microphone permission not granted. The app may not function properly."
-            )
-            logger.warning(
-                "Please grant microphone access in System Settings > Privacy & Security > Microphone"
-            )
 
         # Create multiprocessing queues and event for keyboard listener
         event_queue = multiprocessing.Queue()

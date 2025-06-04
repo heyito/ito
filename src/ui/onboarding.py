@@ -58,7 +58,7 @@ class OnboardingWindow(QMainWindow):
         self.layout.setSpacing(0)
 
         # --- Initialize Permission Checker ---
-        print("DEBUG: Initializing PermissionChecker")
+        logger.debug("Initializing PermissionChecker")
         self.permission_checker = PermissionChecker()
 
         # --- Initialize Permission States ---
@@ -215,7 +215,7 @@ class OnboardingWindow(QMainWindow):
                             sub_widget.setParent(None)
 
     def show_welcome_screen(self):
-        print("DEBUG: Showing welcome screen")
+        logger.debug("Showing welcome screen")
         self.clear_layout()
 
         # Create welcome screen
@@ -238,7 +238,7 @@ class OnboardingWindow(QMainWindow):
         self.permission_screen.permission_states = self.permission_states
 
         # Create the screen and get the buttons
-        mic_button, acc_button, input_mon_button, continue_button = (
+        mic_button, acc_button, auto_button, continue_button = (
             self.permission_screen.create(self.layout)
         )
 
@@ -247,8 +247,8 @@ class OnboardingWindow(QMainWindow):
         acc_button.clicked.connect(
             self.permission_screen.request_accessibility_permission
         )
-        input_mon_button.clicked.connect(
-            self.permission_screen.request_input_monitoring_permission
+        auto_button.clicked.connect(
+            self.permission_screen.request_automation_permission
         )
         continue_button.clicked.connect(
             self.permission_screen.check_all_permissions_and_proceed

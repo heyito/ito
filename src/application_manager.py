@@ -63,8 +63,6 @@ class ApplicationManager(QObject):
         # Load initial settings and configure container
         config = self.load_settings()
         self.container.config.from_dict(config)
-
-        self.browser_app = self.container.browser_app()
         # If wanting to add long hold vs tap back refer to
         # https://github.com/demox-labs/ito/pull/9
         # self.hold_threshold = 0.5
@@ -330,7 +328,8 @@ class ApplicationManager(QObject):
 
         # Clean up browser app
         logger.info("ApplicationManager closeEvent: Stopping browser app...")
-        self.browser_app.cleanup()
+        if self.browser_app:
+            self.browser_app.cleanup()
 
         # Optional: Explicitly shutdown container resources if needed
         # logger.info("ApplicationManager closeEvent: Shutting down container...")
@@ -361,6 +360,8 @@ class ApplicationManager(QObject):
             self.container = Container()  # Create a new container instance
             self.container.config.from_dict(config)
             self.app_instance = self.container.application()
+
+            self.browser_app = self.container.browser_app()
 
             # Pass the stop event to the app instance
             self.app_instance.stop_recording_event = stop_event

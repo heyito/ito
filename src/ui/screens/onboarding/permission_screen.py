@@ -29,13 +29,13 @@ class PermissionScreen:
         self.permission_checker = permission_checker
         self.mic_status = None
         self.acc_status = None
-        self.input_mon_status = None
+        self.auto_status = None
         self.progress_bar = None
         self.continue_button = None
         self.permission_states = {
             "microphone": False,
             "accessibility": False,
-            "input_monitoring": False,
+            "automation": False,
         }
         self._is_cleaned_up = False
         self._animation_refs = []  # Store animation references
@@ -45,11 +45,11 @@ class PermissionScreen:
         self.desc_label = None
         self.mic_button = None
         self.acc_button = None
-        self.input_mon_button = None
+        self.auto_button = None
         self.continue_button = None
         self.mic_status = None
         self.acc_status = None
-        self.input_mon_status = None
+        self.auto_status = None
         self.content_widget = None  # Store reference to content widget
 
         # Connect theme changes
@@ -95,9 +95,9 @@ class PermissionScreen:
                 else f"color: {self.theme_manager.get_color('text_secondary')};"
             )
 
-        if self.input_mon_status:
-            is_granted = self.permission_states.get("input_monitoring", False)
-            self.input_mon_status.setStyleSheet(
+        if self.auto_status:
+            is_granted = self.permission_states.get("automation", False)
+            self.auto_status.setStyleSheet(
                 f"color: {self.theme_manager.get_color('text_primary')};"
                 if is_granted
                 else f"color: {self.theme_manager.get_color('text_secondary')};"
@@ -120,7 +120,7 @@ class PermissionScreen:
 
         # Description
         self.desc_label = QLabel(
-            "Ito needs a few permissions to help you be more productive"
+            "Ito needs a few permissions to help you be more productive. You may have to restart Ito after granting permissions."
         )
         self.desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         content_layout.addWidget(self.desc_label)
@@ -210,38 +210,38 @@ class PermissionScreen:
 
         permissions_layout.addWidget(acc_container)
 
-        # Input Monitoring Permission
-        input_mon_container = QWidget()
-        input_mon_container.setObjectName("permission_row")
-        input_mon_layout = QHBoxLayout(input_mon_container)
-        input_mon_layout.setContentsMargins(0, 0, 16, 0)
+        # Automation Permission
+        auto_container = QWidget()
+        auto_container.setObjectName("permission_row")
+        auto_layout = QHBoxLayout(auto_container)
+        auto_layout.setContentsMargins(0, 0, 16, 0)
 
-        input_mon_icon = QLabel("👀")
-        input_mon_icon.setObjectName("permission_icon")
-        input_mon_layout.addWidget(input_mon_icon)
+        auto_icon = QLabel("🤖")
+        auto_icon.setObjectName("permission_icon")
+        auto_layout.addWidget(auto_icon)
 
-        input_mon_text = QLabel("Input Monitoring")
-        input_mon_text.setObjectName("permission_text")
-        input_mon_text.setStyleSheet(
+        auto_text = QLabel("Automation")
+        auto_text.setObjectName("permission_text")
+        auto_text.setStyleSheet(
             f"color: {self.theme_manager.get_color('text_primary')};"
         )
-        input_mon_layout.addWidget(input_mon_text)
+        auto_layout.addWidget(auto_text)
 
-        input_mon_layout.addStretch()
+        auto_layout.addStretch()
 
         # Start status as "Checking..."
-        self.input_mon_status = QLabel("Checking...")
-        self.input_mon_status.setObjectName("permission_status")
-        self.input_mon_status.setStyleSheet(
+        self.auto_status = QLabel("Checking...")
+        self.auto_status.setObjectName("permission_status")
+        self.auto_status.setStyleSheet(
             f"color: {self.theme_manager.get_color('text_secondary')};"
         )
-        input_mon_layout.addWidget(self.input_mon_status)
+        auto_layout.addWidget(self.auto_status)
 
-        self.input_mon_button = QPushButton("Grant Access")
-        self.input_mon_button.setObjectName("onboarding-primary")
-        input_mon_layout.addWidget(self.input_mon_button)
+        self.auto_button = QPushButton("Grant Access")
+        self.auto_button.setObjectName("onboarding-primary")
+        auto_layout.addWidget(self.auto_button)
 
-        permissions_layout.addWidget(input_mon_container)
+        permissions_layout.addWidget(auto_container)
 
         # Add permissions container to main layout
         content_layout.addWidget(permissions_container)
@@ -265,7 +265,7 @@ class PermissionScreen:
         self.update_progress()  # Initial progress
         QTimer.singleShot(100, self.permission_checker.check_microphone)
         QTimer.singleShot(200, self.permission_checker.check_accessibility)
-        QTimer.singleShot(300, self.permission_checker.check_input_monitoring)
+        QTimer.singleShot(300, self.permission_checker.check_automation)
 
         # Apply initial styles
         self.update_styles()
@@ -284,7 +284,7 @@ class PermissionScreen:
         return (
             self.mic_button,
             self.acc_button,
-            self.input_mon_button,
+            self.auto_button,
             self.continue_button,
         )
 
@@ -305,8 +305,8 @@ class PermissionScreen:
             self.mic_status.setText("Granted" if is_granted else "Not Granted")
         elif permission == "accessibility":
             self.acc_status.setText("Granted" if is_granted else "Not Granted")
-        elif permission == "input_monitoring":
-            self.input_mon_status.setText("Granted" if is_granted else "Not Granted")
+        elif permission == "automation":
+            self.auto_status.setText("Granted" if is_granted else "Not Granted")
 
         self.update_progress()
 
@@ -342,18 +342,18 @@ class PermissionScreen:
         else:
             logger.info("Please grant accessibility access in your system settings")
 
-    def request_input_monitoring_permission(self):
-        """Request input monitoring permission"""
+    def request_automation_permission(self):
+        """Request automation permission"""
         if self._is_cleaned_up:
             return
 
         if platform.system() == "Darwin":
             os.system(
-                'open "x-apple.systempreferences:com.apple.preference.security?Privacy_InputMonitoring"'
+                'open "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"'
             )
-            QTimer.singleShot(3000, self.permission_checker.check_input_monitoring)
+            QTimer.singleShot(3000, self.permission_checker.check_automation)
         else:
-            logger.info("Please grant input monitoring access in your system settings")
+            logger.info("Please grant automation access in your system settings")
 
     def check_all_permissions_and_proceed(self):
         """Check all permissions and proceed if all are granted"""
@@ -398,9 +398,9 @@ class PermissionScreen:
         self.desc_label = None
         self.mic_button = None
         self.acc_button = None
-        self.input_mon_button = None
+        self.auto_button = None
         self.continue_button = None
         self.mic_status = None
         self.acc_status = None
-        self.input_mon_status = None
+        self.auto_status = None
         self.content_widget = None

@@ -318,7 +318,6 @@ if __name__ == "__main__":
 
         # Initialize theme manager
         theme_manager = ThemeManager.instance()
-
         # Create system tray icon
         tray_icon = QSystemTrayIcon()
         tray_icon.setToolTip("Ito")

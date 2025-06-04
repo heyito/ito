@@ -29,7 +29,7 @@ class ContextEngine:
                 case ItoApp.TEXTEDIT:
                     return self.text_edit_app.get_context()
                 case ItoApp.CHROME | ItoApp.BRAVE:
-                    if self.browser_app.extension_available:
+                    if self.browser_app.extension_connected:
                         return self.browser_app.get_context()
                     else:
                         return self.macos_app.get_context()
@@ -47,7 +47,7 @@ class ContextEngine:
         if platform_utils.is_macos():
             match app_name:
                 case ItoApp.CHROME | ItoApp.BRAVE:
-                    if self.browser_app.extension_available:
+                    if self.browser_app.extension_connected:
                         return ""
                     else:
                         return self.macos_app.get_focused_cursor_context()

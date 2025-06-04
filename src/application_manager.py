@@ -60,7 +60,11 @@ class ApplicationManager(QObject):
         self.keyboard_manager.hotkey_pressed.connect(self._handle_hotkey_press)
         self.keyboard_manager.hotkey_released.connect(self._handle_hotkey_release)
 
-        self.browser_app = self.container.browser_app
+        # Load initial settings and configure container
+        config = self.load_settings()
+        self.container.config.from_dict(config)
+
+        self.browser_app = self.container.browser_app()
         # If wanting to add long hold vs tap back refer to
         # https://github.com/demox-labs/ito/pull/9
         # self.hold_threshold = 0.5
@@ -68,9 +72,6 @@ class ApplicationManager(QObject):
         # self.hotkey_thread_lock = threading.Lock()
         # self.is_hotkey_long_hold = False
         # self.is_hotkey_tap = False
-
-        # Load initial settings
-        self.load_settings()
 
         # Initialize status window
         self.status_window = StatusWindow()
@@ -328,15 +329,12 @@ class ApplicationManager(QObject):
         self.keyboard_manager.cleanup()
 
         # Clean up browser app
-        if self.browser_app:
-            logger.info("ApplicationManager closeEvent: Stopping browser app...")
-            self.browser_app.stop_extension_availability_check()
+        logger.info("ApplicationManager closeEvent: Stopping browser app...")
+        self.browser_app.cleanup()
 
         # Optional: Explicitly shutdown container resources if needed
         # logger.info("ApplicationManager closeEvent: Shutting down container...")
         # self.container.shutdown_resources() # If using resource providers
-        logger.info("ApplicationManager closeEvent: Calling super...")
-        super().closeEvent(event)
         logger.info("ApplicationManager closeEvent: Finished.")
 
     def restart_application(self) -> bool:

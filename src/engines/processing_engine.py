@@ -50,7 +50,7 @@ class ProcessingEngine:
                     primary_context, user_text_command, user_command_audio
                 )
             case ItoApp.CHROME | ItoApp.BRAVE:
-                if self.browser_app.extension_available:
+                if self.browser_app.extension_connected:
                     self.browser_app.process_command(
                         current_context["page_context"],
                         user_text_command,
@@ -79,7 +79,7 @@ class ProcessingEngine:
 
         match current_app:
             case ItoApp.CHROME | ItoApp.BRAVE:
-                if self.browser_app.extension_available:
+                if self.browser_app.extension_connected:
                     self.browser_app.process_command(
                         current_context["page_context"],
                         user_text_command,

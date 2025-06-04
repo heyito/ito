@@ -1368,7 +1368,7 @@ class Home(QMainWindow):
         """Handle window close event"""
         logger.info("Closing Home window")
         self.keyboard_manager.cleanup()
-        self.app_manager.stop_application()
+        self.app_manager.closeEvent(event)
         # Hide status window
         if hasattr(self.app_manager, "status_window"):
             self.app_manager.status_window.hide()

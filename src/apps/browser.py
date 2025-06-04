@@ -21,11 +21,20 @@ class BrowserApp:
         self.llm_handler = llm_handler
         self.extension_connected = False
         self._last_pong_time = 0
+        self._stop_ping = threading.Event()
         self._ping_thread = threading.Thread(target=self._ping_loop, daemon=True)
         self._ping_thread.start()
 
+    def cleanup(self):
+        """Stop the ping loop and clean up resources."""
+        logger.info("Stopping ping loop...")
+        self._stop_ping.set()
+        if self._ping_thread.is_alive():
+            self._ping_thread.join(timeout=5.0)
+        logger.info("Ping loop stopped")
+
     def _ping_loop(self):
-        while True:
+        while not self._stop_ping.is_set():
             try:
                 client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                 client.settimeout(1.0)
@@ -45,12 +54,13 @@ class BrowserApp:
                     else:
                         if time.time() - self._last_pong_time > 3:
                             self.extension_connected = False
-                except socket.timeout:
+                except TimeoutError:
                     if time.time() - self._last_pong_time > 3:
                         self.extension_connected = False
                 finally:
                     client.close()
             except Exception:
+                logger.info("Error pinging extension")
                 if time.time() - self._last_pong_time > 3:
                     self.extension_connected = False
             time.sleep(2)
@@ -91,7 +101,6 @@ class BrowserApp:
             """
 
         # 2. Process with LLM
-        print("full_llm_input", full_llm_input)
         new_doc_text = self.llm_handler.process_input_with_llm(
             text=full_llm_input,
             audio_buffer=user_command_audio,

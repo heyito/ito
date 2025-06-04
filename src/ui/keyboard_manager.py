@@ -146,6 +146,10 @@ class KeyboardManager(QObject):
         Example: '⌘+⇧+a' or 'ctrl+shift+a'
         """
         try:
+            # Check if the hotkeys are different
+            if self._hotkey_strs == hotkeys:
+                return True
+
             # Store the symbolic strings
             self._hotkey_strs = hotkeys
 

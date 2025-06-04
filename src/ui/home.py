@@ -551,14 +551,14 @@ class Home(QMainWindow):
         self.max_tokens = QSpinBox()
         self.max_tokens.setRange(1, 25000)
         self.max_tokens.setValue(DEFAULT_MAX_TOKENS)
-        self.max_tokens.setStyleSheet("""
-            QSpinBox {
-                background-color: rgba(255, 255, 255, 0.07);
+        self.max_tokens.setStyleSheet(f"""
+            QSpinBox {{
+                background-color: rgba(255, 255, 255, 0.15);
                 padding: 8px 12px;
                 border-radius: 8px;
-                color: #FFFFFF;
+                color: {self.theme_manager.get_color("text_primary")};
                 font-size: 15px;
-            }
+            }}
         """)
         self.max_tokens.setMaximumWidth(300)
         max_tokens_label = QLabel("Max Tokens")
@@ -576,14 +576,14 @@ class Home(QMainWindow):
         self.temperature.setRange(0.0, 1.0)
         self.temperature.setSingleStep(0.1)
         self.temperature.setValue(DEFAULT_TEMPERATURE)
-        self.temperature.setStyleSheet("""
-            QDoubleSpinBox {
-                background-color: rgba(255, 255, 255, 0.07);
+        self.temperature.setStyleSheet(f"""
+            QDoubleSpinBox {{
+                background-color: rgba(255, 255, 255, 0.15);
                 padding: 8px 12px;
                 border-radius: 8px;
-                color: #FFFFFF;
+                color: {self.theme_manager.get_color("text_primary")};
                 font-size: 15px;
-            }
+            }}
         """)
         self.temperature.setMaximumWidth(300)
         temperature_label = QLabel("Temperature")
@@ -1280,7 +1280,7 @@ class Home(QMainWindow):
     def save_settings(self):
         """Debounced version of save_settings that waits for user to stop typing"""
         if self.initial_load_complete:
-            self.save_settings_timer.start(500)  # 500ms delay
+            self.save_settings_timer.start(2500)  # 2500ms delay
 
     def _save_settings_impl(self):
         """Actual implementation of save_settings"""

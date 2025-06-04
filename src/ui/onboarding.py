@@ -7,13 +7,13 @@ from PySide6.QtWidgets import QApplication, QLabel, QMainWindow
 from src.keyboard.keyboard_manager import KeyboardManager
 from src.types.modes import CommandMode
 from src.ui.components.ito_layout import ItoLayout
-from src.utils.permission_checker import PermissionChecker
 from src.ui.screens.onboarding.api_setup_screen import ApiSetupScreen
 from src.ui.screens.onboarding.completion_screen import CompletionScreen
 from src.ui.screens.onboarding.keyboard_setup_screen import KeyboardSetupScreen
 from src.ui.screens.onboarding.permission_screen import PermissionScreen
 from src.ui.screens.onboarding.welcome_screen import WelcomeScreen
 from src.ui.theme.manager import ThemeManager
+from src.utils.permission_checker import PermissionChecker
 
 # Configure logging
 logger = logging.getLogger(__name__)

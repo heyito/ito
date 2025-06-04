@@ -6,10 +6,10 @@ import traceback
 
 from src.app_config import AppConfig
 from src.application_interface import ApplicationInterface
-from src.command_processor import CommandProcessor
-from src.context_manager import ContextManager
 from src.audio.asr_handler_interface import ASRHandlerInterface
 from src.audio.audio_recorder import AudioRecorder
+from src.command_processor import CommandProcessor
+from src.context_manager import ContextManager
 from src.types.actions import ApplicationAction
 from src.types.modes import CommandMode
 from src.types.status_messages import StatusMessage

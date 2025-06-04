@@ -11,9 +11,9 @@ from PySide6.QtCore import QObject, QSettings, QTimer, Signal
 from src.application_interface import ApplicationInterface
 from src.constants import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
 from src.containers import Container
+from src.keyboard.keyboard_manager import KeyboardManager
 from src.types.modes import CommandMode
 from src.types.status_messages import StatusMessage
-from src.keyboard.keyboard_manager import KeyboardManager
 from src.ui.status_window import StatusWindow
 
 # Configure logging

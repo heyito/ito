@@ -1,7 +1,7 @@
 import io
 
-from src.clients.groq_client import GroqClient
 from src.audio.asr_handler_interface import ASRHandlerInterface
+from src.clients.groq_client import GroqClient
 from src.utils.timing import time_method
 
 

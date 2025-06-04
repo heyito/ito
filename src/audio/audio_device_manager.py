@@ -1,13 +1,13 @@
 import logging
 import threading
-from typing import Optional, Tuple, Set, Any
+from typing import Any
 
 import sounddevice as sd
 
 logger = logging.getLogger(__name__)
 
 class DeviceChangeListener:
-    def on_device_changed(self, new_device_index: Optional[int]):
+    def on_device_changed(self, new_device_index: int | None):
         raise NotImplementedError
 
 class AudioDeviceManager:
@@ -18,10 +18,10 @@ class AudioDeviceManager:
         if AudioDeviceManager._instance is not None:
             raise Exception("Singleton cannot be instantiated more than once! Use instance() method.")
         
-        self._current_device: Optional[int] = None
-        self._current_device_name: Optional[str] = None
+        self._current_device: int | None = None
+        self._current_device_name: str | None = None
         self._device_lock = threading.RLock()  # RLock for re-entrant device operations
-        self._listeners: Set[DeviceChangeListener] = set()
+        self._listeners: set[DeviceChangeListener] = set()
         
         logger.info("Initializing AudioDeviceManager...")
         self._initialize_current_device()
@@ -43,7 +43,7 @@ class AudioDeviceManager:
             # Fallback if query_devices fails for a specific index (e.g., device just disconnected)
             return f"Unknown Device {device_index}"
 
-    def _notify_listeners_about_device_change(self, new_device_index: Optional[int]):
+    def _notify_listeners_about_device_change(self, new_device_index: int | None):
         logger.info(f"Notifying {len(self._listeners)} listeners about device change to index: {new_device_index}")
         for listener in list(self._listeners):
             try:
@@ -51,7 +51,7 @@ class AudioDeviceManager:
             except Exception as e:
                 logger.error(f"Error notifying listener {listener} of device change: {e}", exc_info=True)
 
-    def _select_initial_input_device(self) -> Optional[Tuple[int, str]]:
+    def _select_initial_input_device(self) -> tuple[int, str] | None:
         try:
             default_input_idx = sd.default.device[0] 
             if default_input_idx != -1: # -1 usually means no device
@@ -90,15 +90,15 @@ class AudioDeviceManager:
             self._current_device = None
             self._current_device_name = None
 
-    def get_current_device_index(self) -> Optional[int]:
+    def get_current_device_index(self) -> int | None:
         with self._device_lock:
             return self._current_device
 
-    def get_current_device_name(self) -> Optional[str]:
+    def get_current_device_name(self) -> str | None:
         with self._device_lock:
             return self._current_device_name
 
-    def verify_device_is_suitable_input(self, device_index: int) -> Tuple[bool, str]:
+    def verify_device_is_suitable_input(self, device_index: int) -> tuple[bool, str]:
         try:
             device_info = sd.query_devices(device_index)
             name = device_info.get('name', 'N/A')
@@ -121,7 +121,7 @@ class AudioDeviceManager:
             logger.warning(msg, exc_info=True)
             return False, str(e)
 
-    def update_current_device(self, new_device_index: Optional[int]) -> bool:
+    def update_current_device(self, new_device_index: int | None) -> bool:
         with self._device_lock:
             logger.info(f"Attempting to update device to index: {new_device_index} (Current: {self._current_device})")
 
@@ -173,7 +173,7 @@ class AudioDeviceManager:
             self._notify_listeners_about_device_change(self._current_device)
             return True
 
-    def _find_alternative_device_for_recovery(self, excluded_indices: Set[Optional[int]]) -> Optional[int]:
+    def _find_alternative_device_for_recovery(self, excluded_indices: set[int | None]) -> int | None:
         try:
             default_input_idx = sd.default.device[0]
             if default_input_idx != -1 and default_input_idx not in excluded_indices:
@@ -198,7 +198,7 @@ class AudioDeviceManager:
         
         return None
 
-    def attempt_to_recover_device(self, failed_device_index: Optional[int] = None) -> bool:
+    def attempt_to_recover_device(self, failed_device_index: int | None = None) -> bool:
         with self._device_lock:
             logger.info(f"Attempting device recovery. Failed index: {failed_device_index}, Current: {self._current_device_name} ({self._current_device})")
 
@@ -208,7 +208,7 @@ class AudioDeviceManager:
                     logger.info(f"Current device {self._current_device_name} is still valid and not the failed one. Recovery successful (no change).")
                     return True
 
-            excluded_indices: Set[Optional[int]] = set()
+            excluded_indices: set[int | None] = set()
             if failed_device_index is not None:
                 excluded_indices.add(failed_device_index)
             if self._current_device is not None :
@@ -242,7 +242,7 @@ class AudioDeviceManager:
             logger.debug(f"Unregistering listener: {listener}")
             self._listeners.discard(listener)
 
-    def list_available_input_devices(self) -> list[Tuple[int, Any]]:
+    def list_available_input_devices(self) -> list[tuple[int, Any]]:
         try:
             devices = sd.query_devices()
             input_devices = [

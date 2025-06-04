@@ -14,8 +14,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from src.utils.permission_checker import PermissionChecker
 from src.ui.theme.manager import ThemeManager
+from src.utils.permission_checker import PermissionChecker
 
 # Configure logging
 logger = logging.getLogger(__name__)

@@ -49,6 +49,11 @@ build-backend = "poetry.core.masonry.api"
 [tool.ruff]
 line-length = 88
 target-version = "py312"
+exclude = ["dist", "build"]
+fix = true
+
+[tool.ruff.lint]
+select = ["I"] # Only auto-fix for import sorting
 extend-select = [
   "I",
   "UP",
@@ -56,8 +61,3 @@ extend-select = [
   "B",
   "A",
 ] # I = isort, UP = pyupgrade, F = pyflakes, B = bugbear, A = flake8-annotations
-exclude = ["dist", "build"]
-fix = true
-
-[tool.ruff.lint]
-select = ["I"] # Only auto-fix for import sorting

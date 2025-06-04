@@ -2,7 +2,7 @@ import logging
 import sys
 
 from PySide6.QtCore import QRectF, Qt
-from PySide6.QtGui import QPainter, QPainterPath, QRegion
+from PySide6.QtGui import QPainterPath, QRegion
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from src.ui.theme.manager import ThemeManager

@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import Optional
 
+
 class StatusMessage(Enum):
     """Enum for all possible status messages in the application."""
 

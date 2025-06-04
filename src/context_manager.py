@@ -4,10 +4,10 @@ import threading
 import time
 import traceback
 
-from src.utils import platform_utils_macos as platform_utils  # Or abstract this more
 from src.engines.context_engine import ContextEngine
 from src.types.context import Context
 from src.types.modes import CommandMode
+from src.utils import platform_utils_macos as platform_utils  # Or abstract this more
 
 # Configure logging
 logger = logging.getLogger(__name__)

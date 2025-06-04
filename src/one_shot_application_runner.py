@@ -7,9 +7,9 @@ import traceback
 
 from src.app_config import AppConfig
 from src.application_interface import ApplicationInterface
+from src.audio.audio_recorder import AudioRecorder
 from src.command_processor import CommandProcessor
 from src.context_manager import ContextManager
-from src.audio.audio_recorder import AudioRecorder
 from src.types.status_messages import StatusMessage
 from src.utils.timing import time_method
 

@@ -14,6 +14,7 @@ import traceback
 from src.constants import SOCKET_PATH
 from src.utils.platform_utils_macos import is_macos
 
+
 def setup_logging():
     try:
         # Use /tmp directory which should be writable by Chrome's native messaging host

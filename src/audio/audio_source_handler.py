@@ -1,13 +1,13 @@
 import logging
 import queue
 import threading
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import sounddevice as sd
 
-from src.audio.audio_source_interface import AudioSourceInterface
 from src.audio.audio_device_manager import AudioDeviceManager, DeviceChangeListener
+from src.audio.audio_source_interface import AudioSourceInterface
 
 logger = logging.getLogger(__name__)
 class AudioSourceHandler(AudioSourceInterface, DeviceChangeListener):
@@ -16,14 +16,14 @@ class AudioSourceHandler(AudioSourceInterface, DeviceChangeListener):
         self._device_manager = AudioDeviceManager.instance()
         self._device_manager.register_listener(self)
         
-        self._stream: Optional[sd.InputStream] = None
-        self._audio_queue: Optional[queue.Queue] = None
+        self._stream: sd.InputStream | None = None
+        self._audio_queue: queue.Queue | None = None
         
         self._reinitialize_stream_event = threading.Event()
-        self._stop_recording_event: Optional[threading.Event] = None
+        self._stop_recording_event: threading.Event | None = None
         self._stream_is_operational = False
 
-    def on_device_changed(self, new_device_index: Optional[int]):
+    def on_device_changed(self, new_device_index: int | None):
         logger.info(f"Device change notification received. New effective device index: {new_device_index}. Signaling stream re-initialization.")
         self._stream_is_operational = False
         self._reinitialize_stream_event.set()
@@ -61,7 +61,7 @@ class AudioSourceHandler(AudioSourceInterface, DeviceChangeListener):
             # This should ideally not happen if recording is active
             logger.warning("Audio queue is None in callback. Cannot queue audio data.")
 
-    def _get_and_prepare_device_for_stream(self) -> Optional[int]:
+    def _get_and_prepare_device_for_stream(self) -> int | None:
         """
         Ensures there's a valid device selected in DeviceManager, attempting recovery if needed.
         Returns the device index to use, or None if no suitable device can be set up.

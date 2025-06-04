@@ -1,8 +1,8 @@
+import datetime  # For clear log message
 import logging
 import os
 import sys
 import traceback
-import datetime # For clear log message
 
 # Global variables
 LOG_FILE_PATH = None

@@ -110,7 +110,7 @@ class PermissionChecker(QObject):
             CGEventTapCallBack = CFUNCTYPE(c_void_p, c_int, c_void_p, c_void_p)
 
             # Define the callback function
-            def callback(proxy, type, event, refcon):
+            def callback(proxy, event_type, event, refcon):
                 return event
 
             # Create the callback

@@ -5,11 +5,11 @@ import socket
 import threading
 import time
 
-from src.utils import platform_utils_macos as platform_utils
 from src.constants import SOCKET_PATH
 from src.engines.macos_engine import MacOSEngine
 from src.handlers.llm_handler import LLMHandler
 from src.prompts import prompt_templates
+from src.utils import platform_utils_macos as platform_utils
 
 logger = logging.getLogger(__name__)
 

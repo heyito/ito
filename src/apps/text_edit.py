@@ -1,8 +1,8 @@
 import logging
 
-from src.utils import platform_utils_macos as platform_utils
 from src.handlers.llm_handler import LLMHandler
 from src.prompts import prompt_templates
+from src.utils import platform_utils_macos as platform_utils
 
 # Configure logging
 logger = logging.getLogger(__name__)

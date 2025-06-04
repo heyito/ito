@@ -431,7 +431,7 @@ class PermissionScreen:
 
         if platform.system() == "Darwin":
             os.system(
-                'open "x-apple.systempreferences:com.apple.preference.security?Privacy_InputMonitoring"'
+                'open "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"'
             )
             QTimer.singleShot(3000, self.permission_checker.check_input_monitoring)
         else:

@@ -36,10 +36,8 @@ class KeyboardManager(QObject):
         super().__init__()
         self._event_queue = None
         self._status_queue = None
-        self._listener: keyboard.Listener | None = None
         self._target_hotkeys: dict[CommandMode, set] = None
         self._hotkey_strs: dict[CommandMode, str] = None
-        self._listener_thread = None
         self._listener_started = False
         self._tap = None
         self._key_press_times = {}  # Track when keys were pressed

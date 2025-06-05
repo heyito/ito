@@ -378,35 +378,33 @@ def check_accessibility_permission():
         return False
 
 
-def check_input_monitoring_permission():
-    """Check if the application has input monitoring permission on macOS.
-
-    Returns:
-        bool: True if permission is granted, False otherwise.
+def check_accessibility_permission_no_prompt():
     """
-    if not is_macos():
+    Check if the app has accessibility permissions WITHOUT prompting the system dialog.
+    Returns True if permissions are granted, False otherwise.
+    """
+    if platform.system() != "Darwin":
         return True
 
     try:
+        logger = logging.getLogger("ai.ito.ito.accessibility")
+        logger.info("Checking accessibility permissions (silent)...")
+
         # Load the ApplicationServices framework
         app_services = ctypes.cdll.LoadLibrary(
             "/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices"
         )
 
-        # Set up the function signature for CGEventSourceKeyState
-        app_services.CGEventSourceKeyState.argtypes = [ctypes.c_int, ctypes.c_ushort]
-        app_services.CGEventSourceKeyState.restype = ctypes.c_bool
+        # Method 1: Use AXIsProcessTrusted() - simplest, no dialog
+        app_services.AXIsProcessTrusted.argtypes = []
+        app_services.AXIsProcessTrusted.restype = ctypes.c_bool
 
-        # Try to get the state of a key (we use the space key as a test)
-        # If we can get the key state, we have input monitoring permission
-        # kCGEventSourceStateHIDSystemState = 1
-        # kVK_Space = 0x31
-        try:
-            app_services.CGEventSourceKeyState(1, 0x31)
-            return True
-        except Exception:
-            return False
+        is_trusted = app_services.AXIsProcessTrusted()
+        logger.info(f"Accessibility trust status (silent check): {is_trusted}")
+
+        return is_trusted
 
     except Exception as e:
-        logger.error(f"Error checking input monitoring permission: {e}")
+        logger = logging.getLogger("ai.ito.ito.accessibility")
+        logger.error(f"Error checking accessibility permissions: {str(e)}")
         return False

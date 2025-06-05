@@ -64,6 +64,7 @@ class KeyboardSetupScreen:
             self.key_combo_display.setStyleSheet(f"""
                 font-size: 15px;
                 color: {self.theme_manager.get_color("text_secondary")};
+                background: transparent;
                 font-weight: 400;
                 margin-top: 2px;
                 letter-spacing: 0.1px;
@@ -71,9 +72,12 @@ class KeyboardSetupScreen:
 
         if self.keyboard_container:
             self.keyboard_container.setStyleSheet(f"""
-                background: {self.theme_manager.get_color("surface")};
+                background: {self.theme_manager.get_color("background")};
                 border-radius: 22px;
             """)
+
+        if self.key_pill_container:
+            self.key_pill_container.setStyleSheet("background: transparent;")
 
         # Update key pills
         for pill in self.key_pills:

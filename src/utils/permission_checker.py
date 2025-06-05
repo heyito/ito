@@ -1,11 +1,19 @@
 import logging
 import platform
-import subprocess
 import traceback
-from ctypes import CFUNCTYPE, c_int, c_uint64, c_void_p, cdll
+from ctypes import c_int, cdll
 
 import sounddevice as sd
+from AppKit import NSScreen
 from PySide6.QtCore import QObject, Signal
+from Quartz.CoreGraphics import (
+    CGRectMake,
+    CGWindowListCreateImage,
+    kCGNullWindowID,
+    kCGWindowImageBoundsIgnoreFraming,
+    kCGWindowImageNominalResolution,
+    kCGWindowListOptionOnScreenOnly,
+)
 
 logger = logging.getLogger("ai.ito.ito.ui")
 
@@ -60,100 +68,69 @@ class PermissionChecker(QObject):
             logger.info("Not on macOS, assuming accessibility permissions granted")
             self.permission_checked.emit("accessibility", True)
 
-    def check_automation(self, target_app="System Events"):
-        """
-        Request automation permission by attempting to control another app.
-        This will trigger the system permission dialog.
-
-        Args:
-            target_app: The app you want to automate (triggers permission for that specific app)
-        """
-        try:
-            # This AppleScript attempt will trigger the automation permission dialog
-            script = f'''
-            tell application "{target_app}"
-                -- This simple command will trigger permission request
-                get name
-            end tell
-            '''
-
-            result = subprocess.run(
-                ["osascript", "-e", script], capture_output=True, text=True, check=False
-            )
-
-            # If successful, permission was granted (or already existed)
-            is_granted = result.returncode == 0
-            logger.info(f"Automation permission check result: {is_granted}")
-            self.permission_checked.emit("automation", is_granted)
-
-        except Exception as e:
-            logger.error(f"Error requesting automation permission: {e}")
-            self.permission_checked.emit("automation", False)
-
-    def check_input_monitoring(self):
-        """
-        Check if the application has input monitoring permissions on macOS using CGEventTapCreate.
-        This will trigger the system permission dialog if not already granted.
-        """
+    def check_screen_recording(self):
         if platform.system() != "Darwin":
-            logger.info("Not on macOS, assuming input monitoring permissions granted")
-            self.permission_checked.emit("input_monitoring", True)
+            logger.info(
+                "Not on macOS, assuming screen recording and system audio permissions granted"
+            )
+            if self.permission_checked:
+                self.permission_checked.emit("screen_recording", True)
             return
 
         try:
-            # Load the CoreGraphics framework
-            cg = cdll.LoadLibrary(
+            # First, check if permission is already granted.
+            # This uses the method you already have.
+            core_graphics = cdll.LoadLibrary(
                 "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics"
             )
-
-            # Define the callback function type
-            CGEventTapCallBack = CFUNCTYPE(c_void_p, c_int, c_void_p, c_void_p)
-
-            # Define the callback function
-            def callback(proxy, event_type, event, refcon):
-                return event
-
-            # Create the callback
-            callback_func = CGEventTapCallBack(callback)
-
-            # Constants for CGEventTapCreate
-            kCGSessionEventTap = 0
-            kCGHeadInsertEventTap = 0
-            kCGEventTapOptionDefault = 0
-            kCGEventMaskForAllEvents = 0xFFFFFFFFFFFFFFFF
-
-            # Set up function signatures
-            cg.CGEventTapCreate.argtypes = [
-                c_int,
-                c_int,
-                c_int,
-                c_uint64,
-                CGEventTapCallBack,
-                c_void_p,
-            ]
-            cg.CGEventTapCreate.restype = c_void_p
-            cg.CFMachPortInvalidate.argtypes = [c_void_p]
-            cg.CFMachPortInvalidate.restype = None
-
-            # Try to create an event tap
-            tap = cg.CGEventTapCreate(
-                kCGSessionEventTap,
-                kCGHeadInsertEventTap,
-                kCGEventTapOptionDefault,
-                kCGEventMaskForAllEvents,
-                callback_func,
-                None,
+            core_graphics.CGPreflightScreenCaptureAccess.restype = c_int
+            has_screen_permission = core_graphics.CGPreflightScreenCaptureAccess() == 1
+            logger.info(
+                f"Screen recording permission pre-check result: {has_screen_permission}"
             )
 
-            # If tap is None, permission was denied
-            has_permission = tap is not None
-            if tap is not None:
-                cg.CFMachPortInvalidate(tap)
+            if has_screen_permission:
+                if self.permission_checked:
+                    self.permission_checked.emit("screen_recording", True)
+                return
 
-            logger.info(f"Input monitoring permission check result: {has_permission}")
-            self.permission_checked.emit("input_monitoring", has_permission)
+            logger.info(
+                "Screen recording permission not granted. Attempting to trigger dialog..."
+            )
+
+            # Attempt to capture a small region of the screen to trigger the dialog
+            # This needs to be a valid CGRect. Let's try capturing a 1x1 pixel at (0,0)
+            # This is a very minimal capture that should still trigger the prompt.
+            screen_rect = NSScreen.mainScreen().frame()
+            # Try to capture a tiny rect from the main screen's origin
+            test_rect = CGRectMake(screen_rect.origin.x, screen_rect.origin.y, 1, 1)
+
+            # CGWindowListCreateImage is the key. Calling it attempts screen capture.
+            # Even if we don't use the returned image, the act of calling it triggers the prompt.
+            # We are calling it with the same options that your Swift code uses
+            # to ensure it's a "real" screen capture attempt.
+            _image_ref = CGWindowListCreateImage(
+                test_rect,
+                kCGWindowListOptionOnScreenOnly,
+                kCGNullWindowID,
+                kCGWindowImageNominalResolution | kCGWindowImageBoundsIgnoreFraming,
+            )
+
+            # After the attempt, re-check the permission.
+            has_screen_permission_after_attempt = (
+                core_graphics.CGPreflightScreenCaptureAccess() == 1
+            )
+            logger.info(
+                f"Screen recording permission after attempt: {has_screen_permission_after_attempt}"
+            )
+
+            if self.permission_checked:
+                self.permission_checked.emit(
+                    "screen_recording", has_screen_permission_after_attempt
+                )
 
         except Exception as e:
-            logger.error(f"Error checking input monitoring permission: {e}")
+            logger.error(f"Error checking or attempting screen recording: {e}")
             logger.error(traceback.format_exc())
-            self.permission_checked.emit("input_monitoring", False)
+            if self.permission_checked:
+                self.permission_checked.emit("screen_recording", False)

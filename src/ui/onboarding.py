@@ -65,8 +65,7 @@ class OnboardingWindow(QMainWindow):
         self.permission_states = {
             "microphone": False,
             "accessibility": False,
-            "automation": False,
-            "input_monitoring": False,
+            "screen_recording": False,
         }
 
         # --- Initialize Keyboard Manager ---
@@ -152,6 +151,13 @@ class OnboardingWindow(QMainWindow):
                     )
                 elif hasattr(self, "acc_status") and widget == self.acc_status:
                     is_granted = self.permission_states.get("accessibility", False)
+                    widget.setStyleSheet(
+                        f"color: {self.theme_manager.get_color('text_primary')};"
+                        if is_granted
+                        else f"color: {self.theme_manager.get_color('text_secondary')};"
+                    )
+                elif hasattr(self, "screen_status") and widget == self.screen_status:
+                    is_granted = self.permission_states.get("screen_recording", False)
                     widget.setStyleSheet(
                         f"color: {self.theme_manager.get_color('text_primary')};"
                         if is_granted
@@ -243,7 +249,7 @@ class OnboardingWindow(QMainWindow):
         self.permission_screen.permission_states = self.permission_states
 
         # Create the screen and get the buttons
-        mic_button, acc_button, auto_button, input_button, continue_button = (
+        mic_button, acc_button, screen_button, continue_button = (
             self.permission_screen.create(self.layout)
         )
 
@@ -252,11 +258,8 @@ class OnboardingWindow(QMainWindow):
         acc_button.clicked.connect(
             self.permission_screen.request_accessibility_permission
         )
-        auto_button.clicked.connect(
-            self.permission_screen.request_automation_permission
-        )
-        input_button.clicked.connect(
-            self.permission_screen.request_input_monitoring_permission
+        screen_button.clicked.connect(
+            self.permission_screen.request_screen_recording_permission
         )
         continue_button.clicked.connect(self.permission_screen._check_all_permissions)
 

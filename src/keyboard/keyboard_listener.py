@@ -1,9 +1,12 @@
 import logging
 import os
+import time
 import traceback
 from multiprocessing import Event, Process, Queue
 
 from pynput import keyboard
+
+from src.utils.platform_utils_macos import check_accessibility_permission_no_prompt
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -27,6 +30,23 @@ class KeyboardListenerProcess(Process):
             logger.info(
                 f"KeyboardListenerProcess (PID: {os.getpid()}) run method starting."
             )
+
+            # Wait for input monitoring access
+            while not self.stop_event.is_set():
+                if check_accessibility_permission_no_prompt():
+                    logger.info(
+                        "Accessibility granted, proceeding with keyboard listener setup."
+                    )
+                    break
+                logger.info("Waiting for accessibility access...")
+                time.sleep(1)  # Check every second
+
+            if self.stop_event.is_set():
+                logger.info(
+                    "Stop event received while waiting for accessibility access."
+                )
+                return
+
             self._listener = keyboard.Listener(
                 on_press=lambda key: self._on_press(key),
                 on_release=lambda key: self._on_release(key),

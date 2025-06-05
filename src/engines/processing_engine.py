@@ -11,6 +11,7 @@ from src.types.context import Context
 
 logger = logging.getLogger(__name__)
 
+
 class ProcessingEngine:
     def __init__(
         self,
@@ -71,9 +72,16 @@ class ProcessingEngine:
         user_text_command: str,
         user_command_audio: bytes | None = None,
     ):
-        rprint(f"[bold blue]Processing dictation: '{user_text_command}'[/bold blue]")
+        logger.info(f"Processing dictation: '{user_text_command}'")
         current_app = current_context.get("app_name").strip()
         primary_context = current_context["primary_context"]
+
+        # Remove accessibility elements and OCR texts from page context
+        # Currently too many input tokens for the LLM
+        if "accessibility_elements" in current_context["page_context"]:
+            current_context["page_context"].pop("accessibility_elements", None)
+        if "ocr_texts" in current_context["page_context"]:
+            current_context["page_context"].pop("ocr_texts", None)
 
         match current_app:
             case ItoApp.CHROME | ItoApp.BRAVE:
@@ -94,11 +102,6 @@ class ProcessingEngine:
                     primary_context, user_text_command, user_command_audio
                 )
             case _:
-                # Remove accessibility elements and OCR texts from page context
-                # Currently too many input tokens for the LLM
-                current_context["page_context"].pop("accessibility_elements", None)
-                current_context["page_context"].pop("ocr_texts", None)
-
                 self.macos_app.process_dictation(
                     current_context,
                     user_text_command,

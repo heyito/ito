@@ -1,8 +1,8 @@
 import logging
 import queue
 import threading
-from typing import Any
 import time
+from typing import Any
 
 import numpy as np
 import sounddevice as sd

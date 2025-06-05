@@ -76,11 +76,14 @@ class Container(containers.DeclarativeContainer):
         groq_api=groq_llm_client_provider,
     )
 
-    llm_handler = providers.Singleton(LLMHandler, client=selected_llm_client)
-
-    audio_device_manager = providers.Singleton(
-        lambda: AudioDeviceManager.instance()
+    llm_handler = providers.Singleton(
+        LLMHandler,
+        client=selected_llm_client,
+        max_tokens=config.LLM.max_tokens.as_int(),
+        temperature=config.LLM.temperature.as_float(),
     )
+
+    audio_device_manager = providers.Singleton(lambda: AudioDeviceManager.instance())
 
     audio_source_handler = providers.Singleton(
         AudioSourceHandler,

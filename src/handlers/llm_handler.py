@@ -16,7 +16,12 @@ DEFAULT_LLM_SYSTEM_PROMPT = "You are a helpful AI assistant."
 
 
 class LLMHandler:
-    def __init__(self, client: LLMClientInterface):
+    def __init__(
+        self,
+        client: LLMClientInterface,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        temperature: float = DEFAULT_TEMPERATURE,
+    ):
         """
         Initializes the LLMHandler with a specific LLM client.
 
@@ -25,6 +30,8 @@ class LLMHandler:
         """
         self.client = client
         self.is_client_available = self.client.check_availability()
+        self.max_tokens = max_tokens
+        self.temperature = temperature
 
         if self.is_client_available:
             logger.info(
@@ -42,8 +49,6 @@ class LLMHandler:
         text: str,
         audio_buffer: bytes,
         system_prompt_override: str | None = None,  # Use Optional
-        max_tokens: int = DEFAULT_MAX_TOKENS,
-        temperature: float = DEFAULT_TEMPERATURE,
         tool_functions: list[dict] | None = None,  # Use Optional
         messages_override: list[dict] | None = None,  # Use Optional
     ) -> Any:  # Return type depends on client (string or OpenAI response object)
@@ -93,8 +98,8 @@ class LLMHandler:
                     audio_buffer=audio_buffer,
                     text=text,
                     system_prompt=system_prompt,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
+                    max_tokens=self.max_tokens,
+                    temperature=self.temperature,
                     tools=tool_functions or [],  # Pass empty list if None
                     messages_override=messages_override
                     or [],  # Pass empty list if None
@@ -103,8 +108,8 @@ class LLMHandler:
                 response = self.client.generate_response(
                     text=text,
                     system_prompt=system_prompt,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
+                    max_tokens=self.max_tokens,
+                    temperature=self.temperature,
                     tool_functions=tool_functions or [],  # Pass empty list if None
                     messages_override=messages_override
                     or [],  # Pass empty list if None
@@ -156,8 +161,8 @@ class LLMHandler:
             resp = self.client.generate_response(
                 text="",
                 system_prompt="",
-                max_tokens=DEFAULT_MAX_TOKENS,
-                temperature=DEFAULT_TEMPERATURE,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
                 tool_functions=tool_functions,
                 messages_override=messages,
             )

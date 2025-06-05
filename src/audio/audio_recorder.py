@@ -2,9 +2,8 @@
 import logging
 import queue
 import threading
-import traceback
 import time
-import io
+import traceback
 
 import numpy as np
 

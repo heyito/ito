@@ -71,7 +71,6 @@ open_ai_tools = [
 
 gemini_tools = types.Tool(function_declarations=[ui_batch_tool, no_action_tool])
 
-
 class MacOSapp:
     action_system_prompt = prompt_templates.MACOS_AX_OCR_SYSTEM_PROMPT
     dictation_system_prompt = prompt_templates.PAGE_EDITOR_SYSTEM_PROMPT
@@ -187,7 +186,6 @@ class MacOSapp:
 
         if new_primary_context is None:  # Check for None specifically
             logger.error("LLM processing failed or did not return content.")
-            # is_processing is released in finally block
             return
         logger.info(
             f"LLM returned new document content (length: {len(new_primary_context)} chars)."

@@ -181,7 +181,6 @@ user_command: "Open a new note and type 'Groceries:'"
 """
 )
 
-
 class PromptTemplate:
     def __init__(self, sections: dict[str, str]):
         self.sections = sections

@@ -43,10 +43,6 @@ class OnboardingWindow(QMainWindow):
         # Connect theme changes
         self.theme_manager.theme_changed.connect(self.update_styles)
 
-        # --- Manual Dragging Variables ---
-        self._dragging = False
-        self._drag_start_position = QPoint()
-
         # --- Main widget and layout ---
         main_widget = ItoLayout(
             self, radius=8, show_close_button=True, theme_manager=self.theme_manager

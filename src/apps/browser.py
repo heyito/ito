@@ -13,7 +13,6 @@ from src.utils import platform_utils_macos as platform_utils
 
 logger = logging.getLogger(__name__)
 
-
 class BrowserApp:
     system_prompt = prompt_templates.PAGE_EDITOR_SYSTEM_PROMPT
 

@@ -118,5 +118,5 @@ We welcome contributions! Please open issues for bugs or ideas, and submit PRs f
 
 ## License
 
-MIT © Demox Labs  
+GNU General Public License v3.0 © Demox Labs  
 See [LICENSE](LICENSE) for full terms.

@@ -63,6 +63,7 @@ class BrowserApp:
                 logger.info("Error pinging extension")
                 if time.time() - self._last_pong_time > 3:
                     self.extension_connected = False
+                    self._stop_ping.set()
             time.sleep(2)
 
     def process_command(

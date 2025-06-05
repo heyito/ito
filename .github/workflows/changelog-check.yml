@@ -1,0 +1,31 @@
+name: Check Changelog Updated
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled]
+
+jobs:
+  changelog-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if changelog was updated
+        run: |
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q '^CHANGELOG\.md$'; then
+            echo "✅ Changelog has been updated."
+            exit 0
+          fi
+
+          # Allow skipping changelog with a label
+          PR_LABELS=$(gh pr view ${{ github.event.pull_request.number }} --json labels -q ".labels[].name")
+          if echo "$PR_LABELS" | grep -q 'skip-changelog'; then
+            echo "⚠️ Changelog not updated, but 'skip-changelog' label is present."
+            exit 0
+          fi
+
+          echo "❌ CHANGELOG.md not modified. Please add a changelog entry or label this PR with 'skip-changelog'."
+          exit 1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

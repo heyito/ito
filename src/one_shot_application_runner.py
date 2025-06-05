@@ -99,10 +99,16 @@ class OneShotApplicationRunner(ApplicationInterface):
             f"[{timestamp}] One-Shot Runner: Received audio buffer from recorder."
         )
 
-        if not audio_buffer:
-            logger.error(
-                f"[{timestamp}] One-Shot Runner: No audio buffer received. Aborting."
-            )
+        # Type-agnostic empty check
+        is_empty = False
+        if audio_buffer is None:
+            is_empty = True
+        elif isinstance(audio_buffer, bytes):
+            is_empty = len(audio_buffer) == 0
+        elif hasattr(audio_buffer, 'getbuffer'):
+            is_empty = audio_buffer.getbuffer().nbytes == 0
+        if is_empty:
+            logger.warning("Discrete Runner: No valid audio buffer received (None or empty). Aborting.")
             # Status updated by AudioRecorder
             return
 

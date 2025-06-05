@@ -130,7 +130,7 @@ class KeyboardManager(QObject):
         stuck_keys = []
 
         for key, press_time in self._key_press_times.items():
-            if current_time - press_time > timedelta(seconds=5):  # 5 second threshold
+            if current_time - press_time > timedelta(seconds=20):
                 stuck_keys.append(key)
                 logger.warning(f"Clearing stuck key: {key}")
 

@@ -58,8 +58,11 @@ class DiscreteApplicationRunner(ApplicationInterface):
         logger.info("Ito background process running...")
 
     @time_method
-    def trigger_interaction(self, mode: CommandMode):
+    def trigger_interaction(self, mode: CommandMode, start_time: float = None):
         """Trigger an interaction with the application."""
+        now = time.time()
+        elapsed = now - start_time if start_time else 0.0
+        logger.info(f"[TIMING] trigger_interaction called at {now} with mode {mode} (elapsed: {elapsed:.3f}s)")
         logger.info(f"Triggering interaction with mode: {mode}...")
         if self.command_processor.is_processing:
             logger.info("Trigger ignored: Command processor busy.")
@@ -71,7 +74,7 @@ class DiscreteApplicationRunner(ApplicationInterface):
             return
 
         logger.info("Trigger received. Queuing start action.")
-        self._action_queue.put(ApplicationAction.START)
+        self._action_queue.put((ApplicationAction.START, start_time))
         self._mode = mode
         self._update_status(StatusMessage.HOTKEY_PRESSED)
 
@@ -83,9 +86,13 @@ class DiscreteApplicationRunner(ApplicationInterface):
         logger.info("Discrete Runner: Starting event loop...")
         while not self._stop_event.is_set():
             try:
-                action = self._action_queue.get(timeout=0.5)
+                action_tuple = self._action_queue.get(timeout=0.5)
+                if isinstance(action_tuple, tuple):
+                    action, start_time = action_tuple
+                else:
+                    action, start_time = action_tuple, None
                 if action == ApplicationAction.START:
-                    self._handle_start_recording()
+                    self._handle_start_recording(start_time)
                 elif action == ApplicationAction.STOP:
                     self._handle_stop_recording()
                 else:
@@ -97,18 +104,20 @@ class DiscreteApplicationRunner(ApplicationInterface):
                 traceback.print_exc()
         logger.info("Discrete Runner: Event loop stopped.")
 
-    def _handle_start_recording(self):
+    def _handle_start_recording(self, start_time: float = None):
         """Initiates context fetch and audio recording."""
-        timestamp = time.strftime("%H:%M:%S")
-        logger.info(f"[{timestamp}] Discrete Runner: Handling start action...")
+        now = time.time()
+        elapsed = now - start_time if start_time else 0.0
+        logger.info(f"[TIMING] _handle_start_recording called at {now} (elapsed: {elapsed:.3f}s)")
+        logger.info(f"[{now}] Discrete Runner: Handling start action...")
 
         # Start context fetch (non-blocking)
         self.context_manager.fetch_context_async(mode=self._mode)
 
         # Start audio recording (non-blocking), provide callback
-        if not self.audio_recorder.start_recording(self._process_recorded_audio):
+        if not self.audio_recorder.start_recording(self._process_recorded_audio, start_time=start_time):
             logger.error(
-                f"[{timestamp}] Discrete Runner: Failed to start audio recorder."
+                f"[{now}] Discrete Runner: Failed to start audio recorder. (elapsed: {elapsed:.3f}s)"
             )
             # Reset state? AudioRecorder might already be recording from previous failed trigger.
 
@@ -128,8 +137,16 @@ class DiscreteApplicationRunner(ApplicationInterface):
         """
         logger.info("Discrete Runner: Received audio buffer from recorder.")
 
-        if not audio_buffer:
-            logger.warning(" Discrete Runner: No audio buffer received. Aborting.")
+        # Type-agnostic empty check
+        is_empty = False
+        if audio_buffer is None:
+            is_empty = True
+        elif isinstance(audio_buffer, bytes):
+            is_empty = len(audio_buffer) == 0
+        elif hasattr(audio_buffer, 'getbuffer'):
+            is_empty = audio_buffer.getbuffer().nbytes == 0
+        if is_empty:
+            logger.warning("Discrete Runner: No valid audio buffer received (None or empty). Aborting.")
             # Status updated by AudioRecorder
             return
 

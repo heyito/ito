@@ -3,6 +3,8 @@ import logging
 import queue
 import threading
 import traceback
+import time
+import io
 
 import numpy as np
 
@@ -35,19 +37,27 @@ class AudioRecorder:
             None  # Callback when audio is ready
         )
         self._lock = threading.Lock()
+        self._watchdog_thread: threading.Thread | None = None
+        self._watchdog_stop_event: threading.Event | None = None
+        self._watchdog_timeout_sec = 2.0
+        self._audio_detected = False
 
     @property
     def is_recording(self) -> bool:
         with self._lock:
             return self._is_recording
 
-    def start_recording(self, processing_callback: callable) -> bool:
+    def start_recording(self, processing_callback: callable, start_time: float = None) -> bool:
         """
         Starts recording and monitoring. Calls the callback when audio is ready.
 
         Args:
             processing_callback: A function to call with the audio buffer (bytes) or None on error/no audio.
+            start_time: float, the timestamp when the hotkey was pressed (for timing diagnostics)
         """
+        now = time.time()
+        elapsed = now - start_time if start_time else 0.0
+        logger.info(f"[TIMING] AudioRecorder.start_recording called at {now} (elapsed: {elapsed:.3f}s)")
         with self._lock:
             if self._is_recording:
                 logger.info("AudioRecorder: Already recording.")
@@ -57,6 +67,7 @@ class AudioRecorder:
             self._stop_event.clear()
             self._audio_buffer = None  # Clear previous result
             self._processing_callback = processing_callback
+            self._audio_detected = False  # Reset audio detected flag
 
             # Clear queue
             while not self._audio_queue.empty():
@@ -65,12 +76,15 @@ class AudioRecorder:
                 except queue.Empty:
                     break
 
+            # Attach audio_detected_callback so AudioSourceHandler can notify us
+            self._audio_queue.audio_detected_callback = self.notify_audio_detected
+
             logger.info("AudioRecorder: Starting recording...")
             self._update_status(StatusMessage.RECORDING.value)
 
+            # Pass start_time to the recording thread via a lambda
             self._recording_thread = threading.Thread(
-                target=self.audio_handler.record_audio_stream,
-                args=(self._stop_event, self._audio_queue),
+                target=lambda: self.audio_handler.record_audio_stream(self._stop_event, self._audio_queue, start_time),
                 daemon=True,
                 name="AudioRecordingThread",
             )
@@ -79,14 +93,55 @@ class AudioRecorder:
             )
 
             self._recording_thread.start()
+            logger.info(f"[TIMING] AudioRecorder recording thread started at {time.time()} (elapsed: {time.time() - start_time if start_time else 0.0:.3f}s)")
             self._monitor_thread.start()
+
+            # --- Start watchdog timer ---
+            self._start_watchdog()
             return True
+
+    def _start_watchdog(self):
+        # Stop any previous watchdog
+        self._stop_watchdog()
+        self._watchdog_stop_event = threading.Event()
+        self._watchdog_thread = threading.Thread(target=self._watchdog_target, daemon=True, name="AudioWatchdogThread")
+        self._watchdog_thread.start()
+
+    def _stop_watchdog(self):
+        if self._watchdog_stop_event:
+            self._watchdog_stop_event.set()
+        if self._watchdog_thread and self._watchdog_thread.is_alive():
+            self._watchdog_thread.join(timeout=0.5)
+        self._watchdog_thread = None
+        self._watchdog_stop_event = None
+
+    def _watchdog_target(self):
+        logger.info("AudioRecorder Watchdog: Started.")
+        start_time = time.time()
+        while not self._watchdog_stop_event.is_set():
+            if not self.is_recording:
+                logger.info("AudioRecorder Watchdog: Recording stopped, exiting watchdog.")
+                return
+            if self._audio_detected:
+                logger.info("AudioRecorder Watchdog: Audio detected, exiting watchdog.")
+                return
+            elapsed = time.time() - start_time
+            if elapsed > self._watchdog_timeout_sec:
+                logger.error(f"AudioRecorder Watchdog: Timeout after {self._watchdog_timeout_sec}s! No audio processed.")
+                self._update_status(StatusMessage.ERROR_RECORDING.value)
+                self.stop_recording()
+                return
+            time.sleep(0.1)
+        logger.info("AudioRecorder Watchdog: Stopped by event.")
 
     def _monitor_target(self):
         """Waits for stop signal, collects audio, prepares buffer, and calls callback."""
         logger.info("AudioRecorder Monitor: Waiting for stop signal...")
         self._stop_event.wait()
         logger.info("AudioRecorder Monitor: Stop signal received.")
+
+        # --- Stop watchdog when recording ends ---
+        self._stop_watchdog()
 
         callback_to_call = None
         with self._lock:
@@ -98,7 +153,8 @@ class AudioRecorder:
         chunks = []
         while not self._audio_queue.empty():
             try:
-                chunks.append(self._audio_queue.get_nowait())
+                chunk = self._audio_queue.get_nowait()
+                chunks.append(chunk)
             except queue.Empty:
                 break
         logger.info(f"AudioRecorder Monitor: Collected {len(chunks)} chunks.")
@@ -141,6 +197,7 @@ class AudioRecorder:
         if self.is_recording:  # Check property which uses lock
             logger.info("AudioRecorder: Manual stop requested.")
             self._stop_event.set()
+            self._stop_watchdog()
 
     def _update_status(self, message: str):
         if self.status_queue:
@@ -171,3 +228,8 @@ class AudioRecorder:
             except queue.Empty:
                 break
         logger.info("AudioRecorder: Cleanup finished.")
+
+    def notify_audio_detected(self):
+        """Called by the audio handler when audio is detected."""
+        with self._lock:
+            self._audio_detected = True

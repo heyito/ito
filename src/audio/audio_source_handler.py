@@ -2,6 +2,7 @@ import logging
 import queue
 import threading
 from typing import Any
+import time
 
 import numpy as np
 import sounddevice as sd
@@ -55,6 +56,9 @@ class AudioSourceHandler(AudioSourceInterface, DeviceChangeListener):
         if self._audio_queue is not None:
             try:
                 self._audio_queue.put_nowait(indata.copy())
+                # Notify AudioRecorder as soon as audio is received
+                if hasattr(self._audio_queue, 'audio_detected_callback') and callable(self._audio_queue.audio_detected_callback):
+                    self._audio_queue.audio_detected_callback()
             except queue.Full:
                 logger.warning("Audio queue is full. Dropping audio frame.",  throttle_duration_s=5) # Example of basic throttling
         else:
@@ -98,7 +102,7 @@ class AudioSourceHandler(AudioSourceInterface, DeviceChangeListener):
         logger.info(f"Prepared device for stream: {self._device_manager.get_current_device_name()} (Index {current_device_idx})")
         return current_device_idx
 
-    def _attempt_to_initialize_stream(self) -> bool:
+    def _attempt_to_initialize_stream(self, start_time: float = None) -> bool:
         logger.info("Attempting to initialize audio stream...")
         self._close_existing_stream() # Ensure any old stream is gone
 
@@ -123,7 +127,7 @@ class AudioSourceHandler(AudioSourceInterface, DeviceChangeListener):
                 callback=self._audio_callback
             )
             self._stream.start()
-            logger.info(f"Audio stream started successfully on: {device_name}")
+            logger.info(f"[TIMING] InputStream started at {time.time()} on device {device_name} (elapsed: {time.time() - start_time if start_time else 0.0:.3f}s)")
             self._stream_is_operational = True
             return True
         except sd.PortAudioError as pae:
@@ -140,7 +144,8 @@ class AudioSourceHandler(AudioSourceInterface, DeviceChangeListener):
         self._stream_is_operational = False
         return False
 
-    def record_audio_stream(self, stop_event: threading.Event, audio_queue: queue.Queue):
+    def record_audio_stream(self, stop_event: threading.Event, audio_queue: queue.Queue, start_time: float = None):
+        logger.info(f"[TIMING] AudioSourceHandler.record_audio_stream called at {time.time()} (elapsed: {time.time() - start_time if start_time else 0.0:.3f}s)")
         self._audio_queue = audio_queue
         self._stop_recording_event = stop_event
         self._reinitialize_stream_event.clear() 
@@ -148,7 +153,7 @@ class AudioSourceHandler(AudioSourceInterface, DeviceChangeListener):
 
         logger.info("Audio recording loop started.")
 
-        if not self._attempt_to_initialize_stream():
+        if not self._attempt_to_initialize_stream(start_time=start_time):
             logger.warning("Initial stream initialization failed. Waiting for re-initialize event or stop signal.")
 
         while not self._stop_recording_event.is_set():
@@ -160,7 +165,7 @@ class AudioSourceHandler(AudioSourceInterface, DeviceChangeListener):
             if reinit_signaled:
                 logger.info("Re-initialization event detected. Attempting to re-initialize stream.")
                 self._reinitialize_stream_event.clear()
-                if not self._attempt_to_initialize_stream():
+                if not self._attempt_to_initialize_stream(start_time=start_time):
                     logger.error("Stream re-initialization failed. Will retry or stop.")
                     if not self._stop_recording_event.wait(timeout=1.0):
                         continue
@@ -176,6 +181,7 @@ class AudioSourceHandler(AudioSourceInterface, DeviceChangeListener):
         logger.info("Audio recording loop has been stopped.")
         self._close_existing_stream()
         self._audio_queue = None # Clear reference
+        logger.info(f"[TIMING] AudioSourceHandler.record_audio_stream exiting at {time.time()} (elapsed: {time.time() - start_time if start_time else 0.0:.3f}s)")
         logger.info("Audio source handler finished recording and cleaned up stream resources.")
 
     def cleanup(self):

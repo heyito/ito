@@ -359,9 +359,15 @@ class ApplicationManager(QObject):
             # Configure container within the thread using the passed config
             self.container = Container()  # Create a new container instance
             self.container.config.from_dict(config)
-            self.app_instance = self.container.application()
-
-            self.browser_app = self.container.browser_app()
+            try:
+                self.app_instance = self.container.application()
+                self.browser_app = self.container.browser_app()
+            except Exception as e:
+                error_msg = f"Error initializing app_instance or browser_app: {str(e)}\n{traceback.format_exc()}"
+                logger.error(error_msg)
+                self.error_occurred.emit(f"App Initialization Error: {str(e)}")
+                self.status_changed.emit(StatusMessage.ERROR.value)
+                return
 
             # Pass the stop event to the app instance
             self.app_instance.stop_recording_event = stop_event
@@ -394,25 +400,29 @@ class ApplicationManager(QObject):
             self.app_instance = None
 
     def _handle_hotkey_press(self, command_mode: CommandMode) -> None:
-        """
-        Handles the hotkey_pressed signal. Runs on the main Qt thread.
-        Checks application state and queues the start recording action
-        on the background application's queue.
-        """
-        timestamp = time.strftime("%H:%M:%S")
+        start_time = time.time()
+        logger.info(f"[TIMING] _handle_hotkey_press called at {start_time} with mode {command_mode} (elapsed: 0.000s)")
         # Check if the background application instance exists and is running
         logger.debug(
             f"self.app_instance: {self.app_instance}, self.app_thread: {self.app_thread}"
         )
         if not self.app_instance or not self.app_thread:
             logger.info(
-                f"[{timestamp}] Hotkey Mode '{command_mode}' detected, but application is not running."
+                f"[{start_time}] Hotkey Mode '{command_mode}' detected, but application is not running. (elapsed: 0.000s)"
             )
             self.status_changed.emit(StatusMessage.HOTKEY_IGNORED.value)
+            # --- Recovery mechanism: try to restart the application ---
+            logger.info("Attempting to recover: restarting application due to hotkey press with no running app.")
+            started = self.start_application()
+            if started:
+                logger.info("Recovery: Application restarted successfully. Retrying hotkey action.")
+                # Try the hotkey action again, but only once to avoid infinite loops
+                if self.app_instance and self.app_thread:
+                    self._trigger_interaction(command_mode, start_time)
+            else:
+                logger.error("Recovery failed: Could not restart application.")
             return
-        self._trigger_interaction(
-            command_mode,
-        )
+        self._trigger_interaction(command_mode, start_time)
 
     def _handle_hotkey_release(self, hotkey_name: str) -> None:
         logger.info("Second completion hotkey tap detected.")
@@ -423,12 +433,15 @@ class ApplicationManager(QObject):
 
         self.app_instance.stop_interaction()
 
-    def _trigger_interaction(self, command_mode: CommandMode) -> None:
+    def _trigger_interaction(self, command_mode: CommandMode, start_time: float = None) -> None:
+        now = time.time()
+        elapsed = now - start_time if start_time else 0.0
+        logger.info(f"[TIMING] _trigger_interaction called at {now} with mode {command_mode} (elapsed: {elapsed:.3f}s)")
         logger.info(
             f"Hotkey Mode '{command_mode}' detected by manager. Queuing action for background app."
         )
         try:
-            self.app_instance.trigger_interaction(command_mode)
+            self.app_instance.trigger_interaction(command_mode, start_time)
         except AttributeError:
             logger.error(
                 "Error: Cannot queue action, app_instance or action_queue missing."

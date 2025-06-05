@@ -1,4 +1,5 @@
 # src/audio_recorder.py
+import io
 import logging
 import queue
 import threading
@@ -38,7 +39,7 @@ class AudioRecorder:
         self._lock = threading.Lock()
         self._watchdog_thread: threading.Thread | None = None
         self._watchdog_stop_event: threading.Event | None = None
-        self._watchdog_timeout_sec = 2.0
+        self._watchdog_timeout_sec = 5.0
         self._audio_detected = False
 
     @property
@@ -46,7 +47,9 @@ class AudioRecorder:
         with self._lock:
             return self._is_recording
 
-    def start_recording(self, processing_callback: callable, start_time: float = None) -> bool:
+    def start_recording(
+        self, processing_callback: callable, start_time: float = None
+    ) -> bool:
         """
         Starts recording and monitoring. Calls the callback when audio is ready.
 
@@ -56,13 +59,14 @@ class AudioRecorder:
         """
         now = time.time()
         elapsed = now - start_time if start_time else 0.0
-        logger.info(f"[TIMING] AudioRecorder.start_recording called at {now} (elapsed: {elapsed:.3f}s)")
+        logger.info(
+            f"[TIMING] AudioRecorder.start_recording called at {now} (elapsed: {elapsed:.3f}s)"
+        )
         with self._lock:
             if self._is_recording:
                 logger.info("AudioRecorder: Already recording.")
                 return False
 
-            self._is_recording = True
             self._stop_event.clear()
             self._audio_buffer = None  # Clear previous result
             self._processing_callback = processing_callback
@@ -83,7 +87,9 @@ class AudioRecorder:
 
             # Pass start_time to the recording thread via a lambda
             self._recording_thread = threading.Thread(
-                target=lambda: self.audio_handler.record_audio_stream(self._stop_event, self._audio_queue, start_time),
+                target=lambda: self.audio_handler.record_audio_stream(
+                    self._stop_event, self._audio_queue, start_time
+                ),
                 daemon=True,
                 name="AudioRecordingThread",
             )
@@ -92,18 +98,23 @@ class AudioRecorder:
             )
 
             self._recording_thread.start()
-            logger.info(f"[TIMING] AudioRecorder recording thread started at {time.time()} (elapsed: {time.time() - start_time if start_time else 0.0:.3f}s)")
+            logger.info(
+                f"[TIMING] AudioRecorder recording thread started at {time.time()} (elapsed: {time.time() - start_time if start_time else 0.0:.3f}s)"
+            )
             self._monitor_thread.start()
 
             # --- Start watchdog timer ---
             self._start_watchdog()
+            self._is_recording = True
             return True
 
     def _start_watchdog(self):
         # Stop any previous watchdog
         self._stop_watchdog()
         self._watchdog_stop_event = threading.Event()
-        self._watchdog_thread = threading.Thread(target=self._watchdog_target, daemon=True, name="AudioWatchdogThread")
+        self._watchdog_thread = threading.Thread(
+            target=self._watchdog_target, daemon=True, name="AudioWatchdogThread"
+        )
         self._watchdog_thread.start()
 
     def _stop_watchdog(self):
@@ -119,14 +130,18 @@ class AudioRecorder:
         start_time = time.time()
         while not self._watchdog_stop_event.is_set():
             if not self.is_recording:
-                logger.info("AudioRecorder Watchdog: Recording stopped, exiting watchdog.")
+                logger.info(
+                    "AudioRecorder Watchdog: Recording stopped, exiting watchdog."
+                )
                 return
             if self._audio_detected:
                 logger.info("AudioRecorder Watchdog: Audio detected, exiting watchdog.")
                 return
             elapsed = time.time() - start_time
             if elapsed > self._watchdog_timeout_sec:
-                logger.error(f"AudioRecorder Watchdog: Timeout after {self._watchdog_timeout_sec}s! No audio processed.")
+                logger.error(
+                    f"AudioRecorder Watchdog: Timeout after {self._watchdog_timeout_sec}s! No audio processed."
+                )
                 self._update_status(StatusMessage.ERROR_RECORDING.value)
                 self.stop_recording()
                 return

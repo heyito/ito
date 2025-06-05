@@ -101,7 +101,7 @@ Ito is a voice-activated productivity tool that transcribes your speech, interpr
 
 3. You’ll see: `Ito tool running. Press [Your Hotkey] to toggle recording.`
 4. Open any app with a text field (e.g., browser, editor).
-5. Press your hotkey, speak clearly, then press it again.
+5. Press and hold your hotkey, speak clearly, then release once done.
 6. The tool will process your speech and type the output.
 
 ---

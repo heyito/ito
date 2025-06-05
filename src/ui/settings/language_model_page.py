@@ -1,4 +1,3 @@
-# src/ui/settings/language_model_page.py
 import logging
 
 from PySide6.QtCore import Qt, Signal
@@ -32,7 +31,7 @@ class LanguageModelPage(QWidget):
         self._internal_labels_for_styling = []
         self._init_ui()
         self._connect_signals()
-        self._update_ui_for_llm_source()
+        self._update_model_visibility()
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
@@ -157,7 +156,6 @@ class LanguageModelPage(QWidget):
         layout.addStretch()
 
     def _connect_signals(self):
-        # Connect to the new handler for user interactions
         self.llm_source.selectionChanged.connect(
             self._on_llm_source_changed_by_interaction
         )
@@ -168,24 +166,20 @@ class LanguageModelPage(QWidget):
         self.max_tokens.valueChanged.connect(lambda: self.settings_changed.emit())
         self.temperature.valueChanged.connect(lambda: self.settings_changed.emit())
 
+    # This public method is called from home.py
     def _update_ui_for_llm_source(self):
-        """Updates internal UI based on llm_source without emitting signals."""
-        logger.debug(
-            f"LanguageModelPage: Updating UI for LLM source {self.llm_source.currentText()}"
-        )
+        """Public method to update UI visibility when source is changed externally."""
         self._update_model_visibility()
-        self._sync_active_model_value()
 
     def _on_llm_source_changed_by_interaction(self):
         """Handles llm_source change from user interaction and emits settings_changed."""
         logger.debug(
             f"LanguageModelPage: LLM source changed by interaction to {self.llm_source.currentText()}"
         )
-        self._update_ui_for_llm_source()
+        self._update_model_visibility()
         self.settings_changed.emit()  # Emit signal only for user-driven changes
 
     def update_styles(self):
-        # ... (remains IDENTICAL to your provided version) ...
         self.set_page_title_style(self.title_label)
         for label in self._internal_labels_for_styling:
             self.set_label_style(label)
@@ -249,7 +243,7 @@ class LanguageModelPage(QWidget):
             self.groq_model.setCurrentText(
                 groq_config.get("user_command_model", "llama-3.3-70b-versatile")
             )
-            self._update_ui_for_llm_source()  # Calls visibility and sync
+            self._update_model_visibility()
         finally:
             for widget in widgets_to_block:
                 widget.blockSignals(False)
@@ -260,48 +254,3 @@ class LanguageModelPage(QWidget):
         self.openai_model_container.setVisible(source == "openai_api")
         self.gemini_model_container.setVisible(source == "gemini_api")
         self.groq_model_container.setVisible(source == "groq_api")
-
-    def _sync_active_model_value(self):
-        config = self.app_manager.load_settings()
-        llm_source = self.llm_source.currentText()
-        default_openai_model = config.get("OpenAI", {}).get(
-            "user_command_model", "gpt-4.1"
-        )
-        default_gemini_model = config.get("Gemini", {}).get(
-            "user_command_model", "gemini-2.0-flash"
-        )
-        default_groq_model = config.get("Groq", {}).get(
-            "user_command_model", "llama-3.3-70b-versatile"
-        )
-        default_ollama_model = config.get("Ollama", {}).get("model", "llama3.2:latest")
-        llm_config_overall_model = config.get("LLM", {}).get("model")
-        if llm_source == "openai_api":
-            model_to_set = (
-                llm_config_overall_model
-                if llm_config_overall_model
-                and llm_config_overall_model in self.openai_model.buttons
-                else default_openai_model
-            )
-            self.openai_model.setCurrentText(model_to_set)
-        elif llm_source == "gemini_api":
-            model_to_set = (
-                llm_config_overall_model
-                if llm_config_overall_model
-                and llm_config_overall_model in self.gemini_model.buttons
-                else default_gemini_model
-            )
-            self.gemini_model.setCurrentText(model_to_set)
-        elif llm_source == "groq_api":
-            model_to_set = (
-                llm_config_overall_model
-                if llm_config_overall_model
-                and llm_config_overall_model in self.groq_model.buttons
-                else default_groq_model
-            )
-            self.groq_model.setCurrentText(model_to_set)
-        elif llm_source == "ollama":
-            self.llm_model_edit.setText(
-                llm_config_overall_model
-                if llm_config_overall_model
-                else default_ollama_model
-            )

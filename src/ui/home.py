@@ -957,26 +957,21 @@ class Home(QMainWindow):
         for widget_obj in widgets_to_block_signals:
             widget_obj.blockSignals(True)
         logger.debug(
-            f"Home: Signals blocked for {len(widgets_to_block_signals)} widgets: {widgets_to_block_signals}"
+            f"Home: Signals blocked for {len(widgets_to_block_signals)} widgets."
         )
 
+        # 1. ===== EXPLICIT RESET TO DEFAULT STATE =====
+        # The default state is that all options are enabled.
         self.speech_recognition_button.setEnabled(True)
+        if hasattr(self, "language_model_page_widget"):
+            llm_source_widget = self.language_model_page_widget.llm_source
+            if llm_source_widget:
+                llm_source_widget.setEnabled(True)
+                for button in llm_source_widget.buttons:
+                    button.setEnabled(True)
+        # ===============================================
 
-        for rule_config in Home.UI_RESTRICTIONS:
-            for action_list_key in ["then_actions", "else_actions"]:
-                if action_list_key in rule_config:
-                    for action_detail in rule_config[action_list_key]:
-                        target_widget_instance = self._get_page_widget(
-                            action_detail["target_widget_name"]
-                        )
-                        if (
-                            isinstance(target_widget_instance, SegmentedButtonGroup)
-                            and action_detail["action"] == "enable_all_options"
-                        ):
-                            for button in target_widget_instance.buttons:
-                                button.setEnabled(True)
-                            target_widget_instance.setEnabled(True)
-
+        # 2. ===== APPLY RULES BASED ON CURRENT STATE =====
         for rule_config in Home.UI_RESTRICTIONS:
             condition_cfg = rule_config["condition"]
             condition_widget_instance = self._get_page_widget(
@@ -1020,12 +1015,22 @@ class Home(QMainWindow):
                 logger.debug(
                     f"Applying rule action: {action_type} to {action_detail['target_widget_name']}"
                 )
-                if isinstance(target_widget_instance, SegmentedButtonGroup):
+
+                if action_type == "enable_all_options" and isinstance(
+                    target_widget_instance, SegmentedButtonGroup
+                ):
+                    target_widget_instance.setEnabled(True)
+                    for button in target_widget_instance.buttons:
+                        button.setEnabled(True)
+
+                elif isinstance(target_widget_instance, SegmentedButtonGroup):
                     if action_type == "force_selection":
                         value_to_set = action_detail["value"]
                         target_widget_instance.setCurrentText(value_to_set)
+                        # Also disable other options to enforce the selection
                         for button in target_widget_instance.buttons:
                             button.setEnabled(button.text() == value_to_set)
+
                 elif isinstance(target_widget_instance, MenuButton):
                     if action_type == "set_enabled":
                         target_widget_instance.setEnabled(action_detail["enabled"])
@@ -1033,13 +1038,15 @@ class Home(QMainWindow):
                     logger.warning(
                         f"UI Rule Action: Unhandled widget type {type(target_widget_instance)} for '{action_detail['target_widget_name']}'."
                     )
+        # =================================================
 
         for widget_obj in widgets_to_block_signals:
             widget_obj.blockSignals(False)
             logger.debug(f"Home: Signals unblocked for {widget_obj}.")
-            if widget_obj == self.language_model_page_widget.llm_source:
-                logger.debug("Home: Manually syncing LLM page UI after rule change.")
-                self.language_model_page_widget._update_ui_for_llm_source()
+
+        # Manually sync UI on the language model page after rules may have changed its state
+        if hasattr(self, "language_model_page_widget"):
+            self.language_model_page_widget._update_ui_for_llm_source()
 
         logger.debug("Home: UI restrictions applied.")
 

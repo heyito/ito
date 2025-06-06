@@ -3,8 +3,7 @@ import platform
 import traceback
 from ctypes import c_int, cdll
 
-import sounddevice as sd
-from AppKit import NSScreen
+import soundcard as sc
 from PySide6.QtCore import QObject, Signal
 from Quartz.CoreGraphics import (
     CGRectMake,
@@ -22,30 +21,33 @@ class PermissionChecker(QObject):
     permission_checked = Signal(str, bool)  # permission_name, is_granted
 
     def check_microphone(self):
-        """Check if the application has microphone permissions."""
+        """Check if the application has microphone permissions using SoundCard."""
         try:
-            logger.info("Checking microphone permissions...")
-            devices = sd.query_devices()
-            input_devices = [d for d in devices if d["max_input_channels"] > 0]
-            if not input_devices:
-                logger.error("No input devices found")
-                self.permission_checked.emit("microphone", False)
+            logger.info("Checking microphone permissions with SoundCard...")
 
-            # Try to open a test stream to verify permissions
+            mics = sc.all_microphones(include_loopback=False)
+            if not mics:
+                logger.error("No microphones found by SoundCard.")
+                self.permission_checked.emit("microphone", False)
+                return
+
             try:
-                with sd.InputStream(
-                    samplerate=16000, channels=1, blocksize=128, latency="low"
-                ):
+                with sc.default_microphone().recorder(samplerate=16000, channels=1):
                     logger.info(
-                        "Successfully opened test audio stream - permissions granted"
+                        "Successfully opened test audio stream - microphone permissions granted."
                     )
                     self.permission_checked.emit("microphone", True)
-            except sd.PortAudioError as e:
-                logger.error(f"Failed to open test audio stream: {e}")
+            except Exception as e:
+                # Any exception here (often a RuntimeError on macOS) indicates a permissions issue.
+                logger.error(
+                    f"Failed to open test audio stream, likely due to permissions: {e}"
+                )
                 self.permission_checked.emit("microphone", False)
 
         except Exception as e:
-            logger.error(f"Error checking microphone permissions: {e}")
+            logger.error(
+                f"An unexpected error occurred while checking microphone permissions: {e}"
+            )
             self.permission_checked.emit("microphone", False)
 
     def check_accessibility(self):

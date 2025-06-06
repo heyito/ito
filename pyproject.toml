@@ -10,7 +10,6 @@ package-mode = false
 python = ">=3.12,<3.14"
 numpy = "2.2.4"
 pynput = "1.8.1"
-sounddevice = "0.5.1"
 openai = "1.72.0"
 pyautogui = "0.9.54"
 PyAudio = "0.2.14"
@@ -34,6 +33,7 @@ pyside6 = "^6.9.0"
 rich = "^14.0.0"
 watchdog = "^6.0.0"
 appnope = "^0.1.4"
+soundcard = "^0.4.4"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

@@ -13,6 +13,7 @@ from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
 from src.application_manager import ApplicationManager
+from src.audio.audio_device_manager import AudioDeviceManager
 from src.keyboard.keyboard_listener import KeyboardListenerProcess
 from src.keyboard.keyboard_manager import KeyboardManager
 from src.ui.font.load_fonts import load_fonts
@@ -275,6 +276,11 @@ if __name__ == "__main__":
         keyboard_listener.start()
         logger.info("Keyboard listener process started")
 
+        # Initialize audio device manager
+        logger.info("Initializing audio device manager...")
+        AudioDeviceManager.start()
+        logger.info("Audio device manager started")
+
         # Initialize keyboard manager with the queues
         logger.info("Initializing keyboard manager...")
         keyboard_manager = KeyboardManager.instance()
@@ -304,6 +310,11 @@ if __name__ == "__main__":
         try:
             sys.exit(app.exec())
         finally:
+            # Clean up audio device manager
+            logger.info("Cleaning up audio device manager...")
+            AudioDeviceManager.stop()
+            logger.info("Audio device manager cleaned up")
+
             # Clean up keyboard listener process
             logger.info("Cleaning up keyboard listener process...")
             stop_event.set()

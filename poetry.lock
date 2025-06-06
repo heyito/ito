@@ -2275,25 +2275,20 @@ files = [
 ]
 
 [[package]]
-name = "sounddevice"
-version = "0.5.1"
-description = "Play and Record Sound with Python"
+name = "soundcard"
+version = "0.4.4"
+description = "Play and record audio without resorting to CPython extensions"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.5"
 groups = ["main"]
 files = [
-    {file = "sounddevice-0.5.1-py3-none-any.whl", hash = "sha256:e2017f182888c3f3c280d9fbac92e5dbddac024a7e3442f6e6116bd79dab8a9c"},
-    {file = "sounddevice-0.5.1-py3-none-macosx_10_6_x86_64.macosx_10_6_universal2.whl", hash = "sha256:d16cb23d92322526a86a9490c427bf8d49e273d9ccc0bd096feecd229cde6031"},
-    {file = "sounddevice-0.5.1-py3-none-win32.whl", hash = "sha256:d84cc6231526e7a08e89beff229c37f762baefe5e0cc2747cbe8e3a565470055"},
-    {file = "sounddevice-0.5.1-py3-none-win_amd64.whl", hash = "sha256:4313b63f2076552b23ac3e0abd3bcfc0c1c6a696fc356759a13bd113c9df90f1"},
-    {file = "sounddevice-0.5.1.tar.gz", hash = "sha256:09ca991daeda8ce4be9ac91e15a9a81c8f81efa6b695a348c9171ea0c16cb041"},
+    {file = "soundcard-0.4.4-py3-none-any.whl", hash = "sha256:e915dc6d281bbce369cd3ace46f37e07941dbf2ba867bf4677e7a9433fd63657"},
+    {file = "soundcard-0.4.4.tar.gz", hash = "sha256:87df9c4b8ec97585fe440a1d9dbafabcece58eae5857ed005e6bb385b2179cff"},
 ]
 
 [package.dependencies]
-CFFI = ">=1.0"
-
-[package.extras]
-numpy = ["NumPy"]
+cffi = "*"
+numpy = "*"
 
 [[package]]
 name = "soundfile"
@@ -2596,4 +2591,4 @@ test = ["pytest (>=6.0.0)", "setuptools (>=65)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "6301240ead54cb79c030a69e8f18a637735ff14b74fbdb978d9d3db5f800f757"
+content-hash = "b6967c0340789523dab1098d584a0c4007d3f63cac43fbb0ef36b37599016d6b"

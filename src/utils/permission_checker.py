@@ -4,6 +4,7 @@ import traceback
 from ctypes import c_int, cdll
 
 import soundcard as sc
+from AppKit import NSScreen
 from PySide6.QtCore import QObject, Signal
 from Quartz.CoreGraphics import (
     CGRectMake,

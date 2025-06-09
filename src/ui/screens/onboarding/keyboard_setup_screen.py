@@ -108,7 +108,7 @@ class KeyboardSetupScreen:
 
         # Description
         self.desc_label = QLabel(
-            "Press any key or key combination to set your shortcut"
+            "Press any key or key combination for 2 seconds to set your shortcut"
         )
         self.desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         content_layout.addWidget(self.desc_label)

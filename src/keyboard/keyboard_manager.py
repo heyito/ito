@@ -130,7 +130,7 @@ class KeyboardManager(QObject):
         stuck_keys = []
 
         for key, press_time in self._key_press_times.items():
-            if current_time - press_time > timedelta(seconds=20):
+            if current_time - press_time > timedelta(seconds=1):
                 stuck_keys.append(key)
                 logger.warning(f"Clearing stuck key: {key}")
 
@@ -257,13 +257,14 @@ class KeyboardManager(QObject):
                 if key_symbol not in self.pressed_keys:
                     # First release event: treat as press
                     self.pressed_keys.add(key_symbol)
-                    self._key_press_times[key_symbol] = datetime.now()
                     # Check for hotkey match after adding Fn
                     mode_match = self.check_hotkey_match()
                     if mode_match and not self._was_hotkey_pressed:
                         self._was_hotkey_pressed = True
                         self.hotkey_pressed.emit(mode_match)
                         logger.info(f"Hotkey pressed: {mode_match}")
+                    else:
+                        self._key_press_times[key_symbol] = datetime.now()
                     return
                 else:
                     # Second release event: treat as release

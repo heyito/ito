@@ -1,7 +1,7 @@
 import logging
 import sys
 
-from PySide6.QtCore import QPoint, QSettings, Qt, QTimer
+from PySide6.QtCore import QEvent, QPoint, QSettings, Qt, QTimer
 from PySide6.QtWidgets import QApplication, QLabel, QMainWindow
 
 from src.keyboard.keyboard_manager import KeyboardManager
@@ -100,6 +100,19 @@ class OnboardingWindow(QMainWindow):
         # Apply initial styles
         self.update_styles(self.theme_manager.current_theme)
 
+    def event(self, event: QEvent) -> bool:
+        """
+        Overrides the default event handler to catch screen changes
+        and prevent UI scaling flicker.
+        """
+        if event.type() == QEvent.Type.ScreenChangeInternal:
+            # When moving between screens with different scaling, force an immediate,
+            # synchronous repaint to prevent the UI from getting stuck in a distorted state.
+            logger.info("Screen change detected. Repainting window.")
+            self.repaint()
+
+        return super().event(event)
+
     def update_styles(self, new_theme):
         """Update all styles based on current theme"""
         # Update primary button style
@@ -109,7 +122,7 @@ class OnboardingWindow(QMainWindow):
                 color: {self.theme_manager.get_color("onboarding.button.text")};
                 border: none;
                 border-radius: 8px;
-                font-size: 16px;
+                font-size: 16pt;
                 font-weight: 600;
                 padding: 0 14px;
                 min-height: 32px;
@@ -172,7 +185,7 @@ class OnboardingWindow(QMainWindow):
                     QLabel {{
                         background-color: {self.theme_manager.get_color("onboarding.success.background")};
                         color: {self.theme_manager.get_color("onboarding.success.text")};
-                        font-size: 32px;
+                        font-size: 32pt;
                         border-radius: 28px;
                         margin-bottom: 4px;
                         font-weight: 500;
@@ -184,7 +197,7 @@ class OnboardingWindow(QMainWindow):
         for widget in self.findChildren(QLabel):
             if widget.text() in ["Required Permissions", "Setup Complete!"]:
                 widget.setStyleSheet(f"""
-                    font-size: 28px;
+                    font-size: 28pt;
                     font-weight: 600;
                     color: {self.theme_manager.get_color("text_primary")};
                     margin-top: 0px;
@@ -196,7 +209,7 @@ class OnboardingWindow(QMainWindow):
                 "You're all set to start using Ito!",
             ]:
                 widget.setStyleSheet(f"""
-                    font-size: {15 if widget.text() == "Ito needs a few permissions to help you be more productive" else 16}px;
+                    font-size: {15 if widget.text() == "Ito needs a few permissions to help you be more productive" else 16}pt;
                     color: {self.theme_manager.get_color("text_secondary")};
                     font-weight: 400;
                     margin-bottom: {40 if widget.text() == "Ito needs a few permissions to help you be more productive" else 10}px;

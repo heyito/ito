@@ -7,6 +7,7 @@ import signal
 import sys
 
 import appnope
+from PySide6 import QtCore
 from PySide6.QtCore import QByteArray, Qt
 from PySide6.QtGui import QFont, QIcon, QPainter, QPixmap
 from PySide6.QtSvg import QSvgRenderer
@@ -212,6 +213,14 @@ if __name__ == "__main__":
         except Exception as e:
             logger.error(f"Failed to register native messaging host: {e}")
             # Continue anyway - this is not critical for the app to function
+
+        # Enable High-DPI scaling before creating the application instance.
+        QApplication.setAttribute(
+            QtCore.Qt.ApplicationAttribute.AA_EnableHighDpiScaling, True
+        )
+        QApplication.setAttribute(
+            QtCore.Qt.ApplicationAttribute.AA_UseHighDpiPixmaps, True
+        )
 
         # Create QApplication instance
         app = QApplication(sys.argv)

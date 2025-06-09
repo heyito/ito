@@ -5,7 +5,7 @@ import shutil
 import sys
 import traceback
 
-from PySide6.QtCore import QPointF, QSettings, Qt, QTimer
+from PySide6.QtCore import QEvent, QPointF, QSettings, Qt, QTimer
 from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -138,7 +138,7 @@ class Home(QMainWindow):
         center_layout.addWidget(self.logo_label)
         self.app_name = QLabel("ito")
         self.app_name.setStyleSheet(
-            f"font-size: 24px; font-weight: 600; color: {self.theme_manager.get_color('text_primary')}; margin-top: 4px;"
+            f"font-size: 24pt; font-weight: 600; color: {self.theme_manager.get_color('text_primary')}; margin-top: 4px;"
         )
         center_layout.addWidget(self.app_name)
         logo_layout.addWidget(center_container, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -318,7 +318,7 @@ class Home(QMainWindow):
         main_layout.addWidget(content_widget)
         self.setStyleSheet(
             self.styleSheet()
-            + "QPushButton#btn-primary { background-color: #F6EBDD; color: #181A2A; border: none; border-radius: 14px; font-size: 16px; font-weight: 600; padding: 0 14px; min-height: 32px; min-width: 160px; letter-spacing: 0.2px; } QPushButton#btn-primary:hover { background-color: #f3e2c7; } QPushButton#btn-primary:disabled { background-color: #f3e2c7; color: #b0b0b0; }"
+            + "QPushButton#btn-primary { background-color: #F6EBDD; color: #181A2A; border: none; border-radius: 14px; font-size: 16pt; font-weight: 600; padding: 0 14px; min-height: 32px; min-width: 160px; letter-spacing: 0.2px; } QPushButton#btn-primary:hover { background-color: #f3e2c7; } QPushButton#btn-primary:disabled { background-color: #f3e2c7; color: #b0b0b0; }"
         )
 
         self.keyboard_page = QWidget()
@@ -529,6 +529,19 @@ class Home(QMainWindow):
             else:
                 self.handle_error(error_msg)
 
+    def event(self, event: QEvent) -> bool:
+        """
+        Overrides the default event handler to catch screen changes
+        and prevent UI scaling flicker.
+        """
+        if event.type() == QEvent.Type.ScreenChangeInternal:
+            # When moving between screens with different scaling, force an immediate,
+            # synchronous repaint to prevent the UI from getting stuck in a distorted state.
+            logger.info("Screen change detected. Repainting window. HOME.PY")
+            self.repaint()
+
+        return super().event(event)
+
     def _get_page_widget(self, name: str) -> QWidget | None:
         if hasattr(self, name):
             return getattr(self, name)
@@ -550,7 +563,7 @@ class Home(QMainWindow):
         elif isinstance(self.logo_label, QLabel):
             self.logo_label.setText("🎯")
         self.app_name.setStyleSheet(
-            f"font-size: 24px; font-weight: 600; color: {self.theme_manager.get_color('text_primary')}; margin-top: 4px;"
+            f"font-size: 24pt; font-weight: 600; color: {self.theme_manager.get_color('text_primary')}; margin-top: 4px;"
         )
 
         if hasattr(self, "speech_recognition_page_widget"):
@@ -739,7 +752,7 @@ class Home(QMainWindow):
             layout.addRow(divider)
         header = QLabel(text)
         header.setStyleSheet(
-            f"font-size: 15px; font-weight: 600; color: {color or self.theme_manager.get_color('text_primary')}; margin-top: 24px; margin-bottom: 8px; font-family: 'Inter 18pt', -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif;"
+            f"font-size: 15pt; font-weight: 600; color: {color or self.theme_manager.get_color('text_primary')}; margin-top: 24px; margin-bottom: 8px; font-family: 'Inter 18pt', -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif;"
         )
         layout.addRow(header)
 
@@ -891,7 +904,7 @@ class Home(QMainWindow):
 
     def set_page_title_style(self, label):
         label.setStyleSheet(
-            f"font-size: 24px; font-weight: 600; color: {self.theme_manager.get_color('text_primary')}; margin-bottom: 28px; margin-left: 0px;"
+            f"font-size: 24pt; font-weight: 600; color: {self.theme_manager.get_color('text_primary')}; margin-bottom: 28px; margin-left: 0px;"
         )
 
     def set_line_edit_style(self, line_edit):
@@ -931,14 +944,14 @@ class Home(QMainWindow):
         label_color = color or self.theme_manager.get_color("text_primary")
         weight = f"font-weight: {font_weight};" if font_weight else ""
         label.setStyleSheet(
-            f"font-size: {font_size}px; color: {label_color}; padding: {padding}; {weight}"
+            f"font-size: {font_size}pt; color: {label_color}; padding: {padding}; {weight}"
         )
 
     def set_primary_button_style(self, button):
         background = self.theme_manager.get_color("button.background")
         text_color = self.theme_manager.get_color("button.text")
         button.setStyleSheet(
-            f"QPushButton {{ background-color: {background}; color: {text_color}; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; padding: 0 14px; min-height: 44px; min-width: 160px; letter-spacing: 0.2px; }} QPushButton:hover {{ background-color: {background}; opacity: 0.9; }}"
+            f"QPushButton {{ background-color: {background}; color: {text_color}; border: none; border-radius: 8px; font-size: 12pt; font-weight: 600; padding: 0 14px; min-height: 44px; min-width: 160px; letter-spacing: 0.2px; }} QPushButton:hover {{ background-color: {background}; opacity: 0.9; }}"
         )
 
     def _handle_ui_change(self):

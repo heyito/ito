@@ -39,7 +39,7 @@ class AudioRecorder:
         self._lock = threading.Lock()
         self._watchdog_thread: threading.Thread | None = None
         self._watchdog_stop_event: threading.Event | None = None
-        self._watchdog_timeout_sec = 5.0
+        self._watchdog_timeout_sec = 30.0
         self._audio_detected = False
 
     @property

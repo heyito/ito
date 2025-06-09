@@ -212,11 +212,19 @@ class ApplicationManager(QObject):
         """Start the application background thread and the hotkey listener."""
         logger.info("Starting application...")
 
-        # Prevent double-start
+        # Robust state check: handle out-of-sync app_thread/app_instance
         if self.app_thread and self.app_thread.is_alive():
-            logger.info("Application thread already running. Not starting again.")
-            self.status_changed.emit(StatusMessage.STARTED.value)
-            return False
+            if not self.app_instance:
+                logger.warning(
+                    "App thread is alive but app_instance is None. Forcing stop and restart."
+                )
+                self.stop_application()
+            else:
+                logger.info(
+                    "Application thread already running and app_instance exists. Not starting again."
+                )
+                self.status_changed.emit(StatusMessage.STARTED.value)
+                return False
 
         try:
             # Stop any existing application first (should be a no-op if already stopped)
@@ -401,22 +409,62 @@ class ApplicationManager(QObject):
 
     def _handle_hotkey_press(self, command_mode: CommandMode) -> None:
         start_time = time.time()
-        logger.info(f"[TIMING] _handle_hotkey_press called at {start_time} with mode {command_mode} (elapsed: 0.000s)")
-        # Check if the background application instance exists and is running
+        logger.info(
+            f"[TIMING] _handle_hotkey_press called at {start_time} with mode {command_mode} (elapsed: 0.000s)"
+        )
         logger.debug(
             f"self.app_instance: {self.app_instance}, self.app_thread: {self.app_thread}"
         )
-        if not self.app_instance or not self.app_thread:
+        # Split out the cases for app_instance and app_thread
+        if not self.app_instance and (
+            not self.app_thread or not self.app_thread.is_alive()
+        ):
             logger.info(
                 f"[{start_time}] Hotkey Mode '{command_mode}' detected, but application is not running. (elapsed: 0.000s)"
             )
             self.status_changed.emit(StatusMessage.HOTKEY_IGNORED.value)
             # --- Recovery mechanism: try to restart the application ---
-            logger.info("Attempting to recover: restarting application due to hotkey press with no running app.")
+            logger.info(
+                "Attempting to recover: restarting application due to hotkey press with no running app."
+            )
             started = self.start_application()
             if started:
-                logger.info("Recovery: Application restarted successfully. Retrying hotkey action.")
+                logger.info(
+                    "Recovery: Application restarted successfully. Retrying hotkey action."
+                )
                 # Try the hotkey action again, but only once to avoid infinite loops
+                if self.app_instance and self.app_thread:
+                    self._trigger_interaction(command_mode, start_time)
+            else:
+                logger.error("Recovery failed: Could not restart application.")
+            return
+        elif not self.app_instance and self.app_thread and self.app_thread.is_alive():
+            logger.warning(
+                "App thread is alive but app_instance is None. Forcing stop and restart."
+            )
+            self.stop_application()
+            started = self.start_application()
+            if started:
+                logger.info(
+                    "Recovery: Application restarted successfully. Retrying hotkey action."
+                )
+                if self.app_instance and self.app_thread:
+                    self._trigger_interaction(command_mode, start_time)
+            else:
+                logger.error("Recovery failed: Could not restart application.")
+            return
+        elif self.app_instance and (
+            not self.app_thread or not self.app_thread.is_alive()
+        ):
+            logger.warning(
+                "app_instance exists but app_thread is not alive. Forcing stop and restart."
+            )
+            self.stop_application()
+            started = self.start_application()
+            if started:
+                logger.info(
+                    "Recovery: Application restarted successfully. Retrying hotkey action."
+                )
                 if self.app_instance and self.app_thread:
                     self._trigger_interaction(command_mode, start_time)
             else:
@@ -433,10 +481,14 @@ class ApplicationManager(QObject):
 
         self.app_instance.stop_interaction()
 
-    def _trigger_interaction(self, command_mode: CommandMode, start_time: float = None) -> None:
+    def _trigger_interaction(
+        self, command_mode: CommandMode, start_time: float = None
+    ) -> None:
         now = time.time()
         elapsed = now - start_time if start_time else 0.0
-        logger.info(f"[TIMING] _trigger_interaction called at {now} with mode {command_mode} (elapsed: {elapsed:.3f}s)")
+        logger.info(
+            f"[TIMING] _trigger_interaction called at {now} with mode {command_mode} (elapsed: {elapsed:.3f}s)"
+        )
         logger.info(
             f"Hotkey Mode '{command_mode}' detected by manager. Queuing action for background app."
         )

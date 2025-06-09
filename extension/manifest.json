@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Ito Browser Integration",
-  "version": "1.0",
+  "version": "1.0.1",
   "description": "Communicates with Ito application",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmIb1VFIM8YBAOeJFA1UnOmOYNoYUshYs/4YDVJUmcQ7KX6l+MNzhEpnJ67+9pER/zQ9rN1ZbOmVf9QdRFuqYUJQUVz/x3y6nHlx0h6PAprjjPOYdwUpQPEGQhZZ1PuMc7vRE5LK5UTHtqX2ZWQhQ3zucRRxAJ2oA2NaXXnbmBBngdp63DM/cNCdAl2OC2XmfKgZFBYCbvLeTzXv2117PxXSMOfg6fjeJlUeSzCGp0IWtgahf1CymxGWF+EG2eR/DQYkgg/XoRbEvRtQiZjBbcEtPNPzIO26vO5Np/ktHKeqyFvt1VFJnl2k90BIKBJtQEX1O2KIgeZAJcbTZaa998QIDAQAB",
   "permissions": [

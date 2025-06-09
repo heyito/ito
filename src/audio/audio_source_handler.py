@@ -50,10 +50,11 @@ class AudioSourceHandler(AudioSourceInterface):
                         # This is exactly what we want for a responsive, chunk-based loop.
                         data = recorder.record(numframes=None)
                         if data.size > 0:
+                            self.audio_detected_callback()
                             data_int16 = (data * 32767).astype(np.int16)
                             audio_queue.put_nowait(data_int16)
                     except queue.Full:
-                        pass
+                        logger.warning("Audio queue is full. Dropping audio frame.")
                     except Exception as e:
                         logger.error(
                             f"Error during recording on '{mic.name}': {e}. Stopping session."

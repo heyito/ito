@@ -39,7 +39,7 @@ class AudioRecorder:
         self._lock = threading.Lock()
         self._watchdog_thread: threading.Thread | None = None
         self._watchdog_stop_event: threading.Event | None = None
-        self._watchdog_timeout_sec = 30.0
+        self._watchdog_timeout_sec = 5.0
         self._audio_detected = False
 
     @property
@@ -80,7 +80,7 @@ class AudioRecorder:
                     break
 
             # Attach audio_detected_callback so AudioSourceHandler can notify us
-            self._audio_queue.audio_detected_callback = self.notify_audio_detected
+            self.audio_handler.audio_detected_callback = self.notify_audio_detected
 
             logger.info("AudioRecorder: Starting recording...")
             self._update_status(StatusMessage.RECORDING.value)
@@ -245,5 +245,7 @@ class AudioRecorder:
 
     def notify_audio_detected(self):
         """Called by the audio handler when audio is detected."""
-        with self._lock:
-            self._audio_detected = True
+        if not self._audio_detected:
+            logger.info("AudioRecorder: Audio detected.")
+            with self._lock:
+                self._audio_detected = True

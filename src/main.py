@@ -74,12 +74,17 @@ def ensure_native_messaging_host_registered(native_messaging_script_path):
         logger.info(f"Target manifest directory: {manifest_dir}")
 
         # Create manifest content
+        dev_mode = os.getenv("DEV")
         manifest = {
             "name": "ai.ito.ito",
             "description": "Ito native messaging host",
             "path": native_messaging_script_path,
             "type": "stdio",
-            "allowed_origins": ["chrome-extension://jgfjmabgdpbccfecnilbjnjoglnholem/"],
+            "allowed_origins": [
+                "chrome-extension://jgfjmabgdpbccfecnilbjnjoglnholem/"
+                if dev_mode
+                else "chrome-extension://lmlbndcblagobfpjkkhophkkpnffamln/"
+            ],
         }
 
         # Create a temporary manifest file

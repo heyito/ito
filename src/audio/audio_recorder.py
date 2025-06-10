@@ -1,5 +1,4 @@
 # src/audio_recorder.py
-import io
 import logging
 import queue
 import threading

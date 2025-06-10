@@ -1,4 +1,5 @@
-from PySide6.QtCore import QEasingCurve, QPoint, QPropertyAnimation, Qt, QTimer
+from PySide6.QtCore import QEasingCurve, QPoint, QPropertyAnimation, Qt, QTimer, QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QGraphicsOpacityEffect,
     QHBoxLayout,
@@ -19,6 +20,12 @@ class CompletionScreen:
         self.check_icon = None
         self.title_label = None
         self.desc_label = None
+        self.left_card = None
+        self.right_card = None
+        self.install_button = None
+        self.gh_button = None
+        self.tw_button = None
+        self.web_button = None
         self.start_button = None
         self.content_widget = None
 
@@ -33,13 +40,14 @@ class CompletionScreen:
         if self.check_icon:
             self.check_icon.setStyleSheet(f"""
                 QLabel {{
-                    background-color: {self.theme_manager.get_color("onboarding.success.background")};
-                    color: {self.theme_manager.get_color("onboarding.success.text")};
+                    color: {self.theme_manager.get_color("text_primary")};
                     font-size: 32px;
-                    border-radius: 28px;
+                    border-radius: 14px;
                     margin-bottom: 4px;
                     font-weight: 500;
                     letter-spacing: 1px;
+                    border: 1px solid {self.theme_manager.get_color("text_primary")};
+                    padding: 8px;
                 }}
             """)
 
@@ -61,6 +69,36 @@ class CompletionScreen:
                 margin-bottom: 20px;
                 letter-spacing: 0.05px;
             """)
+
+        card_radius = 16
+        card_style = f"""
+            QWidget {{
+                border-radius: {card_radius}px;
+            }}
+        """
+        if self.left_card:
+            self.left_card.setStyleSheet(card_style)
+        if self.right_card:
+            self.right_card.setStyleSheet(card_style)
+
+        button_style = """
+            QPushButton {{
+                font-size: 14px;
+                font-weight: 500;
+                border: none;
+                border-radius: 14px;
+                padding: 8px 12px;
+                min-width: 90px;
+            }}
+        """
+        for btn in [
+            self.install_button,
+            self.gh_button,
+            self.tw_button,
+            self.web_button,
+        ]:
+            if btn:
+                btn.setStyleSheet(button_style)
 
     def create(self, parent_layout):
         # --- Centered Layout ---
@@ -88,14 +126,95 @@ class CompletionScreen:
         content_layout.addSpacing(8)
 
         # Title
-        self.title_label = QLabel("Setup Complete!")
+        self.title_label = QLabel("You're all set!")
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         content_layout.addWidget(self.title_label)
 
         # Subtitle
-        self.desc_label = QLabel("You're all set to start using Ito!")
+        self.desc_label = QLabel("Your new voice assistant is ready.")
         self.desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         content_layout.addWidget(self.desc_label)
+        content_layout.addSpacing(2)
+
+        # --- Two Card Boxes ---
+        cards_row = QHBoxLayout()
+        cards_row.setSpacing(16)
+        cards_row.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # Left Card: Chrome Extension
+        self.left_card = QWidget()
+        left_layout = QVBoxLayout(self.left_card)
+        left_layout.setContentsMargins(28, 24, 28, 24)
+        left_layout.setSpacing(12)
+        self.left_card.setFixedWidth(400)
+        left_title = QLabel("Add the Ito Chrome Extension")
+        left_title.setStyleSheet("font-size: 16px; font-weight: 600;")
+        left_desc = QLabel(
+            "Help make Ito smarter in your browser by adding the Ito extension."
+        )
+        left_desc.setWordWrap(True)
+        left_desc.setStyleSheet(
+            f"font-size: 13px; color: {self.theme_manager.get_color('text_primary')};"
+        )
+        self.install_button = QPushButton("Install")
+        self.install_button.clicked.connect(
+            lambda: QDesktopServices.openUrl(
+                QUrl(
+                    "https://chromewebstore.google.com/detail/ito-browser-integration/lmlbndcblagobfpjkkhophkkpnffamln"
+                )
+            )
+        )
+        self.install_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        left_layout.addWidget(left_title)
+        left_layout.addWidget(left_desc)
+        left_layout.addSpacing(8)
+        left_layout.addWidget(self.install_button, alignment=Qt.AlignmentFlag.AlignLeft)
+        left_layout.addStretch(1)
+
+        # Right Card: Open Source Project
+        self.right_card = QWidget()
+        right_layout = QVBoxLayout(self.right_card)
+        right_layout.setContentsMargins(28, 24, 28, 24)
+        right_layout.setSpacing(12)
+        self.right_card.setFixedWidth(400)
+        right_title = QLabel("Follow our Open Source Project")
+        right_title.setStyleSheet("font-size: 16px; font-weight: 600;")
+        right_desc = QLabel(
+            "Stay updated, contribute, or just say hi. We're building in the open."
+        )
+        right_desc.setWordWrap(True)
+        right_desc.setStyleSheet(
+            f"font-size: 13px; color: {self.theme_manager.get_color('text_primary')};"
+        )
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(12)
+        self.gh_button = QPushButton("GitHub")
+        self.gh_button.clicked.connect(
+            lambda: QDesktopServices.openUrl(QUrl("https://github.com/heyito/ito"))
+        )
+        self.gh_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.tw_button = QPushButton("Twitter (X)")
+        self.tw_button.clicked.connect(
+            lambda: QDesktopServices.openUrl(QUrl("https://x.com/HeyItoAI"))
+        )
+        self.tw_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.web_button = QPushButton("Website")
+        self.web_button.clicked.connect(
+            lambda: QDesktopServices.openUrl(QUrl("https://www.heyito.ai/"))
+        )
+        self.web_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_row.addWidget(self.gh_button)
+        btn_row.addWidget(self.tw_button)
+        btn_row.addWidget(self.web_button)
+        right_layout.addWidget(right_title)
+        right_layout.addWidget(right_desc)
+        right_layout.addSpacing(8)
+        right_layout.addLayout(btn_row)
+        right_layout.addStretch(1)
+
+        cards_row.addWidget(self.left_card)
+        cards_row.addWidget(self.right_card)
+        content_layout.addLayout(cards_row)
         content_layout.addSpacing(8)
 
         # Create a container for the button to ensure proper spacing
@@ -159,6 +278,12 @@ class CompletionScreen:
         self.check_icon = None
         self.title_label = None
         self.desc_label = None
+        self.left_card = None
+        self.right_card = None
+        self.install_button = None
+        self.gh_button = None
+        self.tw_button = None
+        self.web_button = None
         self.start_button = None
         self.content_widget = None
         self._animation_refs = []

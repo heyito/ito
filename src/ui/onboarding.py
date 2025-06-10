@@ -1,7 +1,7 @@
 import logging
 import sys
 
-from PySide6.QtCore import QEvent, QPoint, QSettings, Qt, QTimer
+from PySide6.QtCore import QEvent, QSettings, Qt, QTimer
 from PySide6.QtWidgets import QApplication, QLabel, QMainWindow
 
 from src.keyboard.keyboard_manager import KeyboardManager
@@ -195,7 +195,7 @@ class OnboardingWindow(QMainWindow):
 
         # Update title and subtitle labels
         for widget in self.findChildren(QLabel):
-            if widget.text() in ["Required Permissions", "Setup Complete!"]:
+            if widget.text() in ["Required Permissions", "You're all set!"]:
                 widget.setStyleSheet(f"""
                     font-size: 28pt;
                     font-weight: 600;
@@ -206,7 +206,7 @@ class OnboardingWindow(QMainWindow):
                 """)
             elif widget.text() in [
                 "Ito needs a few permissions to help you be more productive",
-                "You're all set to start using Ito!",
+                "Your new voice assistant is ready!",
             ]:
                 widget.setStyleSheet(f"""
                     font-size: {15 if widget.text() == "Ito needs a few permissions to help you be more productive" else 16}pt;

@@ -2,7 +2,6 @@
 
 import logging
 import threading
-import time
 from typing import Any
 
 import soundcard as sc

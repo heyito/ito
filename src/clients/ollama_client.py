@@ -1,3 +1,4 @@
+import io
 import json
 import logging
 import time
@@ -13,11 +14,11 @@ logger = logging.getLogger(__name__)
 
 
 class OllamaClient(LLMClientInterface):
-    def __init__(self, model: str, base_url: str = "http://localhost:11434"):
+    def __init__(self, model: str):
         if not model:
             raise ValueError("Ollama model name is required.")
         self._model = model
-        self._base_url = base_url.rstrip("/")
+        self._base_url = "http://localhost:11434"
         self._is_running = False  # Checked by check_availability
 
     @property
@@ -27,6 +28,14 @@ class OllamaClient(LLMClientInterface):
     @property
     def model_name(self) -> str:
         return self._model
+
+    @property
+    def user_command_model_name(self) -> str:
+        return self._model
+
+    @property
+    def asr_model_name(self) -> str:
+        return "whisper"  # Ollama uses whisper for ASR
 
     def _check_ollama_service(
         self, max_retries: int = 1, retry_delay: float = 1.0
@@ -261,3 +270,8 @@ class OllamaClient(LLMClientInterface):
 
     def extract_tool_calls(self, response: Any) -> list[ToolCallDict] | None:
         raise ValueError("OllamaClient does not support tool calls")
+
+    def transcribe_audio(self, audio_buffer: io.BytesIO) -> str:
+        raise NotImplementedError(
+            "Ollama client does not support audio transcription directly."
+        )

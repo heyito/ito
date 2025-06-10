@@ -54,9 +54,7 @@ class Container(containers.DeclarativeContainer):
     )
 
     ollama_llm_client_provider = providers.Singleton(
-        OllamaClient,
-        model=config.Ollama.model,
-        base_url=config.Ollama.base_url.as_str(),
+        OllamaClient, model=config.Ollama.model
     )
 
     gemini_llm_client_provider = providers.Singleton(

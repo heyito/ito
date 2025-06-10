@@ -9,8 +9,7 @@ import sys
 import appnope
 from PySide6 import QtCore
 from PySide6.QtCore import QByteArray, Qt
-from PySide6.QtGui import QFont, QIcon, QPainter, QPixmap
-from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtGui import QFont, QIcon, QPixmap
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
 from src.application_manager import ApplicationManager
@@ -252,27 +251,30 @@ if __name__ == "__main__":
         quit_action.triggered.connect(app.quit)
         tray_icon.setContextMenu(tray_menu)
 
-        # Set icon using theme manager's SVG
-        fill_color = "white" if theme_manager.current_theme == "dark" else "black"
-        svg_content = theme_manager.get_logo_svg_content(fill_color)
+        # ==================== MODIFIED ICON LOGIC ====================
+        # Use the black version of the SVG. macOS will automatically invert it for
+        # dark mode when it's set as a "template" image.
+        svg_content = theme_manager.get_logo_svg_content("black")
         if svg_content:
-            # Create a QByteArray from the SVG content
+            # Load the SVG data into a QPixmap
             svg_data = QByteArray(svg_content.encode("utf-8"))
+            pixmap = QPixmap()
+            pixmap.loadFromData(svg_data)
 
-            # Create a renderer and pixmap
-            renderer = QSvgRenderer(svg_data)
-            pixmap = QPixmap(32, 32)  # Standard tray icon size
-            pixmap.fill(Qt.transparent)
+            # Create a QIcon from the QPixmap
+            icon = QIcon(pixmap)
 
-            # Render the SVG onto the pixmap
-            painter = QPainter(pixmap)
-            renderer.render(painter)
-            painter.end()
+            # This is the crucial step: mark the icon as a "template" image on macOS.
+            # This allows the OS to correctly style the icon for the menu bar.
+            if platform.system() == "Darwin":
+                icon.setIsMask(True)
 
-            tray_icon.setIcon(QIcon(pixmap))
+            tray_icon.setIcon(icon)
         else:
-            # Use a default icon if SVG processing fails
+            # Fallback if SVG processing fails
+            logger.warning("Failed to load SVG for tray icon, using fallback.")
             tray_icon.setIcon(QIcon.fromTheme("application-x-executable"))
+        # =============================================================
 
         # Show the tray icon
         tray_icon.show()

@@ -33,15 +33,30 @@ cp "$SWIFT_HELPER_BUILD_PATH" src/bin/ito_macos_agent
 chmod +x src/bin/ito_macos_agent
 
 # --- Create Application Icon ---
-echo "🎨 Creating application icon..."
+# echo "🎨 Creating application icon..."
+
+# # Use a high-resolution source image (e.g., 1024x1024) for best results
+SOURCE_ICON="extension/public/ito-logo-1024.png" # Assuming you have a 1024x1024 version
+
+# Create the iconset directory
 mkdir -p icon.iconset
-cp extension/public/ito-logo-16.png icon.iconset/icon_16x16.png
-cp extension/public/ito-logo-48.png icon.iconset/icon_32x32@2x.png
-cp extension/public/ito-logo-128.png icon.iconset/icon_128x128.png
-sips -z 32 32 extension/public/ito-logo-48.png --out icon.iconset/icon_32x32.png
-sips -z 256 256 extension/public/ito-logo-128.png --out icon.iconset/icon_256x256.png
-sips -z 512 512 extension/public/ito-logo-128.png --out icon.iconset/icon_512x512.png
+
+# Generate the required sizes
+sips -z 16 16   "$SOURCE_ICON" --out icon.iconset/icon_16x16.png
+sips -z 32 32   "$SOURCE_ICON" --out icon.iconset/icon_16x16@2x.png
+sips -z 32 32   "$SOURCE_ICON" --out icon.iconset/icon_32x32.png
+sips -z 64 64   "$SOURCE_ICON" --out icon.iconset/icon_32x32@2x.png
+sips -z 128 128 "$SOURCE_ICON" --out icon.iconset/icon_128x128.png
+sips -z 256 256 "$SOURCE_ICON" --out icon.iconset/icon_128x128@2x.png
+sips -z 256 256 "$SOURCE_ICON" --out icon.iconset/icon_256x256.png
+sips -z 512 512 "$SOURCE_ICON" --out icon.iconset/icon_256x256@2x.png
+sips -z 512 512 "$SOURCE_ICON" --out icon.iconset/icon_512x512.png
+sips -z 1024 1024 "$SOURCE_ICON" --out icon.iconset/icon_512x512@2x.png
+
+# Create the .icns file
 iconutil -c icns icon.iconset
+
+echo "✅ Application icon created successfully."
 
 # --- Clean Previous Builds ---
 echo "🧹 Cleaning previous builds..."

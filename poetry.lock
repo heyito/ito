@@ -13,6 +13,18 @@ files = [
 ]
 
 [[package]]
+name = "amplitude-analytics"
+version = "1.1.5"
+description = "The official Amplitude backend Python SDK for server-side instrumentation."
+optional = false
+python-versions = "<4,>=3.6"
+groups = ["main"]
+files = [
+    {file = "amplitude_analytics-1.1.5-py3-none-any.whl", hash = "sha256:da7db1985087d2b9ef0456115d116525888f416e174ef79b53e1532be7a0b3bd"},
+    {file = "amplitude_analytics-1.1.5.tar.gz", hash = "sha256:2836fcf88d75506a1f266a5582253fdf592e14fafaf5783017baeec2118369d4"},
+]
+
+[[package]]
 name = "annotated-types"
 version = "0.7.0"
 description = "Reusable constraint types to use with typing.Annotated"
@@ -1949,6 +1961,21 @@ pytest = ">=6.2.5"
 dev = ["pre-commit", "pytest-asyncio", "tox"]
 
 [[package]]
+name = "python-dotenv"
+version = "1.1.0"
+description = "Read key-value pairs from a .env file and set them as environment variables"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "python_dotenv-1.1.0-py3-none-any.whl", hash = "sha256:d7c01d9e2293916c18baf562d95698754b0dbbb5e74d457c45d4f6561fb9d55d"},
+    {file = "python_dotenv-1.1.0.tar.gz", hash = "sha256:41f90bc6f5f177fb41f53e87666db362025010eb28f60a01c9143bfa33a2b2d5"},
+]
+
+[package.extras]
+cli = ["click (>=5.0)"]
+
+[[package]]
 name = "python-xlib"
 version = "0.33"
 description = "Python X Library"
@@ -2591,4 +2618,4 @@ test = ["pytest (>=6.0.0)", "setuptools (>=65)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "b6967c0340789523dab1098d584a0c4007d3f63cac43fbb0ef36b37599016d6b"
+content-hash = "b56f19c50102145956d291824647398bd7f63fa04da75d130f704fef845e4587"

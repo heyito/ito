@@ -2,9 +2,11 @@ import logging
 import traceback
 from datetime import datetime, timedelta
 
+from amplitude import BaseEvent
 from pynput import keyboard
 from PySide6.QtCore import QObject, QTimer, Signal
 
+from src.analytics.amplitude_manager import AmplitudeManager
 from src.types.modes import CommandMode
 
 # Configure logger
@@ -233,10 +235,16 @@ class KeyboardManager(QObject):
 
             # If we have a match and weren't previously pressed, emit the signal
             if mode_match and not self._was_hotkey_pressed:
-                logger.info(f"Hotkey pressed: {mode_match}")
+                logger.info(f"Hotkey pressed in keyboard manager: {mode_match}")
                 self._was_hotkey_pressed = True
                 self._active_mode = mode_match
                 self.hotkey_pressed.emit(mode_match)
+
+                event = BaseEvent(
+                    event_type="Hotkey Pressed",
+                    event_properties={"mode": mode_match.value},
+                )
+                AmplitudeManager.instance().track_event(event)
 
         except Exception as e:
             error_msg = f"Error in _on_press: {str(e)}"
@@ -261,8 +269,14 @@ class KeyboardManager(QObject):
                     mode_match = self.check_hotkey_match()
                     if mode_match and not self._was_hotkey_pressed:
                         self._was_hotkey_pressed = True
+                        self._active_mode = mode_match
                         self.hotkey_pressed.emit(mode_match)
-                        logger.info(f"Hotkey pressed: {mode_match}")
+                        logger.info(f"fn hotkey pressed in on_release: {mode_match}")
+                        event = BaseEvent(
+                            event_type="Hotkey Pressed",
+                            event_properties={"mode": mode_match.value},
+                        )
+                        AmplitudeManager.instance().track_event(event)
                     else:
                         self._key_press_times[key_symbol] = datetime.now()
                     return
@@ -272,9 +286,17 @@ class KeyboardManager(QObject):
                     self._key_press_times.pop(key_symbol, None)
                     # Check if we should emit release signal
                     if self._was_hotkey_pressed:
+                        released_mode = self._active_mode
                         self._was_hotkey_pressed = False
-                        self.hotkey_released.emit(self._active_mode)
+                        self.hotkey_released.emit(released_mode)
                         self._active_mode = None
+
+                        # Track hotkey release event
+                        event = BaseEvent(
+                            event_type="Hotkey Released",
+                            event_properties={"mode": released_mode.value},
+                        )
+                        AmplitudeManager.instance().track_event(event)
                     return
 
             # Normal behavior for other keys
@@ -284,9 +306,18 @@ class KeyboardManager(QObject):
                 # Check if we should emit release signal
                 mode_match = self.check_hotkey_match()
                 if self._was_hotkey_pressed and not mode_match:
+                    released_mode = self._active_mode
                     self._was_hotkey_pressed = False
-                    self.hotkey_released.emit(self._active_mode)
+                    self.hotkey_released.emit(released_mode)
                     self._active_mode = None
+
+                    # Track hotkey release event
+                    if released_mode:
+                        event = BaseEvent(
+                            event_type="Hotkey Released",
+                            event_properties={"mode": released_mode.value},
+                        )
+                        AmplitudeManager.instance().track_event(event)
 
         except Exception as e:
             error_msg = f"Error in _on_release: {str(e)}"

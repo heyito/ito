@@ -7,11 +7,13 @@ import signal
 import sys
 
 import appnope
+from dotenv import load_dotenv
 from PySide6 import QtCore
 from PySide6.QtCore import QByteArray, Qt
 from PySide6.QtGui import QFont, QIcon, QPixmap
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
+from src.analytics.amplitude_manager import AmplitudeManager
 from src.application_manager import ApplicationManager
 from src.audio.audio_device_manager import AudioDeviceManager
 from src.keyboard.keyboard_listener import KeyboardListenerProcess
@@ -20,6 +22,9 @@ from src.ui.font.load_fonts import load_fonts
 from src.ui.onboarding import OnboardingWindow
 from src.ui.theme.manager import ThemeManager
 from src.utils.logging import setup_logging
+
+# Load environment variables from .env file
+load_dotenv()
 
 setup_logging()
 
@@ -178,6 +183,9 @@ signal.signal(signal.SIGTERM, signal_handler)  # Termination signal
 
 # --- Main Execution Block ---
 if __name__ == "__main__":
+    # Initialize Analytics
+    AmplitudeManager.instance().initialize()
+
     # Prevent app nap on macOS
     if platform.system() == "Darwin":
         try:
@@ -326,6 +334,11 @@ if __name__ == "__main__":
         try:
             sys.exit(app.exec())
         finally:
+            # Clean up amplitude manager
+            logger.info("Cleaning up amplitude manager...")
+            AmplitudeManager.instance().shutdown()
+            logger.info("Amplitude manager cleaned up")
+
             # Clean up audio device manager
             logger.info("Cleaning up audio device manager...")
             AudioDeviceManager.stop()

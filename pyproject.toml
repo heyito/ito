@@ -34,6 +34,8 @@ rich = "^14.0.0"
 watchdog = "^6.0.0"
 appnope = "^0.1.4"
 soundcard = "^0.4.4"
+amplitude-analytics = "^1.1.5"
+python-dotenv = "^1.0.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

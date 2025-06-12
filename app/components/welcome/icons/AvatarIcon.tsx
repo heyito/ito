@@ -3,13 +3,13 @@ const AvatarIcon = (props: any) => (
     viewBox="0 0 128 128"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    width={180}
-    height={180}
+    width={260}
+    height={260}
     {...props}
   >
-    <circle cx="64" cy="64" r="64" fill="#E5E7EB" />
-    <circle cx="64" cy="56" r="32" fill="#D1D5DB" />
-    <ellipse cx="64" cy="108" rx="40" ry="24" fill="#D1D5DB" />
+    <circle cx="64" cy="64" r="64" fill="#D1D5DB" />
+    <circle cx="64" cy="50" r="20" fill="#E5E7EB" />
+    <ellipse cx="64" cy="92" rx="38" ry="16" fill="#E5E7EB" />
   </svg>
 )
 

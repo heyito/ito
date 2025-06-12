@@ -1,4 +1,35 @@
 :root {
+  color-scheme: light;
+  --window-icon-height: 16px;
+  --window-title-margin: 42px;
+  --window-titlebar-height: 40px;
+  --window-titlebar-font-size: 13px;
+  --window-scrollbar-width: 12px;
+  --window-mac-titlebar-controls-margin: 80px;
+  --window-background-transition-duration: 0.3s;
+  --window-c-popup-font-weight: normal;
+  --window-titlebar-font-weight: 500;
+  --window-c-popup-font-weight: 500;
+
+  --window-c-background: #fff;
+  --window-c-titlebar-background: #fff;
+  --window-c-titlebar-border: #8080801a;
+  --window-c-text: #000000c8;
+  --window-c-hover: #ececec;
+  --window-c-popup-background: #f6f6f6;
+  --window-c-popup-border: #dcdcdc;
+  --window-c-popup-shadow: hsla(0, 0%, 0%, 0.1);
+  --window-c-separator: #80808033;
+  --window-c-control-hover: #0000001a;
+  --window-c-control-close-hover: #ff453b;
+  --window-c-control-close-hover-text: #fff;
+  --window-c-scrollbar-track: #e0e0e0;
+  --window-c-scrollbar-thumb: #b0b0b0;
+  --window-c-scrollbar-thumb-hover: #888888cf;
+  --window-c-text-shadow: transparent;
+}
+
+:root.dark {
   color-scheme: dark;
   --window-icon-height: 16px;
   --window-title-margin: 42px;
@@ -24,29 +55,6 @@
   --window-c-scrollbar-thumb: #88888863;
   --window-c-scrollbar-thumb-hover: #555;
   --window-c-text-shadow: #000000a8;
-}
-
-:root:not(.dark) {
-  color-scheme: light;
-  --window-titlebar-font-weight: 500;
-  --window-c-popup-font-weight: 500;
-
-  --window-c-background: #fff;
-  --window-c-titlebar-background: #fff;
-  --window-c-titlebar-border: #8080801a;
-  --window-c-text: #000000c8;
-  --window-c-hover: #ececec;
-  --window-c-popup-background: #f6f6f6;
-  --window-c-popup-border: #dcdcdc;
-  --window-c-popup-shadow: hsla(0, 0%, 0%, 0.1);
-  --window-c-separator: #80808033;
-  --window-c-control-hover: #0000001a;
-  --window-c-control-close-hover: #ff453b;
-  --window-c-control-close-hover-text: #fff;
-  --window-c-scrollbar-track: #e0e0e0;
-  --window-c-scrollbar-thumb: #b0b0b0;
-  --window-c-scrollbar-thumb-hover: #888888cf;
-  --window-c-text-shadow: transparent;
 }
 
 .window-frame {

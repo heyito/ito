@@ -5,10 +5,10 @@ import './styles.css'
 export default function WelcomeKit() {
   return (
     <div className="flex flex-row h-full w-full bg-background">
-      <div className="flex flex-col flex-1 justify-center items-start pl-24">
+      <div className="flex flex-col w-[45%] justify-center items-start pl-24">
         <SignupContent />
       </div>
-      <div className="flex flex-1 items-center justify-center">
+      <div className="flex w-[55%] items-center justify-center bg-neutral-200 border-l border-border">
         <AvatarIcon />
       </div>
     </div>

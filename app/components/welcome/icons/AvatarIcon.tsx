@@ -1,4 +1,4 @@
-const AvatarIcon = (props) => (
+const AvatarIcon = (props: any) => (
   <svg
     viewBox="0 0 128 128"
     fill="none"

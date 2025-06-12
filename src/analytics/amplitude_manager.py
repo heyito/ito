@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 class AmplitudeManager:
     _instance = None
+    _API_KEY = "3e7f88d14d2f5e48e2ebddf9d5bf9872"  # Project API Keys are public https://amplitude.com/docs/apis/keys-and-tokens
 
     def __init__(self):
         if AmplitudeManager._instance is not None:
@@ -28,13 +29,11 @@ class AmplitudeManager:
     def initialize(self):
         """
         Initializes the Amplitude client.
-        Reads the API key from the AMPLITUDE_API_KEY environment variable.
         """
-        api_key = os.getenv("AMPLITUDE_API_KEY")
+        api_key = self._API_KEY
         if not api_key:
             logger.warning(
-                "AMPLITUDE_API_KEY environment variable not set. "
-                "Amplitude analytics will be disabled."
+                "AMPLITUDE_API_KEY not set in code. Amplitude analytics will be disabled."
             )
             return
 

@@ -1,5 +1,6 @@
 import logging
 
+from amplitude import BaseEvent
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QFormLayout,
@@ -8,6 +9,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from src.analytics.amplitude_manager import AmplitudeManager
 from src.ui.components.segmented_button_group import SegmentedButtonGroup
 
 logger = logging.getLogger(__name__)
@@ -153,20 +155,71 @@ class SpeechRecognitionPage(QWidget):
 
     def _connect_signals(self):
         self.asr_source.selectionChanged.connect(self._on_asr_source_changed)
+        self.asr_source.selectionChanged.connect(
+            lambda value: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="ASR Setting Changed",
+                    event_properties={"setting": "asr_provider", "value": value},
+                )
+            )
+        )
         self.openai_asr_model.selectionChanged.connect(
-            lambda: self.settings_changed.emit()
+            lambda value: [
+                self.settings_changed.emit(),
+                AmplitudeManager.instance().track_event(
+                    BaseEvent(
+                        event_type="ASR Setting Changed",
+                        event_properties={"setting": "openai_model", "value": value},
+                    )
+                ),
+            ]
         )
         self.gemini_asr_model.selectionChanged.connect(
-            lambda: self.settings_changed.emit()
+            lambda value: [
+                self.settings_changed.emit(),
+                AmplitudeManager.instance().track_event(
+                    BaseEvent(
+                        event_type="ASR Setting Changed",
+                        event_properties={"setting": "gemini_model", "value": value},
+                    )
+                ),
+            ]
         )
         self.groq_asr_model.selectionChanged.connect(
-            lambda: self.settings_changed.emit()
+            lambda value: [
+                self.settings_changed.emit(),
+                AmplitudeManager.instance().track_event(
+                    BaseEvent(
+                        event_type="ASR Setting Changed",
+                        event_properties={"setting": "groq_model", "value": value},
+                    )
+                ),
+            ]
         )
         self.faster_whisper_model.selectionChanged.connect(
-            lambda: self.settings_changed.emit()
+            lambda value: [
+                self.settings_changed.emit(),
+                AmplitudeManager.instance().track_event(
+                    BaseEvent(
+                        event_type="ASR Setting Changed",
+                        event_properties={
+                            "setting": "faster_whisper_model",
+                            "value": value,
+                        },
+                    )
+                ),
+            ]
         )
         self.asr_compute_type.selectionChanged.connect(
-            lambda: self.settings_changed.emit()
+            lambda value: [
+                self.settings_changed.emit(),
+                AmplitudeManager.instance().track_event(
+                    BaseEvent(
+                        event_type="ASR Setting Changed",
+                        event_properties={"setting": "compute_type", "value": value},
+                    )
+                ),
+            ]
         )
 
     def _on_asr_source_changed(self):

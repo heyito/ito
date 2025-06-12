@@ -1,3 +1,4 @@
+from amplitude import BaseEvent
 from PySide6.QtCore import (
     QEasingCurve,
     QPoint,
@@ -20,6 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from src.analytics.amplitude_manager import AmplitudeManager
 from src.constants import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
 from src.ui.theme.manager import ThemeManager
 
@@ -258,6 +260,20 @@ class ApiSetupScreen:
                 provider["name"], provider["desc"], idx, self.theme_manager
             )
             btn.clicked.connect(self.handle_api_type_change)
+            # Amplitude tracking for provider select
+            btn.clicked.connect(
+                lambda idx=idx,
+                provider=provider: AmplitudeManager.instance().track_event(
+                    BaseEvent(
+                        event_type="Onboarding Button Clicked",
+                        event_properties={
+                            "screen": "api_setup",
+                            "button": "select_provider",
+                            "provider": provider["name"],
+                        },
+                    )
+                )
+            )
             btn.set_selected(idx == 0)
             left_layout.addWidget(btn)
             self.provider_buttons.append(btn)
@@ -270,6 +286,19 @@ class ApiSetupScreen:
         self.continue_button.setEnabled(False)
         left_layout.addStretch()
         left_layout.addWidget(self.continue_button)
+        # Amplitude tracking
+        self.continue_button.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Onboarding Button Clicked",
+                    event_properties={
+                        "screen": "api_setup",
+                        "button": "continue",
+                        "provider": self.selected_api_type,
+                    },
+                )
+            )
+        )
 
         # Right: Input and helper
         right_widget = QWidget()
@@ -303,6 +332,8 @@ class ApiSetupScreen:
         )
         self.api_key_input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         right_layout.addWidget(self.api_key_input)
+        # Amplitude tracking for focus
+        self.api_key_input.focusInEvent = self._api_key_focus_in_event
 
         right_layout.addStretch()
 
@@ -490,3 +521,17 @@ class ApiSetupScreen:
             self.title.deleteLater()
         if self.subtitle:
             self.subtitle.deleteLater()
+
+    def _api_key_focus_in_event(self, event):
+        AmplitudeManager.instance().track_event(
+            BaseEvent(
+                event_type="Onboarding Field Focused",
+                event_properties={
+                    "screen": "api_setup",
+                    "field": "api_key",
+                    "provider": self.selected_api_type,
+                },
+            )
+        )
+        # Call the original focusInEvent
+        QLineEdit.focusInEvent(self.api_key_input, event)

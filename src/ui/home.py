@@ -5,6 +5,7 @@ import shutil
 import sys
 import traceback
 
+from amplitude import BaseEvent
 from PySide6.QtCore import QEvent, QPointF, QSettings, Qt, QTimer
 from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (
@@ -24,6 +25,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from src.analytics.amplitude_manager import AmplitudeManager
 from src.application_manager import ApplicationManager
 from src.keyboard.keyboard_manager import KeyboardManager
 from src.ui.components.ito_layout import ItoLayout
@@ -149,16 +151,43 @@ class Home(QMainWindow):
         )
         self.speech_recognition_button.setChecked(True)
         self.speech_recognition_button.clicked.connect(lambda: self.select_menu(0))
+        # Amplitude tracking
+        self.speech_recognition_button.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Settings Navigation Clicked",
+                    event_properties={"page": "speech_recognition"},
+                )
+            )
+        )
         menu_layout.addWidget(self.speech_recognition_button)
         self.language_model_button = MenuButton(
             "Language Model", 1, theme_manager=self.theme_manager
         )
         self.language_model_button.clicked.connect(lambda: self.select_menu(1))
+        # Amplitude tracking
+        self.language_model_button.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Settings Navigation Clicked",
+                    event_properties={"page": "language_model"},
+                )
+            )
+        )
         menu_layout.addWidget(self.language_model_button)
         self.api_keys_button = MenuButton(
             "API Keys", 2, theme_manager=self.theme_manager
         )
         self.api_keys_button.clicked.connect(lambda: self.select_menu(2))
+        # Amplitude tracking
+        self.api_keys_button.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Settings Navigation Clicked",
+                    event_properties={"page": "api_keys"},
+                )
+            )
+        )
         menu_layout.addWidget(self.api_keys_button)
         self.mode_button = MenuButton("Mode", 3, theme_manager=self.theme_manager)
         self.mode_button.clicked.connect(lambda: self.select_menu(3))
@@ -170,6 +199,15 @@ class Home(QMainWindow):
             "Keyboard", 5, theme_manager=self.theme_manager
         )
         self.keyboard_button.clicked.connect(lambda: self.select_menu(5))
+        # Amplitude tracking
+        self.keyboard_button.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Settings Navigation Clicked",
+                    event_properties={"page": "keyboard"},
+                )
+            )
+        )
         menu_layout.addWidget(self.keyboard_button)
         self.developer_button = MenuButton(
             "Developer", 6, theme_manager=self.theme_manager
@@ -219,6 +257,24 @@ class Home(QMainWindow):
         self.openai_api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.openai_api_key_edit.setMaximumWidth(300)
         self.set_line_edit_style(self.openai_api_key_edit)
+        # Amplitude tracking for OpenAI key
+        self.openai_api_key_edit.focusInEvent = lambda event: (
+            AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="API Key Field Focused",
+                    event_properties={"provider": "openai"},
+                )
+            ),
+            QLineEdit.focusInEvent(self.openai_api_key_edit, event),
+        )
+        self.openai_api_key_edit.textChanged.connect(
+            lambda value: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="API Key Changed",
+                    event_properties={"provider": "openai"},
+                )
+            )
+        )
         openai_api_key_label = QLabel("OpenAI API Key")
         self.set_label_style(openai_api_key_label)
         openai_api_key_container = QWidget()
@@ -232,6 +288,24 @@ class Home(QMainWindow):
         self.gemini_api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.gemini_api_key_edit.setMaximumWidth(300)
         self.set_line_edit_style(self.gemini_api_key_edit)
+        # Amplitude tracking for Gemini key
+        self.gemini_api_key_edit.focusInEvent = lambda event: (
+            AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="API Key Field Focused",
+                    event_properties={"provider": "gemini"},
+                )
+            ),
+            QLineEdit.focusInEvent(self.gemini_api_key_edit, event),
+        )
+        self.gemini_api_key_edit.textChanged.connect(
+            lambda value: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="API Key Changed",
+                    event_properties={"provider": "gemini"},
+                )
+            )
+        )
         gemini_api_key_label = QLabel("Gemini API Key")
         self.set_label_style(gemini_api_key_label)
         gemini_api_key_container = QWidget()
@@ -245,6 +319,23 @@ class Home(QMainWindow):
         self.groq_api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.groq_api_key_edit.setMaximumWidth(300)
         self.set_line_edit_style(self.groq_api_key_edit)
+        # Amplitude tracking for Groq key
+        self.groq_api_key_edit.focusInEvent = lambda event: (
+            AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="API Key Field Focused",
+                    event_properties={"provider": "groq"},
+                )
+            ),
+            QLineEdit.focusInEvent(self.groq_api_key_edit, event),
+        )
+        self.groq_api_key_edit.textChanged.connect(
+            lambda value: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="API Key Changed", event_properties={"provider": "groq"}
+                )
+            )
+        )
         groq_api_key_label = QLabel("Groq API Key")
         self.set_label_style(groq_api_key_label)
         groq_api_key_container = QWidget()
@@ -365,6 +456,15 @@ class Home(QMainWindow):
                 self.dictation_hotkey,
             )
         )
+        # Amplitude tracking for dictation start
+        self.start_recording_dictation.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Hotkey Recording Started",
+                    event_properties={"type": "dictation"},
+                )
+            )
+        )
         dictation_button_layout.addWidget(self.start_recording_dictation)
         self.stop_recording_dictation = QPushButton("Stop Recording")
         self.set_primary_button_style(self.stop_recording_dictation)
@@ -374,6 +474,15 @@ class Home(QMainWindow):
                 self.start_recording_dictation,
                 self.stop_recording_dictation,
                 self.dictation_hotkey,
+            )
+        )
+        # Amplitude tracking for dictation stop
+        self.stop_recording_dictation.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Hotkey Recording Stopped",
+                    event_properties={"type": "dictation"},
+                )
             )
         )
         dictation_button_layout.addWidget(self.stop_recording_dictation)
@@ -405,6 +514,15 @@ class Home(QMainWindow):
                 self.action_hotkey,
             )
         )
+        # Amplitude tracking for action start
+        self.start_recording_action.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Hotkey Recording Started",
+                    event_properties={"type": "action"},
+                )
+            )
+        )
         action_button_layout.addWidget(self.start_recording_action)
         self.stop_recording_action = QPushButton("Stop Recording")
         self.set_primary_button_style(self.stop_recording_action)
@@ -414,6 +532,15 @@ class Home(QMainWindow):
                 self.start_recording_action,
                 self.stop_recording_action,
                 self.action_hotkey,
+            )
+        )
+        # Amplitude tracking for action stop
+        self.stop_recording_action.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Hotkey Recording Stopped",
+                    event_properties={"type": "action"},
+                )
             )
         )
         action_button_layout.addWidget(self.stop_recording_action)

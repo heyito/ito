@@ -2,6 +2,7 @@ import logging
 import os
 import platform
 
+from amplitude import BaseEvent
 from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer
 from PySide6.QtWidgets import (
     QGraphicsOpacityEffect,
@@ -14,6 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from src.analytics.amplitude_manager import AmplitudeManager
 from src.ui.theme.manager import ThemeManager
 from src.utils.permission_checker import PermissionChecker
 
@@ -174,6 +176,18 @@ class PermissionScreen:
         self.mic_button = QPushButton("Grant Access")
         self.mic_button.setObjectName("onboarding-primary")
         mic_layout.addWidget(self.mic_button)
+        # Amplitude tracking
+        self.mic_button.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Onboarding Button Clicked",
+                    event_properties={
+                        "screen": "permissions",
+                        "button": "grant_microphone",
+                    },
+                )
+            )
+        )
 
         permissions_layout.addWidget(mic_container)
 
@@ -207,6 +221,18 @@ class PermissionScreen:
         self.acc_button = QPushButton("Grant Access")
         self.acc_button.setObjectName("onboarding-primary")
         acc_layout.addWidget(self.acc_button)
+        # Amplitude tracking
+        self.acc_button.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Onboarding Button Clicked",
+                    event_properties={
+                        "screen": "permissions",
+                        "button": "grant_accessibility",
+                    },
+                )
+            )
+        )
 
         permissions_layout.addWidget(acc_container)
 
@@ -240,6 +266,18 @@ class PermissionScreen:
         self.screen_button = QPushButton("Grant Access")
         self.screen_button.setObjectName("onboarding-primary")
         screen_layout.addWidget(self.screen_button)
+        # Amplitude tracking
+        self.screen_button.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Onboarding Button Clicked",
+                    event_properties={
+                        "screen": "permissions",
+                        "button": "grant_screen_recording",
+                    },
+                )
+            )
+        )
 
         permissions_layout.addWidget(screen_container)
 
@@ -256,6 +294,15 @@ class PermissionScreen:
         self.continue_button.setFixedWidth(200)
         content_layout.addWidget(
             self.continue_button, alignment=Qt.AlignmentFlag.AlignCenter
+        )
+        # Amplitude tracking
+        self.continue_button.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Onboarding Button Clicked",
+                    event_properties={"screen": "permissions", "button": "continue"},
+                )
+            )
         )
 
         # Add the content widget to the parent layout

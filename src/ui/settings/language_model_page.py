@@ -1,5 +1,6 @@
 import logging
 
+from amplitude import BaseEvent
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QDoubleSpinBox,
@@ -11,6 +12,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from src.analytics.amplitude_manager import AmplitudeManager
 from src.constants import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
 from src.ui.components.segmented_button_group import SegmentedButtonGroup
 
@@ -157,14 +159,65 @@ class LanguageModelPage(QWidget):
 
     def _connect_signals(self):
         self.llm_source.selectionChanged.connect(
-            self._on_llm_source_changed_by_interaction
+            lambda value: [
+                self._on_llm_source_changed_by_interaction(),
+                AmplitudeManager.instance().track_event(
+                    BaseEvent(
+                        event_type="LLM Setting Changed",
+                        event_properties={"setting": "llm_source", "value": value},
+                    )
+                ),
+            ]
         )
-        self.llm_model_edit.textChanged.connect(lambda: self.settings_changed.emit())
-        self.openai_model.selectionChanged.connect(lambda: self.settings_changed.emit())
-        self.gemini_model.selectionChanged.connect(lambda: self.settings_changed.emit())
-        self.groq_model.selectionChanged.connect(lambda: self.settings_changed.emit())
-        self.max_tokens.valueChanged.connect(lambda: self.settings_changed.emit())
-        self.temperature.valueChanged.connect(lambda: self.settings_changed.emit())
+        self.llm_model_edit.textChanged.connect(
+            lambda value: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="LLM Setting Changed",
+                    event_properties={"setting": "ollama_model", "value": value},
+                )
+            )
+        )
+        self.llm_model_edit.focusInEvent = self._llm_model_focus_in_event
+        self.openai_model.selectionChanged.connect(
+            lambda value: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="LLM Setting Changed",
+                    event_properties={"setting": "openai_model", "value": value},
+                )
+            )
+        )
+        self.gemini_model.selectionChanged.connect(
+            lambda value: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="LLM Setting Changed",
+                    event_properties={"setting": "gemini_model", "value": value},
+                )
+            )
+        )
+        self.groq_model.selectionChanged.connect(
+            lambda value: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="LLM Setting Changed",
+                    event_properties={"setting": "groq_model", "value": value},
+                )
+            )
+        )
+        self.max_tokens.valueChanged.connect(
+            lambda value: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="LLM Setting Changed",
+                    event_properties={"setting": "max_tokens", "value": value},
+                )
+            )
+        )
+        self.temperature.valueChanged.connect(
+            lambda value: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="LLM Setting Changed",
+                    event_properties={"setting": "temperature", "value": value},
+                )
+            )
+        )
 
     # This public method is called from home.py
     def _update_ui_for_llm_source(self):
@@ -254,3 +307,12 @@ class LanguageModelPage(QWidget):
         self.openai_model_container.setVisible(source == "openai_api")
         self.gemini_model_container.setVisible(source == "gemini_api")
         self.groq_model_container.setVisible(source == "groq_api")
+
+    def _llm_model_focus_in_event(self, event):
+        AmplitudeManager.instance().track_event(
+            BaseEvent(
+                event_type="LLM Field Focused",
+                event_properties={"field": "ollama_model"},
+            )
+        )
+        QLineEdit.focusInEvent(self.llm_model_edit, event)

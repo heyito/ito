@@ -1,3 +1,4 @@
+from amplitude import BaseEvent
 from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer
 from PySide6.QtWidgets import (
     QGraphicsOpacityEffect,
@@ -7,6 +8,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from src.analytics.amplitude_manager import AmplitudeManager
 
 
 class KeyboardSetupScreen:
@@ -153,6 +156,15 @@ class KeyboardSetupScreen:
         self.continue_button.setFixedHeight(48)
         content_layout.addWidget(
             self.continue_button, alignment=Qt.AlignmentFlag.AlignCenter
+        )
+        # Amplitude tracking
+        self.continue_button.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Onboarding Button Clicked",
+                    event_properties={"screen": "keyboard_setup", "button": "continue"},
+                )
+            )
         )
 
         # Add the content widget to the parent layout

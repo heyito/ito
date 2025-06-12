@@ -185,6 +185,10 @@ signal.signal(signal.SIGTERM, signal_handler)  # Termination signal
 if __name__ == "__main__":
     # Initialize Analytics
     AmplitudeManager.instance().initialize()
+    # Amplitude tracking: App Started
+    from amplitude import BaseEvent
+
+    AmplitudeManager.instance().track_event(BaseEvent(event_type="App Started"))
 
     # Prevent app nap on macOS
     if platform.system() == "Darwin":
@@ -334,6 +338,10 @@ if __name__ == "__main__":
         try:
             sys.exit(app.exec())
         finally:
+            # Amplitude tracking: App Shutdown
+            AmplitudeManager.instance().track_event(
+                BaseEvent(event_type="App Shutdown")
+            )
             # Clean up amplitude manager
             logger.info("Cleaning up amplitude manager...")
             AmplitudeManager.instance().shutdown()

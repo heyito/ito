@@ -1,3 +1,4 @@
+from amplitude import BaseEvent
 from PySide6.QtCore import QEasingCurve, QPoint, QPropertyAnimation, Qt, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
@@ -8,6 +9,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from src.analytics.amplitude_manager import AmplitudeManager
 
 
 class CompletionScreen:
@@ -165,6 +168,18 @@ class CompletionScreen:
             )
         )
         self.install_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        # Amplitude tracking
+        self.install_button.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Onboarding Button Clicked",
+                    event_properties={
+                        "screen": "completion",
+                        "button": "install_extension",
+                    },
+                )
+            )
+        )
         left_layout.addWidget(left_title)
         left_layout.addWidget(left_desc)
         left_layout.addSpacing(8)
@@ -193,16 +208,43 @@ class CompletionScreen:
             lambda: QDesktopServices.openUrl(QUrl("https://github.com/heyito/ito"))
         )
         self.gh_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        # Amplitude tracking
+        self.gh_button.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Onboarding Button Clicked",
+                    event_properties={"screen": "completion", "button": "github"},
+                )
+            )
+        )
         self.tw_button = QPushButton("Twitter (X)")
         self.tw_button.clicked.connect(
             lambda: QDesktopServices.openUrl(QUrl("https://x.com/HeyItoAI"))
         )
         self.tw_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        # Amplitude tracking
+        self.tw_button.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Onboarding Button Clicked",
+                    event_properties={"screen": "completion", "button": "twitter"},
+                )
+            )
+        )
         self.web_button = QPushButton("Website")
         self.web_button.clicked.connect(
             lambda: QDesktopServices.openUrl(QUrl("https://www.heyito.ai/"))
         )
         self.web_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        # Amplitude tracking
+        self.web_button.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Onboarding Button Clicked",
+                    event_properties={"screen": "completion", "button": "website"},
+                )
+            )
+        )
         btn_row.addWidget(self.gh_button)
         btn_row.addWidget(self.tw_button)
         btn_row.addWidget(self.web_button)
@@ -229,6 +271,18 @@ class CompletionScreen:
         self.start_button.setObjectName("onboarding-primary")
         self.start_button.setFixedHeight(38)
         self.start_button.setMinimumWidth(140)
+        # Amplitude tracking
+        self.start_button.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Onboarding Button Clicked",
+                    event_properties={
+                        "screen": "completion",
+                        "button": "start_using_ito",
+                    },
+                )
+            )
+        )
         button_layout.addWidget(
             self.start_button, alignment=Qt.AlignmentFlag.AlignCenter
         )

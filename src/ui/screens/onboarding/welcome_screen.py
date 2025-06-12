@@ -1,3 +1,4 @@
+from amplitude import BaseEvent
 from PySide6.QtCore import QEasingCurve, QPoint, QPropertyAnimation, Qt, QTimer
 from PySide6.QtGui import QPixmap
 from PySide6.QtSvgWidgets import QSvgWidget
@@ -8,6 +9,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from src.analytics.amplitude_manager import AmplitudeManager
 
 
 class WelcomeScreen:
@@ -123,6 +126,15 @@ class WelcomeScreen:
         self.start_button.setFixedHeight(44)
         self.start_button.setMinimumWidth(180)
         button_layout.addWidget(self.start_button)
+        # Amplitude tracking
+        self.start_button.clicked.connect(
+            lambda: AmplitudeManager.instance().track_event(
+                BaseEvent(
+                    event_type="Onboarding Button Clicked",
+                    event_properties={"screen": "welcome", "button": "get_started"},
+                )
+            )
+        )
 
         content_layout.addWidget(
             button_container, alignment=Qt.AlignmentFlag.AlignCenter

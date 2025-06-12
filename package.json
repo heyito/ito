@@ -1,0 +1,74 @@
+{
+  "name": "era",
+  "version": "11.0.0",
+  "description": "Ito, a smart voice assistant",
+  "main": "./out/main/main.js",
+  "license": "MIT",
+  "author": {
+    "name": "Guasam",
+    "url": "https://github.com/guasam"
+  },
+  "scripts": {
+    "dev": "electron-vite dev -w",
+    "format": "prettier --write .",
+    "lint": "eslint . --ext .ts,.tsx --fix",
+    "start": "electron-vite preview",
+    "postinstall": "electron-builder install-app-deps",
+    "vite:build:app": "electron-vite build",
+    "electron:build:win": "electron-builder --win",
+    "electron:build:mac": "electron-builder --mac",
+    "electron:build:linux": "electron-builder --linux",
+    "electron:build:dir": "electron-builder --dir",
+    "build:unpack": "run-s vite:build:app electron:build:dir",
+    "build:win": "run-s vite:build:app electron:build:win",
+    "build:mac": "run-s vite:build:app electron:build:mac",
+    "build:linux": "run-s vite:build:app electron:build:linux"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/guasam/electron-react-app"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild"
+    ]
+  },
+  "dependencies": {
+    "@electron-toolkit/preload": "^3.0.2",
+    "@electron-toolkit/utils": "^4.0.0",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-switch": "^1.2.5",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.511.0",
+    "tailwind-merge": "^3.3.0",
+    "tw-animate-css": "^1.3.2"
+  },
+  "devDependencies": {
+    "@electron-toolkit/eslint-config-prettier": "^3.0.0",
+    "@electron-toolkit/tsconfig": "^1.0.1",
+    "@eslint/js": "^9.28.0",
+    "@rushstack/eslint-patch": "^1.11.0",
+    "@tailwindcss/vite": "^4.1.8",
+    "@types/node": "^22.15.29",
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "^4.5.0",
+    "electron": "^36.3.2",
+    "electron-builder": "^26.0.12",
+    "electron-vite": "^3.1.0",
+    "eslint": "^9.28.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "framer-motion": "^12.15.0",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^3.5.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tailwindcss": "^4.1.8",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.33.0",
+    "vite": "^6.3.5"
+  }
+}

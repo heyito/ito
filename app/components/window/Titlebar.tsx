@@ -8,7 +8,7 @@ import { getOnboardingCategoryIndex, useOnboardingStore } from '@/app/store/useO
 export const Titlebar = () => {
   const { title, icon, titleCentered, menuItems } = useWindowContext().titlebar
   const { menusVisible, setMenusVisible, closeActiveMenu } = useTitlebarContext()
-  const { onboardingStep, totalOnboardingSteps, onboardingCategory, isOnboardingCompleted } = useOnboardingStore()
+  const { onboardingStep, totalOnboardingSteps, onboardingCategory } = useOnboardingStore()
   const wcontext = useWindowContext().window
 
   useEffect(() => {

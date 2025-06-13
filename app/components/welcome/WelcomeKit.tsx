@@ -1,6 +1,7 @@
 import SignupContent from './contents/SignupContent'
 import DataControlContent from './contents/DataControlContent'
 import PermissionsContent from './contents/PermissionsContent'
+import MicrophoneTestContent from './contents/MicrophoneTestContent'
 import { useEffect } from 'react'
 import './styles.css'
 import { usePermissionsStore } from '../../store/usePermissionsStore'
@@ -31,9 +32,11 @@ export default function WelcomeKit() {
         <SignupContent />
       ) : onboardingStep === 1 ? (
         <DataControlContent />
-      ) : (
+      ) : onboardingStep === 2 ? (
         <PermissionsContent />
-      )}
+      ) : onboardingStep === 3 ? (
+        <MicrophoneTestContent />
+      ) : null}
     </div>
   )
 }

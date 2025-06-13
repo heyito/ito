@@ -7,7 +7,7 @@ import {
 } from "@/app/components/ui/tooltip";
 import { useState, useEffect, useRef } from 'react';
 import { Spinner } from '@/app/components/ui/spinner';
-import { Check } from "@mynaui/icons-react";
+import { Check, Lock } from "@mynaui/icons-react";
 
 export default function SetupItoContent({ onBack }: { onBack?: () => void; }) {
   const [isAccessibilityEnabled, setIsAccessibilityEnabled] = useState(false)
@@ -28,14 +28,12 @@ export default function SetupItoContent({ onBack }: { onBack?: () => void; }) {
     };
   }, []);
 
-  console.log('isAccessibilityEnabled', isAccessibilityEnabled)
-
   useEffect(() => {
-    window.api.invoke('check-accessibility-permission', true).then((enabled: boolean) => {
+    window.api.invoke('check-accessibility-permission', false).then((enabled: boolean) => {
       setIsAccessibilityEnabled(enabled);
     });
 
-    window.api.invoke('check-microphone-permission', true).then((enabled: boolean) => {
+    window.api.invoke('check-microphone-permission', false).then((enabled: boolean) => {
       setIsMicrophoneEnabled(enabled);
     });
   }, []);
@@ -181,8 +179,8 @@ export default function SetupItoContent({ onBack }: { onBack?: () => void; }) {
       </div>
       <div className="flex w-[55%] items-center justify-center bg-neutral-200 border-l border-border">
         {/* Placeholder for screenshot/video */}
-        <div className="w-[420px] h-[320px] bg-gray-300 rounded-lg flex items-center justify-center text-gray-500 text-lg">
-          Video Placeholder
+        <div className="w-[420px] h-[320px] rounded-lg flex items-center justify-center text-gray-500 text-lg">
+          {isAccessibilityEnabled && isMicrophoneEnabled ? <Lock style={{ width: 220, height: 220, color: '#D1D5DB' }} /> : 'Video Placeholder'}
         </div>
       </div>
     </div>

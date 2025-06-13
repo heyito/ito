@@ -5,7 +5,7 @@ import { useState } from 'react'
 import './styles.css'
 
 export default function WelcomeKit() {
-  const [step, setStep] = useState(2)
+  const [step, setStep] = useState(0)
 
   return (
     <div className="w-full h-full bg-background">

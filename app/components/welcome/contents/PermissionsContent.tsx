@@ -8,10 +8,15 @@ import {
 import { useState, useEffect, useRef } from 'react';
 import { Spinner } from '@/app/components/ui/spinner';
 import { Check, Lock } from "@mynaui/icons-react";
+import { usePermissionsStore } from '@/app/store/usePermissionsStore';
 
-export default function SetupItoContent({ onBack }: { onBack?: () => void; }) {
-  const [isAccessibilityEnabled, setIsAccessibilityEnabled] = useState(false)
-  const [isMicrophoneEnabled, setIsMicrophoneEnabled] = useState(false)
+export default function PermissionsContent({ onBack }: { onBack?: () => void; }) {
+  const { 
+    isAccessibilityEnabled, 
+    isMicrophoneEnabled,
+    setAccessibilityEnabled,
+    setMicrophoneEnabled
+  } = usePermissionsStore();
   const [checkingAccessibility, setCheckingAccessibility] = useState(false)
   const [checkingMicrophone, setCheckingMicrophone] = useState(false)
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
@@ -30,19 +35,19 @@ export default function SetupItoContent({ onBack }: { onBack?: () => void; }) {
 
   useEffect(() => {
     window.api.invoke('check-accessibility-permission', false).then((enabled: boolean) => {
-      setIsAccessibilityEnabled(enabled);
+      setAccessibilityEnabled(enabled);
     });
 
     window.api.invoke('check-microphone-permission', false).then((enabled: boolean) => {
-      setIsMicrophoneEnabled(enabled);
+      setMicrophoneEnabled(enabled);
     });
-  }, []);
+  }, [setAccessibilityEnabled, setMicrophoneEnabled]);
 
   const pollAccessibility = () => {
     pollingRef.current = setInterval(() => {
       window.api.invoke('check-accessibility-permission', false).then((enabled: boolean) => {
         if (enabled) {
-          setIsAccessibilityEnabled(true);
+          setAccessibilityEnabled(true);
           setCheckingAccessibility(false);
           if (pollingRef.current) {
             clearInterval(pollingRef.current);
@@ -57,7 +62,7 @@ export default function SetupItoContent({ onBack }: { onBack?: () => void; }) {
     microphonePollingRef.current = setInterval(() => {
       window.api.invoke('check-microphone-permission', false).then((enabled: boolean) => {
         if (enabled) {
-          setIsMicrophoneEnabled(true);
+          setMicrophoneEnabled(true);
           setCheckingMicrophone(false);
           if (microphonePollingRef.current) {
             clearInterval(microphonePollingRef.current);
@@ -71,7 +76,7 @@ export default function SetupItoContent({ onBack }: { onBack?: () => void; }) {
   const handleAllowAccessibility = () => {
     setCheckingAccessibility(true);
     window.api.invoke('check-accessibility-permission', true).then((enabled: boolean) => {
-      setIsAccessibilityEnabled(enabled);
+      setAccessibilityEnabled(enabled);
       if (!enabled) {
         pollAccessibility();
       } else {
@@ -83,7 +88,7 @@ export default function SetupItoContent({ onBack }: { onBack?: () => void; }) {
   const handleAllowMicrophone = () => {
     setCheckingMicrophone(true);
     window.api.invoke('check-microphone-permission', true).then((enabled: boolean) => {
-      setIsMicrophoneEnabled(enabled);
+      setMicrophoneEnabled(enabled);
       if (!enabled) {
         pollMicrophone();
       } else {

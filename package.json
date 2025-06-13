@@ -46,7 +46,8 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.511.0",
     "tailwind-merge": "^3.3.0",
-    "tw-animate-css": "^1.3.2"
+    "tw-animate-css": "^1.3.2",
+    "zustand": "^5.0.5"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",

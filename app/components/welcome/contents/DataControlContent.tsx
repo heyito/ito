@@ -54,8 +54,8 @@ export default function DataControlContent() {
           </div>
         </div>
       </div>
-      <div className="flex w-[55%] items-center justify-center bg-neutral-200 border-l border-border">
-        <Lock style={{ width: 220, height: 220, color: '#D1D5DB' }} />
+      <div className="flex w-[55%] items-center justify-center bg-gradient-to-b from-purple-50/10 to-purple-100 border-l-2 border-purple-100">
+        <Lock style={{ width: 220, height: 220, color: '#c4b5fd' }} />
       </div>
     </div>
   )

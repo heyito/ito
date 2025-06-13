@@ -7,9 +7,9 @@ const AvatarIcon = (props: any) => (
     height={260}
     {...props}
   >
-    <circle cx="64" cy="64" r="64" fill="#D1D5DB" />
-    <circle cx="64" cy="50" r="20" fill="#E5E7EB" />
-    <ellipse cx="64" cy="92" rx="38" ry="16" fill="#E5E7EB" />
+    <circle cx="64" cy="64" r="64" fill="#c4b5fd" />
+    <circle cx="64" cy="50" r="20" fill="#f3e8ff" />
+    <ellipse cx="64" cy="92" rx="38" ry="16" fill="#a78bfa" />
   </svg>
 )
 

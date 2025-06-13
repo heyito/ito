@@ -203,10 +203,10 @@ export default function PermissionsContent() {
           </div>
         </div>
       </div>
-      <div className="flex w-[55%] items-center justify-center bg-neutral-200 border-l border-border">
+      <div className="flex w-[55%] items-center justify-center bg-gradient-to-b from-purple-50/10 to-purple-100 border-l-2 border-purple-100">
         {/* Placeholder for screenshot/video */}
         <div className="w-[420px] h-[320px] rounded-lg flex items-center justify-center text-gray-500 text-lg">
-          {isAccessibilityEnabled && isMicrophoneEnabled ? <Lock style={{ width: 220, height: 220, color: '#D1D5DB' }} /> : 'Video Placeholder'}
+          {isAccessibilityEnabled && isMicrophoneEnabled ? <Lock style={{ width: 220, height: 220, color: '#c4b5fd' }} /> : 'Video Placeholder'}
         </div>
       </div>
     </div>

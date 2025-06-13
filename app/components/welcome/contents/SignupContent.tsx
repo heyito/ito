@@ -47,7 +47,7 @@ export default function SignupContent() {
           </div>
         </div>
       </div>
-      <div className="flex w-[55%] items-center justify-center bg-neutral-200 border-l border-border">
+      <div className="flex w-[55%] items-center justify-center bg-gradient-to-b from-purple-50/10 to-purple-100 border-l-2 border-purple-100">
         <AvatarIcon />
       </div>
     </div>

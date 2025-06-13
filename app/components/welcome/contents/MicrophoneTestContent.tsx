@@ -21,7 +21,7 @@ function MicrophoneBars({ volume }: { volume: number }) {
   });
 
   return (
-    <div className="flex gap-1 py-4 px-4 items-end bg-neutral-200 rounded-md" style={{ minHeight: 120 }}>
+    <div className="flex gap-1 py-4 px-4 items-end bg-neutral-100 rounded-md" style={{ minHeight: 120 }}>
       {levels.map((level, i) => (
         <div
           key={i}
@@ -132,7 +132,7 @@ export default function MicrophoneTestContent() {
           </div>
         </div>
       </div>
-      <div className="flex w-[55%] items-center justify-center bg-neutral-200 border-l border-border">
+      <div className="flex w-[55%] items-center justify-center bg-gradient-to-b from-purple-50/10 to-purple-100 border-l-2 border-purple-100">
         <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center" style={{ minWidth: 500, maxHeight: 280 }}>
           <div className="text-lg font-medium mb-6 text-center">Do you see purple bars moving while you speak?</div>
           <MicrophoneBars volume={smoothedVolume} />

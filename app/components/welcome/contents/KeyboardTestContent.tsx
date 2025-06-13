@@ -17,7 +17,7 @@ export default function KeyboardTestContent() {
           </div>
         </div>
       </div>
-      <div className="flex w-[55%] items-center justify-center bg-neutral-200 border-l border-border">
+      <div className="flex w-[55%] items-center justify-center bg-gradient-to-b from-purple-50/10 to-purple-100 border-l-2 border-purple-100">
         <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center" style={{ minWidth: 500, maxHeight: 280 }}>
           <div className="text-lg font-medium mb-6 text-center">Does the button turn purple while pressing it?</div>
           <div className="flex justify-center items-center mb-6 w-full bg-neutral-50 py-4 rounded-lg" style={{ minHeight: 100 }}>

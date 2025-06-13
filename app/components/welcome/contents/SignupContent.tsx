@@ -17,7 +17,7 @@ const sources = [
   'Other',
 ]
 
-export default function SignupContent() {
+export default function SignupContent({ onContinue }: { onContinue?: () => void }) {
   const [source, setSource] = useState('')
 
   return (
@@ -40,7 +40,7 @@ export default function SignupContent() {
         </DropdownMenu>
       </div>
       <div className="flex flex-col items-start mt-64 mb-4">
-        <Button className="w-24" disabled={!source}>Continue</Button>
+        <Button className="w-24" onClick={onContinue}>Continue</Button>
       </div>
     </div>
   )

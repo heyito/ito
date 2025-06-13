@@ -9,8 +9,11 @@ import { useState, useEffect, useRef } from 'react';
 import { Spinner } from '@/app/components/ui/spinner';
 import { Check, Lock } from "@mynaui/icons-react";
 import { usePermissionsStore } from '@/app/store/usePermissionsStore';
+import { useOnboardingStore } from '@/app/store/useOnboardingStore';
 
-export default function PermissionsContent({ onBack }: { onBack?: () => void; }) {
+export default function PermissionsContent() {
+  const { incrementOnboardingStep, decrementOnboardingStep } = useOnboardingStore();
+  
   const { 
     isAccessibilityEnabled, 
     isMicrophoneEnabled,
@@ -102,7 +105,7 @@ export default function PermissionsContent({ onBack }: { onBack?: () => void; })
       <div className="flex flex-col w-[45%] justify-center items-start pl-24">
         <div className="flex flex-col h-full min-h-[400px] justify-between py-12">
           <div className="mt-8">
-            <button className="mb-4 text-sm text-muted-foreground hover:underline" type="button" onClick={onBack}>&lt; Back</button>
+            <button className="mb-4 text-sm text-muted-foreground hover:underline" type="button" onClick={decrementOnboardingStep}>&lt; Back</button>
             <h1 className="text-3xl mb-4 mt-12 pr-24">
               {isAccessibilityEnabled && isMicrophoneEnabled ? 'Thank you for trusting us. We take your privacy seriously.' : 'Set up Ito on your computer'}
             </h1>
@@ -178,7 +181,7 @@ export default function PermissionsContent({ onBack }: { onBack?: () => void; })
                 )}
               </div>
             </div>
-            <Button className={`w-24 mb-8 ${isAccessibilityEnabled && isMicrophoneEnabled ? '' : 'hidden'}`} style={{marginTop: '130px'}} onClick={() => {}}>Continue</Button>
+            <Button className={`w-24 mb-8 ${isAccessibilityEnabled && isMicrophoneEnabled ? '' : 'hidden'}`} style={{marginTop: '130px'}} onClick={incrementOnboardingStep}>Continue</Button>
           </div>
         </div>
       </div>

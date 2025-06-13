@@ -1,12 +1,14 @@
 import SignupContent from './contents/SignupContent'
 import DataControlContent from './contents/DataControlContent'
 import PermissionsContent from './contents/PermissionsContent'
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import './styles.css'
 import { usePermissionsStore } from '../../store/usePermissionsStore'
+import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 
 export default function WelcomeKit() {
-  const [step, setStep] = useState(0)
+  const { onboardingStep } = useOnboardingStore();
+  
   const { 
     setAccessibilityEnabled,
     setMicrophoneEnabled
@@ -25,12 +27,12 @@ export default function WelcomeKit() {
 
   return (
     <div className="w-full h-full bg-background">
-      {step === 0 ? (
-        <SignupContent onContinue={() => setStep(1)} />
-      ) : step === 1 ? (
-        <DataControlContent onBack={() => setStep(0)} onContinue={() => setStep(2)} />
+      {onboardingStep === 0 ? (
+        <SignupContent />
+      ) : onboardingStep === 1 ? (
+        <DataControlContent />
       ) : (
-        <PermissionsContent onBack={() => setStep(1)} />
+        <PermissionsContent />
       )}
     </div>
   )

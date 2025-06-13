@@ -1,5 +1,4 @@
 import { Button } from '@/app/components/ui/button'
-import { useState } from 'react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,6 +6,7 @@ import {
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
 import AvatarIcon from '../icons/AvatarIcon'
+import { useOnboardingStore } from '@/app/store/useOnboardingStore';
 
 const sources = [
   'Twitter',
@@ -18,8 +18,8 @@ const sources = [
   'Other',
 ]
 
-export default function SignupContent({ onContinue }: { onContinue?: () => void }) {
-  const [source, setSource] = useState('')
+export default function SignupContent() {
+  const { incrementOnboardingStep, referralSource, setReferralSource } = useOnboardingStore();
 
   return (
     <div className="flex flex-row h-full w-full bg-background">
@@ -31,19 +31,19 @@ export default function SignupContent({ onContinue }: { onContinue?: () => void 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="mb-8 w-48 px-4 py-2 border border-border rounded-md bg-background text-base focus:outline-none text-left flex items-center justify-between">
-                  {source ? <span className="text-sm">{source}</span> : <span className="text-muted-foreground text-sm">Select a source</span>}
+                  {referralSource ? <span className="text-sm">{referralSource}</span> : <span className="text-muted-foreground text-sm">Select a source</span>}
                   <svg className="ml-2 h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-48 text-sm border-border">
                 {sources.map(s => (
-                  <DropdownMenuItem key={s} onSelect={() => setSource(s)}>{s}</DropdownMenuItem>
+                  <DropdownMenuItem key={s} onSelect={() => setReferralSource(s)}>{s}</DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
           <div className="flex flex-col items-start mt-64 mb-4">
-            <Button className="w-24" onClick={onContinue}>Continue</Button>
+            <Button className="w-24" onClick={incrementOnboardingStep}>Continue</Button>
           </div>
         </div>
       </div>

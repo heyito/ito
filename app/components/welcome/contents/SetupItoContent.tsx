@@ -32,7 +32,6 @@ export default function SetupItoContent({ onBack }: { onBack?: () => void; }) {
 
   useEffect(() => {
     window.api.invoke('check-accessibility-permission', true).then((enabled: boolean) => {
-      console.log('on load accessibility enabled', enabled)
       setIsAccessibilityEnabled(enabled);
     });
 
@@ -45,7 +44,6 @@ export default function SetupItoContent({ onBack }: { onBack?: () => void; }) {
     pollingRef.current = setInterval(() => {
       window.api.invoke('check-accessibility-permission', false).then((enabled: boolean) => {
         if (enabled) {
-          console.log('accessibility enabled', enabled)
           setIsAccessibilityEnabled(true);
           setCheckingAccessibility(false);
           if (pollingRef.current) {
@@ -75,7 +73,6 @@ export default function SetupItoContent({ onBack }: { onBack?: () => void; }) {
   const handleAllowAccessibility = () => {
     setCheckingAccessibility(true);
     window.api.invoke('check-accessibility-permission', true).then((enabled: boolean) => {
-      console.log('accessibility enabled', enabled)
       setIsAccessibilityEnabled(enabled);
       if (!enabled) {
         pollAccessibility();

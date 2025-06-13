@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button } from '@/app/components/ui/button'
 import { CheckCircle, Lock } from "@mynaui/icons-react";
 
-export default function DataControlContent({ onBack }: { onBack?: () => void }) {
+export default function DataControlContent({ onBack, onContinue }: { onBack?: () => void, onContinue?: () => void }) {
   const [selected, setSelected] = useState<'help' | 'privacy' | null>('help')
 
   return (
@@ -18,7 +18,7 @@ export default function DataControlContent({ onBack }: { onBack?: () => void }) 
                 onClick={() => setSelected('help')}
               >
                 <div className="flex items-center justify-between w-full my-2">
-                  <div className="font-semibold">Help improve Ito</div>
+                  <div className="font-medium">Help improve Ito</div>
                   {selected === 'help' && (
                     <div><CheckCircle style={{ color: '#22c55e', width: 18, height: 18 }} /></div>
                   )}
@@ -32,7 +32,7 @@ export default function DataControlContent({ onBack }: { onBack?: () => void }) 
                 onClick={() => setSelected('privacy')}
               >
                 <div className="flex items-center justify-between w-full my-2">
-                  <div className="font-semibold">Privacy Mode</div>
+                  <div className="font-medium">Privacy Mode</div>
                   {selected === 'privacy' && (
                     <div><Lock style={{ color: '#a78bfa', width: 18, height: 18 }} /></div>
                   )}
@@ -45,7 +45,7 @@ export default function DataControlContent({ onBack }: { onBack?: () => void }) 
             <div className="text-sm text-muted-foreground mb-8">
               You can always change this later in settings. <a href="#" className="underline">Read more here.</a>
             </div>
-            <Button className="w-24 mb-8 mt-6" disabled={!selected}>Continue</Button>
+            <Button className="w-24 mb-8 mt-6" disabled={!selected} onClick={() => { if (selected && onContinue) onContinue(); }}>Continue</Button>
           </div>
         </div>
       </div>

@@ -199,7 +199,7 @@ export default function PermissionsContent() {
                 )}
               </div>
             </div>
-            <Button className={`w-24 mb-8 ${isAccessibilityEnabled && isMicrophoneEnabled ? '' : 'hidden'}`} style={{marginTop: '130px'}} onClick={incrementOnboardingStep}>Continue</Button>
+            <Button className={`w-24 mb-8 ${isAccessibilityEnabled && isMicrophoneEnabled ? '' : 'hidden'}`} style={{marginTop: '166px'}} onClick={incrementOnboardingStep}>Continue</Button>
           </div>
         </div>
       </div>

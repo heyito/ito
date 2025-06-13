@@ -9,10 +9,12 @@ interface OnboardingState {
   onboardingCategory: OnboardingCategory
   referralSource: string | null
   shareAnalytics: boolean
+  microphoneDeviceId: string
   incrementOnboardingStep: () => void
   decrementOnboardingStep: () => void
   setReferralSource: (source: string) => void
   setShareAnalytics: (share: boolean) => void
+  setMicrophoneDeviceId: (deviceId: string) => void
 }
 
 const getOnboardingCategory = (onboardingStep: number): OnboardingCategory => {
@@ -38,6 +40,7 @@ export const useOnboardingStore = create<OnboardingState>((set) => ({
   onboardingCategory: 'sign-up',
   referralSource: null,
   shareAnalytics: true,
+  microphoneDeviceId: 'default',
   incrementOnboardingStep: () =>
     set((state) => {
       const onboardingStep = Math.min(
@@ -69,4 +72,6 @@ export const useOnboardingStore = create<OnboardingState>((set) => ({
     set((_state) => ({ referralSource: source })),
   setShareAnalytics: (share: boolean) =>
     set((_state) => ({ shareAnalytics: share })),
+  setMicrophoneDeviceId: (deviceId: string) =>
+    set((_state) => ({ microphoneDeviceId: deviceId })),
 }))

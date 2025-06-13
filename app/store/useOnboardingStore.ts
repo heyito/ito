@@ -1,8 +1,12 @@
 import { create } from 'zustand'
 
+type OnboardingCategory = 'sign-up' | 'permissions' | 'set-up' | 'try-it'
+
 interface OnboardingState {
   onboardingStep: number
+  totalOnboardingSteps: number
   onboardingCompleted: boolean
+  onboardingCategory: OnboardingCategory
   referralSource: string | null
   shareAnalytics: boolean
   incrementOnboardingStep: () => void
@@ -11,15 +15,52 @@ interface OnboardingState {
   setShareAnalytics: (share: boolean) => void
 }
 
+const getOnboardingCategory = (onboardingStep: number): OnboardingCategory => {
+  if (onboardingStep < 2) return 'sign-up'
+  if (onboardingStep < 4) return 'permissions'
+  if (onboardingStep < 8) return 'set-up'
+  return 'try-it'
+}
+
+export const getOnboardingCategoryIndex = (
+  onboardingCategory: OnboardingCategory
+): number => {
+  if (onboardingCategory === 'sign-up') return 0
+  if (onboardingCategory === 'permissions') return 1
+  if (onboardingCategory === 'set-up') return 2
+  return 3
+}
+
 export const useOnboardingStore = create<OnboardingState>((set) => ({
   onboardingStep: 0,
+  totalOnboardingSteps: 10,
   onboardingCompleted: false,
+  onboardingCategory: 'sign-up',
   referralSource: null,
   shareAnalytics: true,
   incrementOnboardingStep: () =>
-    set((state) => ({ onboardingStep: state.onboardingStep + 1 })),
+    set((state) => {
+      const onboardingStep = Math.min(
+        state.onboardingStep + 1,
+        state.totalOnboardingSteps
+      )
+      const onboardingCategory = getOnboardingCategory(onboardingStep)
+
+      return {
+        onboardingStep,
+        onboardingCategory,
+      }
+    }),
   decrementOnboardingStep: () =>
-    set((state) => ({ onboardingStep: state.onboardingStep - 1 })),
+    set((state) => {
+      const onboardingStep = Math.max(state.onboardingStep - 1, 0)
+      const onboardingCategory = getOnboardingCategory(onboardingStep)
+
+      return {
+        onboardingStep,
+        onboardingCategory,
+      }
+    }),
   setOnboardingCompleted: () =>
     set((_state) => ({ onboardingCompleted: true })),
   resetOnboarding: () =>

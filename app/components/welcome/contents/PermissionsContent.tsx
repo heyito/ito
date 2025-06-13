@@ -7,9 +7,11 @@ import {
 } from "@/app/components/ui/tooltip";
 import { useState, useEffect, useRef } from 'react';
 import { Spinner } from '@/app/components/ui/spinner';
-import { Check, Lock } from "@mynaui/icons-react";
+import { AnimatedCheck } from '@/app/components/ui/animated-checkmark';
+import { Lock } from "@mynaui/icons-react";
 import { usePermissionsStore } from '@/app/store/usePermissionsStore';
 import { useOnboardingStore } from '@/app/store/useOnboardingStore';
+
 
 export default function PermissionsContent() {
   const { incrementOnboardingStep, decrementOnboardingStep } = useOnboardingStore();
@@ -24,6 +26,8 @@ export default function PermissionsContent() {
   const [checkingMicrophone, setCheckingMicrophone] = useState(false)
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const microphonePollingRef = useRef<NodeJS.Timeout | null>(null);
+  const [accessibilityCheckTrigger, setAccessibilityCheckTrigger] = useState(false);
+  const [microphoneCheckTrigger, setMicrophoneCheckTrigger] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -45,6 +49,20 @@ export default function PermissionsContent() {
       setMicrophoneEnabled(enabled);
     });
   }, [setAccessibilityEnabled, setMicrophoneEnabled]);
+
+  useEffect(() => {
+    if (isAccessibilityEnabled) {
+      setAccessibilityCheckTrigger(false);
+      setTimeout(() => setAccessibilityCheckTrigger(true), 100); // retrigger for animation
+    }
+  }, [isAccessibilityEnabled]);
+
+  useEffect(() => {
+    if (isMicrophoneEnabled) {
+      setMicrophoneCheckTrigger(false);
+      setTimeout(() => setMicrophoneCheckTrigger(true), 100);
+    }
+  }, [isMicrophoneEnabled]);
 
   const pollAccessibility = () => {
     pollingRef.current = setInterval(() => {
@@ -113,7 +131,7 @@ export default function PermissionsContent() {
               <div className="border rounded-lg p-4 flex flex-col gap-2 bg-background border-border border-2">
                 <div className="flex items-center mb-2 gap-2">
                   {isAccessibilityEnabled && (
-                    <div><Check className="mr-1" style={{ color: '#22c55e', width: 24, height: 24 }} /></div>
+                    <AnimatedCheck trigger={accessibilityCheckTrigger} />
                   )}
                   <div className="font-medium text-base flex">
                     {isAccessibilityEnabled ? 'Ito can insert and edit text' : 'Allow Ito to insert spoken words'}
@@ -148,7 +166,7 @@ export default function PermissionsContent() {
               <div className="border rounded-lg p-4 flex flex-col gap-2 bg-background border-border border-2">
                 <div className="flex items-center mb-2 gap-2">
                   {isMicrophoneEnabled && (
-                    <div><Check className="mr-1" style={{ color: '#22c55e', width: 24, height: 24 }} /></div>
+                    <AnimatedCheck trigger={microphoneCheckTrigger} />
                   )}
                   <div className="font-medium text-base flex">
                     {isMicrophoneEnabled ? 'Ito can use your microphone' : 'Allow Ito to use your microphone'}

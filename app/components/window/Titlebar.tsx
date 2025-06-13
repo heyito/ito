@@ -3,10 +3,12 @@ import { useWindowContext } from './WindowContext'
 import { useTitlebarContext } from './TitlebarContext'
 import { TitlebarMenu } from './TitlebarMenu'
 import React from 'react'
+import { getOnboardingCategoryIndex, useOnboardingStore } from '@/app/store/useOnboardingStore'
 
 export const Titlebar = () => {
   const { title, icon, titleCentered, menuItems } = useWindowContext().titlebar
   const { menusVisible, setMenusVisible, closeActiveMenu } = useTitlebarContext()
+  const { onboardingStep, totalOnboardingSteps, onboardingCategory, isOnboardingCompleted } = useOnboardingStore()
   const wcontext = useWindowContext().window
 
   useEffect(() => {
@@ -28,6 +30,9 @@ export const Titlebar = () => {
     }
   }, [menusVisible, closeActiveMenu, setMenusVisible, menuItems])
 
+  const onboardingProgress = Math.ceil(((onboardingStep + 1) / totalOnboardingSteps) * 100)
+  const onboardingCategoryIndex = getOnboardingCategoryIndex(onboardingCategory)
+
   return (
     <div className={`window-titlebar ${wcontext?.platform ? `platform-${wcontext.platform}` : ''}`}
          style={{ position: 'relative' }}>
@@ -48,9 +53,9 @@ export const Titlebar = () => {
       <div className="onboarding-steps-text">
         {['Sign Up', 'Permissions', 'Set Up', 'Try it'].map((step, idx, arr) => (
           <React.Fragment key={step}>
-            <span className={`onboarding-step-label${idx === 0 ? ' active' : ''}`}>{step.toUpperCase()}</span>
+            <span className={`onboarding-step-label${idx <= onboardingCategoryIndex ? ' active' : ''}`}>{step.toUpperCase()}</span>
             {idx < arr.length - 1 && (
-              <span className="onboarding-step-chevron" aria-hidden="true">&#8250;</span>
+              <span className={`onboarding-step-chevron${idx < onboardingCategoryIndex ? ' active' : ''}`} aria-hidden="true">&#8250;</span>
             )}
           </React.Fragment>
         ))}
@@ -84,10 +89,6 @@ export const Titlebar = () => {
           align-items: center;
           margin: 0 36px;
         }
-        .onboarding-step-label.active {
-          color: #222;
-          font-weight: 500;
-        }
         .onboarding-step-chevron {
           color: #d0d0d0;
           font-size: 24px;
@@ -95,6 +96,10 @@ export const Titlebar = () => {
           margin-top: -4px;
           display: inline-flex;
           align-items: center;
+        }
+        .onboarding-step-label.active, .onboarding-step-chevron.active {
+          color: #222;
+          font-weight: 500;
         }
         .onboarding-progress-bar-bg {
           position: absolute;
@@ -110,7 +115,7 @@ export const Titlebar = () => {
         }
         .onboarding-progress-bar-fg {
           height: 100%;
-          width: 25%; /* 1 of 4 steps */
+          width: ${onboardingProgress}%; /* 1 of 4 steps */
           background: linear-gradient(90deg, #8aa6cf 0%, #43679d 100%);
           border-radius: 2px;
           transition: width 0.4s cubic-bezier(0.4,0,0.2,1);

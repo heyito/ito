@@ -66,6 +66,7 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
   handleIPC(
     'check-microphone-permission',
     (_event, prompt: boolean = false) => {
+      if (prompt) return systemPreferences.askForMediaAccess('microphone')
       return systemPreferences.getMediaAccessStatus('microphone') === 'granted'
     }
   )

@@ -1,13 +1,40 @@
 # Global Key Listener
 
-A simple Rust crate that captures global keyboard events and outputs them as JSON to stdout using the `rdev` library.
+A Rust-based global keyboard event listener that captures and blocks keyboard events, designed for integration with Electron applications.
 
 ## Features
 
 - Captures global key press and key release events
-- Outputs events as JSON with timestamps
+- Outputs events as JSON with timestamps and raw key codes
+- Supports blocking/unblocking specific keys
 - Cross-platform support (Windows, macOS, Linux)
-- Includes raw key codes for compatibility
+- Special handling for modifier keys (including fn key on macOS)
+- Command interface for runtime control
+
+## Usage
+
+The key listener can be controlled through stdin commands in JSON format:
+
+```json
+// Block specific keys
+{"command": "block", "keys": ["KeyA", "KeyB", "KeyC"]}
+
+// Unblock a specific key
+{"command": "unblock", "key": "KeyA"}
+
+// Get list of currently blocked keys
+{"command": "get_blocked"}
+```
+
+Events are output to stdout in JSON format:
+```json
+{
+  "type": "keydown",
+  "key": "KeyA",
+  "timestamp": "2024-06-14T01:58:44.617Z",
+  "raw_code": 65
+}
+```
 
 ## Requirements
 
@@ -25,74 +52,30 @@ sudo cargo run
 ### Windows
 Should work without additional permissions.
 
-## Installation
-
-1. Make sure you have Rust installed
-2. Clone or create this project
-3. Run with cargo:
-
-```bash
-cargo run
-```
-
-## Usage
-
-The program will output JSON events to stdout in this format:
-
-```json
-{
-  "type": "keydown",
-  "key": "KeyA",
-  "timestamp": "2024-01-15T10:30:45.123Z",
-  "raw_code": 65
-}
-```
-
-```json
-{
-  "type": "keyup", 
-  "key": "KeyA",
-  "timestamp": "2024-01-15T10:30:45.456Z",
-  "raw_code": 65
-}
-```
-
-## Event Fields
-
-- `type`: Either "keydown" or "keyup"
-- `key`: The key name as provided by rdev (e.g., "KeyA", "Space", "Return")
-- `timestamp`: ISO 8601 timestamp when the event occurred
-- `raw_code`: Numeric key code (when available) for compatibility
-
-## Integration with Electron
-
-You can spawn this as a child process from your Electron app:
-
-```javascript
-const { spawn } = require('child_process');
-const keyListener = spawn('./target/release/global-key-listener');
-
-keyListener.stdout.on('data', (data) => {
-  const events = data.toString().trim().split('\n');
-  events.forEach(eventStr => {
-    try {
-      const event = JSON.parse(eventStr);
-      console.log('Key event:', event);
-      // Handle the key event in your Electron app
-    } catch (e) {
-      // Ignore malformed JSON
-    }
-  });
-});
-```
-
-## Building for Release
+## Building
 
 ```bash
 cargo build --release
 ```
 
-The compiled binary will be in `./target/release/global-key-listener`
+The binary will be available at `target/release/global-key-listener`
+
+## Integration with Electron
+
+When integrating with Electron:
+1. Copy the compiled binary to your app's resources directory
+2. Use the binary path from `process.resourcesPath` in production
+3. Use the development path (`target/release/global-key-listener`) during development
+4. Ensure proper error handling and process management in your Electron app
+
+## Key Names
+
+The key listener uses standard key names that match the `rdev` library's Key enum. Common examples:
+- `KeyA` through `KeyZ` for letter keys
+- `Digit1` through `Digit9` for number keys
+- `Function` for the fn key (macOS)
+- `ShiftLeft`, `ShiftRight` for modifier keys
+- `Space`, `Enter`, `Escape` for special keys
 
 ## Notes
 

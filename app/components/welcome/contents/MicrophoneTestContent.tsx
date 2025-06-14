@@ -21,7 +21,7 @@ function MicrophoneBars({ volume }: { volume: number }) {
   });
 
   return (
-    <div className="flex gap-1 py-4 px-4 items-end bg-neutral-100 rounded-md" style={{ minHeight: 120 }}>
+    <div className="flex gap-1 py-4 px-4 items-end bg-neutral-100 rounded-md" style={{ height: 120 }}>
       {levels.map((level, i) => (
         <div
           key={i}

@@ -18,19 +18,38 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
   // Start the global key listener
   const startKeyListener = () => {
     if (keyListenerProcess) {
-      console.log('Key listener already running')
+      console.warn('Key listener already running')
       return
     }
 
     const isDev = !app.isPackaged
-    const binaryPath = isDev
-      ? join(
-          __dirname,
-          '../../native/global-key-listener/target/release/global-key-listener'
-        )
-      : join(process.resourcesPath, 'global-key-listener')
+    const platform = os.platform()
+    const arch = os.arch()
 
-    console.log('Starting key listener from:', binaryPath)
+    // Determine the binary name based on platform
+    const binaryName =
+      platform === 'win32' ? 'global-key-listener.exe' : 'global-key-listener'
+
+    // Determine the target directory based on platform and architecture
+    const getTargetDir = () => {
+      if (isDev) {
+        const targetBase = join(
+          __dirname,
+          '../../native/global-key-listener/target'
+        )
+        if (platform === 'darwin') {
+          return arch === 'arm64'
+            ? join(targetBase, 'aarch64-apple-darwin/release')
+            : join(targetBase, 'x86_64-apple-darwin/release')
+        } else if (platform === 'win32') {
+          return join(targetBase, 'x86_64-pc-windows-gnu/release')
+        }
+      }
+      // For production builds, binaries should be in the resources directory
+      return join(process.resourcesPath, 'binaries')
+    }
+
+    const binaryPath = join(getTargetDir(), binaryName)
 
     try {
       // Set up environment variables
@@ -62,12 +81,10 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
         // Split on newlines and process complete events
         const lines = buffer.split('\n')
         buffer = lines.pop() || '' // Keep the last incomplete line in the buffer
-        console.log('Lines:', lines)
         for (const line of lines) {
           if (line.trim()) {
             try {
               const event = JSON.parse(line)
-              console.log('Sending key event to renderer:', event)
               mainWindow.webContents.send('key-event', event)
             } catch (e) {
               console.error('Failed to parse key event:', e)
@@ -86,7 +103,7 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
       })
 
       keyListenerProcess.on('close', (code, signal) => {
-        console.log(
+        console.warn(
           'Key listener process exited with code:',
           code,
           'signal:',
@@ -98,7 +115,6 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
       // Send a test command to verify the process is working
       setTimeout(() => {
         if (keyListenerProcess) {
-          console.log('Sending test command to key listener')
           keyListenerProcess.stdin?.write(
             JSON.stringify({ command: 'get_blocked' }) + '\n'
           )
@@ -113,7 +129,7 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
   // Stop the global key listener
   const stopKeyListener = () => {
     if (keyListenerProcess) {
-      console.log('Stopping key listener')
+      console.warn('Stopping key listener')
       // Send SIGTERM instead of SIGKILL to allow graceful shutdown
       keyListenerProcess.kill('SIGTERM')
       keyListenerProcess = null
@@ -133,7 +149,6 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
 
   handleIPC('block-keys', (_e, keys: string[]) => {
     if (keyListenerProcess) {
-      console.log('Blocking keys:', keys)
       keyListenerProcess.stdin?.write(
         JSON.stringify({ command: 'block', keys }) + '\n'
       )
@@ -142,7 +157,6 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
 
   handleIPC('unblock-key', (_e, key: string) => {
     if (keyListenerProcess) {
-      console.log('Unblocking key:', key)
       keyListenerProcess.stdin?.write(
         JSON.stringify({ command: 'unblock', key }) + '\n'
       )
@@ -151,7 +165,6 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
 
   handleIPC('get-blocked-keys', () => {
     if (keyListenerProcess) {
-      console.log('Getting blocked keys')
       keyListenerProcess.stdin?.write(
         JSON.stringify({ command: 'get_blocked' }) + '\n'
       )

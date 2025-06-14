@@ -1,4 +1,5 @@
 out/*
+release/*
 node_modules/*
 .env
 .env.local

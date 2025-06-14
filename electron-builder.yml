@@ -1,18 +1,28 @@
-appId: com.electron.era
-productName: Era
-copyright: Copyright © 2024 Guasam
+appId: ai.ito.ito
+productName: Ito
+copyright: Copyright © 2025 Demox Labs
 directories:
   buildResources: resources
   output: release
 files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
   - from: out
     filter:
       - '**/*'
-  - from: native/global-key-listener/target/release
+  - from: native/global-key-listener/target
     filter:
-      - 'global-key-listener'
-    to: resources
+      - 'x86_64-apple-darwin/release/global-key-listener'
+      - 'aarch64-apple-darwin/release/global-key-listener'
+      - 'x86_64-pc-windows-gnu/release/global-key-listener.exe'
+    to: resources/binaries
 asar: true
+asarUnpack:
+  - resources/**
 mac:
   target:
     - dmg
@@ -22,15 +32,24 @@ mac:
   gatekeeperAssess: false
   entitlements: resources/entitlements.mac.plist
   entitlementsInherit: resources/entitlements.mac.plist
+  extendInfo:
+    - NSCameraUsageDescription: Application requests access to the device's camera.
+    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
+    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
+    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+  notarize: false
+dmg:
+  artifactName: ${name}-${version}.${ext}
 win:
   target:
     - nsis
   icon: resources/build/icon.ico
-linux:
-  target:
-    - AppImage
-  icon: resources/build/icon.png
+  executableName: Ito
 nsis:
+  artifactName: ${name}-${version}-setup.${ext}
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  createDesktopShortcut: always
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true

@@ -4,7 +4,6 @@ import { useOnboardingStore } from '@/app/store/useOnboardingStore';
 import KeyboardKey from '../../ui/keyboard-key';
 
 export default function KeyboardTestContent() {
-  console.log('KeyboardTestContent rendering')
   const { incrementOnboardingStep, decrementOnboardingStep, keyboardShortcut } = useOnboardingStore();
   const cleanupRef = useRef<(() => void) | null>(null);
 
@@ -15,49 +14,28 @@ export default function KeyboardTestContent() {
   }, []);
 
   useEffect(() => {
-    // console.log('KeyboardTestContent mounted')
-    
-    // // Verify window.api exists
-    // if (!window.api) {
-    //   console.error('window.api is not defined!')
-    //   return
-    // }
+    // Start the key listener when the component mounts
+    window.api.startKeyListener()
 
-    // console.log('Starting key listener...')
-    // // Start the key listener when the component mounts
-    // window.api.startKeyListener().then(() => {
-    //   console.log('Key listener started successfully')
-    // }).catch(error => {
-    //   console.error('Failed to start key listener:', error)
-    // })
+    // Listen for key events and store cleanup function
+    try {
+      const cleanup = window.api.onKeyEvent(handleKeyEvent)
+      cleanupRef.current = cleanup
+    } catch (error) {
+      console.error('Failed to set up key event handler:', error)
+    }
 
-    // // Listen for key events and store cleanup function
-    // console.log('Setting up key event handler...')
-    // try {
-    //   const cleanup = window.api.onKeyEvent(handleKeyEvent)
-    //   cleanupRef.current = cleanup
-    //   console.log('Key event handler set up')
-    // } catch (error) {
-    //   console.error('Failed to set up key event handler:', error)
-    // }
-
-    // // Clean up when the component unmounts
-    // return () => {
-    //   console.log('KeyboardTestContent unmounting')
-    //   if (cleanupRef.current) {
-    //     console.log('Cleaning up key event handler...')
-    //     try {
-    //       cleanupRef.current()
-    //     } catch (error) {
-    //       console.error('Error during cleanup:', error)
-    //     }
-    //   }
-    //   window.api.stopKeyListener().then(() => {
-    //     console.log('Key listener stopped successfully')
-    //   }).catch(error => {
-    //     console.error('Failed to stop key listener:', error)
-    //   })
-    // }
+    // Clean up when the component unmounts
+    return () => {
+      if (cleanupRef.current) {
+        try {
+          cleanupRef.current()
+        } catch (error) {
+          console.error('Error during cleanup:', error)
+        }
+      }
+      window.api.stopKeyListener()
+    }
   }, [handleKeyEvent])
 
   return (

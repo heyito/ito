@@ -15,15 +15,13 @@
     "start": "electron-vite preview",
     "postinstall": "electron-builder install-app-deps",
     "vite:build:app": "electron-vite build",
-    "build:rust": "cd native/global-key-listener && cargo build --release",
-    "electron:build:win": "run-s build:rust electron-builder --win",
-    "electron:build:mac": "run-s build:rust electron-builder --mac",
-    "electron:build:linux": "run-s build:rust electron-builder --linux",
-    "electron:build:dir": "run-s build:rust electron-builder --dir",
-    "build:unpack": "run-s vite:build:app electron:build:dir",
-    "build:win": "run-s vite:build:app electron:build:win",
-    "build:mac": "run-s vite:build:app electron:build:mac",
-    "build:linux": "run-s vite:build:app electron:build:linux"
+    "build:rust": "./build-binaries.sh",
+    "electron:build:win": "./build-binaries.sh && electron-builder --win --x64",
+    "electron:build:mac": "./build-binaries.sh && electron-builder --mac --universal",
+    "electron:build:dir": "./build-binaries.sh && electron-builder --dir",
+    "build:unpack": "electron-vite build && electron-builder --dir",
+    "build:win": "electron-vite build && electron-builder --win --x64",
+    "build:mac": "electron-vite build && electron-builder --mac --universal"
   },
   "repository": {
     "type": "git",

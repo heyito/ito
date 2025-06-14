@@ -20,12 +20,10 @@ const api = {
   unblockKey: (key: string) => ipcRenderer.invoke('unblock-key', key),
   getBlockedKeys: () => ipcRenderer.invoke('get-blocked-keys'),
   onKeyEvent: (callback: (event: any) => void) => {
-    console.log('Setting up key event listener in preload')
     // Remove any existing listeners to prevent duplicates
     ipcRenderer.removeAllListeners('key-event')
     // Add the new listener
     const handler = (_: any, event: any) => {
-      console.log('Received key event in preload:', event)
       try {
         callback(event)
       } catch (error) {
@@ -33,10 +31,8 @@ const api = {
       }
     }
     ipcRenderer.on('key-event', handler)
-    console.log('Key event listener set up in preload')
     // Return cleanup function
     return () => {
-      console.log('Cleaning up key event listener in preload')
       ipcRenderer.removeListener('key-event', handler)
     }
   },

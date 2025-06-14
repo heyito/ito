@@ -15,7 +15,6 @@ const api = {
   },
   // Key listener methods
   startKeyListener: () => ipcRenderer.invoke('start-key-listener'),
-  stopKeyListener: () => ipcRenderer.invoke('stop-key-listener'),
   blockKeys: (keys: string[]) => ipcRenderer.invoke('block-keys', keys),
   unblockKey: (key: string) => ipcRenderer.invoke('unblock-key', key),
   getBlockedKeys: () => ipcRenderer.invoke('get-blocked-keys'),

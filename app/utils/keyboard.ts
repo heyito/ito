@@ -12,7 +12,7 @@ const keyNameMap: Record<string, string> = {
   ShiftLeft: 'shift',
   ShiftRight: 'shift',
   Function: 'fn',
-  'Unknown(179)': 'fn', // Special case for Function key
+  'Unknown(179)': 'fn_fast', // Happens when pressing and releasing fn quickly
 
   // Letter keys (remove the 'Key' prefix)
   KeyA: 'a',
@@ -74,7 +74,6 @@ const keyNameMap: Record<string, string> = {
  * @returns The normalized key name for UI display
  */
 export function normalizeKeyEvent(event: KeyEvent): string {
-  console.log('keyboard event', event)
   // If we have a mapping for this key, use it
   if (keyNameMap[event.key]) {
     return keyNameMap[event.key]
@@ -113,13 +112,7 @@ export class KeyState {
     const key = normalizeKeyEvent(event)
 
     // Handle Function key special case
-    if (this.isFunctionKeyShortcut && event.key === 'Unknown(179)') {
-      // Treat Unknown(179) as the Function key
-      if (event.type === 'keydown') {
-        this.pressedKeys.add('fn')
-      } else if (event.type === 'keyup') {
-        this.pressedKeys.delete('fn')
-      }
+    if (key === 'fn_fast') {
       return
     }
 

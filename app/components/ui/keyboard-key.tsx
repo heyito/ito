@@ -44,9 +44,8 @@ const DefaultKey = ({ keyboardKey }: { keyboardKey: string }) => {
     keyboardKey = keyboardKey.toUpperCase()
   }
   let fontSize = 20
-  if (keyboardKey.length > 1) fontSize = 18
-  if (keyboardKey.length > 3) fontSize = 16
-  if (keyboardKey.length > 4) fontSize = 14
+  if (keyboardKey.length > 3) fontSize = 18
+  if (keyboardKey.length > 6) fontSize = 16
 
   return (
     <svg width="100%" height="100%" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">

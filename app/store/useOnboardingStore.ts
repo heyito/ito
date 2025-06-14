@@ -78,5 +78,5 @@ export const useOnboardingStore = create<OnboardingState>((set) => ({
   setMicrophoneDeviceId: (deviceId: string) =>
     set((_state) => ({ microphoneDeviceId: deviceId })),
   setKeyboardShortcut: (shortcut: string[]) =>
-    set((_state) => ({ keyboardShortcut: shortcut })),
+    set((_state) => ({ keyboardShortcut: [...shortcut].sort() })),
 }))

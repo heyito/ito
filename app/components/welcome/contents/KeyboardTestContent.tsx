@@ -120,7 +120,7 @@ export default function KeyboardTestContent() {
                   <KeyboardKey 
                     key={index} 
                     keyboardKey={keyboardKey}
-                    className="bg-white"
+                    className="bg-white border-2 border-neutral-300"
                     style={{ 
                       width: '80px', 
                       height: '80px',
@@ -128,9 +128,9 @@ export default function KeyboardTestContent() {
                   />
                 ))}
               </div>
-              <div className="flex gap-2 mt-2">
-                <Button variant="outline" className="w-44" type="button" onClick={handleCancel}>Cancel</Button>
-                <Button className="w-44" type="button" onClick={handleSave}>Save</Button>
+              <div className="flex gap-2 mt-2 w-full justify-end">
+                <Button variant="outline" className="" type="button" onClick={handleCancel}>Cancel</Button>
+                <Button className="" type="button" onClick={handleSave}>Save</Button>
               </div>
             </>
           ) : (
@@ -141,7 +141,7 @@ export default function KeyboardTestContent() {
                   <KeyboardKey 
                     key={index} 
                     keyboardKey={keyboardKey}
-                    className={`${pressedKeys.includes(keyboardKey.toLowerCase()) ? 'bg-purple-100' : 'bg-white'}`}
+                    className={`${pressedKeys.includes(keyboardKey.toLowerCase()) ? 'bg-purple-50 border-2 border-purple-200' : 'bg-white border-2 border-neutral-300'}`}
                     style={{ 
                       width: '80px', 
                       height: '80px',
@@ -149,7 +149,7 @@ export default function KeyboardTestContent() {
                   />
                 ))}
               </div>
-              <div className="flex gap-2 mt-2">
+              <div className="flex gap-2 mt-2 w-full justify-end">
                 <Button variant="outline" className="w-44" type="button" onClick={handleStartEditing}>No, change shortcut</Button>
                 <Button className="w-16" type="button" onClick={incrementOnboardingStep}>Yes</Button>
               </div>

@@ -16,7 +16,7 @@ function MicrophoneBars({ volume }: { volume: number }) {
   const minHeight = 0.2;
   const levels = Array(12).fill(0).map((_, i) => {
     const threshold = (i / 12) * 0.5;
-    const normalizedVolume = Math.min(volume * 1.35, 1);
+    const normalizedVolume = Math.min(volume * 1.5, 1);
     return normalizedVolume > threshold ? 1 : minHeight;
   });
 
@@ -136,7 +136,7 @@ export default function MicrophoneTestContent() {
         <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center" style={{ minWidth: 500, maxHeight: 280 }}>
           <div className="text-lg font-medium mb-6 text-center">Do you see purple bars moving while you speak?</div>
           <MicrophoneBars volume={smoothedVolume} />
-          <div className="flex gap-2 mt-6">
+          <div className="flex gap-2 mt-6 w-full justify-end">
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" className="w-44" type="button">No, change microphone</Button>

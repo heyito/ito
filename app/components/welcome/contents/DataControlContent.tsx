@@ -47,10 +47,12 @@ export default function DataControlContent() {
                 </div>
               </div>
             </div>
-            <div className="text-sm text-muted-foreground mb-8">
+            <div className="text-sm text-muted-foreground">
               You can always change this later in settings. <a href="#" className="underline">Read more here.</a>
             </div>
-            <Button className="w-24 mb-8 mt-6" onClick={incrementOnboardingStep}>Continue</Button>
+          </div>
+          <div className="flex flex-col items-start mb-8">
+            <Button className="w-24" onClick={incrementOnboardingStep}>Continue</Button>
           </div>
         </div>
       </div>

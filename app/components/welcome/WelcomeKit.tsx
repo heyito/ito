@@ -5,6 +5,7 @@ import MicrophoneTestContent from './contents/MicrophoneTestContent'
 import KeyboardTestContent from './contents/KeyboardTestContent'
 import GoodToGoContent from './contents/GoodToGoContent'
 import AnyAppContent from './contents/AnyAppContent'
+import TryItOutContent from './contents/TryItOutContent'
 import { useEffect } from 'react'
 import './styles.css'
 import { usePermissionsStore } from '../../store/usePermissionsStore'
@@ -45,6 +46,8 @@ export default function WelcomeKit() {
         <GoodToGoContent />
       ) : onboardingStep === 6 ? (
         <AnyAppContent />
+      ) : onboardingStep === 7 ? (
+        <TryItOutContent />
       ) : null}
     </div>
   )

@@ -13,7 +13,7 @@ export default function GoodToGoContent() {
             <button className="mb-4 text-sm text-muted-foreground hover:underline" type="button" onClick={decrementOnboardingStep}>&lt; Back</button>
             <h1 className="text-3xl mb-4 mt-12">Your hardware setup is good to go</h1>
           </div>
-          <div className="flex flex-col items-start mb-4" style={{ marginTop: '366px' }}>
+          <div className="flex flex-col items-start mb-8">
             <Button className="w-24" onClick={incrementOnboardingStep}>Continue</Button>
           </div>
         </div>

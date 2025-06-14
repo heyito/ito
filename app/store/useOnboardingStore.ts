@@ -36,7 +36,7 @@ export const getOnboardingCategoryIndex = (
 }
 
 export const useOnboardingStore = create<OnboardingState>((set) => ({
-  onboardingStep: 0,
+  onboardingStep: 7,
   totalOnboardingSteps: 9,
   onboardingCompleted: false,
   onboardingCategory: 'sign-up',

@@ -18,7 +18,7 @@ export default function AnyAppContent() {
             <h1 className="text-3xl mb-4 mt-12">Ito works in any app</h1>
             <p className="text-base text-muted-foreground mt-6">From emails to chats to documents—Ito works in any textbox on your computer.</p>
           </div>
-          <div className="flex flex-col items-start mb-4" style={{ marginTop: '346px' }}>
+          <div className="flex flex-col items-start mb-8">
             <Button className="w-24" onClick={incrementOnboardingStep}>Continue</Button>
           </div>
         </div>

@@ -25,7 +25,7 @@ export default function SignupContent() {
     <div className="flex flex-row h-full w-full bg-background">
       <div className="flex flex-col w-[45%] justify-center items-start pl-24">
         <div className="flex flex-col h-full min-h-[400px] justify-between py-12">
-          <div className="mt-36">
+          <div className="pt-32">
             <h1 className="text-3xl mb-4">Welcome!</h1>
             <p className="mb-6 text-base text-muted-foreground">Where did you hear about us?</p>
             <DropdownMenu>
@@ -42,7 +42,7 @@ export default function SignupContent() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <div className="flex flex-col items-start mt-64 mb-4">
+          <div className="flex flex-col items-start mb-8">
             <Button className="w-24" onClick={incrementOnboardingStep}>Continue</Button>
           </div>
         </div>

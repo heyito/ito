@@ -45,12 +45,9 @@ fn handle_command(command: Command) {
     match command {
         Command::Block { keys } => unsafe {
             BLOCKED_KEYS = keys;
-            println!("Updated blocked keys: {:?}", BLOCKED_KEYS);
         },
         Command::Unblock { key } => unsafe {
             BLOCKED_KEYS.retain(|k| k != &key);
-            println!("Removed key from blocked list: {}", key);
-            println!("Current blocked keys: {:?}", BLOCKED_KEYS);
         },
         Command::GetBlocked => unsafe {
             println!(

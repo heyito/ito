@@ -78,7 +78,7 @@ interface KeyboardKeyProps extends ComponentPropsWithoutRef<'div'> {
 
 export default function KeyboardKey({ keyboardKey, className, ...props }: KeyboardKeyProps) {
   return (
-    <div className={`bg-white rounded-lg shadow-lg ${className}`} {...props}>
+    <div className={`rounded-lg shadow-lg ${className}`} {...props}>
       <KeyToRender keyboardKey={keyboardKey} />
     </div>
   )

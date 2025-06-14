@@ -25,6 +25,15 @@ const api = {
     // Add the new listener
     const handler = (_: any, event: any) => {
       try {
+        // Validate event object before calling callback
+        if (!event || typeof event !== 'object') {
+          console.warn('Received invalid key event:', event)
+          return
+        }
+        if (!event.type || !event.key) {
+          console.warn('Key event missing required properties:', event)
+          return
+        }
         callback(event)
       } catch (error) {
         console.error('Error in key event callback:', error)

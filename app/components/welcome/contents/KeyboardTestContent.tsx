@@ -1,21 +1,44 @@
-import { useEffect, useCallback, useRef } from 'react'
+import { useEffect, useCallback, useRef, useState } from 'react'
 import { Button } from '@/app/components/ui/button';
 import { useOnboardingStore } from '@/app/store/useOnboardingStore';
 import KeyboardKey from '../../ui/keyboard-key';
+import { KeyState } from '@/app/utils/keyboard';
 
 export default function KeyboardTestContent() {
   const { incrementOnboardingStep, decrementOnboardingStep, keyboardShortcut } = useOnboardingStore();
   const cleanupRef = useRef<(() => void) | null>(null);
+  const keyStateRef = useRef<KeyState>(new KeyState(keyboardShortcut));
+  const [pressedKeys, setPressedKeys] = useState<string[]>([]);
 
   const handleKeyEvent = useCallback((event: any) => {
-    console.log('Key event in component:', event)
-    // Here you can add logic to check if the pressed key matches the keyboard shortcut
-    // and handle the test accordingly
-  }, []);
+    // Update the key state
+    keyStateRef.current.update(event);
+    
+    // Get the current pressed keys and update state
+    const currentPressedKeys = keyStateRef.current.getPressedKeys();
+    setPressedKeys(currentPressedKeys);
+
+    // Check if the pressed keys match our keyboard shortcut
+    const normalizedShortcut = keyboardShortcut.map(key => key.toLowerCase());
+    const isMatch = normalizedShortcut.every(key => 
+      currentPressedKeys.includes(key.toLowerCase())
+    );
+
+    if (isMatch && currentPressedKeys.length === normalizedShortcut.length) {
+      // All keys in the shortcut are pressed
+      console.log('Keyboard shortcut matched!');
+    }
+  }, [keyboardShortcut]);
 
   useEffect(() => {
     // Start the key listener when the component mounts
     window.api.startKeyListener()
+
+    // Block necessary keys for the shortcut
+    const keysToBlock = keyStateRef.current.getKeysToBlock();
+    if (keysToBlock.length > 0) {
+      window.api.blockKeys(keysToBlock);
+    }
 
     // Listen for key events and store cleanup function
     try {
@@ -35,6 +58,8 @@ export default function KeyboardTestContent() {
         }
       }
       window.api.stopKeyListener()
+      // Clear the key state when unmounting
+      keyStateRef.current.clear();
     }
   }, [handleKeyEvent])
 
@@ -56,7 +81,15 @@ export default function KeyboardTestContent() {
           <div className="text-lg font-medium mb-6 text-center">Does the button turn purple while pressing it?</div>
           <div className="flex justify-center items-center mb-6 w-full bg-neutral-50 py-4 rounded-lg gap-2" style={{ minHeight: 100 }}>
             {keyboardShortcut.map((keyboardKey, index) => (
-              <KeyboardKey key={index} keyboardKey={keyboardKey} style={{ width: '80px', height: '80px' }} />
+              <KeyboardKey 
+                key={index} 
+                keyboardKey={keyboardKey}
+                className={`${pressedKeys.includes(keyboardKey.toLowerCase()) ? 'bg-purple-100' : 'bg-white'}`}
+                style={{ 
+                  width: '80px', 
+                  height: '80px',
+                }} 
+              />
             ))}
           </div>
           <div className="flex gap-2 mt-2">

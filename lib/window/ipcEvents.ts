@@ -85,6 +85,10 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
           if (line.trim()) {
             try {
               const event = JSON.parse(line)
+              if (mainWindow.webContents.isDestroyed()) {
+                console.warn('Window is destroyed, skipping key event')
+                return
+              }
               mainWindow.webContents.send('key-event', event)
             } catch (e) {
               console.error('Failed to parse key event:', e)
@@ -235,4 +239,9 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
       return systemPreferences.getMediaAccessStatus('microphone') === 'granted'
     }
   )
+
+  // Clean up key listener on window reload
+  mainWindow.webContents.on('did-start-loading', () => {
+    stopKeyListener()
+  })
 }

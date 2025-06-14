@@ -1,8 +1,9 @@
 import { Button } from '@/app/components/ui/button';
 import { useOnboardingStore } from '@/app/store/useOnboardingStore';
+import KeyboardKey from '../../ui/keyboard-key';
 
 export default function KeyboardTestContent() {
-  const { incrementOnboardingStep, decrementOnboardingStep } = useOnboardingStore();
+  const { incrementOnboardingStep, decrementOnboardingStep, keyboardShortcut } = useOnboardingStore();
 
   return (
     <div className="flex flex-row h-full w-full bg-background">
@@ -20,19 +21,14 @@ export default function KeyboardTestContent() {
       <div className="flex w-[55%] items-center justify-center bg-gradient-to-b from-purple-50/10 to-purple-100 border-l-2 border-purple-100">
         <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center" style={{ minWidth: 500, maxHeight: 280 }}>
           <div className="text-lg font-medium mb-6 text-center">Does the button turn purple while pressing it?</div>
-          <div className="flex justify-center items-center mb-6 w-full bg-neutral-50 py-4 rounded-lg" style={{ minHeight: 100 }}>
-            <div className="flex flex-col items-center">
-              <div className="flex items-center justify-center bg-white aspect-square rounded-lg border border-neutral-300 bg-neutral-50 text-lg font-mono">
-                <span className="flex items-center gap-1">
-                  <span className="i-tabler-world text-xl" />
-                  fn
-                </span>
-              </div>
-            </div>
+          <div className="flex justify-center items-center mb-6 w-full bg-neutral-50 py-4 rounded-lg gap-2" style={{ minHeight: 100 }}>
+            {keyboardShortcut.map((keyboardKey, index) => (
+              <KeyboardKey key={index} keyboardKey={keyboardKey} style={{ width: '80px', height: '80px' }} />
+            ))}
           </div>
           <div className="flex gap-2 mt-2">
             <Button variant="outline" className="w-44" type="button">No, change shortcut</Button>
-            <Button className="w-16" type="button">Yes</Button>
+            <Button className="w-16" type="button" onClick={incrementOnboardingStep}>Yes</Button>
           </div>
         </div>
       </div>

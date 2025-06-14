@@ -16,6 +16,7 @@ interface OnboardingState {
   setReferralSource: (source: string) => void
   setShareAnalytics: (share: boolean) => void
   setMicrophoneDeviceId: (deviceId: string) => void
+  setKeyboardShortcut: (shortcut: string[]) => void
 }
 
 const getOnboardingCategory = (onboardingStep: number): OnboardingCategory => {

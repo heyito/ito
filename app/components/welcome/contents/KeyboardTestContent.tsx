@@ -2,13 +2,15 @@ import { useEffect, useCallback, useRef, useState } from 'react'
 import { Button } from '@/app/components/ui/button';
 import { useOnboardingStore } from '@/app/store/useOnboardingStore';
 import KeyboardKey from '../../ui/keyboard-key';
-import { KeyState } from '@/app/utils/keyboard';
+import { KeyState, normalizeKeyEvent } from '@/app/utils/keyboard';
 
 export default function KeyboardTestContent() {
-  const { incrementOnboardingStep, decrementOnboardingStep, keyboardShortcut } = useOnboardingStore();
+  const { incrementOnboardingStep, decrementOnboardingStep, keyboardShortcut, setKeyboardShortcut } = useOnboardingStore();
   const cleanupRef = useRef<(() => void) | null>(null);
   const keyStateRef = useRef<KeyState>(new KeyState(keyboardShortcut));
   const [pressedKeys, setPressedKeys] = useState<string[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [newShortcut, setNewShortcut] = useState<string[]>([]);
 
   const handleKeyEvent = useCallback((event: any) => {
     // Update the key state
@@ -18,17 +20,27 @@ export default function KeyboardTestContent() {
     const currentPressedKeys = keyStateRef.current.getPressedKeys();
     setPressedKeys(currentPressedKeys);
 
-    // Check if the pressed keys match our keyboard shortcut
-    const normalizedShortcut = keyboardShortcut.map(key => key.toLowerCase());
-    const isMatch = normalizedShortcut.every(key => 
-      currentPressedKeys.includes(key.toLowerCase())
-    );
+    if (isEditing) {
+      // In edit mode, handle adding/removing keys
+      if (event.type === 'keydown') {
+        const normalizedKey = normalizeKeyEvent(event);
+        if (!newShortcut.includes(normalizedKey)) {
+          setNewShortcut(prev => [...prev, normalizedKey]);
+        }
+      }
+    } else {
+      // In normal mode, check if the pressed keys match our keyboard shortcut
+      const normalizedShortcut = keyboardShortcut.map(key => key.toLowerCase());
+      const isMatch = normalizedShortcut.every(key => 
+        currentPressedKeys.includes(key.toLowerCase())
+      );
 
-    if (isMatch && currentPressedKeys.length === normalizedShortcut.length) {
-      // All keys in the shortcut are pressed
-      console.log('Keyboard shortcut matched!');
+      if (isMatch && currentPressedKeys.length === normalizedShortcut.length) {
+        // All keys in the shortcut are pressed
+        console.log('Keyboard shortcut matched!');
+      }
     }
-  }, [keyboardShortcut]);
+  }, [keyboardShortcut, isEditing, newShortcut]);
 
   useEffect(() => {
     // Start the key listener when the component mounts
@@ -63,6 +75,21 @@ export default function KeyboardTestContent() {
     }
   }, [handleKeyEvent])
 
+  const handleStartEditing = () => {
+    setIsEditing(true);
+    setNewShortcut([]);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setNewShortcut([]);
+  };
+
+  const handleSave = () => {
+    setKeyboardShortcut(newShortcut);
+    setIsEditing(false);
+  };
+
   return (
     <div className="flex flex-row h-full w-full bg-background">
       <div className="flex flex-col w-[45%] justify-center items-start px-24">
@@ -78,24 +105,49 @@ export default function KeyboardTestContent() {
       </div>
       <div className="flex w-[55%] items-center justify-center bg-gradient-to-b from-purple-50/10 to-purple-100 border-l-2 border-purple-100">
         <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center" style={{ minWidth: 500, maxHeight: 280 }}>
-          <div className="text-lg font-medium mb-6 text-center">Does the button turn purple while pressing it?</div>
-          <div className="flex justify-center items-center mb-6 w-full bg-neutral-50 py-4 rounded-lg gap-2" style={{ minHeight: 100 }}>
-            {keyboardShortcut.map((keyboardKey, index) => (
-              <KeyboardKey 
-                key={index} 
-                keyboardKey={keyboardKey}
-                className={`${pressedKeys.includes(keyboardKey.toLowerCase()) ? 'bg-purple-100' : 'bg-white'}`}
-                style={{ 
-                  width: '80px', 
-                  height: '80px',
-                }} 
-              />
-            ))}
-          </div>
-          <div className="flex gap-2 mt-2">
-            <Button variant="outline" className="w-44" type="button">No, change shortcut</Button>
-            <Button className="w-16" type="button" onClick={incrementOnboardingStep}>Yes</Button>
-          </div>
+          {isEditing ? (
+            <>
+              <div className="text-lg font-medium mb-6 text-center">Press a key to add it to the shortcut, press it again to remove it</div>
+              <div className="flex justify-center items-center mb-6 w-full bg-neutral-50 py-4 rounded-lg gap-2" style={{ minHeight: 100 }}>
+                {newShortcut.map((keyboardKey, index) => (
+                  <KeyboardKey 
+                    key={index} 
+                    keyboardKey={keyboardKey}
+                    className="bg-white"
+                    style={{ 
+                      width: '80px', 
+                      height: '80px',
+                    }} 
+                  />
+                ))}
+              </div>
+              <div className="flex gap-2 mt-2">
+                <Button variant="outline" className="w-44" type="button" onClick={handleCancel}>Cancel</Button>
+                <Button className="w-44" type="button" onClick={handleSave}>Save</Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-lg font-medium mb-6 text-center">Does the button turn purple while pressing it?</div>
+              <div className="flex justify-center items-center mb-6 w-full bg-neutral-50 py-4 rounded-lg gap-2" style={{ minHeight: 100 }}>
+                {keyboardShortcut.map((keyboardKey, index) => (
+                  <KeyboardKey 
+                    key={index} 
+                    keyboardKey={keyboardKey}
+                    className={`${pressedKeys.includes(keyboardKey.toLowerCase()) ? 'bg-purple-100' : 'bg-white'}`}
+                    style={{ 
+                      width: '80px', 
+                      height: '80px',
+                    }} 
+                  />
+                ))}
+              </div>
+              <div className="flex gap-2 mt-2">
+                <Button variant="outline" className="w-44" type="button" onClick={handleStartEditing}>No, change shortcut</Button>
+                <Button className="w-16" type="button" onClick={incrementOnboardingStep}>Yes</Button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

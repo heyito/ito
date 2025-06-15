@@ -1,10 +1,10 @@
 import { Button } from '@/app/components/ui/button';
 import { useOnboardingStore } from '@/app/store/useOnboardingStore';
-import SlackIcon from '../icons/SlackIcon';
-import GmailIcon from '../icons/GmailIcon';
-import ChatGPTIcon from '../icons/ChatGPTIcon';
-import NotionIcon from '../icons/NotionIcon';
-import CursorIcon from '../icons/CursorIcon';
+import SlackIcon from '../../icons/SlackIcon';
+import GmailIcon from '../../icons/GmailIcon';
+import ChatGPTIcon from '../../icons/ChatGPTIcon';
+import NotionIcon from '../../icons/NotionIcon';
+import CursorIcon from '../../icons/CursorIcon';
 import { useState } from 'react';
 import { ArrowUp } from "@mynaui/icons-react";
 import React from 'react';

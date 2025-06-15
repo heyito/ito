@@ -2,23 +2,64 @@ import { useWindowContext } from './WindowContext'
 import React from 'react'
 import { OnboardingTitlebar } from './OnboardingTitlebar'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
+import { CogFour, UserCircle, PanelLeft } from '@mynaui/icons-react'
 
 export const Titlebar = () => {
   const {icon } = useWindowContext().titlebar
   const { onboardingCompleted } = useOnboardingStore()
   const wcontext = useWindowContext().window
 
+  // Inline style override for onboarding completed
+  const style: React.CSSProperties = onboardingCompleted
+    ? { position: 'relative' as const, backgroundColor: '#f8fafc', borderBottom: 'none' }
+    : { position: 'relative' as const }
+
   return (
-    <div className={`window-titlebar ${wcontext?.platform ? `platform-${wcontext.platform}` : ''}`}
-         style={{ position: 'relative' }}>
+    <div 
+      className={`window-titlebar ${wcontext?.platform ? `platform-${wcontext.platform}` : ''}`}
+      style={style}
+    >
+      {onboardingCompleted && (
+        <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', display: 'flex', alignItems: 'center', gap: '2px', zIndex: 10, marginLeft: 100 }}>
+          <div
+            className="titlebar-action-btn hover:bg-slate-200"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 30, border: 'none', cursor: 'pointer', borderRadius: 6, padding: 0 }}
+            aria-label="Open Panel"
+            tabIndex={0}
+          >
+            <PanelLeft style={{ width: 20, height: 20 }} />
+          </div>
+        </div>
+      )}
       {wcontext?.platform === 'win32' && (
-        <div className="window-titlebar-icon">
+        <div className="window-titlebar-icon" style={onboardingCompleted ? { left: 36 } : {}}>
           <img src={icon} />
         </div>
       )}
 
       {!onboardingCompleted && <OnboardingTitlebar />}
       {wcontext?.platform === 'win32' && <TitlebarControls />}
+
+      {onboardingCompleted && (
+        <div style={{ position: 'absolute', right: 0, top: 0, height: '100%', display: 'flex', alignItems: 'center', gap: '2px', zIndex: 10 }}>
+          <div
+            className="titlebar-action-btn hover:bg-slate-200"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 30, border: 'none', cursor: 'pointer', borderRadius: 6, padding: 0 }}
+            aria-label="Settings"
+            tabIndex={0}
+          >
+            <CogFour style={{ width: 20, height: 20 }} />
+          </div>
+          <div
+            className="titlebar-action-btn hover:bg-slate-200"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 30, border: 'none', cursor: 'pointer', borderRadius: 6, padding: 0, marginRight: 12 }}
+            aria-label="Account"
+            tabIndex={0}
+          >
+            <UserCircle style={{ width: 20, height: 20 }} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

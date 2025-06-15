@@ -1,10 +1,10 @@
 import { Button } from '@/app/components/ui/button';
 import { useOnboardingStore } from '@/app/store/useOnboardingStore';
-import SlackIcon from '../icons/SlackIcon';
-import GmailIcon from '../icons/GmailIcon';
-import ChatGPTIcon from '../icons/ChatGPTIcon';
-import NotionIcon from '../icons/NotionIcon';
-import CursorIcon from '../icons/CursorIcon';
+import SlackIcon from '../../icons/SlackIcon';
+import GmailIcon from '../../icons/GmailIcon';
+import ChatGPTIcon from '../../icons/ChatGPTIcon';
+import NotionIcon from '../../icons/NotionIcon';
+import CursorIcon from '../../icons/CursorIcon';
 
 export default function AnyAppContent() {
   const { incrementOnboardingStep, decrementOnboardingStep } = useOnboardingStore();

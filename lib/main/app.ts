@@ -17,6 +17,7 @@ export function createAppWindow(): void {
     icon: appIcon,
     frame: false,
     titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 20, y: 17 },
     title: 'Ito',
     maximizable: false,
     resizable: false,

@@ -5,7 +5,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
-import AvatarIcon from '../icons/AvatarIcon'
+import AvatarIcon from '../../icons/AvatarIcon'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore';
 
 const sources = [

@@ -89,6 +89,10 @@
   border-bottom: 1px solid var(--window-c-titlebar-border);
 }
 
+.titlebar-action-btn {
+  -webkit-app-region: no-drag;
+}
+
 .window-titlebar-icon {
   position: absolute;
   left: 0;

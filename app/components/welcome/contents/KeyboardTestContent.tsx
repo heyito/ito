@@ -115,7 +115,7 @@ export default function KeyboardTestContent() {
           {isEditing ? (
             <>
               <div className="text-lg font-medium mb-6 text-center">Press a key to add it to the shortcut, press it again to remove it</div>
-              <div className="flex justify-center items-center mb-6 w-full bg-neutral-100 py-4 rounded-lg gap-2" style={{ minHeight: 100 }}>
+              <div className="flex justify-center items-center mb-6 w-full bg-neutral-100 py-4 rounded-lg gap-2" style={{ minHeight: 112 }}>
                 {newShortcut.map((keyboardKey, index) => (
                   <KeyboardKey 
                     key={index} 
@@ -136,7 +136,7 @@ export default function KeyboardTestContent() {
           ) : (
             <>
               <div className="text-lg font-medium mb-6 text-center">Does the button turn purple while pressing it?</div>
-              <div className="flex justify-center items-center mb-6 w-full bg-neutral-100 py-4 rounded-lg gap-2" style={{ minHeight: 100 }}>
+              <div className="flex justify-center items-center mb-6 w-full bg-neutral-100 py-4 rounded-lg gap-2" style={{ minHeight: 112 }}>
                 {keyboardShortcut.map((keyboardKey, index) => (
                   <KeyboardKey 
                     key={index} 

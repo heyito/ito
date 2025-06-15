@@ -1,16 +1,10 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext } from 'react'
 
 const TitlebarContext = createContext<TitlebarContextProps | undefined>(undefined)
 
 export const TitlebarContextProvider = ({ children }: { children: React.ReactNode }) => {
-  const [activeMenuIndex, setActiveMenuIndex] = useState<number | null>(null)
-  const [menusVisible, setMenusVisible] = useState(false)
-  const closeActiveMenu = () => setActiveMenuIndex(null)
-
   return (
-    <TitlebarContext.Provider
-      value={{ activeMenuIndex, setActiveMenuIndex, menusVisible, setMenusVisible, closeActiveMenu }}
-    >
+    <TitlebarContext.Provider value={{}}>
       {children}
     </TitlebarContext.Provider>
   )
@@ -24,10 +18,5 @@ export const useTitlebarContext = () => {
   return context
 }
 
-interface TitlebarContextProps {
-  activeMenuIndex: number | null
-  menusVisible: boolean
-  setActiveMenuIndex: (index: number | null) => void
-  setMenusVisible: (visible: boolean) => void
-  closeActiveMenu: () => void
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+interface TitlebarContextProps { }

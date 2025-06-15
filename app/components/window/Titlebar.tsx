@@ -1,34 +1,11 @@
-import { useEffect } from 'react'
 import { useWindowContext } from './WindowContext'
-import { useTitlebarContext } from './TitlebarContext'
-import { TitlebarMenu } from './TitlebarMenu'
 import React from 'react'
 import { getOnboardingCategoryIndex, useOnboardingStore } from '@/app/store/useOnboardingStore'
 
 export const Titlebar = () => {
-  const { title, icon, titleCentered, menuItems } = useWindowContext().titlebar
-  const { menusVisible, setMenusVisible, closeActiveMenu } = useTitlebarContext()
+  const { title, icon, titleCentered } = useWindowContext().titlebar
   const { onboardingStep, totalOnboardingSteps, onboardingCategory, onboardingCompleted } = useOnboardingStore()
   const wcontext = useWindowContext().window
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.altKey && menuItems?.length) {
-        // Ignore repeated keydown events
-        if (e.repeat) return
-        // Close active menu if it's open
-        if (menusVisible) closeActiveMenu()
-        setMenusVisible(!menusVisible)
-      }
-    }
-
-    // Add event listener for Alt key
-    document.addEventListener('keydown', handleKeyDown)
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [menusVisible, closeActiveMenu, setMenusVisible, menuItems])
 
   const onboardingProgress = Math.ceil(((onboardingStep + 1) / totalOnboardingSteps) * 100)
   const onboardingCategoryIndex = getOnboardingCategoryIndex(onboardingCategory)
@@ -170,5 +147,4 @@ export interface TitlebarProps {
   title: string
   titleCentered?: boolean
   icon?: string
-  menuItems?: TitlebarMenu[]
 }

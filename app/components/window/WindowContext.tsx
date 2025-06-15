@@ -11,7 +11,6 @@ export const WindowContextProvider = ({ children, titlebar }: WindowContextProvi
     title: 'Ito',
     icon: 'appIcon.png',
     titleCentered: false,
-    menuItems: [],
   }
 
   // Merge default titlebar props with user defined props

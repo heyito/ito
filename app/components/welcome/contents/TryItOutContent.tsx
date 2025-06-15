@@ -7,6 +7,7 @@ import NotionIcon from '../icons/NotionIcon';
 import CursorIcon from '../icons/CursorIcon';
 import { useState } from 'react';
 import { ArrowUp } from "@mynaui/icons-react";
+import React from 'react';
 
 export default function TryItOutContent() {
   const { incrementOnboardingStep, decrementOnboardingStep, keyboardShortcut } = useOnboardingStore();
@@ -153,12 +154,12 @@ export default function TryItOutContent() {
             <p className="text-base text-muted-foreground mt-6">
               Hold down on the {keyboardShortcut && Array.isArray(keyboardShortcut) && keyboardShortcut.length > 0 ? (
                 keyboardShortcut.map((key, idx) => (
-                  <>
-                  <span key={key} className="inline-flex items-center px-2 py-0.5 bg-neutral-100 border rounded text-xs font-mono mx-1">
-                    {key}
-                  </span>
-                  {idx < keyboardShortcut.length - 1 && <span key={`${key}-${idx}`} className="text-muted-foreground"> + </span>}
-                  </>
+                  <React.Fragment key={`keyboard-shortcut-${idx}`}>
+                    <span className="inline-flex items-center px-2 py-0.5 bg-neutral-100 border rounded text-xs font-mono mx-1">
+                      {key}
+                    </span>
+                    {idx < keyboardShortcut.length - 1 && <span className="text-muted-foreground"> + </span>}
+                  </React.Fragment>
                 ))
               ) : (
                 <span className="inline-flex items-center px-2 py-0.5 bg-neutral-100 border rounded text-xs font-mono ml-1">fn</span>

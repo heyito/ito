@@ -8,7 +8,7 @@ import { getOnboardingCategoryIndex, useOnboardingStore } from '@/app/store/useO
 export const Titlebar = () => {
   const { title, icon, titleCentered, menuItems } = useWindowContext().titlebar
   const { menusVisible, setMenusVisible, closeActiveMenu } = useTitlebarContext()
-  const { onboardingStep, totalOnboardingSteps, onboardingCategory } = useOnboardingStore()
+  const { onboardingStep, totalOnboardingSteps, onboardingCategory, onboardingCompleted } = useOnboardingStore()
   const wcontext = useWindowContext().window
 
   useEffect(() => {
@@ -60,7 +60,6 @@ export const Titlebar = () => {
           </React.Fragment>
         ))}
       </div>
-      {menusVisible && <TitlebarMenu />}
       {wcontext?.platform === 'win32' && <TitlebarControls />}
       {/* Onboarding Progress Bar (hardcoded to 25% for now) */}
       <div className="onboarding-progress-bar-bg">

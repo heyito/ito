@@ -3,10 +3,19 @@ import os from 'os'
 import { spawn } from 'child_process'
 import { join } from 'path'
 import { app } from 'electron'
+import store from '../main/store'
 
 const handleIPC = (channel: string, handler: (...args: any[]) => void) => {
   ipcMain.handle(channel, handler)
 }
+
+// IPC listener
+ipcMain.on('electron-store-get', async (event, val) => {
+  event.returnValue = store.get(val)
+})
+ipcMain.on('electron-store-set', async (event, key, val) => {
+  store.set(key, val)
+})
 
 // Global key listener process singleton
 let keyListenerProcess: ReturnType<typeof spawn> | null = null

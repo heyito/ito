@@ -10,7 +10,7 @@ import { ArrowUp } from "@mynaui/icons-react";
 import React from 'react';
 
 export default function TryItOutContent() {
-  const { incrementOnboardingStep, decrementOnboardingStep, keyboardShortcut } = useOnboardingStore();
+  const { decrementOnboardingStep, setOnboardingCompleted, keyboardShortcut } = useOnboardingStore();
   const [selectedApp, setSelectedApp] = useState<'slack' | 'gmail' | 'cursor' | 'chatgpt' | 'notion'>('slack');
 
   function renderDemo() {
@@ -167,7 +167,7 @@ export default function TryItOutContent() {
             </p>
           </div>
           <div className="flex flex-col items-start mb-8">
-            <Button className="w-24" onClick={incrementOnboardingStep}>Finish</Button>
+            <Button className="w-24" onClick={setOnboardingCompleted}>Finish</Button>
           </div>
         </div>
       </div>

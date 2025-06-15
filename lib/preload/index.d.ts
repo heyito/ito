@@ -8,9 +8,16 @@ interface KeyEvent {
   raw_code: number
 }
 
+interface StoreAPI {
+  get(key: string): any
+  set(property: string, val: any): void
+}
+
 declare global {
   interface Window {
-    electron: ElectronAPI
+    electron: ElectronAPI & {
+      store: StoreAPI
+    }
     api: typeof api & {
       startKeyListener: () => Promise<boolean>
       stopKeyListener: () => Promise<boolean>

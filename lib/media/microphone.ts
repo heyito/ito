@@ -153,9 +153,8 @@ const microphoneToRender = (microphone: Microphone): MicrophoneToRender => {
 
   // Handle default device case
   if (label.includes('default -')) {
-    const deviceName = microphone.label.split('Default - ')[1]
     return {
-      title: `Auto-detect (${deviceName})`,
+      title: `Auto-detect`,
       description:
         'May connect to Bluetooth earbuds, slowing transcription speed',
     }

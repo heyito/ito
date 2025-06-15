@@ -158,7 +158,7 @@ export default function MicrophoneTestContent() {
                       style={{ minWidth: 0 }}
                     >
                       <div className="font-medium text-base truncate" style={{ maxWidth: '100%' }}>{title}</div>
-                      {description && <div className="text-sm text-muted-foreground truncate mt-2" style={{ maxWidth: '100%' }}>{description}</div>}
+                      {description && <div className="text-sm text-muted-foreground text-wrap mt-2" style={{ maxWidth: '100%' }}>{description}</div>}
                     </div>
                   )
                 })}

@@ -55,6 +55,8 @@ export default function KeyboardTestContent() {
     const keysToBlock = keyStateRef.current.getKeysToBlock();
     if (keysToBlock.length > 0) {
       window.api.blockKeys(keysToBlock);
+    } else {
+      window.api.unblockKey('Unknown(179)');
     }
 
     // Listen for key events and store cleanup function
@@ -77,7 +79,7 @@ export default function KeyboardTestContent() {
       // Clear the key state when unmounting
       keyStateRef.current.clear();
     }
-  }, [handleKeyEvent])
+  }, [handleKeyEvent, keyboardShortcut])
 
   const handleStartEditing = () => {
     setIsEditing(true);
@@ -93,6 +95,7 @@ export default function KeyboardTestContent() {
     if (newShortcut.length === 0) {
       throw new Error('Shortcut cannot be empty');
     }
+    keyStateRef.current.updateShortcut(newShortcut);
     setKeyboardShortcut(newShortcut);
     setIsEditing(false);
   };

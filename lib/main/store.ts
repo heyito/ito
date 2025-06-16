@@ -30,6 +30,4 @@ const store = new Store<AppStore>({
   },
 })
 
-console.log('store', store.get('onboarding'))
-
 export default store

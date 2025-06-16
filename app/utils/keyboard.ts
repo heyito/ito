@@ -105,6 +105,16 @@ export class KeyState {
   }
 
   /**
+   * Updates the shortcut for the key state
+   * @param shortcut The shortcut to set
+   */
+  updateShortcut(shortcut: string[]) {
+    this.isFunctionKeyShortcut = shortcut.some(
+      (key) => key.toLowerCase() === 'fn' || key.toLowerCase() === 'function'
+    )
+  }
+
+  /**
    * Updates the key state based on a key event
    * @param event The key event from the global key listener
    */

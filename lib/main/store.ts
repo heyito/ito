@@ -1,5 +1,9 @@
 import Store from 'electron-store'
 
+interface MainStore {
+  navExpanded: boolean
+}
+
 interface OnboardingStore {
   onboardingStep: number
   onboardingCompleted: boolean
@@ -12,6 +16,7 @@ interface SettingsStore {
 }
 
 interface AppStore {
+  main: MainStore
   onboarding: OnboardingStore
   settings: SettingsStore
 }
@@ -26,6 +31,9 @@ const store = new Store<AppStore>({
       shareAnalytics: true,
       microphoneDeviceId: 'default',
       keyboardShortcut: ['fn'],
+    },
+    main: {
+      navExpanded: true,
     },
   },
 })

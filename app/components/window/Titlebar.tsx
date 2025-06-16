@@ -3,10 +3,12 @@ import React from 'react'
 import { OnboardingTitlebar } from './OnboardingTitlebar'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { CogFour, UserCircle, PanelLeft } from '@mynaui/icons-react'
+import { useMainStore } from '@/app/store/useMainStore'
 
 export const Titlebar = () => {
   const {icon } = useWindowContext().titlebar
   const { onboardingCompleted } = useOnboardingStore()
+  const { toggleNavExpanded } = useMainStore()
   const wcontext = useWindowContext().window
 
   // Inline style override for onboarding completed
@@ -26,6 +28,7 @@ export const Titlebar = () => {
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 30, border: 'none', cursor: 'pointer', borderRadius: 6, padding: 0 }}
             aria-label="Open Panel"
             tabIndex={0}
+            onClick={toggleNavExpanded}
           >
             <PanelLeft style={{ width: 20, height: 20 }} />
           </div>

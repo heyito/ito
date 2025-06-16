@@ -1,0 +1,29 @@
+{
+  "name": "ito-server",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "type": "module",
+  "license": "GPL-3.0-only",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "express-oauth2-jwt-bearer": "^1.6.1",
+    "express-rate-limit": "^7.5.0",
+    "pg": "^8.16.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.0.1",
+    "@types/pg": "^8.15.4",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.2",
+    "typescript": "^5.8.3"
+  },
+  "packageManager": "yarn@4.9.2"
+}

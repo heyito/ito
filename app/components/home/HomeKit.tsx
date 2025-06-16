@@ -2,11 +2,13 @@ import { Grid, BookOpen, FileText } from '@mynaui/icons-react';
 import { ItoIcon } from '../icons/ItoIcon';
 import { useMainStore } from '@/app/store/useMainStore';
 import { useEffect, useState } from 'react';
-import { NavItem } from './elements/NavItem';
+import { NavItem } from '../ui/nav-item';
 import HomeContent from './contents/HomeContent';
+import DictionaryContent from './contents/DictionaryContent';
+import NotesContent from './contents/NotesContent';
 
 export default function HomeKit() {
-  const {navExpanded} = useMainStore()
+  const { navExpanded, currentPage, setCurrentPage } = useMainStore()
   const [showText, setShowText] = useState(navExpanded)
 
   // Handle text and positioning animation timing
@@ -25,10 +27,24 @@ export default function HomeKit() {
     }
   }, [navExpanded])
 
+  // Render the appropriate content based on current page
+  const renderContent = () => {
+    switch (currentPage) {
+      case 'home':
+        return <HomeContent />
+      case 'dictionary':
+        return <DictionaryContent />
+      case 'notes':
+        return <NotesContent />
+      default:
+        return <HomeContent />
+    }
+  }
+
   return (
     <div className="flex h-full bg-slate-50">
       {/* Sidebar */}
-      <div className={`${navExpanded ? 'w-64' : 'w-20'} flex flex-col justify-between py-2 px-4 transition-all duration-100 ease-in-out`}>
+      <div className={`${navExpanded ? 'w-64' : 'w-20'} flex flex-col justify-between py-4 px-4 transition-all duration-100 ease-in-out`}>
         <div>
           {/* Logo and Plan */}
           <div className="flex items-center mb-10 px-3">
@@ -42,26 +58,31 @@ export default function HomeKit() {
             <NavItem 
               icon={<Grid className="w-5 h-5" />}
               label="Home"
-              isActive={true}
+              isActive={currentPage === 'home'}
               showText={showText}
+              onClick={() => setCurrentPage('home')}
             />
             <NavItem 
               icon={<BookOpen className="w-5 h-5" />}
               label="Dictionary"
+              isActive={currentPage === 'dictionary'}
               showText={showText}
+              onClick={() => setCurrentPage('dictionary')}
             />
             <NavItem 
               icon={<FileText className="w-5 h-5" />}
               label="Notes"
+              isActive={currentPage === 'notes'}
               showText={showText}
+              onClick={() => setCurrentPage('notes')}
             />
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-col w-full items-center bg-white rounded-lg m-2 ml-0 mt-0 border border-neutral-200 pt-8 px-36">
-        <HomeContent />
+      <div className="flex flex-col w-full items-center bg-white rounded-lg m-2 ml-0 mt-0 border border-neutral-200 pt-12 px-36">
+        {renderContent()}
       </div>
     </div>
   );

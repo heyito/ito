@@ -1,7 +1,7 @@
 export default function HomeContent() {
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between my-8">
+      <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold">Welcome back, Evan</h1>
         </div>

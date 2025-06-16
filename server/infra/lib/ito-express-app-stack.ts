@@ -22,8 +22,9 @@ import {
   SslPolicy,
 } from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import { Bucket } from "aws-cdk-lib/aws-s3";
+import { Secret } from "aws-cdk-lib/aws-secretsmanager";
 
-const DB_NAME = "ito-db";
+const DB_NAME = "itodb";
 export class ItoExpressAppStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
@@ -37,35 +38,34 @@ export class ItoExpressAppStack extends Stack {
       vpc,
     });
 
-    const dbCredentialsSecret = new rds.DatabaseSecret(this, "ItoDbSecret", {
-      username: "dbadmin",
-      secretName: "prod/ito-db/cdk-credentials",
-    });
-    dbCredentialsSecret.applyRemovalPolicy(RemovalPolicy.RETAIN);
+    const dbCredentialsSecret = Secret.fromSecretNameV2(
+      this,
+      "ItoDbSecret",
+      "prod/ito-db/cdk-credentials"
+    );
 
-    const dbCluster = new rds.DatabaseCluster(this, "ItoAurora", {
-      engine: rds.DatabaseClusterEngine.auroraPostgres({
-        version: rds.AuroraPostgresEngineVersion.VER_15_3,
-      }),
-      writer: rds.ClusterInstance.provisioned("WriterInstance", {
-        instanceType: ec2.InstanceType.of(
-          ec2.InstanceClass.BURSTABLE2,
-          ec2.InstanceSize.SMALL
-        ),
-      }),
-      readers: [],
-      credentials: rds.Credentials.fromSecret(dbCredentialsSecret),
-      defaultDatabaseName: DB_NAME,
-      vpc,
-      vpcSubnets: {
-        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-      },
-      removalPolicy: RemovalPolicy.RETAIN,
-      backup: {
-        retention: Duration.days(7),
-        preferredWindow: "03:00-04:00",
-      },
-    });
+    const serverlessCluster = new rds.ServerlessCluster(
+      this,
+      "ItoAuroraServerless",
+      {
+        engine: rds.DatabaseClusterEngine.auroraPostgres({
+          version: rds.AuroraPostgresEngineVersion.VER_15_3,
+        }),
+        vpc,
+        scaling: {
+          autoPause: Duration.minutes(10), // pause when idle
+          minCapacity: rds.AuroraCapacityUnit.ACU_2,
+          maxCapacity: rds.AuroraCapacityUnit.ACU_16,
+        },
+        credentials: rds.Credentials.fromSecret(dbCredentialsSecret),
+        defaultDatabaseName: DB_NAME,
+        removalPolicy: RemovalPolicy.RETAIN,
+      }
+    );
+
+    const cfnCluster = serverlessCluster.node.defaultChild as rds.CfnDBCluster;
+    cfnCluster.backupRetentionPeriod = 7; // Retain backups for 7 days
+    cfnCluster.preferredBackupWindow = "03:00-04:00"; // Daily backup window
 
     const cert = Certificate.fromCertificateArn(
       this,
@@ -97,7 +97,7 @@ export class ItoExpressAppStack extends Stack {
               ),
             },
             environment: {
-              DB_HOST: dbCluster.clusterEndpoint.hostname,
+              DB_HOST: serverlessCluster.clusterEndpoint.hostname,
               DB_NAME,
             },
             logDriver: new ecs.AwsLogDriver({ streamPrefix: "ito-server" }),
@@ -118,13 +118,12 @@ export class ItoExpressAppStack extends Stack {
     });
 
     const alb = fargateService.loadBalancer;
-    alb.logAccessLogs(
-      new Bucket(this, "AlbLogsBucket", {
-        removalPolicy: RemovalPolicy.RETAIN,
-        lifecycleRules: [{ expiration: Duration.days(90) }],
-      }),
-      "/ito-alb"
+    const albLogs = Bucket.fromBucketName(
+      this,
+      "AlbLogsBucket",
+      "ito-alb-logs"
     );
+    alb.logAccessLogs(albLogs, "/ito-alb");
 
     // TODO: Consider adding auto-scaling in the future. Keeping off for now
     // const scaling = fargateService.service.autoScaleTaskCount({
@@ -143,14 +142,8 @@ export class ItoExpressAppStack extends Stack {
       evaluationPeriods: 2,
       alarmDescription: "Fargate CPU > 80% for 2 periods",
     });
-    new cw.Alarm(this, "DbFreeStorage", {
-      metric: dbCluster.metric("FreeStorageSpace"),
-      threshold: 20 * 1024 * 1024 * 1024, // 20 GiB
-      evaluationPeriods: 1,
-      alarmDescription: "Aurora free storage < 20 GiB",
-    });
 
-    dbCluster.connections.allowDefaultPortFrom(
+    serverlessCluster.connections.allowDefaultPortFrom(
       fargateService.service,
       "Allow ECS to connect to Aurora"
     );
@@ -159,7 +152,7 @@ export class ItoExpressAppStack extends Stack {
       value: fargateService.loadBalancer.loadBalancerDnsName,
     });
     new CfnOutput(this, "DbEndpoint", {
-      value: dbCluster.clusterEndpoint.socketAddress,
+      value: serverlessCluster.clusterEndpoint.socketAddress,
     });
 
     Tags.of(this).add("Project", "Ito");

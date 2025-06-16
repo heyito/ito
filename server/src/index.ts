@@ -8,11 +8,11 @@ import rateLimit from "express-rate-limit";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT ?? 3000;
+const PORT = 3000;
 
 app.use(express.json());
 
-// TODO: Change this to Redis eventually if we scale beyond 2-3 tasks 
+// TODO: Change this to Redis eventually if we scale beyond 2-3 tasks
 const limiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 100, // 100 requests per minute per IP

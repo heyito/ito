@@ -5,8 +5,10 @@
     "moduleResolution": "node",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "strict": true
+    "strict": true,
+    "outDir": "./dist"
   },
+  "include": ["src/**/*"],
   "ts-node": {
     "esm": true
   }

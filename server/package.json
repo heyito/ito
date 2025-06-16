@@ -21,9 +21,10 @@
     "@types/express": "^5.0.3",
     "@types/node": "^24.0.1",
     "@types/pg": "^8.15.4",
+    "prettier": "^3.5.3",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.2",
     "typescript": "^5.8.3"
   },
-  "packageManager": "yarn@4.9.2"
+  "packageManager": "yarn@1.22.1"
 }

@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { Tooltip, TooltipTrigger, TooltipContent } from './tooltip';
 
 interface NavItemProps {
   icon: ReactNode;
@@ -9,7 +10,7 @@ interface NavItemProps {
 }
 
 export function NavItem({ icon, label, isActive = false, showText, onClick }: NavItemProps) {
-  return (
+  const navContent = (
     <div 
       className={`flex items-center px-3 py-3 rounded cursor-pointer ${
         isActive ? 'bg-slate-200 font-medium' : 'hover:bg-slate-200'
@@ -26,4 +27,19 @@ export function NavItem({ icon, label, isActive = false, showText, onClick }: Na
       </span>
     </div>
   );
+
+  if (!showText) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {navContent}
+        </TooltipTrigger>
+        <TooltipContent side="right" sideOffset={2} className="text-sm">
+          {label}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return navContent;
 } 

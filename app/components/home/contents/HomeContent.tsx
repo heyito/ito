@@ -3,7 +3,7 @@ export default function HomeContent() {
     <div className="w-full">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold">Welcome back, Evan</h1>
+          <h1 className="text-2xl font-medium">Welcome back, Evan</h1>
         </div>
         <div className="flex items-center text-sm text-gray-700">
           <span className="flex items-center gap-1 bg-slate-100 px-3 py-2 rounded-l-2xl relative after:content-[''] after:absolute after:right-0 after:top-[17.5%] after:h-[65%] after:w-[2px] after:bg-slate-200">🔥 1 week</span>

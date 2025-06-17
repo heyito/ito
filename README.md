@@ -19,6 +19,9 @@ A modern Electron application template with React, Vite, TypeScript, and Tailwin
 
 <br />
 
+## Building the App
+1. Make sure you have cargo/rust installed.
+2. Make sure mingw-w64 is installed `brew install mingw-w64`.
 ## Features
 
 - 🚀 Electron - Cross-platform desktop application framework

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { v4 as uuidv4 } from 'uuid'
 
 export type Note = {
   id: string
@@ -50,7 +51,7 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
 
   addNote: (content: string) => {
     const newNote: Note = {
-      id: Date.now().toString(),
+      id: uuidv4(),
       content: content.trim(),
       createdAt: new Date(),
       updatedAt: new Date(),

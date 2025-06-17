@@ -2,7 +2,7 @@ import { useWindowContext } from './WindowContext'
 import React from 'react'
 import { OnboardingTitlebar } from './OnboardingTitlebar'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
-import { CogFour, UserCircle, PanelLeft } from '@mynaui/icons-react'
+import { UserCircle, PanelLeft } from '@mynaui/icons-react'
 import { useMainStore } from '@/app/store/useMainStore'
 
 export const Titlebar = () => {
@@ -85,24 +85,6 @@ export const Titlebar = () => {
             zIndex: 10,
           }}
         >
-          <div
-            className="titlebar-action-btn hover:bg-slate-200"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 36,
-              height: 30,
-              border: 'none',
-              cursor: 'pointer',
-              borderRadius: 6,
-              padding: 0,
-            }}
-            aria-label="Settings"
-            tabIndex={0}
-          >
-            <CogFour style={{ width: 20, height: 20 }} />
-          </div>
           <div
             className="titlebar-action-btn hover:bg-slate-200"
             style={{

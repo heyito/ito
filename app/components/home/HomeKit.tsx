@@ -1,4 +1,4 @@
-import { Grid, BookOpen, FileText } from '@mynaui/icons-react'
+import { Grid, BookOpen, FileText, CogFour } from '@mynaui/icons-react'
 import { ItoIcon } from '../icons/ItoIcon'
 import { useMainStore } from '@/app/store/useMainStore'
 import { useEffect, useState } from 'react'
@@ -6,6 +6,7 @@ import { NavItem } from '../ui/nav-item'
 import HomeContent from './contents/HomeContent'
 import DictionaryContent from './contents/DictionaryContent'
 import NotesContent from './contents/NotesContent'
+import SettingsContent from './contents/SettingsContent'
 
 export default function HomeKit() {
   const { navExpanded, currentPage, setCurrentPage } = useMainStore()
@@ -36,6 +37,8 @@ export default function HomeKit() {
         return <DictionaryContent />
       case 'notes':
         return <NotesContent />
+      case 'settings':
+        return <SettingsContent />
       default:
         return <HomeContent />
     }
@@ -79,6 +82,13 @@ export default function HomeKit() {
               isActive={currentPage === 'notes'}
               showText={showText}
               onClick={() => setCurrentPage('notes')}
+            />
+            <NavItem
+              icon={<CogFour className="w-5 h-5" />}
+              label="Settings"
+              isActive={currentPage === 'settings'}
+              showText={showText}
+              onClick={() => setCurrentPage('settings')}
             />
           </div>
         </div>

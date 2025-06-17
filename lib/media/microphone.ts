@@ -37,7 +37,7 @@ async function getAvailableMicrophones(): Promise<Microphone[]> {
 
     // Filter for audio input devices and exclude non-default virtual microphones
     const microphones = devices
-      .filter((device) => {
+      .filter(device => {
         // Keep only audio input devices
         if (device.kind !== 'audioinput') return false
 
@@ -59,7 +59,7 @@ async function getAvailableMicrophones(): Promise<Microphone[]> {
 
         return !isVirtual
       })
-      .map((device) => ({
+      .map(device => ({
         deviceId: device.deviceId,
         label: device.label || `Microphone ${device.deviceId.slice(0, 5)}...`,
       }))
@@ -73,7 +73,7 @@ async function getAvailableMicrophones(): Promise<Microphone[]> {
 
 async function setupVolumeMonitoring(
   callback: (volume: number) => void,
-  deviceId?: string
+  deviceId?: string,
 ) {
   let currentMicrophone: {
     audioContext: AudioContext
@@ -88,7 +88,7 @@ async function setupVolumeMonitoring(
       animationFrameId = null
     }
     if (currentMicrophone) {
-      currentMicrophone.stream.getTracks().forEach((track) => track.stop())
+      currentMicrophone.stream.getTracks().forEach(track => track.stop())
       currentMicrophone.audioContext.close()
       currentMicrophone = null
     }

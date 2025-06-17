@@ -81,7 +81,7 @@ export default function HomeKit() {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-col w-full items-center bg-white rounded-lg m-2 ml-0 mt-0 border border-neutral-200 pt-12 px-36">
+      <div className="flex flex-col w-full items-center bg-white rounded-lg m-2 ml-0 mt-0 border border-neutral-200 pt-12">
         {renderContent()}
       </div>
     </div>

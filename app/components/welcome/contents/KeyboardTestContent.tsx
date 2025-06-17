@@ -42,7 +42,7 @@ export default function KeyboardTestContent() {
 
       if (isMatch && currentPressedKeys.length === normalizedShortcut.length) {
         // All keys in the shortcut are pressed
-        console.log('Keyboard shortcut matched!');
+        // Keyboard shortcut matched - could add visual feedback here
       }
     }
   }, [keyboardShortcut, isEditing, newShortcut]);
@@ -51,8 +51,11 @@ export default function KeyboardTestContent() {
     // Start the key listener when the component mounts
     window.api.startKeyListener()
 
+    // Capture the current keyState ref value for cleanup
+    const currentKeyState = keyStateRef.current;
+
     // Block necessary keys for the shortcut
-    const keysToBlock = keyStateRef.current.getKeysToBlock();
+    const keysToBlock = currentKeyState.getKeysToBlock();
     if (keysToBlock.length > 0) {
       window.api.blockKeys(keysToBlock);
     } else {
@@ -76,8 +79,10 @@ export default function KeyboardTestContent() {
           console.error('Error during cleanup:', error)
         }
       }
-      // Clear the key state when unmounting
-      keyStateRef.current.clear();
+      // Clear the key state when unmounting using captured ref value
+      if (currentKeyState) {
+        currentKeyState.clear();
+      }
     }
   }, [handleKeyEvent, keyboardShortcut])
 

@@ -116,7 +116,6 @@ export default function MicrophoneTestContent() {
   const handleDialogClose = async () => {
     if (tempSelectedMicrophone !== microphoneDeviceId) {
       setMicrophoneDeviceId(tempSelectedMicrophone)
-      console.log('Changing microphone to deviceId:', tempSelectedMicrophone)
       await initializeMicrophone(tempSelectedMicrophone)
     }
   }

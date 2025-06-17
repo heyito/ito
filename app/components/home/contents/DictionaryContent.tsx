@@ -287,7 +287,7 @@ export default function DictionaryContent() {
               {editingEntry?.type === 'replacement' ? 'Edit replacement' : 'Edit Dictionary Entry'}
             </DialogTitle>
           </DialogHeader>
-          <div className="p-6">
+          <div className="px-6">
             <h2 className="text-lg font-semibold mb-4">
               {editingEntry?.type === 'replacement' ? 'Edit replacement' : 'Edit entry'}
             </h2>
@@ -352,7 +352,7 @@ export default function DictionaryContent() {
           <DialogHeader>
             <DialogTitle className="sr-only">Add to vocabulary</DialogTitle>
           </DialogHeader>
-          <div className="p-6">
+          <div className="px-6">
             <h2 className="text-lg font-semibold mb-4">Add to vocabulary</h2>
             
             <div className="flex items-center justify-between mb-4">

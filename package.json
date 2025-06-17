@@ -10,7 +10,9 @@
   },
   "scripts": {
     "dev": "electron-vite dev -w",
+    "format:app": "prettier --write app",
     "format": "prettier --write .",
+    "lint:app": "eslint app --ext .ts,.tsx --fix",
     "lint": "eslint . --ext .ts,.tsx --fix",
     "start": "electron-vite preview",
     "postinstall": "electron-builder install-app-deps",

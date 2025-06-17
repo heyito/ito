@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNotesStore } from '../../../store/useNotesStore'
 import Masonry from '@mui/lab/Masonry'
 import { AudioIcon } from '../../icons/AudioIcon'
-import { ArrowUp, Rows, Search } from '@mynaui/icons-react'
+import { ArrowUp, Grid, Rows, Search } from '@mynaui/icons-react'
 
 export default function NotesContent() {
   const { notes, loadNotes, addNote } = useNotesStore()
@@ -10,6 +10,7 @@ export default function NotesContent() {
   const [showAddNoteButton, setShowAddNoteButton] = useState(false)
   const [noteContent, setNoteContent] = useState('')
   const [showScrollToTop, setShowScrollToTop] = useState(false)
+  const [containerHeight, setContainerHeight] = useState(128) // 128px = h-32
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
@@ -60,9 +61,11 @@ export default function NotesContent() {
 
   const handleBlur = () => {
     // If the note isn't empty, don't close the input
-    if (textareaRef.current?.value.trim() === '') {
-      setCreatingNote(false)
-    }
+    setTimeout(() => {
+      if (textareaRef.current?.value.trim() === '') {
+        setCreatingNote(false)
+      }
+    }, 200)
   }
 
   const updateNoteContent = (content: string) => {
@@ -73,10 +76,17 @@ export default function NotesContent() {
       setShowAddNoteButton(false)
     }
     
-    // Auto-resize textarea
+    // Auto-resize textarea and container
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
+      const scrollHeight = textareaRef.current.scrollHeight
+      textareaRef.current.style.height = `${scrollHeight}px`
+      
+      // Calculate container height: textarea height + padding + button space
+      const minHeight = 192 // min-h-48 = 192px
+      const paddingAndButton = 48 + 40 // 48px padding + 40px for button space
+      const newContainerHeight = Math.max(minHeight, scrollHeight + paddingAndButton)
+      setContainerHeight(newContainerHeight)
     }
   }
 
@@ -88,7 +98,20 @@ export default function NotesContent() {
   useEffect(() => {
     if (creatingNote && textareaRef.current) {
       textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
+      const scrollHeight = textareaRef.current.scrollHeight
+      textareaRef.current.style.height = `${scrollHeight}px`
+      
+      // Set container height for creating state
+      const minHeight = 192 // min-h-48 = 192px
+      const paddingAndButton = 48 + 40 // 48px padding + 40px for button space
+      const newContainerHeight = Math.max(minHeight, scrollHeight + paddingAndButton)
+      setContainerHeight(newContainerHeight)
+    } else if (!creatingNote) {
+      // Reset to default height when not creating
+      setContainerHeight(128) // h-32 = 128px
+      if (textareaRef.current) {
+        textareaRef.current.style.height = ''
+      }
     }
   }, [creatingNote])
 
@@ -133,7 +156,10 @@ export default function NotesContent() {
       </div>
 
       {/* Text Input Area */}
-      <div className={`shadow-lg rounded-2xl mb-8 border border-gray-200 w-3/5 mx-auto transition-all duration-200 ease-in-out relative ${creatingNote ? 'min-h-48' : 'h-32'}`}>
+      <div 
+        className="shadow-lg rounded-2xl mb-8 border border-gray-200 w-3/5 mx-auto transition-all duration-200 ease-in-out relative"
+        style={{ height: `${containerHeight}px` }}
+      >
         {!creatingNote && (
           <div className="absolute top-6 left-6 flex items-center gap-1 text-gray-500 pointer-events-none">
             <AudioIcon />
@@ -142,7 +168,7 @@ export default function NotesContent() {
         )}
         <textarea
            ref={textareaRef}
-           className={`w-full p-6 focus:outline-none resize-none overflow-hidden ${creatingNote ? 'cursor-text pb-12 min-h-48' : 'cursor-pointer h-32'}`}
+           className={`w-full p-6 focus:outline-none resize-none overflow-hidden ${creatingNote ? 'cursor-text pb-12' : 'cursor-pointer'}`}
            value={noteContent}
            onChange={(e) => updateNoteContent(e.target.value)}
            onClick={() => setCreatingNote(true)}
@@ -151,7 +177,7 @@ export default function NotesContent() {
          />
         {showAddNoteButton && (
           <div className="absolute bottom-3 right-3">
-            <button className="bg-neutral-200 px-4 py-2 rounded font-semibold hover:bg-neutral-300">Add note</button>
+            <button className="bg-neutral-200 px-4 py-2 rounded font-semibold hover:bg-neutral-300 cursor-pointer">Add note</button>
           </div>
         )}
       </div>
@@ -165,7 +191,11 @@ export default function NotesContent() {
               <Search className="w-5 h-5 text-neutral-400" />
             </button>
             <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer" title="List view" onClick={toggleViewMode}>
-              <Rows className="w-5 h-5 text-neutral-400" />
+              {viewMode === 'grid' ? (
+                <Rows className="w-5 h-5 text-neutral-400" />
+              ) : (
+                <Grid className="w-5 h-5 text-neutral-400" />
+              )}
             </button>
           </div>
         </div>
@@ -186,7 +216,7 @@ export default function NotesContent() {
                 {notes.map((note, index) => (
                   <div 
                     key={index}
-                    className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer group"
+                    className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md cursor-pointer group"
                   >
                     <div className="flex flex-col">
                       <div className="mb-4">
@@ -206,7 +236,7 @@ export default function NotesContent() {
             {viewMode === 'list' && (
               <div className="flex flex-col gap-4">
                 {notes.map((note, index) => (
-                  <div key={index} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer group">
+                  <div key={index} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md cursor-pointer group">
                     <div className="flex flex-col">
                       <div className="mb-4">
                         <div className="text-gray-900 font-normal text-sm leading-relaxed break-words">

@@ -4,9 +4,11 @@ import Masonry from '@mui/lab/Masonry'
 import { AudioIcon } from '../../icons/AudioIcon'
 import { ArrowUp, Grid, Rows, Search, X } from '@mynaui/icons-react'
 import { Note } from '../../ui/note'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../ui/dialog'
+import { Button } from '../../ui/button'
 
 export default function NotesContent() {
-  const { notes, loadNotes, addNote, deleteNote } = useNotesStore()
+  const { notes, loadNotes, addNote, deleteNote, updateNote } = useNotesStore()
   const [creatingNote, setCreatingNote] = useState(false)
   const [showAddNoteButton, setShowAddNoteButton] = useState(false)
   const [noteContent, setNoteContent] = useState('')
@@ -19,6 +21,9 @@ export default function NotesContent() {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [editingNote, setEditingNote] = useState<{id: string, content: string} | null>(null)
+  const [editContent, setEditContent] = useState('')
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     loadNotes()
@@ -126,8 +131,40 @@ export default function NotesContent() {
   }
 
   const handleEditNote = (noteId: string) => {
-    // TODO: Implement edit functionality
-    setShowDropdown(null)
+    const note = notes.find(n => n.id === noteId)
+    if (note) {
+      setEditingNote({ id: noteId, content: note.content })
+      setEditContent(note.content)
+      setShowDropdown(null)
+      // Focus the textarea after the dialog opens
+      setTimeout(() => {
+        editTextareaRef.current?.focus()
+      }, 100)
+    }
+  }
+
+  const handleSaveEdit = () => {
+    if (editingNote && editContent.trim() !== '') {
+      updateNote(editingNote.id, { content: editContent.trim() })
+      setEditingNote(null)
+      setEditContent('')
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingNote(null)
+    setEditContent('')
+  }
+
+  // Handle keyboard shortcuts in edit dialog
+  const handleEditKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault()
+      handleSaveEdit()
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      handleCancelEdit()
+    }
   }
 
   const toggleDropdown = (index: number, e: React.MouseEvent) => {
@@ -367,6 +404,34 @@ export default function NotesContent() {
           <ArrowUp className="w-4 h-4 font-bold" />
         </button>
       )}
+
+      {/* Edit Note Dialog */}
+      <Dialog open={!!editingNote} onOpenChange={(open) => !open && handleCancelEdit()}>
+        <DialogContent className="!border-0 shadow-lg p-0" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle className="sr-only">Edit Note</DialogTitle>
+          </DialogHeader>
+          <div>
+            <textarea
+              ref={editTextareaRef}
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              onKeyDown={handleEditKeyDown}
+              className="w-full px-4 rounded-md resize-none focus:outline-none border-0"
+              rows={6}
+              placeholder="Edit your note..."
+            />
+          </div>
+          <DialogFooter className="p-4">
+            <Button className='bg-neutral-200 hover:bg-neutral-300 text-black cursor-pointer' onClick={handleCancelEdit}>
+              Cancel
+            </Button>
+            <Button className='cursor-pointer' onClick={handleSaveEdit} disabled={!editContent.trim()}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 

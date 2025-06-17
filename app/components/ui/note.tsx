@@ -58,7 +58,7 @@ export function Note({
                   e.stopPropagation()
                   onCopyToClipboard(note.content)
                 }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 rounded-t-lg"
+                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 rounded-t-lg cursor-pointer"
               >
                 <Copy className="w-4 h-4" />
                 Copy to clipboard
@@ -68,7 +68,7 @@ export function Note({
                   e.stopPropagation()
                   onDeleteNote(note.id)
                 }}
-                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-lg"
+                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-lg cursor-pointer"
               >
                 <Trash className="w-4 h-4" />
                 Delete note

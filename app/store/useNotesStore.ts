@@ -13,7 +13,7 @@ interface NotesStore {
   addNote: (content: string) => void
   updateNote: (
     id: string,
-    updates: Partial<Omit<Note, 'id' | 'createdAt'>>
+    updates: Partial<Omit<Note, 'id' | 'createdAt'>>,
   ) => void
   deleteNote: (id: string) => void
   loadNotes: () => void
@@ -25,7 +25,7 @@ const getInitialNotes = (): Note[] => {
   try {
     const storedNotes = window.electron.store.get('notes')
     if (storedNotes && Array.isArray(storedNotes)) {
-      return storedNotes.map((note) => ({
+      return storedNotes.map(note => ({
         ...note,
         createdAt: new Date(note.createdAt),
         updatedAt: new Date(note.updatedAt),
@@ -57,7 +57,7 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       updatedAt: new Date(),
     }
 
-    set((state) => {
+    set(state => {
       const newNotes = [newNote, ...state.notes]
       syncNotesToStore(newNotes)
       return { notes: newNotes }
@@ -66,11 +66,11 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
 
   updateNote: (
     id: string,
-    updates: Partial<Omit<Note, 'id' | 'createdAt'>>
+    updates: Partial<Omit<Note, 'id' | 'createdAt'>>,
   ) => {
-    set((state) => {
-      const newNotes = state.notes.map((note) =>
-        note.id === id ? { ...note, ...updates, updatedAt: new Date() } : note
+    set(state => {
+      const newNotes = state.notes.map(note =>
+        note.id === id ? { ...note, ...updates, updatedAt: new Date() } : note,
       )
       syncNotesToStore(newNotes)
       return { notes: newNotes }
@@ -78,8 +78,8 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
   },
 
   deleteNote: (id: string) => {
-    set((state) => {
-      const newNotes = state.notes.filter((note) => note.id !== id)
+    set(state => {
+      const newNotes = state.notes.filter(note => note.id !== id)
       syncNotesToStore(newNotes)
       return { notes: newNotes }
     })

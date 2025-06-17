@@ -4,7 +4,13 @@ import Masonry from '@mui/lab/Masonry'
 import { AudioIcon } from '../../icons/AudioIcon'
 import { ArrowUp, Grid, Rows, Search, X } from '@mynaui/icons-react'
 import { Note } from '../../ui/note'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../../ui/dialog'
 import { Button } from '../../ui/button'
 
 export default function NotesContent() {
@@ -21,7 +27,10 @@ export default function NotesContent() {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const [editingNote, setEditingNote] = useState<{id: string, content: string} | null>(null)
+  const [editingNote, setEditingNote] = useState<{
+    id: string
+    content: string
+  } | null>(null)
   const [editContent, setEditContent] = useState('')
   const editTextareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -32,7 +41,7 @@ export default function NotesContent() {
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     })
   }
 
@@ -40,7 +49,7 @@ export default function NotesContent() {
     return date.toLocaleString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
-      hour12: true
+      hour12: true,
     })
   }
 
@@ -67,17 +76,20 @@ export default function NotesContent() {
     } else {
       setShowAddNoteButton(false)
     }
-    
+
     // Auto-resize textarea and container
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
       const scrollHeight = textareaRef.current.scrollHeight
       textareaRef.current.style.height = `${scrollHeight}px`
-      
+
       // Calculate container height: textarea height + padding + button space
       const minHeight = 192 // min-h-48 = 192px
       const paddingAndButton = 48 + 40 // 48px padding + 40px for button space
-      const newContainerHeight = Math.max(minHeight, scrollHeight + paddingAndButton)
+      const newContainerHeight = Math.max(
+        minHeight,
+        scrollHeight + paddingAndButton,
+      )
       setContainerHeight(newContainerHeight)
     }
   }
@@ -100,11 +112,12 @@ export default function NotesContent() {
   }
 
   // Filter notes based on search query
-  const filteredNotes = searchQuery.trim() === '' 
-    ? notes 
-    : notes.filter(note => 
-        note.content.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+  const filteredNotes =
+    searchQuery.trim() === ''
+      ? notes
+      : notes.filter(note =>
+          note.content.toLowerCase().includes(searchQuery.toLowerCase()),
+        )
 
   const handleAddNote = () => {
     if (noteContent.trim() !== '') {
@@ -178,11 +191,14 @@ export default function NotesContent() {
       textareaRef.current.style.height = 'auto'
       const scrollHeight = textareaRef.current.scrollHeight
       textareaRef.current.style.height = `${scrollHeight}px`
-      
+
       // Set container height for creating state
       const minHeight = 192 // min-h-48 = 192px
       const paddingAndButton = 48 + 40 // 48px padding + 40px for button space
-      const newContainerHeight = Math.max(minHeight, scrollHeight + paddingAndButton)
+      const newContainerHeight = Math.max(
+        minHeight,
+        scrollHeight + paddingAndButton,
+      )
       setContainerHeight(newContainerHeight)
     } else if (!creatingNote) {
       // Reset to default height when not creating
@@ -207,7 +223,7 @@ export default function NotesContent() {
       container.addEventListener('scroll', handleScroll)
       return () => container.removeEventListener('scroll', handleScroll)
     }
-      }, [])
+  }, [])
 
   // Handle escape key for closing search
   useEffect(() => {
@@ -239,19 +255,19 @@ export default function NotesContent() {
     if (containerRef.current) {
       containerRef.current.scrollTo({
         top: 0,
-        behavior: 'smooth'
+        behavior: 'smooth',
       })
     }
   }
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="w-full max-w-6xl mx-auto px-4 h-200 overflow-y-auto relative px-36"
-      style={{ 
+      style={{
         height: '640px',
-        msOverflowStyle: 'none',  /* Internet Explorer 10+ */
-        scrollbarWidth: 'none'    /* Firefox */
+        msOverflowStyle: 'none' /* Internet Explorer 10+ */,
+        scrollbarWidth: 'none' /* Firefox */,
       }}
     >
       {/* Header */}
@@ -262,7 +278,7 @@ export default function NotesContent() {
             ref={searchInputRef}
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search your notes"
             className="flex-1 text-sm outline-none placeholder-gray-400"
           />
@@ -276,13 +292,15 @@ export default function NotesContent() {
         </div>
       ) : (
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-xl font-medium text-gray-900 w-full text-center">What's on your mind today?</h1>
+          <h1 className="text-xl font-medium text-gray-900 w-full text-center">
+            What's on your mind today?
+          </h1>
         </div>
       )}
 
       {/* Text Input Area - Only show when not searching */}
       {!showSearch && (
-        <div 
+        <div
           className="shadow-lg rounded-2xl mb-8 border border-gray-200 w-3/5 mx-auto transition-all duration-200 ease-in-out relative"
           style={{ height: `${containerHeight}px` }}
         >
@@ -293,17 +311,17 @@ export default function NotesContent() {
             </div>
           )}
           <textarea
-             ref={textareaRef}
-             className={`w-full p-6 focus:outline-none resize-none overflow-hidden ${creatingNote ? 'cursor-text pb-12' : 'cursor-pointer'}`}
-             value={noteContent}
-             onChange={(e) => updateNoteContent(e.target.value)}
-             onClick={() => setCreatingNote(true)}
-             onBlur={handleBlur}
-             placeholder={`${creatingNote ? 'Press and hold fn and start speaking' : ''}`}
-           />
+            ref={textareaRef}
+            className={`w-full p-6 focus:outline-none resize-none overflow-hidden ${creatingNote ? 'cursor-text pb-12' : 'cursor-pointer'}`}
+            value={noteContent}
+            onChange={e => updateNoteContent(e.target.value)}
+            onClick={() => setCreatingNote(true)}
+            onBlur={handleBlur}
+            placeholder={`${creatingNote ? 'Press and hold fn and start speaking' : ''}`}
+          />
           {showAddNoteButton && (
             <div className="absolute bottom-3 right-3">
-              <button 
+              <button
                 onClick={handleAddNote}
                 className="bg-neutral-200 px-4 py-2 rounded-md font-semibold hover:bg-neutral-300 cursor-pointer"
               >
@@ -313,20 +331,28 @@ export default function NotesContent() {
           )}
         </div>
       )}
-      <div className={`${viewMode === 'grid' || showSearch ? '' : 'm-auto w-3/5'}`}>
+      <div
+        className={`${viewMode === 'grid' || showSearch ? '' : 'm-auto w-3/5'}`}
+      >
         <div className="flex items-center justify-between mb-1">
           <div className="text-xs text-gray-500 font-medium uppercase tracking-wide">
-            {showSearch ? `Search Results (${filteredNotes.length})` : `Notes (${notes.length})`}
+            {showSearch
+              ? `Search Results (${filteredNotes.length})`
+              : `Notes (${notes.length})`}
           </div>
           <div className="flex items-center gap-1">
-            <button 
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer" 
+            <button
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
               title="Search"
               onClick={openSearch}
             >
               <Search className="w-5 h-5 text-neutral-400" />
             </button>
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer" title="List view" onClick={toggleViewMode}>
+            <button
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+              title="List view"
+              onClick={toggleViewMode}
+            >
               {viewMode === 'grid' ? (
                 <Rows className="w-5 h-5 text-neutral-400" />
               ) : (
@@ -399,17 +425,23 @@ export default function NotesContent() {
       {/* Scroll to Top Button */}
       {showScrollToTop && (
         <button
-            onClick={scrollToTop}
-            className="fixed bottom-8 bg-black text-white right-8 w-8 h-8 rounded-full shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex items-center justify-center group z-50 cursor-pointer"
-            aria-label="Scroll to top"
-          >
+          onClick={scrollToTop}
+          className="fixed bottom-8 bg-black text-white right-8 w-8 h-8 rounded-full shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex items-center justify-center group z-50 cursor-pointer"
+          aria-label="Scroll to top"
+        >
           <ArrowUp className="w-4 h-4 font-bold" />
         </button>
       )}
 
       {/* Edit Note Dialog */}
-      <Dialog open={!!editingNote} onOpenChange={(open) => !open && handleCancelEdit()}>
-        <DialogContent className="!border-0 shadow-lg p-0" showCloseButton={false}>
+      <Dialog
+        open={!!editingNote}
+        onOpenChange={open => !open && handleCancelEdit()}
+      >
+        <DialogContent
+          className="!border-0 shadow-lg p-0"
+          showCloseButton={false}
+        >
           <DialogHeader>
             <DialogTitle className="sr-only">Edit Note</DialogTitle>
           </DialogHeader>
@@ -417,7 +449,7 @@ export default function NotesContent() {
             <textarea
               ref={editTextareaRef}
               value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
+              onChange={e => setEditContent(e.target.value)}
               onKeyDown={handleEditKeyDown}
               className="w-full px-4 rounded-md resize-none focus:outline-none border-0"
               rows={6}
@@ -425,10 +457,17 @@ export default function NotesContent() {
             />
           </div>
           <DialogFooter className="p-4">
-            <Button className='bg-neutral-200 hover:bg-neutral-300 text-black cursor-pointer' onClick={handleCancelEdit}>
+            <Button
+              className="bg-neutral-200 hover:bg-neutral-300 text-black cursor-pointer"
+              onClick={handleCancelEdit}
+            >
               Cancel
             </Button>
-            <Button className='cursor-pointer' onClick={handleSaveEdit} disabled={!editContent.trim()}>
+            <Button
+              className="cursor-pointer"
+              onClick={handleSaveEdit}
+              disabled={!editContent.trim()}
+            >
               Save
             </Button>
           </DialogFooter>
@@ -436,4 +475,4 @@ export default function NotesContent() {
       </Dialog>
     </div>
   )
-} 
+}

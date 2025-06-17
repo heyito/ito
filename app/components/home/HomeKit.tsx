@@ -1,11 +1,11 @@
-import { Grid, BookOpen, FileText } from '@mynaui/icons-react';
-import { ItoIcon } from '../icons/ItoIcon';
-import { useMainStore } from '@/app/store/useMainStore';
-import { useEffect, useState } from 'react';
-import { NavItem } from '../ui/nav-item';
-import HomeContent from './contents/HomeContent';
-import DictionaryContent from './contents/DictionaryContent';
-import NotesContent from './contents/NotesContent';
+import { Grid, BookOpen, FileText } from '@mynaui/icons-react'
+import { ItoIcon } from '../icons/ItoIcon'
+import { useMainStore } from '@/app/store/useMainStore'
+import { useEffect, useState } from 'react'
+import { NavItem } from '../ui/nav-item'
+import HomeContent from './contents/HomeContent'
+import DictionaryContent from './contents/DictionaryContent'
+import NotesContent from './contents/NotesContent'
 
 export default function HomeKit() {
   const { navExpanded, currentPage, setCurrentPage } = useMainStore()
@@ -44,32 +44,36 @@ export default function HomeKit() {
   return (
     <div className="flex h-full bg-slate-50">
       {/* Sidebar */}
-      <div className={`${navExpanded ? 'w-64' : 'w-20'} flex flex-col justify-between py-4 px-4 transition-all duration-100 ease-in-out`}>
+      <div
+        className={`${navExpanded ? 'w-64' : 'w-20'} flex flex-col justify-between py-4 px-4 transition-all duration-100 ease-in-out`}
+      >
         <div>
           {/* Logo and Plan */}
           <div className="flex items-center mb-10 px-3">
             <ItoIcon className="w-6 text-gray-900" style={{ height: '32px' }} />
-            <span className={`text-2xl font-bold transition-opacity duration-100 ${showText ? 'opacity-100' : 'opacity-0'} ${showText ? 'ml-2' : 'w-0 overflow-hidden'}`}>
+            <span
+              className={`text-2xl font-bold transition-opacity duration-100 ${showText ? 'opacity-100' : 'opacity-0'} ${showText ? 'ml-2' : 'w-0 overflow-hidden'}`}
+            >
               Ito
             </span>
           </div>
           {/* Nav */}
           <div className="flex flex-col gap-1 text-sm">
-            <NavItem 
+            <NavItem
               icon={<Grid className="w-5 h-5" />}
               label="Home"
               isActive={currentPage === 'home'}
               showText={showText}
               onClick={() => setCurrentPage('home')}
             />
-            <NavItem 
+            <NavItem
               icon={<BookOpen className="w-5 h-5" />}
               label="Dictionary"
               isActive={currentPage === 'dictionary'}
               showText={showText}
               onClick={() => setCurrentPage('dictionary')}
             />
-            <NavItem 
+            <NavItem
               icon={<FileText className="w-5 h-5" />}
               label="Notes"
               isActive={currentPage === 'notes'}
@@ -85,5 +89,5 @@ export default function HomeKit() {
         {renderContent()}
       </div>
     </div>
-  );
+  )
 }

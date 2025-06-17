@@ -100,7 +100,7 @@ export class KeyState {
   constructor(shortcut: string[] = []) {
     // Check if the shortcut includes the Function key
     this.isFunctionKeyShortcut = shortcut.some(
-      (key) => key.toLowerCase() === 'fn' || key.toLowerCase() === 'function'
+      key => key.toLowerCase() === 'fn' || key.toLowerCase() === 'function',
     )
   }
 
@@ -110,7 +110,7 @@ export class KeyState {
    */
   updateShortcut(shortcut: string[]) {
     this.isFunctionKeyShortcut = shortcut.some(
-      (key) => key.toLowerCase() === 'fn' || key.toLowerCase() === 'function'
+      key => key.toLowerCase() === 'fn' || key.toLowerCase() === 'function',
     )
   }
 

@@ -29,7 +29,7 @@ const getOnboardingCategory = (onboardingStep: number): OnboardingCategory => {
 }
 
 export const getOnboardingCategoryIndex = (
-  onboardingCategory: OnboardingCategory
+  onboardingCategory: OnboardingCategory,
 ): number => {
   if (onboardingCategory === 'sign-up') return 0
   if (onboardingCategory === 'permissions') return 1
@@ -80,7 +80,7 @@ const syncToStore = (state: Partial<OnboardingState>) => {
   }
 }
 
-export const useOnboardingStore = create<OnboardingState>((set) => {
+export const useOnboardingStore = create<OnboardingState>(set => {
   const initialState = getInitialState()
 
   return {
@@ -93,10 +93,10 @@ export const useOnboardingStore = create<OnboardingState>((set) => {
     microphoneDeviceId: initialState.microphoneDeviceId,
     keyboardShortcut: initialState.keyboardShortcut,
     incrementOnboardingStep: () =>
-      set((state) => {
+      set(state => {
         const onboardingStep = Math.min(
           state.onboardingStep + 1,
-          state.totalOnboardingSteps
+          state.totalOnboardingSteps,
         )
         const onboardingCategory = getOnboardingCategory(onboardingStep)
         const newState = {
@@ -107,7 +107,7 @@ export const useOnboardingStore = create<OnboardingState>((set) => {
         return newState
       }),
     decrementOnboardingStep: () =>
-      set((state) => {
+      set(state => {
         const onboardingStep = Math.max(state.onboardingStep - 1, 0)
         const onboardingCategory = getOnboardingCategory(onboardingStep)
         const newState = {
@@ -118,33 +118,33 @@ export const useOnboardingStore = create<OnboardingState>((set) => {
         return newState
       }),
     setOnboardingCompleted: () =>
-      set((_state) => {
+      set(_state => {
         const newState = { onboardingCompleted: true }
         syncToStore(newState)
         return newState
       }),
     resetOnboarding: () =>
-      set((_state) => {
+      set(_state => {
         const newState = { onboardingStep: 0, onboardingCompleted: false }
         syncToStore(newState)
         return newState
       }),
     setReferralSource: (source: string) =>
-      set((_state) => ({ referralSource: source })),
+      set(_state => ({ referralSource: source })),
     setShareAnalytics: (share: boolean) =>
-      set((_state) => {
+      set(_state => {
         const newState = { shareAnalytics: share }
         syncToStore(newState)
         return newState
       }),
     setMicrophoneDeviceId: (deviceId: string) =>
-      set((_state) => {
+      set(_state => {
         const newState = { microphoneDeviceId: deviceId }
         syncToStore(newState)
         return newState
       }),
     setKeyboardShortcut: (shortcut: string[]) =>
-      set((_state) => {
+      set(_state => {
         const newState = { keyboardShortcut: [...shortcut].sort() }
         syncToStore(newState)
         return newState

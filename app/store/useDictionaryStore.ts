@@ -24,7 +24,7 @@ interface DictionaryStore {
   addReplacement: (from: string, to: string) => void
   updateEntry: (
     id: string,
-    updates: Partial<Omit<DictionaryEntry, 'id' | 'createdAt'>>
+    updates: Partial<Omit<DictionaryEntry, 'id' | 'createdAt'>>,
   ) => void
   deleteEntry: (id: string) => void
   loadEntries: () => void
@@ -36,7 +36,7 @@ const getInitialEntries = (): DictionaryEntry[] => {
   try {
     const storedEntries = window.electron.store.get('dictionary')
     if (storedEntries && Array.isArray(storedEntries)) {
-      return storedEntries.map((entry) => ({
+      return storedEntries.map(entry => ({
         ...entry,
         createdAt: new Date(entry.createdAt),
         updatedAt: new Date(entry.updatedAt),
@@ -69,7 +69,7 @@ export const useDictionaryStore = create<DictionaryStore>((set, get) => ({
       updatedAt: new Date(),
     } as DictionaryEntry
 
-    set((state) => {
+    set(state => {
       const newEntries = [newEntry, ...state.entries]
       syncEntriesToStore(newEntries)
       return { entries: newEntries }
@@ -86,7 +86,7 @@ export const useDictionaryStore = create<DictionaryStore>((set, get) => ({
       updatedAt: new Date(),
     } as DictionaryEntry
 
-    set((state) => {
+    set(state => {
       const newEntries = [newEntry, ...state.entries]
       syncEntriesToStore(newEntries)
       return { entries: newEntries }
@@ -95,13 +95,13 @@ export const useDictionaryStore = create<DictionaryStore>((set, get) => ({
 
   updateEntry: (
     id: string,
-    updates: Partial<Omit<DictionaryEntry, 'id' | 'createdAt'>>
+    updates: Partial<Omit<DictionaryEntry, 'id' | 'createdAt'>>,
   ) => {
-    set((state) => {
-      const newEntries = state.entries.map((entry) =>
+    set(state => {
+      const newEntries = state.entries.map(entry =>
         entry.id === id
           ? ({ ...entry, ...updates, updatedAt: new Date() } as DictionaryEntry)
-          : entry
+          : entry,
       )
       syncEntriesToStore(newEntries)
       return { entries: newEntries }
@@ -109,8 +109,8 @@ export const useDictionaryStore = create<DictionaryStore>((set, get) => ({
   },
 
   deleteEntry: (id: string) => {
-    set((state) => {
-      const newEntries = state.entries.filter((entry) => entry.id !== id)
+    set(state => {
+      const newEntries = state.entries.filter(entry => entry.id !== id)
       syncEntriesToStore(newEntries)
       return { entries: newEntries }
     })

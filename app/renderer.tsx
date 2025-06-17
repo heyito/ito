@@ -10,5 +10,5 @@ ReactDOM.createRoot(document.getElementById('app') as HTMLElement).render(
     <WindowContextProvider titlebar={{ title: 'Ito', icon: appIcon }}>
       <App />
     </WindowContextProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
 )

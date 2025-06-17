@@ -1,23 +1,40 @@
 import React from 'react'
-import { getOnboardingCategoryIndex, useOnboardingStore } from '@/app/store/useOnboardingStore'
+import {
+  getOnboardingCategoryIndex,
+  useOnboardingStore,
+} from '@/app/store/useOnboardingStore'
 
 export const OnboardingTitlebar = () => {
-  const { onboardingStep, totalOnboardingSteps, onboardingCategory } = useOnboardingStore()
-  const onboardingProgress = Math.ceil(((onboardingStep + 1) / totalOnboardingSteps) * 100)
+  const { onboardingStep, totalOnboardingSteps, onboardingCategory } =
+    useOnboardingStore()
+  const onboardingProgress = Math.ceil(
+    ((onboardingStep + 1) / totalOnboardingSteps) * 100,
+  )
   const onboardingCategoryIndex = getOnboardingCategoryIndex(onboardingCategory)
 
   return (
     <>
       {/* Onboarding Steps Text */}
       <div className="onboarding-steps-text">
-        {['Sign Up', 'Permissions', 'Set Up', 'Try it'].map((step, idx, arr) => (
-          <React.Fragment key={step}>
-            <span className={`onboarding-step-label${idx <= onboardingCategoryIndex ? ' active' : ''}`}>{step.toUpperCase()}</span>
-            {idx < arr.length - 1 && (
-              <span className={`onboarding-step-chevron${idx < onboardingCategoryIndex ? ' active' : ''}`} aria-hidden="true">&#8250;</span>
-            )}
-          </React.Fragment>
-        ))}
+        {['Sign Up', 'Permissions', 'Set Up', 'Try it'].map(
+          (step, idx, arr) => (
+            <React.Fragment key={step}>
+              <span
+                className={`onboarding-step-label${idx <= onboardingCategoryIndex ? ' active' : ''}`}
+              >
+                {step.toUpperCase()}
+              </span>
+              {idx < arr.length - 1 && (
+                <span
+                  className={`onboarding-step-chevron${idx < onboardingCategoryIndex ? ' active' : ''}`}
+                  aria-hidden="true"
+                >
+                  &#8250;
+                </span>
+              )}
+            </React.Fragment>
+          ),
+        )}
       </div>
       {/* Onboarding Progress Bar */}
       <div className="onboarding-progress-bar-bg">
@@ -80,4 +97,4 @@ export const OnboardingTitlebar = () => {
       `}</style>
     </>
   )
-} 
+}

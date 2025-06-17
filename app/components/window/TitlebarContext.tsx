@@ -1,12 +1,16 @@
 import { createContext, useContext } from 'react'
 
-const TitlebarContext = createContext<TitlebarContextProps | undefined>(undefined)
+const TitlebarContext = createContext<TitlebarContextProps | undefined>(
+  undefined,
+)
 
-export const TitlebarContextProvider = ({ children }: { children: React.ReactNode }) => {
+export const TitlebarContextProvider = ({
+  children,
+}: {
+  children: React.ReactNode
+}) => {
   return (
-    <TitlebarContext.Provider value={{}}>
-      {children}
-    </TitlebarContext.Provider>
+    <TitlebarContext.Provider value={{}}>{children}</TitlebarContext.Provider>
   )
 }
 
@@ -19,4 +23,4 @@ export const useTitlebarContext = () => {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface TitlebarContextProps { }
+interface TitlebarContextProps {}

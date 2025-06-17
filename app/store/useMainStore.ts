@@ -31,13 +31,13 @@ const syncToStore = (state: Partial<MainStore>) => {
   window.electron.store.set('main', updates)
 }
 
-export const useMainStore = create<MainStore>((set) => {
+export const useMainStore = create<MainStore>(set => {
   const initialState = getInitialState()
   return {
     navExpanded: initialState.navExpanded,
     currentPage: 'home',
     toggleNavExpanded: () =>
-      set((state) => {
+      set(state => {
         const newState = { navExpanded: !state.navExpanded }
         syncToStore(newState)
         return newState

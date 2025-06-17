@@ -3,14 +3,33 @@ import { ArrowUp, Pencil, Trash, Plus } from '@mynaui/icons-react'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip'
 import { Switch } from '../../ui/switch'
 import { useDictionaryStore } from '../../../store/useDictionaryStore'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../../ui/dialog'
 import { Button } from '../../ui/button'
 
 export default function DictionaryContent() {
-  const { entries, loadEntries, addEntry, addReplacement, updateEntry, deleteEntry } = useDictionaryStore()
+  const {
+    entries,
+    loadEntries,
+    addEntry,
+    addReplacement,
+    updateEntry,
+    deleteEntry,
+  } = useDictionaryStore()
   const [showScrollToTop, setShowScrollToTop] = useState(false)
   const [hoveredRow, setHoveredRow] = useState<number | null>(null)
-  const [editingEntry, setEditingEntry] = useState<{id: string, type: 'normal' | 'replacement', content?: string, from?: string, to?: string} | null>(null)
+  const [editingEntry, setEditingEntry] = useState<{
+    id: string
+    type: 'normal' | 'replacement'
+    content?: string
+    from?: string
+    to?: string
+  } | null>(null)
   const [editContent, setEditContent] = useState('')
   const [editFrom, setEditFrom] = useState('')
   const [editTo, setEditTo] = useState('')
@@ -49,12 +68,12 @@ export default function DictionaryContent() {
     if (containerRef.current) {
       containerRef.current.scrollTo({
         top: 0,
-        behavior: 'smooth'
+        behavior: 'smooth',
       })
     }
   }
 
-  const getDisplayText = (entry: typeof entries[0]) => {
+  const getDisplayText = (entry: (typeof entries)[0]) => {
     if (entry.type === 'replacement') {
       return `${entry.from} → ${entry.to}`
     }
@@ -74,7 +93,12 @@ export default function DictionaryContent() {
           editInputRef.current?.focus()
         }, 100)
       } else {
-        setEditingEntry({ id, type: 'replacement', from: entry.from, to: entry.to })
+        setEditingEntry({
+          id,
+          type: 'replacement',
+          from: entry.from,
+          to: entry.to,
+        })
         setEditContent('')
         setEditFrom(entry.from)
         setEditTo(entry.to)
@@ -88,19 +112,23 @@ export default function DictionaryContent() {
 
   const handleSaveEdit = () => {
     if (!editingEntry) return
-    
+
     if (editingEntry.type === 'normal' && editContent.trim() !== '') {
-      updateEntry(editingEntry.id, { 
+      updateEntry(editingEntry.id, {
         type: 'normal',
-        content: editContent.trim() 
+        content: editContent.trim(),
       } as any)
       setEditingEntry(null)
       setEditContent('')
-    } else if (editingEntry.type === 'replacement' && editFrom.trim() !== '' && editTo.trim() !== '') {
-      updateEntry(editingEntry.id, { 
+    } else if (
+      editingEntry.type === 'replacement' &&
+      editFrom.trim() !== '' &&
+      editTo.trim() !== ''
+    ) {
+      updateEntry(editingEntry.id, {
         type: 'replacement',
         from: editFrom.trim(),
-        to: editTo.trim()
+        to: editTo.trim(),
       } as any)
       setEditingEntry(null)
       setEditFrom('')
@@ -192,17 +220,17 @@ export default function DictionaryContent() {
   const noEntries = entries.length === 0
 
   return (
-    <div 
+    <div
       ref={containerRef}
-      className="w-full px-36 max-h-160 overflow-y-auto relative" 
+      className="w-full px-36 max-h-160 overflow-y-auto relative"
       style={{
         msOverflowStyle: 'none',
-        scrollbarWidth: 'none'
+        scrollbarWidth: 'none',
       }}
     >
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-medium">Dictionary</h1>
-        <button 
+        <button
           onClick={handleAddNew}
           className="bg-gray-900 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-800 cursor-pointer flex items-center gap-2"
         >
@@ -215,24 +243,30 @@ export default function DictionaryContent() {
       {noEntries && (
         <div className="text-gray-500">
           <p className="text-sm">No entries yet</p>
-          <p className="text-xs mt-1">Dictionary entries make the transcription more accurate</p>
+          <p className="text-xs mt-1">
+            Dictionary entries make the transcription more accurate
+          </p>
         </div>
       )}
-      {!noEntries &&
+      {!noEntries && (
         <div className="bg-white rounded-lg border border-slate-200 divide-y divide-slate-200">
           {entries.map((entry, index) => (
-            <div 
+            <div
               key={entry.id}
               className="flex items-center justify-between px-4 py-4 gap-10 hover:bg-gray-50 transition-colors duration-200 group"
               onMouseEnter={() => setHoveredRow(index)}
               onMouseLeave={() => setHoveredRow(null)}
             >
-              <div className="text-gray-900 flex-1">{getDisplayText(entry)}</div>
-              
+              <div className="text-gray-900 flex-1">
+                {getDisplayText(entry)}
+              </div>
+
               {/* Action Icons - shown on hover */}
-              <div className={`flex items-center gap-2 transition-opacity duration-200 ${
-                hoveredRow === index ? 'opacity-100' : 'opacity-0'
-              }`}>
+              <div
+                className={`flex items-center gap-2 transition-opacity duration-200 ${
+                  hoveredRow === index ? 'opacity-100' : 'opacity-0'
+                }`}
+              >
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
@@ -247,7 +281,7 @@ export default function DictionaryContent() {
                     Edit
                   </TooltipContent>
                 </Tooltip>
-                
+
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
@@ -266,7 +300,7 @@ export default function DictionaryContent() {
             </div>
           ))}
         </div>
-      }
+      )}
 
       {/* Scroll to Top Button */}
       {showScrollToTop && (
@@ -280,24 +314,34 @@ export default function DictionaryContent() {
       )}
 
       {/* Edit Entry Dialog */}
-      <Dialog open={!!editingEntry} onOpenChange={(open) => !open && handleCancelEdit()}>
-        <DialogContent className="!border-0 shadow-lg p-0" showCloseButton={false}>
+      <Dialog
+        open={!!editingEntry}
+        onOpenChange={open => !open && handleCancelEdit()}
+      >
+        <DialogContent
+          className="!border-0 shadow-lg p-0"
+          showCloseButton={false}
+        >
           <DialogHeader>
             <DialogTitle className="sr-only">
-              {editingEntry?.type === 'replacement' ? 'Edit replacement' : 'Edit Dictionary Entry'}
+              {editingEntry?.type === 'replacement'
+                ? 'Edit replacement'
+                : 'Edit Dictionary Entry'}
             </DialogTitle>
           </DialogHeader>
           <div className="px-6">
             <h2 className="text-lg font-semibold mb-4">
-              {editingEntry?.type === 'replacement' ? 'Edit replacement' : 'Edit entry'}
+              {editingEntry?.type === 'replacement'
+                ? 'Edit replacement'
+                : 'Edit entry'}
             </h2>
-            
+
             {editingEntry?.type === 'normal' ? (
               <input
                 ref={editInputRef}
                 type="text"
                 value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
+                onChange={e => setEditContent(e.target.value)}
                 onKeyDown={handleEditKeyDown}
                 className="w-full p-4 rounded-md resize-none focus:outline-none border border-neutral-200"
                 placeholder="Enter dictionary entry..."
@@ -309,7 +353,7 @@ export default function DictionaryContent() {
                     ref={editFromRef}
                     type="text"
                     value={editFrom}
-                    onChange={(e) => setEditFrom(e.target.value)}
+                    onChange={e => setEditFrom(e.target.value)}
                     onKeyDown={handleEditKeyDown}
                     className="flex-1 p-4 rounded-md resize-none focus:outline-none border border-neutral-200"
                     placeholder="Misspelling"
@@ -318,7 +362,7 @@ export default function DictionaryContent() {
                   <input
                     type="text"
                     value={editTo}
-                    onChange={(e) => setEditTo(e.target.value)}
+                    onChange={e => setEditTo(e.target.value)}
                     onKeyDown={handleEditKeyDown}
                     className="flex-1 p-4 rounded-md resize-none focus:outline-none border border-neutral-200"
                     placeholder="Correct spelling"
@@ -328,15 +372,18 @@ export default function DictionaryContent() {
             )}
           </div>
           <DialogFooter className="p-4">
-            <Button className='bg-neutral-200 hover:bg-neutral-300 text-black cursor-pointer' onClick={handleCancelEdit}>
+            <Button
+              className="bg-neutral-200 hover:bg-neutral-300 text-black cursor-pointer"
+              onClick={handleCancelEdit}
+            >
               Cancel
             </Button>
-            <Button 
-              className='cursor-pointer' 
-              onClick={handleSaveEdit} 
+            <Button
+              className="cursor-pointer"
+              onClick={handleSaveEdit}
               disabled={
-                editingEntry?.type === 'normal' 
-                  ? !editContent.trim() 
+                editingEntry?.type === 'normal'
+                  ? !editContent.trim()
                   : !editFrom.trim() || !editTo.trim()
               }
             >
@@ -347,18 +394,24 @@ export default function DictionaryContent() {
       </Dialog>
 
       {/* Add New Entry Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={(open) => !open && handleCancelNew()}>
-        <DialogContent className="!border-0 shadow-lg p-0" showCloseButton={false}>
+      <Dialog
+        open={showAddDialog}
+        onOpenChange={open => !open && handleCancelNew()}
+      >
+        <DialogContent
+          className="!border-0 shadow-lg p-0"
+          showCloseButton={false}
+        >
           <DialogHeader>
             <DialogTitle className="sr-only">Add to vocabulary</DialogTitle>
           </DialogHeader>
           <div className="px-6">
             <h2 className="text-lg font-semibold mb-4">Add to vocabulary</h2>
-            
+
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm font-medium">Make it a replacement</span>
-              <Switch 
-                checked={isReplacement} 
+              <Switch
+                checked={isReplacement}
                 onCheckedChange={handleReplacementToggle}
               />
             </div>
@@ -368,7 +421,7 @@ export default function DictionaryContent() {
                 ref={addInputRef}
                 type="text"
                 value={newEntryContent}
-                onChange={(e) => setNewEntryContent(e.target.value)}
+                onChange={e => setNewEntryContent(e.target.value)}
                 onKeyDown={handleAddKeyDown}
                 className="w-full p-4 rounded-md resize-none focus:outline-none border border-neutral-200"
                 placeholder="Enter dictionary entry..."
@@ -380,7 +433,7 @@ export default function DictionaryContent() {
                     ref={addFromRef}
                     type="text"
                     value={newFrom}
-                    onChange={(e) => setNewFrom(e.target.value)}
+                    onChange={e => setNewFrom(e.target.value)}
                     onKeyDown={handleAddKeyDown}
                     className="flex-1 p-4 rounded-md resize-none focus:outline-none border border-neutral-200"
                     placeholder="Misspelling"
@@ -389,7 +442,7 @@ export default function DictionaryContent() {
                   <input
                     type="text"
                     value={newTo}
-                    onChange={(e) => setNewTo(e.target.value)}
+                    onChange={e => setNewTo(e.target.value)}
                     onKeyDown={handleAddKeyDown}
                     className="flex-1 p-4 rounded-md resize-none focus:outline-none border border-neutral-200"
                     placeholder="Correct spelling"
@@ -399,14 +452,17 @@ export default function DictionaryContent() {
             )}
           </div>
           <DialogFooter className="p-4">
-            <Button className='bg-neutral-200 hover:bg-neutral-300 text-black cursor-pointer' onClick={handleCancelNew}>
+            <Button
+              className="bg-neutral-200 hover:bg-neutral-300 text-black cursor-pointer"
+              onClick={handleCancelNew}
+            >
               Cancel
             </Button>
-            <Button 
-              className='cursor-pointer' 
-              onClick={handleSaveNew} 
+            <Button
+              className="cursor-pointer"
+              onClick={handleSaveNew}
               disabled={
-                isReplacement 
+                isReplacement
                   ? !newFrom.trim() || !newTo.trim()
                   : !newEntryContent.trim()
               }
@@ -418,4 +474,4 @@ export default function DictionaryContent() {
       </Dialog>
     </div>
   )
-} 
+}

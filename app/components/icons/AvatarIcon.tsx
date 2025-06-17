@@ -13,4 +13,4 @@ const AvatarIcon = (props: any) => (
   </svg>
 )
 
-export default AvatarIcon 
+export default AvatarIcon

@@ -1,21 +1,27 @@
 import { Button } from '@/app/components/ui/button'
-import { CheckCircle, Lock } from "@mynaui/icons-react";
-import { useOnboardingStore } from '@/app/store/useOnboardingStore';
+import { CheckCircle, Lock } from '@mynaui/icons-react'
+import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 
 export default function DataControlContent() {
-  const { 
+  const {
     incrementOnboardingStep,
     decrementOnboardingStep,
     shareAnalytics,
-    setShareAnalytics
-  } = useOnboardingStore();
+    setShareAnalytics,
+  } = useOnboardingStore()
 
   return (
     <div className="flex flex-row h-full w-full bg-background">
       <div className="flex flex-col w-[45%] justify-center items-start pl-24">
         <div className="flex flex-col h-full min-h-[400px] justify-between py-12">
           <div className="mt-8">
-            <button className="mb-4 text-sm text-muted-foreground hover:underline" type="button" onClick={decrementOnboardingStep}>&lt; Back</button>
+            <button
+              className="mb-4 text-sm text-muted-foreground hover:underline"
+              type="button"
+              onClick={decrementOnboardingStep}
+            >
+              &lt; Back
+            </button>
             <h1 className="text-3xl mb-4 mt-12">You control your data</h1>
             <div className="flex flex-col gap-4 my-8 pr-24">
               <div
@@ -25,11 +31,17 @@ export default function DataControlContent() {
                 <div className="flex items-center justify-between w-full my-2">
                   <div className="font-medium">Help improve Ito</div>
                   {shareAnalytics && (
-                    <div><CheckCircle style={{ color: '#22c55e', width: 18, height: 18 }} /></div>
+                    <div>
+                      <CheckCircle
+                        style={{ color: '#22c55e', width: 18, height: 18 }}
+                      />
+                    </div>
                   )}
                 </div>
                 <div className="text-sm text-muted-foreground max-w-md mt-1">
-                  To make Ito better, this option lets us collect your audio, transcript, and edits to evaluate, train and improve Ito's features and AI models
+                  To make Ito better, this option lets us collect your audio,
+                  transcript, and edits to evaluate, train and improve Ito's
+                  features and AI models
                 </div>
               </div>
               <div
@@ -39,20 +51,30 @@ export default function DataControlContent() {
                 <div className="flex items-center justify-between w-full my-2">
                   <div className="font-medium">Privacy Mode</div>
                   {!shareAnalytics && (
-                    <div><Lock style={{ color: '#a78bfa', width: 18, height: 18 }} /></div>
+                    <div>
+                      <Lock
+                        style={{ color: '#a78bfa', width: 18, height: 18 }}
+                      />
+                    </div>
                   )}
                 </div>
                 <div className="text-muted-foreground max-w-md mt-1">
-                  If you enable Privacy Mode, none of your dictation data will be stored or used for model training by us or any third party.
+                  If you enable Privacy Mode, none of your dictation data will
+                  be stored or used for model training by us or any third party.
                 </div>
               </div>
             </div>
             <div className="text-sm text-muted-foreground">
-              You can always change this later in settings. <a href="#" className="underline">Read more here.</a>
+              You can always change this later in settings.{' '}
+              <a href="#" className="underline">
+                Read more here.
+              </a>
             </div>
           </div>
           <div className="flex flex-col items-start mb-8">
-            <Button className="w-24" onClick={incrementOnboardingStep}>Continue</Button>
+            <Button className="w-24" onClick={incrementOnboardingStep}>
+              Continue
+            </Button>
           </div>
         </div>
       </div>
@@ -61,4 +83,4 @@ export default function DataControlContent() {
       </div>
     </div>
   )
-} 
+}

@@ -1,29 +1,29 @@
-import { useState, useEffect, useRef } from 'react';
-import { Check } from "@mynaui/icons-react";
+import { useState, useEffect, useRef } from 'react'
+import { Check } from '@mynaui/icons-react'
 
 // AnimatedCheck component for check mark animation
 function AnimatedCheck({ trigger }: { trigger: boolean }) {
-  const [showWidth, setShowWidth] = useState(false);
-  const [showOpacity, setShowOpacity] = useState(false);
-  const checkRef = useRef<HTMLDivElement>(null);
+  const [showWidth, setShowWidth] = useState(false)
+  const [showOpacity, setShowOpacity] = useState(false)
+  const checkRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (trigger) {
-      setShowWidth(false);
-      setShowOpacity(false);
+      setShowWidth(false)
+      setShowOpacity(false)
       // Start width animation
       setTimeout(() => {
-        setShowWidth(true);
+        setShowWidth(true)
         // After width animation, start opacity
         setTimeout(() => {
-          setShowOpacity(true);
-        }, 350); // match transition duration
-      }, 50);
+          setShowOpacity(true)
+        }, 350) // match transition duration
+      }, 50)
     } else {
-      setShowWidth(false);
-      setShowOpacity(false);
+      setShowWidth(false)
+      setShowOpacity(false)
     }
-  }, [trigger]);
+  }, [trigger])
 
   return (
     <div
@@ -47,7 +47,7 @@ function AnimatedCheck({ trigger }: { trigger: boolean }) {
         }}
       />
     </div>
-  );
+  )
 }
 
-export { AnimatedCheck };
+export { AnimatedCheck }

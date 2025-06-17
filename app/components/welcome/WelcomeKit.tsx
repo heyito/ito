@@ -12,23 +12,24 @@ import { usePermissionsStore } from '../../store/usePermissionsStore'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 
 export default function WelcomeKit() {
-  const { onboardingStep } = useOnboardingStore();
-  
-  const { 
-    setAccessibilityEnabled,
-    setMicrophoneEnabled
-  } = usePermissionsStore();
-  
+  const { onboardingStep } = useOnboardingStore()
+
+  const { setAccessibilityEnabled, setMicrophoneEnabled } =
+    usePermissionsStore()
 
   useEffect(() => {
-    window.api.invoke('check-accessibility-permission', false).then((enabled: boolean) => {
-      setAccessibilityEnabled(enabled);
-    });
+    window.api
+      .invoke('check-accessibility-permission', false)
+      .then((enabled: boolean) => {
+        setAccessibilityEnabled(enabled)
+      })
 
-    window.api.invoke('check-microphone-permission', false).then((enabled: boolean) => {
-      setMicrophoneEnabled(enabled);
-    });
-  }, [setAccessibilityEnabled, setMicrophoneEnabled]);
+    window.api
+      .invoke('check-microphone-permission', false)
+      .then((enabled: boolean) => {
+        setMicrophoneEnabled(enabled)
+      })
+  }, [setAccessibilityEnabled, setMicrophoneEnabled])
 
   return (
     <div className="w-full h-full bg-background">

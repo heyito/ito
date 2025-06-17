@@ -7,17 +7,19 @@
   "dependencies": {
     "@grpc/grpc-js": "^1.13.4",
     "@grpc/proto-loader": "^0.7.15",
+    "@grpc/reflection": "^1.0.4",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "express-oauth2-jwt-bearer": "^1.6.1",
     "express-rate-limit": "^7.5.0",
+    "grpc-health-check": "^2.0.2",
     "pg": "^8.16.0"
   },
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
     "start": "node dist/index.js",
-    "proto:gen": "proto-loader-gen-types --grpcLib=@grpc/grpc-js --outDir=src/generated/ src/ito.proto && cp -r src/generated/ ../app/generated/",
+    "proto:gen": "proto-loader-gen-types --grpcLib=@grpc/grpc-js --outDir=src/generated/ src/ito.proto node_modules/grpc-health-check/proto/health/v1/health.proto && cp -r src/generated/ ../app/generated/",
     "dev": "tsx watch src/index.ts",
     "start:grpc": "tsx src/server.ts",
     "test-client": "tsx ./test-client.ts"

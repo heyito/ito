@@ -152,6 +152,14 @@
     protobufjs "^7.2.5"
     yargs "^17.7.2"
 
+"@grpc/reflection@^1.0.4":
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/@grpc/reflection/-/reflection-1.0.4.tgz#83d37e1261562868a847ee68124e7b5c66e4e157"
+  integrity sha512-znA8v4AviOD3OPOxy11pxrtP8k8DanpefeTymS8iGW1fVr1U2cHuzfhYqDPHnVNDf4qvF9E25KtSihPy2DBWfQ==
+  dependencies:
+    "@grpc/proto-loader" "^0.7.13"
+    protobufjs "^7.2.5"
+
 "@jridgewell/resolve-uri@^3.0.3":
   version "3.1.2"
   resolved "https://registry.yarnpkg.com/@jridgewell/resolve-uri/-/resolve-uri-3.1.2.tgz#7a0ee601f60f99a20c7c7c5ff0c80388c1189bd6"
@@ -682,6 +690,13 @@ gopd@^1.2.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/gopd/-/gopd-1.2.0.tgz#89f56b8217bdbc8802bd299df6d7f1081d7e51a1"
   integrity sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==
+
+grpc-health-check@^2.0.2:
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/grpc-health-check/-/grpc-health-check-2.0.2.tgz#84b8f8a7bf6d99ee9e0827177cf976f1502f4738"
+  integrity sha512-5XKOdg/gIlTsZZR+8QJjzmW2CHBnn+NfM8zevIpzg+96i9dAuoH+Guu/L/5vuUkSbVZG69wVPnLpEnW+Smon1A==
+  dependencies:
+    "@grpc/proto-loader" "^0.7.13"
 
 has-symbols@^1.1.0:
   version "1.1.0"

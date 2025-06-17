@@ -5,12 +5,23 @@ import { ProtoGrpcType } from "./generated/ito";
 // Correct path to the generated service handler type
 import { ItoServiceHandlers } from "./generated/ito/ItoService";
 import { PassThrough } from "stream";
+import { ReflectionService } from "@grpc/reflection";
+import { HealthImplementation, ServingStatusMap } from 'grpc-health-check';
 
 // Correct path to the proto file
 const PROTO_PATH = "./src/ito.proto";
+const HEALTH_PROTO_PATH = "node_modules/grpc-health-check/proto/health/v1/health.proto";
 
-const packageDefinition = protoLoader.loadSync(PROTO_PATH);
-const itoProto = grpc.loadPackageDefinition(packageDefinition) as unknown as ProtoGrpcType;
+const itoPackageDefinition = protoLoader.loadSync([PROTO_PATH, HEALTH_PROTO_PATH]);
+const itoProto = grpc.loadPackageDefinition(itoPackageDefinition) as unknown as ProtoGrpcType;
+
+const statusMap: ServingStatusMap = {
+  'ito.ItoService': 'SERVING',
+  '': 'NOT_SERVING',
+};
+
+// Construct the service implementation
+const healthImpl = new HealthImplementation(statusMap);
 
 // Use a consistent name for the server implementation
 const itoServer: ItoServiceHandlers = {
@@ -69,7 +80,11 @@ function main() {
   const server = new grpc.Server();
   // Ensure we use the correct service definition and implementation
   server.addService(itoProto.ito.ItoService.service, itoServer);
-  
+  const healthServiceDefinition = protoLoader.loadSync(HEALTH_PROTO_PATH);
+  healthImpl.addToServer(server);
+  const reflectionService = new ReflectionService(itoPackageDefinition);
+  reflectionService.addToServer(server);
+
   const port = "0.0.0.0:3000";
   server.bindAsync(port, grpc.ServerCredentials.createInsecure(), (err, port) => {
     if (err) {
@@ -78,6 +93,8 @@ function main() {
     }
     console.log(`gRPC server listening on ${port}`);
   });
+
+  healthImpl.setStatus('', 'SERVING');
 }
 
 main();

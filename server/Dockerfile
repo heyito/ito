@@ -4,8 +4,7 @@ FROM node:22-alpine AS base
 WORKDIR /app
 
 COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
-
+RUN yarn install
 COPY . .
 
 # New step: Generate proto types during the build

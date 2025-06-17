@@ -1,14 +1,25 @@
-import { App, Environment } from "aws-cdk-lib";
+import "source-map-support/register";
+import * as cdk from "aws-cdk-lib";
 import { ItoExpressAppStack } from "../lib/ito-express-app-stack";
+import { SharedResourcesStack } from "../lib/shared-resources-stack";
 
-const app = new App();
+const app = new cdk.App();
 
-// use the CLI’s default if you’ve done `export AWS_REGION=us-west-2` etc:
-const env: Environment = {
+const env = {
   account: process.env.CDK_DEFAULT_ACCOUNT,
   region: process.env.CDK_DEFAULT_REGION,
 };
 
-new ItoExpressAppStack(app, "ItoExpressAppStack", { env });
+const sharedStack = new SharedResourcesStack(app, "ItoSharedResourcesStack", {
+  env: env,
+  description: "Stack for shared, persistent resources like logs and secrets.",
+});
 
-app.synth();
+const appStack = new ItoExpressAppStack(app, "ItoExpressAppStack", {
+  env: env,
+  description: "The main Ito Express application service.",
+  logBucket: sharedStack.logBucket,
+  dbSecretArn: sharedStack.dbSecretArn,
+});
+
+appStack.addDependency(sharedStack);

@@ -21,52 +21,68 @@ import {
   ApplicationProtocol,
   SslPolicy,
 } from "aws-cdk-lib/aws-elasticloadbalancingv2";
-import { Bucket } from "aws-cdk-lib/aws-s3";
-import { Secret } from "aws-cdk-lib/aws-secretsmanager";
+import { Bucket, IBucket } from "aws-cdk-lib/aws-s3";
+import { ISecret, Secret } from "aws-cdk-lib/aws-secretsmanager";
 
 const DB_NAME = "itodb";
+
+export interface ItoExpressAppStackProps extends StackProps {
+  logBucket: IBucket;
+  dbSecretArn: string;
+}
+
 export class ItoExpressAppStack extends Stack {
-  constructor(scope: Construct, id: string, props?: StackProps) {
+  constructor(scope: Construct, id: string, props: ItoExpressAppStackProps) {
     super(scope, id, props);
 
     const vpc = new ec2.Vpc(this, "ItoVpc", {
       maxAzs: 2,
-      natGateways: 1,
+      natGateways: 2,
     });
 
     const cluster = new ecs.Cluster(this, "ItoCluster", {
       vpc,
     });
 
-    const dbCredentialsSecret = Secret.fromSecretNameV2(
+    const dbSecurityGroup = new ec2.SecurityGroup(this, "ItoDbSecurityGroup", {
+      vpc,
+      description: "Allow ECS Fargate service to connect to Aurora",
+      allowAllOutbound: true,
+    });
+    const dbCredentialsSecret = Secret.fromSecretCompleteArn(
       this,
-      "ItoDbSecret",
-      "prod/ito-db/cdk-credentials"
+      "ImportedDbSecret",
+      props.dbSecretArn
     );
 
-    const serverlessCluster = new rds.ServerlessCluster(
+    const serverlessCluster = new rds.DatabaseCluster(
       this,
       "ItoAuroraServerless",
       {
         engine: rds.DatabaseClusterEngine.auroraPostgres({
-          version: rds.AuroraPostgresEngineVersion.VER_15_3,
+          version: rds.AuroraPostgresEngineVersion.VER_16_2,
         }),
         vpc,
-        scaling: {
-          autoPause: Duration.minutes(10), // pause when idle
-          minCapacity: rds.AuroraCapacityUnit.ACU_2,
-          maxCapacity: rds.AuroraCapacityUnit.ACU_16,
-        },
+        securityGroups: [dbSecurityGroup],
         credentials: rds.Credentials.fromSecret(dbCredentialsSecret),
         defaultDatabaseName: DB_NAME,
+
+        writer: rds.ClusterInstance.serverlessV2("WriterInstance"),
+        readers: [
+          rds.ClusterInstance.serverlessV2("ReaderInstance", {
+            scaleWithWriter: true,
+          }),
+        ],
+        serverlessV2MinCapacity: 0.5,
+        serverlessV2MaxCapacity: 4,
+        backup: {
+          retention: Duration.days(7),
+        },
         removalPolicy: RemovalPolicy.RETAIN,
       }
     );
 
-    const cfnCluster = serverlessCluster.node.defaultChild as rds.CfnDBCluster;
-    cfnCluster.backupRetentionPeriod = 7; // Retain backups for 7 days
-    cfnCluster.preferredBackupWindow = "03:00-04:00"; // Daily backup window
-
+    // Cloudflare DNS - CNAME setup for HTTPs
     const cert = Certificate.fromCertificateArn(
       this,
       "ItoCert",
@@ -118,12 +134,7 @@ export class ItoExpressAppStack extends Stack {
     });
 
     const alb = fargateService.loadBalancer;
-    const albLogs = Bucket.fromBucketName(
-      this,
-      "AlbLogsBucket",
-      "ito-alb-logs"
-    );
-    alb.logAccessLogs(albLogs, "/ito-alb");
+    alb.logAccessLogs(props.logBucket, "ito-alb-access-logs");
 
     // TODO: Consider adding auto-scaling in the future. Keeping off for now
     // const scaling = fargateService.service.autoScaleTaskCount({

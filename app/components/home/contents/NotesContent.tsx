@@ -268,7 +268,7 @@ export default function NotesContent() {
             <div className="absolute bottom-3 right-3">
               <button 
                 onClick={handleAddNote}
-                className="bg-neutral-200 px-4 py-2 rounded font-semibold hover:bg-neutral-300 cursor-pointer"
+                className="bg-neutral-200 px-4 py-2 rounded-md font-semibold hover:bg-neutral-300 cursor-pointer"
               >
                 Add note
               </button>

@@ -29,7 +29,7 @@ export function Note({
   return (
     <div 
       key={note.id}
-      className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md cursor-pointer group relative"
+      className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md group relative"
     >
       {/* Hover Icons */}
       <div className="absolute top-2 right-2 opacity-0 group-hover:shadow-sm group-hover:opacity-100 transition-opacity duration-200 flex items-center rounded-md">
@@ -38,14 +38,14 @@ export function Note({
             e.stopPropagation()
             onEdit(note.id)
           }}
-          className="p-1.5 hover:bg-gray-100 transition-colors border-r border-neutral-200 rounded-l-md"
+          className="p-1.5 hover:bg-gray-100 transition-colors border-r border-neutral-200 rounded-l-md cursor-pointer "
         >
           <Pencil className="w-4 h-4 text-neutral-500" />
         </button>
         <div className="relative">
           <button
             onClick={(e) => onToggleDropdown(index, e)}
-            className="p-1.5 hover:bg-gray-100 transition-colors rounded-r-md"
+            className="p-1.5 hover:bg-gray-100 transition-colors rounded-r-md cursor-pointer"
           >
             <Dots className="w-4 h-4 text-neutral-800" />
           </button>

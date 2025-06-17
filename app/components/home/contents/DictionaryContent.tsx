@@ -3,7 +3,7 @@ export default function DictionaryContent() {
     <div className="w-full px-36">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-medium">Dictionary</h1>
-        <button className="bg-gray-900 text-white px-4 py-2 rounded font-semibold hover:bg-gray-800 cursor-pointer">
+        <button className="bg-gray-900 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-800 cursor-pointer">
           Add new
         </button>
       </div>

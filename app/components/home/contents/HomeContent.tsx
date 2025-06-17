@@ -18,7 +18,7 @@ export default function HomeContent() {
           <div className="text-base font-medium mb-1">Voice dictation in any app</div>
           <div className="text-sm text-gray-600">Hold down the trigger key <span className="bg-slate-50 px-1 py-0.5 rounded text-xs font-mono shadow-sm">fn</span> and speak into any textbox</div>
         </div>
-        <button className="bg-gray-900 text-white px-4 py-2 rounded font-semibold hover:bg-gray-800 cursor-pointer">Explore use cases</button>
+        <button className="bg-gray-900 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-800 cursor-pointer">Explore use cases</button>
       </div>
       {/* Recent Activity */}
       <div>

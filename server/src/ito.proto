@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package ito;
+
+service ItoService {
+  // Method 1: Sends a whole audio file and gets a single response.
+  // Good for simple, non-real-time use cases.
+  rpc TranscribeFile(TranscribeFileRequest) returns (TranscriptionResponse);
+
+  // Method 2: Streams audio chunks from the client and gets a single response.
+  // This is the ideal method for dictation to reduce latency and memory usage.
+  rpc TranscribeStream(stream AudioChunk) returns (TranscriptionResponse);
+}
+
+// The request message containing the entire audio file data.
+message TranscribeFileRequest {
+  // The raw audio data.
+  bytes audio_data = 1;
+}
+
+// A chunk of audio data for streaming.
+message AudioChunk {
+  bytes audio_data = 1;
+}
+
+// The response message containing the final transcript.
+message TranscriptionResponse {
+  string transcript = 1;
+}

@@ -5,6 +5,8 @@
   "type": "module",
   "license": "GPL-3.0-only",
   "dependencies": {
+    "@grpc/grpc-js": "^1.13.4",
+    "@grpc/proto-loader": "^0.7.15",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "express-oauth2-jwt-bearer": "^1.6.1",
@@ -15,7 +17,10 @@
     "build": "tsc",
     "clean": "rm -rf dist",
     "start": "node dist/index.js",
-    "dev": "tsx watch src/index.ts"
+    "proto:gen": "proto-loader-gen-types --grpcLib=@grpc/grpc-js --outDir=src/generated/ src/ito.proto && cp -r src/generated/ ../app/generated/",
+    "dev": "tsx watch src/index.ts",
+    "start:grpc": "tsx src/server.ts",
+    "test-client": "tsx ./test-client.ts"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
@@ -25,6 +30,5 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.20.2",
     "typescript": "^5.8.3"
-  },
-  "packageManager": "yarn@1.22.1"
+  }
 }

@@ -367,6 +367,7 @@ export default function NotesContent() {
                     formatDate={formatDate}
                     formatTime={formatTime}
                     truncateContent={truncateContent}
+                    searchQuery={showSearch ? searchQuery : undefined}
                   />
                 ))}
               </Masonry>
@@ -386,6 +387,7 @@ export default function NotesContent() {
                     formatDate={formatDate}
                     formatTime={formatTime}
                     truncateContent={truncateContent}
+                    searchQuery={showSearch ? searchQuery : undefined}
                   />
                 ))}
               </div>

@@ -1,3 +1,4 @@
+import React from 'react'
 import { Pencil, Copy, Trash, Dots } from '@mynaui/icons-react'
 import type { Note } from '../../store/useNotesStore'
 
@@ -12,6 +13,32 @@ interface NoteProps {
   formatDate: (date: Date) => string
   formatTime: (date: Date) => string
   truncateContent: (content: string, maxLength?: number) => string
+  searchQuery?: string
+}
+
+// Function to highlight matching text
+function highlightText(text: string, searchQuery: string): React.ReactElement {
+  if (!searchQuery.trim()) {
+    return <>{text}</>
+  }
+
+  const regex = new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
+  const parts = text.split(regex)
+
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (regex.test(part)) {
+          return (
+            <span key={index} className="bg-yellow-200 font-medium">
+              {part}
+            </span>
+          )
+        }
+        return part
+      })}
+    </>
+  )
 }
 
 export function Note({
@@ -24,8 +51,12 @@ export function Note({
   onDeleteNote,
   formatDate,
   formatTime,
-  truncateContent
+  truncateContent,
+  searchQuery
 }: NoteProps) {
+  // Determine what content to display
+  const displayContent = searchQuery ? note.content : truncateContent(note.content)
+
   return (
     <div 
       key={note.id}
@@ -81,7 +112,7 @@ export function Note({
       <div className="flex flex-col">
         <div className="mb-4 pr-16">
           <div className="text-gray-900 font-normal text-sm leading-relaxed break-words">
-            {truncateContent(note.content)}
+            {searchQuery ? highlightText(displayContent, searchQuery) : displayContent}
           </div>
         </div>
         <div className="flex items-center justify-between text-gray-400 text-xs mt-auto">

@@ -17,7 +17,7 @@ const getInitialState = () => {
   const storedMain = window.electron.store.get('main')
 
   return {
-    navExpanded: storedMain?.navExpanded ?? false,
+    navExpanded: storedMain?.navExpanded ?? true,
     currentPage: (storedMain?.currentPage as PageType) ?? 'home',
     settingsPage: (storedMain?.settingsPage as SettingsPageType) ?? 'general',
   }

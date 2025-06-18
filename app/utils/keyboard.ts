@@ -112,6 +112,13 @@ export class KeyState {
     this.isFunctionKeyShortcut = shortcut.some(
       key => key.toLowerCase() === 'fn' || key.toLowerCase() === 'function',
     )
+
+    // Unblock all the keys
+    window.api.unblockKey('Unknown(179)')
+
+    // Block the new keys
+    const newKeysToBlock = this.getKeysToBlock()
+    window.api.blockKeys(newKeysToBlock)
   }
 
   /**

@@ -4,10 +4,8 @@ import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { useSettingsStore } from '@/app/store/useSettingsStore'
 
 export default function DataControlContent() {
-  const {
-    incrementOnboardingStep,
-    decrementOnboardingStep,
-  } = useOnboardingStore()
+  const { incrementOnboardingStep, decrementOnboardingStep } =
+    useOnboardingStore()
   const { shareAnalytics, setShareAnalytics } = useSettingsStore()
 
   return (

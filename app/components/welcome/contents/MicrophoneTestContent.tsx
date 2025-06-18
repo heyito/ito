@@ -41,11 +41,10 @@ function MicrophoneBars({ volume }: { volume: number }) {
 }
 
 export default function MicrophoneTestContent() {
-  const {
-    incrementOnboardingStep,
-    decrementOnboardingStep,
-  } = useOnboardingStore()
-  const { microphoneDeviceId, microphoneName, setMicrophoneDeviceId } = useSettingsStore()
+  const { incrementOnboardingStep, decrementOnboardingStep } =
+    useOnboardingStore()
+  const { microphoneDeviceId, microphoneName, setMicrophoneDeviceId } =
+    useSettingsStore()
   const [volume, setVolume] = useState(0)
   const [smoothedVolume, setSmoothedVolume] = useState(0)
   const cleanupRef = useRef<(() => void) | null>(null)

@@ -24,12 +24,12 @@ export default function GeneralSettingsContent() {
                 Share anonymous usage data to help us improve Ito.
               </div>
             </div>
-            <Switch 
-              checked={shareAnalytics} 
+            <Switch
+              checked={shareAnalytics}
               onCheckedChange={setShareAnalytics}
             />
           </div>
-          
+
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-medium">Launch at Login</div>
@@ -37,21 +37,23 @@ export default function GeneralSettingsContent() {
                 Open Ito automatically when your computer starts.
               </div>
             </div>
-            <Switch 
-              checked={launchAtLogin} 
+            <Switch
+              checked={launchAtLogin}
               onCheckedChange={setLaunchAtLogin}
             />
           </div>
 
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-medium">Show Ito bar at all times</div>
+              <div className="text-sm font-medium">
+                Show Ito bar at all times
+              </div>
               <div className="text-xs text-gray-600 mt-1">
                 Show the Ito bar at all times.
               </div>
             </div>
-            <Switch 
-              checked={showItoBarAlways} 
+            <Switch
+              checked={showItoBarAlways}
               onCheckedChange={setShowItoBarAlways}
             />
           </div>
@@ -63,8 +65,8 @@ export default function GeneralSettingsContent() {
                 Show the Ito app in the dock for quick access.
               </div>
             </div>
-            <Switch 
-              checked={showAppInDock} 
+            <Switch
+              checked={showAppInDock}
               onCheckedChange={setShowAppInDock}
             />
           </div>
@@ -72,4 +74,4 @@ export default function GeneralSettingsContent() {
       </div>
     </div>
   )
-} 
+}

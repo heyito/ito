@@ -19,7 +19,13 @@ interface MicrophoneSelectorProps {
   selectedMicrophoneName?: string
   onSelectionChange: (deviceId: string, name: string) => void
   triggerButtonText?: string
-  triggerButtonVariant?: 'default' | 'outline' | 'secondary' | 'ghost' | 'link' | 'destructive'
+  triggerButtonVariant?:
+    | 'default'
+    | 'outline'
+    | 'secondary'
+    | 'ghost'
+    | 'link'
+    | 'destructive'
   triggerButtonClassName?: string
 }
 
@@ -35,7 +41,7 @@ export function MicrophoneSelector({
     Array<Microphone>
   >([])
   const [tempSelectedMicrophone, setTempSelectedMicrophone] = useState<string>(
-    selectedDeviceId || 'default'
+    selectedDeviceId || 'default',
   )
   const [isOpen, setIsOpen] = useState(false)
 
@@ -65,7 +71,7 @@ export function MicrophoneSelector({
   const handleDialogClose = () => {
     if (tempSelectedMicrophone !== selectedDeviceId) {
       const selectedMic = availableMicrophones.find(
-        mic => mic.deviceId === tempSelectedMicrophone
+        mic => mic.deviceId === tempSelectedMicrophone,
       )
       const selectedMicName = selectedMic
         ? microphoneToRender(selectedMic).title
@@ -76,14 +82,16 @@ export function MicrophoneSelector({
   }
 
   // Use saved microphone name if available, otherwise fallback to looking it up
-  const selectedMicrophoneDisplay = selectedMicrophoneName || (() => {
-    const foundMicrophone = availableMicrophones.find(
-      mic => mic.deviceId === selectedDeviceId
-    )
-    return foundMicrophone
-      ? microphoneToRender(foundMicrophone).title
-      : 'Auto-detect'
-  })()
+  const selectedMicrophoneDisplay =
+    selectedMicrophoneName ||
+    (() => {
+      const foundMicrophone = availableMicrophones.find(
+        mic => mic.deviceId === selectedDeviceId,
+      )
+      return foundMicrophone
+        ? microphoneToRender(foundMicrophone).title
+        : 'Auto-detect'
+    })()
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -93,7 +101,8 @@ export function MicrophoneSelector({
           className={triggerButtonClassName}
           type="button"
         >
-          {triggerButtonText === 'Select Microphone' && (selectedMicrophoneName || selectedDeviceId)
+          {triggerButtonText === 'Select Microphone' &&
+          (selectedMicrophoneName || selectedDeviceId)
             ? selectedMicrophoneDisplay
             : triggerButtonText}
         </Button>
@@ -138,11 +147,7 @@ export function MicrophoneSelector({
         })}
         <div className="flex justify-end mt-6">
           <DialogClose asChild>
-            <Button
-              className="w-32"
-              type="button"
-              onClick={handleDialogClose}
-            >
+            <Button className="w-32" type="button" onClick={handleDialogClose}>
               Save and close
             </Button>
           </DialogClose>
@@ -150,4 +155,4 @@ export function MicrophoneSelector({
       </DialogContent>
     </Dialog>
   )
-} 
+}

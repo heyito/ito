@@ -1,4 +1,11 @@
+import React from 'react'
+import { InfoCircle } from '@mynaui/icons-react'
+import { useSettingsStore } from '../../../store/useSettingsStore'
+import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip'
+
 export default function HomeContent() {
+  const { keyboardShortcut } = useSettingsStore()
+
   return (
     <div className="w-full px-36">
       <div className="flex items-center justify-between mb-8">
@@ -25,11 +32,16 @@ export default function HomeContent() {
             Voice dictation in any app
           </div>
           <div className="text-sm text-gray-600">
-            Hold down the trigger key{' '}
-            <span className="bg-slate-50 px-1 py-0.5 rounded text-xs font-mono shadow-sm">
-              fn
-            </span>{' '}
-            and speak into any textbox
+            <span key="hold-down">Hold down the trigger key{' '}</span>
+            {keyboardShortcut.map((key, index) => (
+              <React.Fragment key={index}>
+                <span className="bg-slate-50 px-1 py-0.5 rounded text-xs font-mono shadow-sm">
+                  {key}
+                </span>
+                <span>{index < keyboardShortcut.length - 1 && ' + '}</span>
+              </React.Fragment>
+            ))}
+            <span key="and">{' '}and speak into any textbox</span>
           </div>
         </div>
         <button className="bg-gray-900 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-800 cursor-pointer">
@@ -51,27 +63,42 @@ export default function HomeContent() {
             <div className="text-gray-600">03:45 PM</div>
             <div className="text-gray-600 flex items-center gap-1">
               Audio is silent.{' '}
-              <span className="text-gray-400" title="No audio detected">
-                &#9432;
-              </span>
+              <Tooltip>
+                <TooltipTrigger>
+                  <InfoCircle className="w-4 h-4 text-gray-400" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  Ito didn't detect any words so the transcript is empty
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
           <div className="flex items-center justify-start px-4 py-4 gap-10">
             <div className="text-gray-600">03:45 PM</div>
             <div className="text-gray-600 flex items-center gap-1">
               Audio is silent.{' '}
-              <span className="text-gray-400" title="No audio detected">
-                &#9432;
-              </span>
+              <Tooltip>
+                <TooltipTrigger>
+                  <InfoCircle className="w-4 h-4 text-gray-400" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  Ito didn't detect any words so the transcript is empty
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
           <div className="flex items-center justify-start px-4 py-4 gap-10">
             <div className="text-gray-600">03:45 PM</div>
             <div className="text-gray-600 flex items-center gap-1">
               Audio is silent.{' '}
-              <span className="text-gray-400" title="No audio detected">
-                &#9432;
-              </span>
+              <Tooltip>
+                <TooltipTrigger>
+                  <InfoCircle className="w-4 h-4 text-gray-400" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  Ito didn't detect any words so the transcript is empty
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
         </div>

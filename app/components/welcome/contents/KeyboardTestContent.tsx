@@ -6,10 +6,8 @@ import KeyboardKey from '../../ui/keyboard-key'
 import { KeyState, normalizeKeyEvent } from '@/app/utils/keyboard'
 
 export default function KeyboardTestContent() {
-  const {
-    incrementOnboardingStep,
-    decrementOnboardingStep,
-  } = useOnboardingStore()
+  const { incrementOnboardingStep, decrementOnboardingStep } =
+    useOnboardingStore()
   const { keyboardShortcut, setKeyboardShortcut } = useSettingsStore()
   const cleanupRef = useRef<(() => void) | null>(null)
   const keyStateRef = useRef<KeyState>(new KeyState(keyboardShortcut))

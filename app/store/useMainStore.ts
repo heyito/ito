@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 type PageType = 'home' | 'dictionary' | 'notes' | 'settings'
-type SettingsPageType = 'general' | 'audio' | 'account'
+type SettingsPageType = 'general' | 'keyboard' | 'audio' | 'account'
 
 interface MainStore {
   navExpanded: boolean

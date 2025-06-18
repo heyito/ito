@@ -2,12 +2,14 @@ import { useMainStore } from '@/app/store/useMainStore'
 import GeneralSettingsContent from './settings/GeneralSettingsContent'
 import AudioSettingsContent from './settings/AudioSettingsContent'
 import AccountSettingsContent from './settings/AccountSettingsContent'
+import KeyboardSettingsContent from './settings/KeyboardSettingsContent'
 
 export default function SettingsContent() {
   const { settingsPage, setSettingsPage } = useMainStore()
 
   const settingsMenuItems = [
     { id: 'general', label: 'General', active: settingsPage === 'general' },
+    { id: 'keyboard', label: 'Keyboard', active: settingsPage === 'keyboard' },
     { id: 'audio', label: 'Audio & Mic', active: settingsPage === 'audio' },
     { id: 'account', label: 'Account', active: settingsPage === 'account' },
   ]
@@ -16,6 +18,8 @@ export default function SettingsContent() {
     switch (settingsPage) {
       case 'general':
         return <GeneralSettingsContent />
+      case 'keyboard':
+        return <KeyboardSettingsContent />
       case 'audio':
         return <AudioSettingsContent />
       case 'account':
@@ -30,7 +34,7 @@ export default function SettingsContent() {
       <div className="space-y-6">
         {/* Horizontal Tab/Pill Selector */}
         <div className="flex gap-1 p-1 bg-slate-100 rounded-lg w-fit mx-auto">
-          {settingsMenuItems.map((item) => (
+          {settingsMenuItems.map(item => (
             <button
               key={item.id}
               onClick={() => setSettingsPage(item.id as any)}
@@ -44,12 +48,10 @@ export default function SettingsContent() {
             </button>
           ))}
         </div>
-        
+
         {/* Content Area */}
-        <div className="w-full pt-8">
-          {renderSettingsContent()}
-        </div>
+        <div className="w-full pt-8">{renderSettingsContent()}</div>
       </div>
     </div>
   )
-} 
+}

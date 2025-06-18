@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNotesStore } from '../../../store/useNotesStore'
+import { useSettingsStore } from '../../../store/useSettingsStore'
 import Masonry from '@mui/lab/Masonry'
 import { AudioIcon } from '../../icons/AudioIcon'
 import { ArrowUp, Grid, Rows, Search, X } from '@mynaui/icons-react'
@@ -15,6 +16,7 @@ import { Button } from '../../ui/button'
 
 export default function NotesContent() {
   const { notes, loadNotes, addNote, deleteNote, updateNote } = useNotesStore()
+  const { keyboardShortcut } = useSettingsStore()
   const [creatingNote, setCreatingNote] = useState(false)
   const [showAddNoteButton, setShowAddNoteButton] = useState(false)
   const [noteContent, setNoteContent] = useState('')
@@ -223,6 +225,8 @@ export default function NotesContent() {
       container.addEventListener('scroll', handleScroll)
       return () => container.removeEventListener('scroll', handleScroll)
     }
+
+    return () => {}
   }, [])
 
   // Handle escape key for closing search
@@ -237,6 +241,8 @@ export default function NotesContent() {
       document.addEventListener('keydown', handleKeyDown)
       return () => document.removeEventListener('keydown', handleKeyDown)
     }
+
+    return () => {}
   }, [showSearch])
 
   // Handle clicks outside dropdown to close it
@@ -249,6 +255,8 @@ export default function NotesContent() {
       document.addEventListener('click', handleClickOutside)
       return () => document.removeEventListener('click', handleClickOutside)
     }
+
+    return () => {}
   }, [showDropdown])
 
   const scrollToTop = () => {
@@ -317,7 +325,7 @@ export default function NotesContent() {
             onChange={e => updateNoteContent(e.target.value)}
             onClick={() => setCreatingNote(true)}
             onBlur={handleBlur}
-            placeholder={`${creatingNote ? 'Press and hold fn and start speaking' : ''}`}
+            placeholder={`${creatingNote ? `Press and hold ${keyboardShortcut.join(' + ')} and start speaking` : ''}`}
           />
           {showAddNoteButton && (
             <div className="absolute bottom-3 right-3">

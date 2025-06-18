@@ -16,7 +16,8 @@ import {
 
 interface MicrophoneSelectorProps {
   selectedDeviceId?: string
-  onSelectionChange: (deviceId: string) => void
+  selectedMicrophoneName?: string
+  onSelectionChange: (deviceId: string, name: string) => void
   triggerButtonText?: string
   triggerButtonVariant?: 'default' | 'outline' | 'secondary' | 'ghost' | 'link' | 'destructive'
   triggerButtonClassName?: string
@@ -24,6 +25,7 @@ interface MicrophoneSelectorProps {
 
 export function MicrophoneSelector({
   selectedDeviceId,
+  selectedMicrophoneName,
   onSelectionChange,
   triggerButtonText = 'Select Microphone',
   triggerButtonVariant = 'outline',
@@ -46,10 +48,11 @@ export function MicrophoneSelector({
         console.error('Failed to load microphones:', error)
       }
     }
-
-    // Load microphones on mount to display selected microphone name
-    loadMicrophones()
-  }, [])
+    // Only load microphones when the dialog is opened
+    if (isOpen) {
+      loadMicrophones()
+    }
+  }, [isOpen])
 
   useEffect(() => {
     setTempSelectedMicrophone(selectedDeviceId || 'default')
@@ -61,17 +64,26 @@ export function MicrophoneSelector({
 
   const handleDialogClose = () => {
     if (tempSelectedMicrophone !== selectedDeviceId) {
-      onSelectionChange(tempSelectedMicrophone)
+      const selectedMic = availableMicrophones.find(
+        mic => mic.deviceId === tempSelectedMicrophone
+      )
+      const selectedMicName = selectedMic
+        ? microphoneToRender(selectedMic).title
+        : 'Auto-detect'
+      onSelectionChange(tempSelectedMicrophone, selectedMicName)
     }
     setIsOpen(false)
   }
 
-  const selectedMicrophone = availableMicrophones.find(
-    mic => mic.deviceId === selectedDeviceId
-  )
-  const selectedMicrophoneDisplay = selectedMicrophone
-    ? microphoneToRender(selectedMicrophone).title
-    : 'Default Microphone'
+  // Use saved microphone name if available, otherwise fallback to looking it up
+  const selectedMicrophoneDisplay = selectedMicrophoneName || (() => {
+    const foundMicrophone = availableMicrophones.find(
+      mic => mic.deviceId === selectedDeviceId
+    )
+    return foundMicrophone
+      ? microphoneToRender(foundMicrophone).title
+      : 'Auto-detect'
+  })()
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -81,7 +93,7 @@ export function MicrophoneSelector({
           className={triggerButtonClassName}
           type="button"
         >
-          {triggerButtonText === 'Select Microphone' && selectedMicrophone
+          {triggerButtonText === 'Select Microphone' && (selectedMicrophoneName || selectedDeviceId)
             ? selectedMicrophoneDisplay
             : triggerButtonText}
         </Button>

@@ -28,9 +28,10 @@ type MicrophoneToRender = {
 }
 
 async function getAvailableMicrophones(): Promise<Microphone[]> {
+  let stream: MediaStream | null = null
   try {
     // First request microphone permission to ensure we get labels
-    await navigator.mediaDevices.getUserMedia({ audio: true })
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true })
 
     // Get all devices
     const devices = await navigator.mediaDevices.enumerateDevices()
@@ -68,6 +69,11 @@ async function getAvailableMicrophones(): Promise<Microphone[]> {
   } catch (error) {
     console.error('Error getting available microphones:', error)
     throw error
+  } finally {
+    // Always stop the stream to release the microphone
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop())
+    }
   }
 }
 

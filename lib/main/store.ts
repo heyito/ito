@@ -11,8 +11,17 @@ interface OnboardingStore {
 
 interface SettingsStore {
   shareAnalytics: boolean
+  launchAtLogin: boolean
+  showItoBarAlways: boolean
+  showAppInDock: boolean
+  interactionSounds: boolean
+  muteAudioWhenDictating: boolean
   microphoneDeviceId: string
+  microphoneName: string
   keyboardShortcut: string[]
+  firstName: string
+  lastName: string
+  email: string
 }
 
 interface AppStore {
@@ -29,8 +38,17 @@ const store = new Store<AppStore>({
     },
     settings: {
       shareAnalytics: true,
+      launchAtLogin: true,
+      showItoBarAlways: true,
+      showAppInDock: true,
+      interactionSounds: true,
+      muteAudioWhenDictating: false,
       microphoneDeviceId: 'default',
+      microphoneName: 'Auto-detect',
       keyboardShortcut: ['fn'],
+      firstName: '',
+      lastName: '',
+      email: '',
     },
     main: {
       navExpanded: true,

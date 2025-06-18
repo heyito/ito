@@ -5,6 +5,7 @@ import { useSettingsStore } from '@/app/store/useSettingsStore'
 import {
   setupVolumeMonitoring,
   getAvailableMicrophones,
+  microphoneToRender,
 } from '@/lib/media/microphone'
 import { MicrophoneSelector } from '@/app/components/ui/microphone-selector'
 
@@ -44,7 +45,7 @@ export default function MicrophoneTestContent() {
     incrementOnboardingStep,
     decrementOnboardingStep,
   } = useOnboardingStore()
-  const { microphoneDeviceId, setMicrophoneDeviceId } = useSettingsStore()
+  const { microphoneDeviceId, microphoneName, setMicrophoneDeviceId } = useSettingsStore()
   const [volume, setVolume] = useState(0)
   const [smoothedVolume, setSmoothedVolume] = useState(0)
   const cleanupRef = useRef<(() => void) | null>(null)
@@ -81,8 +82,10 @@ export default function MicrophoneTestContent() {
         }
 
         if (mics.length > 0) {
-          const initialDeviceId = mics[0].deviceId
-          setMicrophoneDeviceId(initialDeviceId)
+          const initialMic = mics[0]
+          const initialDeviceId = initialMic.deviceId
+          const initialMicName = microphoneToRender(initialMic).title
+          setMicrophoneDeviceId(initialDeviceId, initialMicName)
           await initializeMicrophone(initialDeviceId)
         }
       } catch (error) {
@@ -108,8 +111,8 @@ export default function MicrophoneTestContent() {
     setSmoothedVolume(prev => prev * (1 - smoothing) + volume * smoothing)
   }, [volume])
 
-  const handleMicrophoneChange = async (deviceId: string) => {
-    setMicrophoneDeviceId(deviceId)
+  const handleMicrophoneChange = async (deviceId: string, name: string) => {
+    setMicrophoneDeviceId(deviceId, name)
     await initializeMicrophone(deviceId)
   }
 
@@ -147,6 +150,7 @@ export default function MicrophoneTestContent() {
           <div className="flex gap-2 mt-6 w-full justify-end">
             <MicrophoneSelector
               selectedDeviceId={microphoneDeviceId}
+              selectedMicrophoneName={microphoneName}
               onSelectionChange={handleMicrophoneChange}
               triggerButtonText="No, change microphone"
               triggerButtonVariant="outline"

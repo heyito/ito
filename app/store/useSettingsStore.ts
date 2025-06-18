@@ -2,11 +2,28 @@ import { create } from 'zustand'
 
 interface SettingsState {
   shareAnalytics: boolean
+  launchAtLogin: boolean
+  showItoBarAlways: boolean
+  showAppInDock: boolean
+  interactionSounds: boolean
+  muteAudioWhenDictating: boolean
   microphoneDeviceId: string
+  microphoneName: string
   keyboardShortcut: string[]
+  firstName: string
+  lastName: string
+  email: string
   setShareAnalytics: (share: boolean) => void
-  setMicrophoneDeviceId: (deviceId: string) => void
+  setLaunchAtLogin: (launch: boolean) => void
+  setShowItoBarAlways: (show: boolean) => void
+  setShowAppInDock: (show: boolean) => void
+  setInteractionSounds: (enabled: boolean) => void
+  setMuteAudioWhenDictating: (enabled: boolean) => void
+  setMicrophoneDeviceId: (deviceId: string, name?: string) => void
   setKeyboardShortcut: (shortcut: string[]) => void
+  setFirstName: (firstName: string) => void
+  setLastName: (lastName: string) => void
+  setEmail: (email: string) => void
 }
 
 // Initialize from electron store
@@ -15,8 +32,17 @@ const getInitialState = () => {
 
   return {
     shareAnalytics: storedSettings?.shareAnalytics ?? true,
+    launchAtLogin: storedSettings?.launchAtLogin ?? true,
+    showItoBarAlways: storedSettings?.showItoBarAlways ?? true,
+    showAppInDock: storedSettings?.showAppInDock ?? true,
+    interactionSounds: storedSettings?.interactionSounds ?? true,
+    muteAudioWhenDictating: storedSettings?.muteAudioWhenDictating ?? false,
     microphoneDeviceId: storedSettings?.microphoneDeviceId ?? 'default',
+    microphoneName: storedSettings?.microphoneName ?? 'Default Microphone',
     keyboardShortcut: storedSettings?.keyboardShortcut ?? ['fn'],
+    firstName: storedSettings?.firstName ?? '',
+    lastName: storedSettings?.lastName ?? '',
+    email: storedSettings?.email ?? '',
   }
 }
 
@@ -26,37 +52,76 @@ const syncToStore = (state: Partial<SettingsState>) => {
   window.electron.store.set('settings', {
     ...currentSettings,
     shareAnalytics: state.shareAnalytics ?? currentSettings.shareAnalytics,
+    launchAtLogin: state.launchAtLogin ?? currentSettings.launchAtLogin,
+    showItoBarAlways:
+      state.showItoBarAlways ?? currentSettings.showItoBarAlways,
+    showAppInDock: state.showAppInDock ?? currentSettings.showAppInDock,
+    interactionSounds:
+      state.interactionSounds ?? currentSettings.interactionSounds,
+    muteAudioWhenDictating:
+      state.muteAudioWhenDictating ?? currentSettings.muteAudioWhenDictating,
     microphoneDeviceId:
       state.microphoneDeviceId ?? currentSettings.microphoneDeviceId,
+    microphoneName: state.microphoneName ?? currentSettings.microphoneName,
     keyboardShortcut:
       state.keyboardShortcut ?? currentSettings.keyboardShortcut,
+    firstName: state.firstName ?? currentSettings.firstName,
+    lastName: state.lastName ?? currentSettings.lastName,
+    email: state.email ?? currentSettings.email,
   })
 }
 
 export const useSettingsStore = create<SettingsState>(set => {
   const initialState = getInitialState()
 
+  // Helper function to reduce duplication in setters
+  const createSetter =
+    <K extends keyof SettingsState>(key: K) =>
+    (value: SettingsState[K]) =>
+      set(_state => {
+        const newState = { [key]: value } as Partial<SettingsState>
+        syncToStore(newState)
+        return newState
+      })
+
   return {
     shareAnalytics: initialState.shareAnalytics,
+    launchAtLogin: initialState.launchAtLogin,
+    showItoBarAlways: initialState.showItoBarAlways,
+    showAppInDock: initialState.showAppInDock,
+    interactionSounds: initialState.interactionSounds,
+    muteAudioWhenDictating: initialState.muteAudioWhenDictating,
     microphoneDeviceId: initialState.microphoneDeviceId,
+    microphoneName: initialState.microphoneName,
     keyboardShortcut: initialState.keyboardShortcut,
-    setShareAnalytics: (share: boolean) =>
+    firstName: initialState.firstName,
+    lastName: initialState.lastName,
+    email: initialState.email,
+    setShareAnalytics: createSetter('shareAnalytics'),
+    setLaunchAtLogin: createSetter('launchAtLogin'),
+    setShowItoBarAlways: createSetter('showItoBarAlways'),
+    setShowAppInDock: createSetter('showAppInDock'),
+    setInteractionSounds: createSetter('interactionSounds'),
+    setMuteAudioWhenDictating: createSetter('muteAudioWhenDictating'),
+    // Special case: can set both deviceId and optionally name
+    setMicrophoneDeviceId: (deviceId: string, name?: string) =>
       set(_state => {
-        const newState = { shareAnalytics: share }
+        const newState = {
+          microphoneDeviceId: deviceId,
+          ...(name && { microphoneName: name }),
+        }
         syncToStore(newState)
         return newState
       }),
-    setMicrophoneDeviceId: (deviceId: string) =>
-      set(_state => {
-        const newState = { microphoneDeviceId: deviceId }
-        syncToStore(newState)
-        return newState
-      }),
+    // Special case: sorts the array
     setKeyboardShortcut: (shortcut: string[]) =>
       set(_state => {
         const newState = { keyboardShortcut: [...shortcut].sort() }
         syncToStore(newState)
         return newState
       }),
+    setFirstName: createSetter('firstName'),
+    setLastName: createSetter('lastName'),
+    setEmail: createSetter('email'),
   }
 })

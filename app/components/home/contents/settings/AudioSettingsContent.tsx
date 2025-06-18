@@ -1,6 +1,10 @@
 import { Switch } from '@/app/components/ui/switch'
+import { MicrophoneSelector } from '@/app/components/ui/microphone-selector'
+import { useSettingsStore } from '@/app/store/useSettingsStore'
 
 export default function AudioSettingsContent() {
+  const { microphoneDeviceId, setMicrophoneDeviceId } = useSettingsStore()
+
   return (
     <div className="space-y-8">
       <div>
@@ -25,22 +29,19 @@ export default function AudioSettingsContent() {
             <Switch />
           </div>
           
-          <div>
-            <div className="text-sm font-medium mb-2">Input Device</div>
-            <select className="w-full max-w-xs bg-white border border-gray-300 rounded-md px-3 py-2 text-sm">
-              <option>Default Microphone</option>
-              <option>Built-in Microphone</option>
-              <option>External USB Microphone</option>
-            </select>
-          </div>
-          
-          <div>
-            <div className="text-sm font-medium mb-2">Audio Quality</div>
-            <select className="w-full max-w-xs bg-white border border-gray-300 rounded-md px-3 py-2 text-sm">
-              <option>High (Recommended)</option>
-              <option>Medium</option>
-              <option>Low (Faster Processing)</option>
-            </select>
+          <div className="flex justify-between">
+            <div>
+              <div className="text-sm font-medium mb-2">Select default microphone</div>
+              <div className="text-xs text-gray-600 mt-1">
+                Select the microphone Ito will use by default for audio input.
+              </div>
+            </div>
+            <MicrophoneSelector
+              selectedDeviceId={microphoneDeviceId}
+              onSelectionChange={setMicrophoneDeviceId}
+              triggerButtonVariant="outline"
+              triggerButtonClassName=""
+            />
           </div>
         </div>
       </div>

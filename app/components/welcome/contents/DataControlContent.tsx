@@ -1,14 +1,14 @@
 import { Button } from '@/app/components/ui/button'
 import { CheckCircle, Lock } from '@mynaui/icons-react'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
+import { useSettingsStore } from '@/app/store/useSettingsStore'
 
 export default function DataControlContent() {
   const {
     incrementOnboardingStep,
     decrementOnboardingStep,
-    shareAnalytics,
-    setShareAnalytics,
   } = useOnboardingStore()
+  const { shareAnalytics, setShareAnalytics } = useSettingsStore()
 
   return (
     <div className="flex flex-row h-full w-full bg-background">

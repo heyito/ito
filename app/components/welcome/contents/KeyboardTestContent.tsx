@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { Button } from '@/app/components/ui/button'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
+import { useSettingsStore } from '@/app/store/useSettingsStore'
 import KeyboardKey from '../../ui/keyboard-key'
 import { KeyState, normalizeKeyEvent } from '@/app/utils/keyboard'
 
@@ -8,9 +9,8 @@ export default function KeyboardTestContent() {
   const {
     incrementOnboardingStep,
     decrementOnboardingStep,
-    keyboardShortcut,
-    setKeyboardShortcut,
   } = useOnboardingStore()
+  const { keyboardShortcut, setKeyboardShortcut } = useSettingsStore()
   const cleanupRef = useRef<(() => void) | null>(null)
   const keyStateRef = useRef<KeyState>(new KeyState(keyboardShortcut))
   const [pressedKeys, setPressedKeys] = useState<string[]>([])

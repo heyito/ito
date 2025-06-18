@@ -26,29 +26,27 @@ export default function SettingsContent() {
   }
 
   return (
-    <div className="w-full px-8">
-      <div className="flex gap-8">
-        {/* Left Sidebar Menu */}
-        <div className="w-48">
-          <div className="space-y-1">
-            {settingsMenuItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setSettingsPage(item.id as any)}
-                className={`w-full text-left px-4 py-2.5 rounded text-sm font-medium transition-colors ${
-                  item.active
-                    ? 'bg-slate-200'
-                    : 'text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
+    <div className="w-full px-32">
+      <div className="space-y-6">
+        {/* Horizontal Tab/Pill Selector */}
+        <div className="flex gap-1 p-1 bg-slate-100 rounded-lg w-fit mx-auto">
+          {settingsMenuItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setSettingsPage(item.id as any)}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                item.active
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
         
-        {/* Right Content Area */}
-        <div className="flex-1">
+        {/* Content Area */}
+        <div className="w-full pt-8">
           {renderSettingsContent()}
         </div>
       </div>

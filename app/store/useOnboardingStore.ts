@@ -8,15 +8,9 @@ interface OnboardingState {
   onboardingCompleted: boolean
   onboardingCategory: OnboardingCategory
   referralSource: string | null
-  shareAnalytics: boolean
-  microphoneDeviceId: string
-  keyboardShortcut: string[]
   incrementOnboardingStep: () => void
   decrementOnboardingStep: () => void
   setReferralSource: (source: string) => void
-  setShareAnalytics: (share: boolean) => void
-  setMicrophoneDeviceId: (deviceId: string) => void
-  setKeyboardShortcut: (shortcut: string[]) => void
   setOnboardingCompleted: () => void
   resetOnboarding: () => void
 }
@@ -40,14 +34,10 @@ export const getOnboardingCategoryIndex = (
 // Initialize from electron store
 const getInitialState = () => {
   const storedOnboarding = window.electron.store.get('onboarding')
-  const storedSettings = window.electron.store.get('settings')
 
   return {
     onboardingStep: storedOnboarding?.onboardingStep ?? 0,
     onboardingCompleted: storedOnboarding?.onboardingCompleted ?? false,
-    shareAnalytics: storedSettings?.shareAnalytics ?? true,
-    microphoneDeviceId: storedSettings?.microphoneDeviceId ?? 'default',
-    keyboardShortcut: storedSettings?.keyboardShortcut ?? ['fn'],
   }
 }
 
@@ -62,22 +52,6 @@ const syncToStore = (state: Partial<OnboardingState>) => {
         state.onboardingCompleted ?? currentStore.onboardingCompleted,
     })
   }
-
-  if (
-    'shareAnalytics' in state ||
-    'microphoneDeviceId' in state ||
-    'keyboardShortcut' in state
-  ) {
-    const currentSettings = window.electron.store.get('settings') || {}
-    window.electron.store.set('settings', {
-      ...currentSettings,
-      shareAnalytics: state.shareAnalytics ?? currentSettings.shareAnalytics,
-      microphoneDeviceId:
-        state.microphoneDeviceId ?? currentSettings.microphoneDeviceId,
-      keyboardShortcut:
-        state.keyboardShortcut ?? currentSettings.keyboardShortcut,
-    })
-  }
 }
 
 export const useOnboardingStore = create<OnboardingState>(set => {
@@ -89,9 +63,6 @@ export const useOnboardingStore = create<OnboardingState>(set => {
     onboardingCompleted: initialState.onboardingCompleted,
     onboardingCategory: getOnboardingCategory(initialState.onboardingStep),
     referralSource: null,
-    shareAnalytics: initialState.shareAnalytics,
-    microphoneDeviceId: initialState.microphoneDeviceId,
-    keyboardShortcut: initialState.keyboardShortcut,
     incrementOnboardingStep: () =>
       set(state => {
         const onboardingStep = Math.min(
@@ -131,23 +102,5 @@ export const useOnboardingStore = create<OnboardingState>(set => {
       }),
     setReferralSource: (source: string) =>
       set(_state => ({ referralSource: source })),
-    setShareAnalytics: (share: boolean) =>
-      set(_state => {
-        const newState = { shareAnalytics: share }
-        syncToStore(newState)
-        return newState
-      }),
-    setMicrophoneDeviceId: (deviceId: string) =>
-      set(_state => {
-        const newState = { microphoneDeviceId: deviceId }
-        syncToStore(newState)
-        return newState
-      }),
-    setKeyboardShortcut: (shortcut: string[]) =>
-      set(_state => {
-        const newState = { keyboardShortcut: [...shortcut].sort() }
-        syncToStore(newState)
-        return newState
-      }),
   }
 })

@@ -1,5 +1,6 @@
 import { Button } from '@/app/components/ui/button'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
+import { useSettingsStore } from '@/app/store/useSettingsStore'
 import SlackIcon from '../../icons/SlackIcon'
 import GmailIcon from '../../icons/GmailIcon'
 import ChatGPTIcon from '../../icons/ChatGPTIcon'
@@ -10,8 +11,9 @@ import { ArrowUp } from '@mynaui/icons-react'
 import React from 'react'
 
 export default function TryItOutContent() {
-  const { decrementOnboardingStep, setOnboardingCompleted, keyboardShortcut } =
+  const { decrementOnboardingStep, setOnboardingCompleted } =
     useOnboardingStore()
+  const { keyboardShortcut } = useSettingsStore()
   const [selectedApp, setSelectedApp] = useState<
     'slack' | 'gmail' | 'cursor' | 'chatgpt' | 'notion'
   >('slack')

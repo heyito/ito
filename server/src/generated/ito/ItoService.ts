@@ -2,9 +2,9 @@
 
 import type * as grpc from '@grpc/grpc-js'
 import type { MethodDefinition } from '@grpc/proto-loader'
-import type { AudioChunk as _ito_AudioChunk, AudioChunk__Output as _ito_AudioChunk__Output } from '../ito/AudioChunk';
-import type { TranscribeFileRequest as _ito_TranscribeFileRequest, TranscribeFileRequest__Output as _ito_TranscribeFileRequest__Output } from '../ito/TranscribeFileRequest';
-import type { TranscriptionResponse as _ito_TranscriptionResponse, TranscriptionResponse__Output as _ito_TranscriptionResponse__Output } from '../ito/TranscriptionResponse';
+import type { AudioChunk as _ito_AudioChunk, AudioChunk__Output as _ito_AudioChunk__Output } from '../ito/AudioChunk.js';
+import type { TranscribeFileRequest as _ito_TranscribeFileRequest, TranscribeFileRequest__Output as _ito_TranscribeFileRequest__Output } from '../ito/TranscribeFileRequest.js';
+import type { TranscriptionResponse as _ito_TranscriptionResponse, TranscriptionResponse__Output as _ito_TranscriptionResponse__Output } from '../ito/TranscriptionResponse.js';
 
 export interface ItoServiceClient extends grpc.Client {
   TranscribeFile(argument: _ito_TranscribeFileRequest, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_ito_TranscriptionResponse__Output>): grpc.ClientUnaryCall;

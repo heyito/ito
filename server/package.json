@@ -1,7 +1,7 @@
 {
   "name": "ito-server",
   "version": "1.0.0",
-  "main": "src/index.js",
+  "main": "dist/index.js",
   "type": "module",
   "license": "GPL-3.0-only",
   "dependencies": {
@@ -19,9 +19,10 @@
     "build": "tsc",
     "clean": "rm -rf dist",
     "start": "node dist/index.js",
-    "proto:gen": "proto-loader-gen-types --grpcLib=@grpc/grpc-js --outDir=src/generated/ src/ito.proto node_modules/grpc-health-check/proto/health/v1/health.proto && cp -r src/generated/ ../app/generated/",
+    "proto:gen:server": "proto-loader-gen-types --importFileExtension .js --grpcLib=@grpc/grpc-js --outDir=src/generated/ src/ito.proto node_modules/grpc-health-check/proto/health/v1/health.proto",
+    "proto:gen:client": "proto-loader-gen-types --importFileExtension .js --grpcLib=@grpc/grpc-js --outDir=../app/src/generated/ src/ito.proto node_modules/grpc-health-check/proto/health/v1/health.proto",
+    "proto:gen": "proto:gen:server && proto:gen:client",
     "dev": "tsx watch src/index.ts",
-    "start:grpc": "tsx src/server.ts",
     "test-client": "tsx ./test-client.ts"
   },
   "devDependencies": {

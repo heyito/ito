@@ -1,9 +1,9 @@
 import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
 // Correct path to the generated types
-import { ProtoGrpcType } from "./generated/ito";
+import { ProtoGrpcType } from "./generated/ito.js";
 // Correct path to the generated service handler type
-import { ItoServiceHandlers } from "./generated/ito/ItoService";
+import { ItoServiceHandlers } from "./generated/ito/ItoService.js";
 import { PassThrough } from "stream";
 import { ReflectionService } from "@grpc/reflection";
 import { HealthImplementation, ServingStatusMap } from 'grpc-health-check';
@@ -76,11 +76,10 @@ const itoServer: ItoServiceHandlers = {
   },
 };
 
-function main() {
+export const startServer = async () => {
   const server = new grpc.Server();
   // Ensure we use the correct service definition and implementation
   server.addService(itoProto.ito.ItoService.service, itoServer);
-  const healthServiceDefinition = protoLoader.loadSync(HEALTH_PROTO_PATH);
   healthImpl.addToServer(server);
   const reflectionService = new ReflectionService(itoPackageDefinition);
   reflectionService.addToServer(server);
@@ -96,5 +95,3 @@ function main() {
 
   healthImpl.setStatus('', 'SERVING');
 }
-
-main();

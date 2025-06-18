@@ -10,7 +10,7 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
-    command: yarn start:grpc
+    command: yarn start
     container_name: ito-server
     restart: always
     depends_on:

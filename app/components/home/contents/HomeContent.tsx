@@ -32,7 +32,7 @@ export default function HomeContent() {
             Voice dictation in any app
           </div>
           <div className="text-sm text-gray-600">
-            <span key="hold-down">Hold down the trigger key{' '}</span>
+            <span key="hold-down">Hold down the trigger key </span>
             {keyboardShortcut.map((key, index) => (
               <React.Fragment key={index}>
                 <span className="bg-slate-50 px-1 py-0.5 rounded text-xs font-mono shadow-sm">
@@ -41,7 +41,7 @@ export default function HomeContent() {
                 <span>{index < keyboardShortcut.length - 1 && ' + '}</span>
               </React.Fragment>
             ))}
-            <span key="and">{' '}and speak into any textbox</span>
+            <span key="and"> and speak into any textbox</span>
           </div>
         </div>
         <button className="bg-gray-900 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-800 cursor-pointer">

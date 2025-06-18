@@ -19,10 +19,11 @@ import {
 import { Application } from "aws-cdk-lib/aws-appconfig";
 import {
   ApplicationProtocol,
+  Protocol,
   SslPolicy,
 } from "aws-cdk-lib/aws-elasticloadbalancingv2";
-import { Bucket, IBucket } from "aws-cdk-lib/aws-s3";
-import { ISecret, Secret } from "aws-cdk-lib/aws-secretsmanager";
+import { IBucket } from "aws-cdk-lib/aws-s3";
+import { Secret } from "aws-cdk-lib/aws-secretsmanager";
 
 const DB_NAME = "itodb";
 
@@ -126,7 +127,8 @@ export class ItoExpressAppStack extends Stack {
       );
 
     fargateService.targetGroup.configureHealthCheck({
-      path: "/ping-db",
+      protocol: Protocol.TCP,
+      port: "3000",
       interval: Duration.seconds(30),
       timeout: Duration.seconds(5),
       healthyThresholdCount: 2,

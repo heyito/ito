@@ -134,7 +134,10 @@ export default function KeyboardShortcutEditor({
               {editModeTitle}
             </div>
           )}
-          <div className="flex justify-center items-center mb-4 w-full bg-neutral-100 py-3 rounded-lg gap-2" style={{ minHeight }}>
+          <div
+            className="flex justify-center items-center mb-4 w-full bg-neutral-100 py-3 rounded-lg gap-2"
+            style={{ minHeight }}
+          >
             {newShortcut.map((keyboardKey, index) => (
               <KeyboardKey
                 key={index}
@@ -178,7 +181,10 @@ export default function KeyboardShortcutEditor({
               {viewModeTitle}
             </div>
           )}
-          <div className="flex justify-center items-center mb-4 w-full bg-neutral-100 py-3 rounded-lg gap-2" style={{ minHeight }}>
+          <div
+            className="flex justify-center items-center mb-4 w-full bg-neutral-100 py-3 rounded-lg gap-2"
+            style={{ minHeight }}
+          >
             {shortcut.map((keyboardKey, index) => (
               <KeyboardKey
                 key={index}

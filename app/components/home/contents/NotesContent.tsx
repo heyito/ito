@@ -196,7 +196,7 @@ export default function NotesContent() {
 
       // Set container height for creating state
       const minHeight = 192 // min-h-48 = 192px
-      const paddingAndButton = 48 + 40 // 48px padding + 40px for button space
+      const paddingAndButton = 48 // 48px padding for button space
       const newContainerHeight = Math.max(
         minHeight,
         scrollHeight + paddingAndButton,
@@ -320,7 +320,7 @@ export default function NotesContent() {
           )}
           <textarea
             ref={textareaRef}
-            className={`w-full p-6 focus:outline-none resize-none overflow-hidden ${creatingNote ? 'cursor-text pb-12' : 'cursor-pointer'}`}
+            className={`w-full pt-6 px-6 focus:outline-none resize-none overflow-hidden ${creatingNote ? 'cursor-text' : 'cursor-pointer'}`}
             value={noteContent}
             onChange={e => updateNoteContent(e.target.value)}
             onClick={() => setCreatingNote(true)}

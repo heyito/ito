@@ -28,8 +28,11 @@ fi
 print_status "Adding required targets..."
 rustup target add x86_64-apple-darwin
 rustup target add aarch64-apple-darwin
-rustup target add x86_64-pc-windows-gnu
 
+# Only add Windows target if explicitly requested
+if [ "$1" = "--windows" ] || [ "$1" = "--all" ]; then
+    rustup target add x86_64-pc-windows-gnu
+fi
 
 # Change to the key listener directory
 cd native/global-key-listener
@@ -41,7 +44,10 @@ cargo build --release --target x86_64-apple-darwin
 print_status "Building for aarch64-apple-darwin..."
 cargo build --release --target aarch64-apple-darwin
 
-print_status "Building for x86_64-pc-windows-gnu..."
-cargo build --release --target x86_64-pc-windows-gnu
+# Only build Windows if explicitly requested
+if [ "$1" = "--windows" ] || [ "$1" = "--all" ]; then
+    print_status "Building for x86_64-pc-windows-gnu..."
+    cargo build --release --target x86_64-pc-windows-gnu
+fi
 
 print_status "All builds completed successfully!" 

@@ -3,7 +3,7 @@ productName: Ito
 copyright: Copyright © 2025 Demox Labs
 directories:
   buildResources: resources
-  output: release
+  output: dist
 files:
   - '!**/.vscode/*'
   - '!src/*'
@@ -11,35 +11,27 @@ files:
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!native/**'
   - from: out
     filter:
       - '**/*'
-  - from: native/global-key-listener/target
-    filter:
-      - 'x86_64-apple-darwin/release/global-key-listener'
-      - 'aarch64-apple-darwin/release/global-key-listener'
-      - 'x86_64-pc-windows-gnu/release/global-key-listener.exe'
-    to: resources/binaries
 asar: true
 asarUnpack:
   - resources/**
+extraResources:
+  - from: native/global-key-listener/target/${arch}-apple-darwin/release/global-key-listener
+    to: binaries/global-key-listener
 mac:
   target:
     - dmg
   icon: resources/build/icon.icns
   darkModeSupport: true
-  hardenedRuntime: true
+  hardenedRuntime: false
   gatekeeperAssess: false
-  entitlements: resources/entitlements.mac.plist
-  entitlementsInherit: resources/entitlements.mac.plist
-  extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+  identity: 'Demox Labs, Inc. (294ZSTM7UB)'
   notarize: false
 dmg:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: Ito-Installer.${ext}
 win:
   target:
     - nsis

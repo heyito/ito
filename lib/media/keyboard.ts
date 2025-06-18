@@ -36,11 +36,17 @@ export const initializeKeyListener = (mainWindow: BrowserWindow) => {
         return join(targetBase, 'x86_64-pc-windows-gnu/release')
       }
     }
-    // For production builds, binaries should be in the resources directory
+    // For production builds, the binary is in the Resources/binaries directory
     return join(process.resourcesPath, 'binaries')
   }
 
   const binaryPath = join(getTargetDir(), binaryName)
+
+  console.log('--- Key Listener Initialization ---')
+  console.log(`Platform: ${platform}, Arch: ${arch}`)
+  console.log(`Is Development: ${isDev}`)
+  console.log(`Calculated Target Directory: ${getTargetDir()}`)
+  console.log(`Attempting to spawn binary at: ${binaryPath}`)
 
   try {
     // Set up environment variables
@@ -57,7 +63,10 @@ export const initializeKeyListener = (mainWindow: BrowserWindow) => {
       detached: true,
     })
 
+    console.log('Key listener process object created.')
+
     if (!KeyListenerProcess) {
+      console.error('Failed to spawn key listener process object is null.')
       throw new Error('Failed to spawn process')
     }
 
@@ -66,7 +75,9 @@ export const initializeKeyListener = (mainWindow: BrowserWindow) => {
 
     let buffer = ''
     KeyListenerProcess.stdout?.on('data', (data) => {
-      const chunk = data.toString()
+      const output = data.toString()
+      console.log('Key listener stdout:', output)
+      const chunk = output
       buffer += chunk
 
       // Split on newlines and process complete events
@@ -82,7 +93,7 @@ export const initializeKeyListener = (mainWindow: BrowserWindow) => {
             }
             mainWindow.webContents.send('key-event', event)
           } catch (e) {
-            console.error('Failed to parse key event:', e)
+            console.error('Failed to parse key event:', line, e)
           }
         }
       }
@@ -93,7 +104,7 @@ export const initializeKeyListener = (mainWindow: BrowserWindow) => {
     })
 
     KeyListenerProcess.on('error', (error) => {
-      console.error('Key listener process error:', error)
+      console.error('Key listener process spawn error:', error)
       KeyListenerProcess = null
     })
 
@@ -106,6 +117,8 @@ export const initializeKeyListener = (mainWindow: BrowserWindow) => {
       )
       KeyListenerProcess = null
     })
+
+    console.log('Key listener process event handlers attached.')
 
     // Send a test command to verify the process is working
     setTimeout(() => {

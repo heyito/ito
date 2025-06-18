@@ -32,6 +32,11 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
     return true
   })
 
+  handleIPC('stop-key-listener', () => {
+    stopKeyListener()
+    return true
+  })
+
   handleIPC('block-keys', (_e, keys: string[]) => {
     if (KeyListenerProcess) {
       KeyListenerProcess.stdin?.write(
@@ -108,6 +113,7 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
   handleIPC(
     'check-accessibility-permission',
     (_event, prompt: boolean = false) => {
+      console.log('check-accessibility-permission', systemPreferences.isTrustedAccessibilityClient(prompt))
       return systemPreferences.isTrustedAccessibilityClient(prompt)
     }
   )
@@ -116,7 +122,9 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
   handleIPC(
     'check-microphone-permission',
     (_event, prompt: boolean = false) => {
+      console.log('check-microphone-permission prompt', prompt)
       if (prompt) return systemPreferences.askForMediaAccess('microphone')
+      console.log('check-microphone-permission getMediaAccessStatus', systemPreferences.getMediaAccessStatus('microphone'))
       return systemPreferences.getMediaAccessStatus('microphone') === 'granted'
     }
   )

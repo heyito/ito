@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { setupMicrophone } from '@/lib/media/microphone'
+import { setupMicrophone } from '@/app/media/microphone'
+import { useSettingsStore } from './useSettingsStore'
 
 // This is a stub for your gRPC service.
 // When you're ready, you can replace this with your actual gRPC client.
@@ -88,3 +89,14 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     }
   },
 }))
+
+// This watches for changes and notifies the main process.
+useAudioStore.subscribe((state, prevState) => {
+  if (state.isRecording !== prevState.isRecording) {
+    const { microphoneDeviceId } = useSettingsStore.getState()
+    window.api.send('recording-state-changed', {
+      isRecording: state.isRecording,
+      deviceId: microphoneDeviceId,
+    })
+  }
+})

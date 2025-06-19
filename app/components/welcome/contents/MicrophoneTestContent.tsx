@@ -6,7 +6,7 @@ import {
   setupVolumeMonitoring,
   getAvailableMicrophones,
   microphoneToRender,
-} from '@/lib/media/microphone'
+} from '@/app/media/microphone'
 import { MicrophoneSelector } from '@/app/components/ui/microphone-selector'
 
 function MicrophoneBars({ volume }: { volume: number }) {

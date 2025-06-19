@@ -4,7 +4,7 @@ import {
   getAvailableMicrophones,
   microphoneToRender,
   Microphone,
-} from '@/lib/media/microphone'
+} from '@/app/media/microphone'
 import {
   Dialog,
   DialogContent,

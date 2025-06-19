@@ -1,6 +1,6 @@
 import { app, BrowserWindow } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
-import { createAppWindow } from './app'
+import { createAppWindow, createPillWindow, startPillPositioner } from './app'
 import { initializeLogging } from './logger'
 
 // This method will be called when Electron has finished
@@ -14,6 +14,8 @@ app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
   // Create app window
   createAppWindow()
+  createPillWindow()
+  startPillPositioner()
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.

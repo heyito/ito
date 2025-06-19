@@ -1,4 +1,4 @@
-import { type BrowserWindow, ipcMain, shell, systemPreferences } from 'electron'
+import { type BrowserWindow, ipcMain, screen, shell, systemPreferences } from 'electron'
 import os from 'os'
 import { app } from 'electron'
 import store from '../main/store'
@@ -7,6 +7,7 @@ import {
   KeyListenerProcess,
   stopKeyListener,
 } from '../media/keyboard'
+// import { getPillWindow } from '../main/app'
 
 const handleIPC = (channel: string, handler: (...args: any[]) => void) => {
   ipcMain.handle(channel, handler)
@@ -133,3 +134,8 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
     stopKeyListener()
   })
 }
+
+// ipcMain.on('recording-state-changed', (_event, state: { isRecording: boolean; deviceId: string }) => {
+//   // Its ONLY job is to forward the state to the pill's renderer.
+//   getPillWindow()?.webContents.send('recording-state-update', state)
+// })

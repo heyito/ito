@@ -1,10 +1,14 @@
-import { BrowserWindow, shell, app, protocol, net } from 'electron'
+import { BrowserWindow, shell, screen, app, protocol, net } from 'electron'
 import { join } from 'path'
 import { registerWindowIPC } from '@/lib/window/ipcEvents'
 import appIcon from '@/resources/build/icon.png?asset'
 import { pathToFileURL } from 'url'
 import { initializeKeyListener } from '../media/keyboard'
 
+// Keep a reference to the pill window to prevent it from being garbage collected.
+let pillWindow: BrowserWindow | null = null
+
+// --- No changes to createAppWindow ---
 export function createAppWindow(): void {
   // Register custom protocol for resources
   registerResourcesProtocol()
@@ -51,7 +55,77 @@ export function createAppWindow(): void {
   }
 }
 
-// Register custom protocol for assets
+
+// --- Updated createPillWindow function ---
+export function createPillWindow(): void {
+  pillWindow = new BrowserWindow({
+    width: 48,
+    height: 8,
+    show: true,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true, // Keep on top
+    skipTaskbar: true,
+    resizable: false,
+    maximizable: false,
+    minimizable: false,
+    focusable: false, // Prevents window from stealing focus
+    hasShadow: false,
+    type: 'panel',
+    webPreferences: {
+      preload: join(__dirname, '../preload/preload.js'),
+      sandbox: false,
+    },
+  })
+
+  // Set properties for macOS to ensure it stays on top of full-screen apps
+  if (process.platform === 'darwin') {
+    pillWindow.setAlwaysOnTop(true, 'screen-saver', 1)
+    pillWindow.setFullScreenable(false)
+
+    pillWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true,})
+  }
+
+  // Use a URL hash to tell our React app to load the pill component.
+  const pillUrl =
+    !app.isPackaged && process.env['ELECTRON_RENDERER_URL']
+      ? `${process.env['ELECTRON_RENDERER_URL']}/#/pill`
+      : `${pathToFileURL(join(__dirname, '../renderer/index.html'))}#/pill`
+
+  pillWindow.loadURL(pillUrl)
+
+  // Clean up the reference when the window is closed.
+  pillWindow.on('closed', () => {
+    pillWindow = null
+  })
+}
+
+// --- No changes to startPillPositioner ---
+export function startPillPositioner() {
+  setInterval(() => {
+    if (!pillWindow) return
+
+    try {
+      // Get the display that the mouse cursor is currently on.
+      const point = screen.getCursorScreenPoint()
+      const display = screen.getDisplayNearestPoint(point)
+      const { width: pillWidth, height: pillHeight } = pillWindow.getBounds()
+      const { x, y, width, height } = display.bounds
+
+      // Calculate position: Horizontally centered, 20px from the bottom.
+      const newX = Math.round(x + width / 2 - pillWidth / 2)
+      const newY = Math.round(y + height - pillHeight - 40) // Increased margin from bottom
+
+      // Set the position of the pill window.
+      pillWindow.setPosition(newX, newY, false) // `false` = not animated
+    } catch (error) {
+      // This can fail if the app is starting up or shutting down.
+      console.warn('Could not update pill position:', error)
+    }
+  }, 100) // Update position 10 times per second.
+}
+
+// --- No changes to other functions ---
 function registerResourcesProtocol() {
   protocol.handle('res', async (request) => {
     try {

@@ -30,6 +30,10 @@ mac:
   gatekeeperAssess: false
   identity: 'Demox Labs, Inc. (294ZSTM7UB)'
   notarize: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
+  extendInfo:
+    NSMicrophoneUsageDescription: 'Ito requires microphone access to transcribe your speech.'
 dmg:
   artifactName: Ito-Installer.${ext}
 win:

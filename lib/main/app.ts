@@ -5,12 +5,7 @@ import { pathToFileURL } from 'url'
 
 // Keep a reference to the pill window to prevent it from being garbage collected.
 let pillWindow: BrowserWindow | null = null
-// Keep a reference to the main window
-export let mainWindow: BrowserWindow | null = null
-
-export function getPillWindow(): BrowserWindow | null {
-  return pillWindow
-}
+let mainWindow: BrowserWindow | null = null
 
 // --- No changes to createAppWindow ---
 export function createAppWindow(): BrowserWindow {
@@ -37,12 +32,17 @@ export function createAppWindow(): BrowserWindow {
   registerWindowIPC(mainWindow)
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow!.show()
+    mainWindow?.show()
   })
 
   mainWindow.webContents.setWindowOpenHandler(details => {
     shell.openExternal(details.url)
     return { action: 'deny' }
+  })
+
+  // Clean up the reference when the window is closed.
+  mainWindow.on('closed', () => {
+    mainWindow = null
   })
 
   // HMR for renderer base on electron-vite cli.
@@ -53,6 +53,11 @@ export function createAppWindow(): BrowserWindow {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
   
+  return mainWindow
+}
+
+// Getter function to access the main window
+export function getMainWindow(): BrowserWindow | null {
   return mainWindow
 }
 

@@ -5,6 +5,14 @@
   "type": "module",
   "license": "GPL-3.0-only",
   "dependencies": {
+    "@auth0/auth0-fastify-api": "^1.0.2",
+    "@bufbuild/buf": "^1.55.1",
+    "@bufbuild/protobuf": "^2.5.2",
+    "@bufbuild/protoc-gen-es": "^2.5.2",
+    "@connectrpc/connect": "^2.0.2",
+    "@connectrpc/connect-fastify": "^2.0.2",
+    "@connectrpc/connect-node": "^2.0.2",
+    "@connectrpc/protoc-gen-connect-es": "^1.6.1",
     "@grpc/grpc-js": "^1.13.4",
     "@grpc/proto-loader": "^0.7.15",
     "@grpc/reflection": "^1.0.4",
@@ -13,6 +21,7 @@
     "express": "^5.1.0",
     "express-oauth2-jwt-bearer": "^1.6.1",
     "express-rate-limit": "^7.5.0",
+    "fastify": "^5.4.0",
     "grpc-health-check": "^2.0.2",
     "jsonwebtoken": "^9.0.2",
     "jwks-rsa": "^3.2.0",
@@ -27,7 +36,8 @@
     "proto:gen": "bun run proto:gen:server && bun run proto:gen:client",
     "dev": "tsx watch src/index.ts",
     "test-client": "tsx ./test-client.ts",
-    "test-auth": "tsx ./test-auth-client.ts"
+    "test-auth": "tsx ./test-auth-client.ts",
+    "test-connect": "tsx ./test-connect-client.ts"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",

@@ -1,5 +1,5 @@
 import { useAuth0 } from '@auth0/auth0-react'
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { Auth0Connections } from './config'
 
 export interface AuthUser {
@@ -21,6 +21,7 @@ export const useAuth = () => {
     error,
     getAccessTokenSilently,
     getIdTokenClaims,
+    handleRedirectCallback,
   } = useAuth0()
 
   // Convert Auth0 user to our user interface
@@ -33,6 +34,76 @@ export const useAuth = () => {
         emailVerified: user.email_verified,
       }
     : null
+
+  // Handle auth code from protocol URL
+  useEffect(() => {
+    if (!window.api?.on) {
+      console.log('window.api.on not available')
+      return
+    }
+
+    console.log('Setting up auth-code-received listener')
+
+    const cleanup = window.api.on(
+      'auth-code-received',
+      async (authCode: string) => {
+        console.log('🎉 AUTH CODE RECEIVED IN RENDERER:', authCode)
+
+        try {
+          alert(`Auth code received: ${authCode.substring(0, 20)}...`)
+
+          // Import Auth0 config
+          const { Auth0Config } = await import('./config')
+
+          console.log('Attempting to exchange auth code for tokens')
+
+          // Exchange authorization code for tokens
+          const tokenResponse = await fetch(
+            `https://${Auth0Config.domain}/oauth/token`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                grant_type: 'authorization_code',
+                client_id: Auth0Config.clientId,
+                code: authCode,
+                redirect_uri: Auth0Config.redirectUri,
+              }),
+            },
+          )
+
+          console.log('Token response status:', tokenResponse.status)
+
+          if (!tokenResponse.ok) {
+            const errorText = await tokenResponse.text()
+            throw new Error(
+              `Token exchange failed: ${tokenResponse.status} ${errorText}`,
+            )
+          }
+
+          const tokens = await tokenResponse.json()
+          console.log(
+            'Successfully exchanged auth code for tokens:',
+            Object.keys(tokens),
+          )
+
+          // For now, just show success and let the user know they need to log in normally
+          alert(
+            'Authentication successful! Please close this app and log in through the normal flow.',
+          )
+        } catch (error) {
+          console.error('Error handling auth code from protocol URL:', error)
+          alert(
+            `Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          )
+        }
+      },
+    )
+
+    return cleanup
+  }, [])
 
   // External browser authentication - now the primary method
   const openExternalAuth = useCallback(

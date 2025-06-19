@@ -3,9 +3,8 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import {
   createAppWindow,
   createPillWindow,
-  mainWindow,
-  registerResourcesProtocol,
   startPillPositioner,
+  getMainWindow,
 } from './app'
 import { initializeLogging } from './logger'
 import { registerIPC } from '../window/ipcEvents'
@@ -24,6 +23,96 @@ protocol.registerSchemesAsPrivileged([
   },
 ])
 
+// Protocol handling for deep links
+const PROTOCOL = 'ito'
+
+// Handle protocol on Windows/Linux
+const gotTheLock = app.requestSingleInstanceLock()
+
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Someone tried to run a second instance, we should focus our window instead
+    const mainWindow = BrowserWindow.getAllWindows().find(
+      win => !win.isDestroyed(),
+    )
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.focus()
+    }
+
+    // Handle protocol URL on Windows/Linux
+    const url = commandLine.find(arg => arg.startsWith(`${PROTOCOL}://`))
+    if (url) {
+      handleProtocolUrl(url)
+    }
+  })
+}
+
+// Handle protocol URL
+function handleProtocolUrl(url: string) {
+  console.log('Protocol URL received:', url)
+
+  try {
+    const urlObj = new URL(url)
+    console.log('Parsed URL components:')
+    console.log('- Protocol:', urlObj.protocol)
+    console.log('- Hostname:', urlObj.hostname)
+    console.log('- Pathname:', urlObj.pathname)
+    console.log('- Search:', urlObj.search)
+    console.log('- SearchParams:', urlObj.searchParams.toString())
+
+    if (
+      urlObj.protocol === `${PROTOCOL}:` &&
+      urlObj.hostname === 'auth' &&
+      urlObj.pathname === '/success'
+    ) {
+      const authCode = urlObj.searchParams.get('code')
+
+      if (authCode) {
+        console.log('Auth code received:', authCode)
+
+        // Find the main window (not the pill window) and send the auth code
+        const mainWindow = getMainWindow()
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          console.log('Found main window via getMainWindow()')
+          console.log('Sending auth code to renderer process')
+          mainWindow.webContents.send('auth-code-received', authCode)
+
+          // Focus and show the window with more aggressive methods
+          console.log('Showing window')
+          mainWindow.show()
+          mainWindow.focus()
+          mainWindow.setAlwaysOnTop(true)
+          mainWindow.setAlwaysOnTop(false)
+
+          // On macOS, use additional methods to force focus
+          if (process.platform === 'darwin') {
+            mainWindow.moveTop()
+            app.focus({ steal: true })
+            app.dock?.show()
+          }
+        } else {
+          console.error('No main window found to send auth code to')
+        }
+      } else {
+        console.warn('No auth code found in protocol URL')
+      }
+    } else {
+      console.warn('Protocol URL does not match expected format')
+      console.warn(
+        `Expected: ${PROTOCOL}: with hostname 'auth' and pathname '/success'`,
+      )
+      console.warn(
+        `Received: ${urlObj.protocol} with hostname '${urlObj.hostname}' and pathname '${urlObj.pathname}'`,
+      )
+    }
+  } catch (error) {
+    console.error('Error parsing protocol URL:', error)
+  }
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -31,8 +120,11 @@ app.whenReady().then(() => {
   // Initialize logging as the first step
   initializeLogging()
 
-  // Register the handler for the 'res' protocol now that the app is ready.
-  registerResourcesProtocol()
+  // Register protocol handler
+  if (!app.isDefaultProtocolClient(PROTOCOL)) {
+    // Define the path to the executable
+    app.setAsDefaultProtocolClient(PROTOCOL)
+  }
 
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
@@ -64,6 +156,12 @@ app.whenReady().then(() => {
   })
 
   registerIPC()
+})
+
+// Handle protocol on macOS
+app.on('open-url', (event, url) => {
+  event.preventDefault()
+  handleProtocolUrl(url)
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common

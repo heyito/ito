@@ -1,151 +1,241 @@
-import * as grpc from '@grpc/grpc-js'
-import * as protoLoader from '@grpc/proto-loader'
-// Correct path to the generated types
-import { ProtoGrpcType } from './generated/ito.js'
-// Correct path to the generated service handler type
-import { ItoServiceHandlers } from './generated/ito/ItoService.js'
-import { PassThrough } from 'stream'
-import { ReflectionService } from '@grpc/reflection'
-import { HealthImplementation, ServingStatusMap } from 'grpc-health-check'
-import { authenticateCall } from './middleware/auth.js'
+import { fastify } from 'fastify'
+import { fastifyConnectPlugin } from '@connectrpc/connect-fastify'
+import Auth0 from '@auth0/auth0-fastify-api'
+import itoServiceRoutes from './services/itoService.js'
+import dotenv from 'dotenv'
+import { readFileSync } from 'fs'
+import { join, dirname } from 'path'
+import { fileURLToPath } from 'url'
 
-// Correct path to the proto file
-const PROTO_PATH = './src/ito.proto'
-const HEALTH_PROTO_PATH =
-  'node_modules/grpc-health-check/proto/health/v1/health.proto'
+dotenv.config()
 
-const itoPackageDefinition = protoLoader.loadSync([
-  PROTO_PATH,
-  HEALTH_PROTO_PATH,
-])
-const itoProto = grpc.loadPackageDefinition(
-  itoPackageDefinition,
-) as unknown as ProtoGrpcType
+// Get the current file's directory
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
-const statusMap: ServingStatusMap = {
-  'ito.ItoService': 'SERVING',
-  '': 'NOT_SERVING',
-}
+// Read the HTML template
+const callbackTemplate = readFileSync(
+  join(__dirname, 'templates/callbackSuccess.html'),
+  'utf-8',
+)
 
-// Construct the service implementation
-const healthImpl = new HealthImplementation(statusMap)
-
-// Use a consistent name for the server implementation
-const itoServer: ItoServiceHandlers = {
-  /**
-   * Implementation for the Unary (whole file) RPC method.
-   */
-  async TranscribeFile(call, callback) {
-    // Authenticate the call
-    const authResult = await authenticateCall(call, callback)
-    if (!authResult) {
-      return // Authentication failed, error already sent via callback
-    }
-
-    // Add a check to ensure audio_data exists
-    if (!call.request.audioData) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        details: 'No audio data received',
-      })
-    }
-
-    console.log(
-      `Received TranscribeFile request from user: ${authResult.user.sub}`,
+// Simple template rendering function
+const renderTemplate = (
+  template: string,
+  variables: Record<string, string>,
+) => {
+  let rendered = template
+  for (const [key, value] of Object.entries(variables)) {
+    // Handle both {{variable}} and {{#variable}}...{{/variable}} patterns
+    const simplePattern = new RegExp(`{{${key}}}`, 'g')
+    const conditionalPattern = new RegExp(
+      `{{#${key}}}([\\s\\S]*?){{/${key}}}`,
+      'g',
     )
-    const audioData: Buffer = call.request.audioData
 
-    console.log(
-      `Processing audio file of size: ${audioData.length} bytes for user: ${authResult.user.sub}`,
-    )
-    // TODO: Replace with actual call to Groq/Gemini STT
-    const dummyTranscript = 'This is a transcript from the whole file.'
+    rendered = rendered.replace(simplePattern, value)
 
-    callback(null, { transcript: dummyTranscript })
-  },
-
-  /**
-   * Implementation for the Client-Streaming RPC method.
-   */
-  TranscribeStream(call, callback) {
-    // Note: For streaming calls, we need to handle auth differently
-    // since we can't use async/await directly in the handler signature
-
-    const handleStream = async () => {
-      // Authenticate the call
-      const authResult = await authenticateCall(call, callback)
-      if (!authResult) {
-        return // Authentication failed, error already sent via callback
-      }
-
-      console.log(
-        `Client has started streaming audio. User: ${authResult.user.sub}`,
-      )
-      const audioChunks: Buffer[] = []
-
-      call.on('data', (chunk: { audio_data: Buffer }) => {
-        console.log(
-          `Received audio chunk of size: ${chunk.audio_data.length} from user: ${authResult.user.sub}`,
-        )
-        audioChunks.push(chunk.audio_data)
-      })
-
-      call.on('error', (err: Error) => {
-        console.error(
-          `Error during stream for user ${authResult.user.sub}:`,
-          err,
-        )
-      })
-
-      call.on('end', () => {
-        console.log(
-          `Client finished streaming. Processing final audio for user: ${authResult.user.sub}`,
-        )
-        const fullAudio: Buffer = Buffer.concat(audioChunks)
-
-        // TODO: Replace with actual call to Groq/Gemini STT
-        console.log(
-          `Processing final concatenated audio of size: ${fullAudio.length} bytes for user: ${authResult.user.sub}`,
-        )
-        const dummyTranscript = 'This is a transcript from the streamed audio.'
-
-        callback(null, { transcript: dummyTranscript })
-      })
-    }
-
-    // Start handling the stream
-    handleStream().catch(error => {
-      console.error('Error in TranscribeStream:', error)
-      callback({
-        code: grpc.status.INTERNAL,
-        details: 'Internal server error',
-      })
+    // For conditional blocks, show content if value exists, hide if empty
+    rendered = rendered.replace(conditionalPattern, (match, content) => {
+      return value ? content.replace(`{{${key}}}`, value) : ''
     })
-  },
+  }
+
+  // Clean up any remaining template variables
+  rendered = rendered.replace(/{{[^}]+}}/g, '')
+
+  return rendered
 }
 
+// Create the main server function
 export const startServer = async () => {
-  const server = new grpc.Server()
-  // Ensure we use the correct service definition and implementation
-  server.addService(itoProto.ito.ItoService.service, itoServer)
-  healthImpl.addToServer(server)
-  const reflectionService = new ReflectionService(itoPackageDefinition)
-  reflectionService.addToServer(server)
+  const server = fastify({
+    logger: true,
+  })
 
-  const port = '0.0.0.0:3000'
-  server.bindAsync(
-    port,
-    grpc.ServerCredentials.createInsecure(),
-    (err, port) => {
-      if (err) {
-        console.error(err)
-        return
+  // Validate Auth0 configuration
+  if (!process.env.AUTH0_DOMAIN || !process.env.AUTH0_AUDIENCE) {
+    server.log.error('Auth0 domain or audience not configured in .env file')
+    process.exit(1)
+  }
+
+  // Register the Auth0 plugin
+  await server.register(Auth0, {
+    domain: process.env.AUTH0_DOMAIN,
+    audience: process.env.AUTH0_AUDIENCE,
+  })
+
+  // Register Connect RPC plugin in a context that applies Auth0 authentication
+  await server.register(async function (fastify) {
+    // Apply Auth0 authentication to all routes in this context
+    fastify.addHook('preHandler', fastify.requireAuth())
+
+    // Register the Connect RPC plugin with our service routes
+    await fastify.register(fastifyConnectPlugin, {
+      routes: itoServiceRoutes,
+    })
+  })
+
+  // Regular HTTP endpoints
+  // Health check endpoint (public)
+  server.get('/health', async (request, reply) => {
+    return { status: 'ok', service: 'ito-server' }
+  })
+
+  // Protected health check endpoint using Auth0
+  server.get(
+    '/health/auth',
+    {
+      preHandler: server.requireAuth(),
+    },
+    async (request, reply) => {
+      return {
+        status: 'ok',
+        service: 'ito-server',
+        user: request.user.sub,
+        authenticated: true,
       }
-      console.log(
-        `gRPC server listening on ${port} with Auth0 authentication enabled`,
-      )
     },
   )
 
-  healthImpl.setStatus('', 'SERVING')
+  // Auth0 OAuth callback handler
+  server.get('/callback', async (request, reply) => {
+    const { code, state, error, error_description } = request.query as {
+      code?: string
+      state?: string
+      error?: string
+      error_description?: string
+    }
+
+    console.log('Auth0 callback received:', {
+      code: code ? 'present' : 'missing',
+      state,
+      error,
+    })
+
+    if (error) {
+      console.error('Auth0 callback error:', error, error_description)
+
+      // Return error page
+      const errorHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Authentication Error</title>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: system-ui, sans-serif; text-align: center; padding: 2rem; background: #fee2e2; }
+            .container { max-width: 400px; margin: 0 auto; background: white; padding: 2rem; border-radius: 8px; }
+            .error { color: #dc2626; margin-bottom: 1rem; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>Authentication Error</h1>
+            <div class="error">${error}</div>
+            <p>${error_description || 'An error occurred during authentication'}</p>
+            <button onclick="window.close()">Close Window</button>
+          </div>
+        </body>
+        </html>
+      `
+
+      reply.type('text/html')
+      return errorHtml
+    }
+
+    if (!code) {
+      console.error('No authorization code received')
+
+      const errorHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Authentication Error</title>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: system-ui, sans-serif; text-align: center; padding: 2rem; background: #fee2e2; }
+            .container { max-width: 400px; margin: 0 auto; background: white; padding: 2rem; border-radius: 8px; }
+            .error { color: #dc2626; margin-bottom: 1rem; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>Authentication Error</h1>
+            <div class="error">Missing authorization code</div>
+            <p>No authorization code was received from the authentication provider.</p>
+            <button onclick="window.close()">Close Window</button>
+          </div>
+        </body>
+        </html>
+      `
+
+      reply.type('text/html')
+      return errorHtml
+    }
+
+    try {
+      console.log(
+        'Authorization code received successfully:',
+        code.substring(0, 20) + '...',
+      )
+
+      // Render the success page with user information
+      const html = renderTemplate(callbackTemplate, {
+        userEmail: 'evan@demoxlabs.xyz', // TODO: Extract from Auth0 token or state
+        authCode: code.substring(0, 20) + '...',
+      })
+
+      reply.type('text/html')
+      return html
+    } catch (error) {
+      console.error('Error processing callback:', error)
+
+      const errorHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Server Error</title>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: system-ui, sans-serif; text-align: center; padding: 2rem; background: #fee2e2; }
+            .container { max-width: 400px; margin: 0 auto; background: white; padding: 2rem; border-radius: 8px; }
+            .error { color: #dc2626; margin-bottom: 1rem; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>Server Error</h1>
+            <div class="error">Internal server error</div>
+            <p>An error occurred while processing your authentication.</p>
+            <button onclick="window.close()">Close Window</button>
+          </div>
+        </body>
+        </html>
+      `
+
+      reply.type('text/html')
+      return errorHtml
+    }
+  })
+
+  // Start the server
+  const port = 3000
+  const host = '0.0.0.0'
+
+  try {
+    await server.listen({ port, host })
+    console.log(`🚀 Connect RPC server listening on ${host}:${port}`)
+    console.log(`📡 gRPC, gRPC-Web, and Connect protocols supported`)
+    console.log(`🔒 Auth0 authentication enabled for all RPC calls`)
+    console.log(`🔗 OAuth callback URL: http://localhost:${port}/callback`)
+    console.log(`❤️  Health check: http://localhost:${port}/health`)
+    console.log(`🔐 Protected health: http://localhost:${port}/health/auth`)
+  } catch (err) {
+    server.log.error(err)
+    process.exit(1)
+  }
 }

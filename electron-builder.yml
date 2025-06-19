@@ -21,6 +21,9 @@ asarUnpack:
 extraResources:
   - from: native/global-key-listener/target/${arch}-apple-darwin/release/global-key-listener
     to: binaries/global-key-listener
+protocols:
+  name: ito
+  schemes: [ito]
 mac:
   target:
     - dmg

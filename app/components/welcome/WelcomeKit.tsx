@@ -1,3 +1,4 @@
+import CreateAccountContent from './contents/CreateAccountContent'
 import SignupContent from './contents/SignupContent'
 import DataControlContent from './contents/DataControlContent'
 import PermissionsContent from './contents/PermissionsContent'
@@ -34,20 +35,22 @@ export default function WelcomeKit() {
   return (
     <div className="w-full h-full bg-background">
       {onboardingStep === 0 ? (
-        <SignupContent />
+        <CreateAccountContent />
       ) : onboardingStep === 1 ? (
-        <DataControlContent />
+        <SignupContent />
       ) : onboardingStep === 2 ? (
-        <PermissionsContent />
+        <DataControlContent />
       ) : onboardingStep === 3 ? (
-        <MicrophoneTestContent />
+        <PermissionsContent />
       ) : onboardingStep === 4 ? (
-        <KeyboardTestContent />
+        <MicrophoneTestContent />
       ) : onboardingStep === 5 ? (
-        <GoodToGoContent />
+        <KeyboardTestContent />
       ) : onboardingStep === 6 ? (
-        <AnyAppContent />
+        <GoodToGoContent />
       ) : onboardingStep === 7 ? (
+        <AnyAppContent />
+      ) : onboardingStep === 8 ? (
         <TryItOutContent />
       ) : null}
     </div>

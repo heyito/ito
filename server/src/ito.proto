@@ -3,6 +3,9 @@ syntax = "proto3";
 package ito;
 
 service ItoService {
+  // Simple authenticated health check
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+
   // Method 1: Sends a whole audio file and gets a single response.
   // Good for simple, non-real-time use cases.
   rpc TranscribeFile(TranscribeFileRequest) returns (TranscriptionResponse);
@@ -26,4 +29,15 @@ message AudioChunk {
 // The response message containing the final transcript.
 message TranscriptionResponse {
   string transcript = 1;
+}
+
+// Health check request (empty for now)
+message HealthCheckRequest {
+}
+
+// Health check response
+message HealthCheckResponse {
+  string status = 1;
+  string user_id = 2;
+  string message = 3;
 }

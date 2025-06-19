@@ -26,10 +26,10 @@ mac:
     - dmg
   icon: resources/build/icon.icns
   darkModeSupport: true
-  hardenedRuntime: false
+  hardenedRuntime: true
   gatekeeperAssess: false
   identity: 'Demox Labs, Inc. (294ZSTM7UB)'
-  notarize: false
+  notarize: true
 dmg:
   artifactName: Ito-Installer.${ext}
 win:

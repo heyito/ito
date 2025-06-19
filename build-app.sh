@@ -3,6 +3,11 @@
 # Exit on error
 set -e
 
+# Load environment variables from .env file if it exists
+if [ -f .env ]; then
+  export $(grep -v '^#' .env | xargs)
+fi
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -101,6 +106,10 @@ build_native_modules() {
     # Change to the key listener directory
     cd native/global-key-listener
     
+    print_info "Cleaning up old build artifacts..."
+    rm -rf "target/arm64-apple-darwin"
+    rm -rf "target/x64-apple-darwin"
+    
     # Build for each target
     print_info "Building for x86_64-apple-darwin (Intel Mac)..."
     cargo build --release --target x86_64-apple-darwin
@@ -143,6 +152,17 @@ build_electron_app() {
 # Create DMG installer
 create_dmg() {
     print_status "Creating DMG installer..."
+    
+    # Check for notarization credentials if notarize is enabled in config
+    if grep -q "notarize: true" electron-builder.yml; then
+      if [ -z "$APPLE_ID" ] || [ -z "$APPLE_APP_SPECIFIC_PASSWORD" ] || [ -z "$APPLE_TEAM_ID" ]; then
+        print_error "Notarization is enabled, but the required environment variables are not set."
+        print_error "Please set APPLE_ID, APPLE_TEAM_ID, and APPLE_APP_SPECIFIC_PASSWORD."
+        exit 1
+      else
+        print_info "Notarization credentials found. Proceeding with notarized build."
+      fi
+    fi
     
     print_info "Packaging application with Electron Builder..."
     # First build the Electron app, then run electron-builder

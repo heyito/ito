@@ -1,5 +1,4 @@
 import dotenv from 'dotenv'
-
 dotenv.config()
 
 // Auth0 configuration

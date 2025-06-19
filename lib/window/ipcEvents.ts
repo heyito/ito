@@ -24,7 +24,6 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
   // Hide the menu bar
   mainWindow.setMenuBarVisibility(false)
 
-  // Register key listener IPC
   handleIPC('start-key-listener', () => {
     if (!KeyListenerProcess) {
       initializeKeyListener(mainWindow)

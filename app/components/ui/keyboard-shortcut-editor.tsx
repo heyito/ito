@@ -2,6 +2,7 @@ import { useEffect, useCallback, useRef, useState } from 'react'
 import { Button } from '@/app/components/ui/button'
 import KeyboardKey from '@/app/components/ui/keyboard-key'
 import { KeyState, normalizeKeyEvent } from '@/app/utils/keyboard'
+import { useAudioStore } from '@/app/store/useAudioStore'
 
 interface KeyboardShortcutEditorProps {
   shortcut: string[]
@@ -41,6 +42,7 @@ export default function KeyboardShortcutEditor({
   const [pressedKeys, setPressedKeys] = useState<string[]>([])
   const [isEditing, setIsEditing] = useState(false)
   const [newShortcut, setNewShortcut] = useState<string[]>([])
+  const { setIsShortcutEnabled } = useAudioStore()
 
   const handleKeyEvent = useCallback(
     (event: any) => {
@@ -75,9 +77,6 @@ export default function KeyboardShortcutEditor({
   }, [shortcut])
 
   useEffect(() => {
-    // Start the key listener (always active for key detection)
-    window.api.startKeyListener()
-
     // Capture the current keyState ref value for cleanup
     const currentKeyState = keyStateRef.current
 
@@ -106,11 +105,13 @@ export default function KeyboardShortcutEditor({
   }, [handleKeyEvent, isEditing])
 
   const handleStartEditing = () => {
+    setIsShortcutEnabled(false)
     setIsEditing(true)
     setNewShortcut([])
   }
 
   const handleCancel = () => {
+    setIsShortcutEnabled(true)
     setIsEditing(false)
     setNewShortcut([])
   }
@@ -123,6 +124,7 @@ export default function KeyboardShortcutEditor({
     keyStateRef.current.updateShortcut(newShortcut)
     onShortcutChange(newShortcut)
     setIsEditing(false)
+    setIsShortcutEnabled(true)
   }
 
   return (

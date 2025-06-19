@@ -3,6 +3,7 @@ import { join } from 'path'
 import { registerWindowIPC } from '@/lib/window/ipcEvents'
 import appIcon from '@/resources/build/icon.png?asset'
 import { pathToFileURL } from 'url'
+import { initializeKeyListener } from '../media/keyboard'
 
 export function createAppWindow(): void {
   // Register custom protocol for resources
@@ -26,6 +27,8 @@ export function createAppWindow(): void {
       sandbox: false,
     },
   })
+
+  initializeKeyListener(mainWindow)
 
   // Register IPC events for the main window.
   registerWindowIPC(mainWindow)

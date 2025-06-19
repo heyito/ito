@@ -10,9 +10,6 @@ let pillWindow: BrowserWindow | null = null
 
 // --- No changes to createAppWindow ---
 export function createAppWindow(): void {
-  // Register custom protocol for resources
-  registerResourcesProtocol()
-
   // Create the main window.
   const mainWindow = new BrowserWindow({
     width: 1270,
@@ -126,7 +123,7 @@ export function startPillPositioner() {
 }
 
 // --- No changes to other functions ---
-function registerResourcesProtocol() {
+export function registerResourcesProtocol() {
   protocol.handle('res', async (request) => {
     try {
       const url = new URL(request.url)

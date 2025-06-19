@@ -1,7 +1,25 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, protocol } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
-import { createAppWindow, createPillWindow, startPillPositioner } from './app'
+import {
+  createAppWindow,
+  createPillWindow,
+  registerResourcesProtocol,
+  startPillPositioner,
+} from './app'
 import { initializeLogging } from './logger'
+
+// Register the custom 'res' protocol and mark it as privileged.
+// This must be done before the app is ready.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'res',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+    },
+  },
+])
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -9,6 +27,9 @@ import { initializeLogging } from './logger'
 app.whenReady().then(() => {
   // Initialize logging as the first step
   initializeLogging()
+
+  // Register the handler for the 'res' protocol now that the app is ready.
+  registerResourcesProtocol()
 
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')

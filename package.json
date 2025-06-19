@@ -9,7 +9,7 @@
     "url": "https://github.com/guasam"
   },
   "scripts": {
-    "dev": "electron-vite dev -w",
+    "dev": "bun build:rust:mac && electron-vite dev -w",
     "format:app": "prettier --write app",
     "format": "prettier --write .",
     "lint:app": "eslint app --ext .ts,.tsx --fix",

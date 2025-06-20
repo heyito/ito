@@ -39,6 +39,7 @@ interface AuthStore {
   setError: (error: string | null) => void
   updateUser: (user: Partial<AuthUser>) => void
   updateState: (state: Partial<AuthState>) => void
+  setName: (name: string) => void
 }
 
 // Initialize from electron store
@@ -128,6 +129,15 @@ export const useAuthStore = create<AuthStore>((set, get) => {
       if (!currentUser) return
 
       const updatedUser = { ...currentUser, ...userUpdate }
+      syncToStore({ user: updatedUser })
+      set({ user: updatedUser })
+    },
+
+    setName: (name: string) => {
+      const currentUser = get().user
+      if (!currentUser) return
+
+      const updatedUser = { ...currentUser, name }
       syncToStore({ user: updatedUser })
       set({ user: updatedUser })
     },

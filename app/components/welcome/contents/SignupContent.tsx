@@ -7,7 +7,7 @@ import {
 } from '../../ui/dropdown-menu'
 import AvatarIcon from '../../icons/AvatarIcon'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
-import { useAuth } from '@/lib/auth/useAuth'
+import { useAuthStore } from '@/app/store/useAuthStore'
 
 const sources = [
   'Twitter',
@@ -22,7 +22,7 @@ const sources = [
 export default function SignupContent() {
   const { incrementOnboardingStep, referralSource, setReferralSource } =
     useOnboardingStore()
-  const { user } = useAuth()
+  const { user } = useAuthStore()
   const firstName = user?.name?.split(' ')[0]
 
   return (

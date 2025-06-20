@@ -3,7 +3,6 @@ import appIcon from '@/resources/build/icon.png'
 import HomeKit from '@/app/components/home/HomeKit';
 import WelcomeKit from '@/app/components/welcome/WelcomeKit';
 import Pill from '@/app/components/Pill';
-import AuthCallback from '@/app/components/auth/AuthCallback';
 import { useOnboardingStore } from '@/app/store/useOnboardingStore';
 import { useAuth } from '@/app/components/auth/useAuth';
 import GlobalKeyListener from './components/GlobalKeyListener';

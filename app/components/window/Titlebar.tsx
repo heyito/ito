@@ -4,10 +4,13 @@ import { OnboardingTitlebar } from './OnboardingTitlebar'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { UserCircle, PanelLeft } from '@mynaui/icons-react'
 import { useMainStore } from '@/app/store/useMainStore'
+import { useAuthStore } from '@/app/store/useAuthStore'
 
 export const Titlebar = () => {
   const { icon } = useWindowContext().titlebar
   const { onboardingCompleted } = useOnboardingStore()
+  const { isAuthenticated } = useAuthStore()
+  const showOnboarding = !onboardingCompleted || !isAuthenticated
   const { toggleNavExpanded } = useMainStore()
   const wcontext = useWindowContext().window
 
@@ -25,7 +28,7 @@ export const Titlebar = () => {
       className={`window-titlebar ${wcontext?.platform ? `platform-${wcontext.platform}` : ''}`}
       style={style}
     >
-      {onboardingCompleted && (
+      {!showOnboarding && (
         <div
           style={{
             position: 'absolute',
@@ -69,10 +72,10 @@ export const Titlebar = () => {
         </div>
       )}
 
-      {!onboardingCompleted && <OnboardingTitlebar />}
+      {showOnboarding && <OnboardingTitlebar />}
       {wcontext?.platform === 'win32' && <TitlebarControls />}
 
-      {onboardingCompleted && (
+      {!showOnboarding && (
         <div
           style={{
             position: 'absolute',

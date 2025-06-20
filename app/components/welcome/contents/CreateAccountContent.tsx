@@ -5,12 +5,11 @@ import GoogleIcon from '../../icons/GoogleIcon'
 import AppleIcon from '../../icons/AppleIcon'
 import GitHubIcon from '../../icons/GitHubIcon'
 import MicrosoftIcon from '../../icons/MicrosoftIcon'
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useAuth } from '../../auth/useAuth'
 
 export default function CreateAccountContent() {
   const { incrementOnboardingStep } = useOnboardingStore()
-  const [email, setEmail] = useState('')
   
   const {
     user,
@@ -18,25 +17,22 @@ export default function CreateAccountContent() {
     loginWithGoogle,
     loginWithMicrosoft,
     loginWithApple,
-    loginWithEmail,
-    loginWithGitHub
+    loginWithGitHub,
+    loginWithSelfHosted
   } = useAuth()
 
   // If user is authenticated, proceed to next step
   useEffect(() => {
     if (isAuthenticated && user) {
-      console.log('User authenticated:', user)
       incrementOnboardingStep()
     }
   }, [isAuthenticated, user, incrementOnboardingStep])
 
-  const handleContinueWithEmail = async () => {
-    if (!email.trim()) return
-    
+  const handleSelfHosted = async () => {
     try {
-      await loginWithEmail(email)
+      await loginWithSelfHosted()
     } catch (error) {
-      console.error('Email authentication failed:', error)
+      console.error('Self-hosted authentication failed:', error)
     }
   }
 
@@ -86,19 +82,19 @@ export default function CreateAccountContent() {
           <div className="grid grid-cols-2 gap-3">
             <Button
               variant="outline"
-              className="w-full h-10 flex items-center justify-start gap-3 text-sm font-medium"
+              className="w-full h-12 flex items-center justify-start gap-3 text-sm font-medium"
               onClick={() => handleSocialAuth('google')}
             >
-              <GoogleIcon width={24} height={24} />
+              <GoogleIcon className="size-5" />
               <div className="w-full text-sm font-medium">Continue with Google</div>
             </Button>
 
             <Button
               variant="outline"
-              className="w-full h-10 flex items-center justify-start gap-3 text-sm font-medium"
+              className="w-full h-12 flex items-center justify-start gap-3 text-sm font-medium"
               onClick={() => handleSocialAuth('microsoft')}
             >
-              <MicrosoftIcon width={24} height={24} />
+              <MicrosoftIcon className="size-5" />
               <div className="w-full text-sm font-medium">Continue with Microsoft</div>
             </Button>
           </div>
@@ -106,19 +102,19 @@ export default function CreateAccountContent() {
           <div className="grid grid-cols-2 gap-3">
             <Button
               variant="outline"
-              className="h-10 flex items-center justify-start gap-2 text-sm font-medium"
+              className="h-12 flex items-center justify-start gap-2 text-sm font-medium"
               onClick={() => handleSocialAuth('apple')}
             >
-              <AppleIcon width={24} height={24} />
+              <AppleIcon className="size-5" />
               <div className="w-full text-sm font-medium">Continue with Apple</div>
             </Button>
 
             <Button
               variant="outline"
-              className="h-10 flex items-center justify-start gap-2 text-sm font-medium"
+              className="h-12 flex items-center justify-start gap-2 text-sm font-medium"
               onClick={() => handleSocialAuth('github')}
             >
-              <GitHubIcon width={24} height={24} />
+              <GitHubIcon className="size-5" />
               <div className="w-full text-sm font-medium">Continue with GitHub</div>
             </Button>
           </div>
@@ -133,35 +129,24 @@ export default function CreateAccountContent() {
 
         {/* Email input */}
         <div className="w-1/2 space-y-4">
-          <input
-            type="email"
-            placeholder="Enter an email address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleContinueWithEmail()}
-            className="w-full h-10 px-4 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
-          />
-
           <Button
-            className="w-full h-10 text-sm font-medium"
-            onClick={handleContinueWithEmail}
-            disabled={!email.trim()}
+            className="w-full h-12 text-sm font-medium"
+            onClick={handleSelfHosted}
           >
-            Continue with Email
+            Self-Hosted (Free)
           </Button>
         </div>
 
         {/* Terms and privacy */}
         <p className="w-1/2 text-xs text-muted-foreground text-center mt-6 leading-relaxed">
-          By signing up, you agree to our{' '}
+          Running Ito locally requires additional setup. Please refer to our{' '}
           <a href="#" className="underline">
-            Terms of Service
+            Github
           </a>{' '}
           and{' '}
           <a href="#" className="underline">
-            Privacy Policy
+            Documentation
           </a>
-          . Your name and email will be used to personalize your Ito experience.
         </p>
       </div>
     </div>

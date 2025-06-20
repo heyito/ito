@@ -27,6 +27,7 @@ export const useAuth = () => {
     isLoading: storeIsLoading,
     error: storeError,
     clearAuth,
+    setSelfHostedMode,
   } = useAuthStore()
 
   // Combine Auth0 and store state - prioritize store state for external auth
@@ -230,6 +231,16 @@ export const useAuth = () => {
     }
   }, [openExternalAuth])
 
+  // Self-hosted authentication - bypasses all external auth
+  const loginWithSelfHosted = useCallback(() => {
+    try {
+      setSelfHostedMode()
+    } catch (error) {
+      console.error('Self-hosted mode activation error:', error)
+      throw error
+    }
+  }, [setSelfHostedMode])
+
   // Get access token for API calls
   const getAccessToken = useCallback(async () => {
     try {
@@ -274,6 +285,7 @@ export const useAuth = () => {
     loginWithApple,
     loginWithEmail,
     loginWithGitHub,
+    loginWithSelfHosted,
     logoutUser,
 
     // Utilities

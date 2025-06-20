@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { v4 as uuidv4 } from 'uuid'
 
 export interface AuthState {
   id: string
@@ -12,7 +13,6 @@ export interface AuthUser {
   email?: string
   name?: string
   picture?: string
-  emailVerified?: boolean
 }
 
 export interface AuthTokens {
@@ -31,6 +31,7 @@ interface AuthStore {
   state: AuthState | null
   isLoading: boolean
   error: string | null
+  isSelfHosted: boolean
 
   // Actions
   setAuthData: (tokens: AuthTokens, user: AuthUser) => void
@@ -40,6 +41,7 @@ interface AuthStore {
   updateUser: (user: Partial<AuthUser>) => void
   updateState: (state: Partial<AuthState>) => void
   setName: (name: string) => void
+  setSelfHostedMode: () => void
 }
 
 // Initialize from electron store
@@ -49,12 +51,14 @@ const getInitialState = () => {
   // Generate new auth state if no stored auth stat
 
   return {
-    isAuthenticated: !!storedAuth?.tokens?.access_token,
+    isAuthenticated:
+      !!storedAuth?.tokens?.access_token || !!storedAuth?.isSelfHosted,
     user: storedAuth?.user || null,
     tokens: storedAuth?.tokens || null,
     state: storedAuth?.state || null,
     isLoading: false,
     error: null,
+    isSelfHosted: !!storedAuth?.isSelfHosted,
   }
 }
 
@@ -63,6 +67,7 @@ const syncToStore = (state: {
   user?: AuthUser | null
   tokens?: AuthTokens | null
   state?: AuthState | null
+  isSelfHosted?: boolean
 }) => {
   if (!window.electron?.store) return
 
@@ -79,6 +84,10 @@ const syncToStore = (state: {
 
   if ('state' in state) {
     updates.state = state.state
+  }
+
+  if ('isSelfHosted' in state) {
+    updates.isSelfHosted = state.isSelfHosted
   }
 
   window.electron.store.set('auth', updates)
@@ -110,9 +119,15 @@ export const useAuthStore = create<AuthStore>((set, get) => {
         tokens: null,
         state: null,
         error: null,
+        isSelfHosted: false,
       }
 
-      syncToStore({ tokens: null, user: null, state: null })
+      syncToStore({
+        tokens: null,
+        user: null,
+        state: null,
+        isSelfHosted: false,
+      })
       set(newState)
     },
 
@@ -149,6 +164,23 @@ export const useAuthStore = create<AuthStore>((set, get) => {
       const updatedState = { ...currentState, ...stateUpdate }
       syncToStore({ state: updatedState })
       set({ state: updatedState })
+    },
+
+    setSelfHostedMode: () => {
+      const selfHostedUser: AuthUser = {
+        id: uuidv4(),
+      }
+
+      const newState = {
+        isAuthenticated: true,
+        isSelfHosted: true,
+        user: selfHostedUser,
+        tokens: null, // No tokens needed for self-hosted
+        error: null,
+      }
+
+      syncToStore({ user: selfHostedUser, isSelfHosted: true })
+      set(newState)
     },
   }
 })

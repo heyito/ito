@@ -1,25 +1,45 @@
 import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
-import { ItoExpressAppStack } from "../lib/ito-express-app-stack";
-import { SharedResourcesStack } from "../lib/shared-resources-stack";
+import { PlatformStack } from "../lib/platform-stack";
+import { NetworkStack } from "../lib/network-stack";
+import { ServiceStack } from "../lib/service-stack";
+import { SecurityStack } from "../lib/security-stack";
+import { ObservabilityStack } from "../lib/observability-stack";
 
 const app = new cdk.App();
-
 const env = {
   account: process.env.CDK_DEFAULT_ACCOUNT,
   region: process.env.CDK_DEFAULT_REGION,
 };
 
-const sharedStack = new SharedResourcesStack(app, "ItoSharedResourcesStack", {
-  env: env,
-  description: "Stack for shared, persistent resources like logs and secrets.",
+const network = new NetworkStack(app, "ItoNetworking", { env });
+
+const platform = new PlatformStack(app, "ItoPlatform", {
+  env,
+  vpc: network.vpc,
 });
 
-const appStack = new ItoExpressAppStack(app, "ItoExpressAppStack", {
-  env: env,
-  description: "The main Ito Express application service.",
-  logBucket: sharedStack.logBucket,
-  dbSecretArn: sharedStack.dbSecretArn,
+const service = new ServiceStack(app, "ItoService", {
+  env,
+  vpc: network.vpc,
+  dbSecretArn: platform.dbSecretArn,
+  dbEndpoint: platform.dbEndpoint,
 });
 
-appStack.addDependency(sharedStack);
+const security = new SecurityStack(app, "ItoSecurity", {
+  env,
+  fargateService: service.fargateService,
+  dbSecurityGroupId: platform.dbSecurityGroupId,
+});
+
+const observability = new ObservabilityStack(app, "ItoObservability", {
+  env,
+  fargateService: service.fargateService,
+});
+
+platform.addDependency(network);
+service.addDependency(platform);
+service.addDependency(network);
+security.addDependency(platform);
+security.addDependency(service);
+observability.addDependency(service);

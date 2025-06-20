@@ -6,18 +6,26 @@ import { ProtoGrpcType } from "./generated/ito.js";
 import { ItoServiceHandlers } from "./generated/ito/ItoService.js";
 import { PassThrough } from "stream";
 import { ReflectionService } from "@grpc/reflection";
-import { HealthImplementation, ServingStatusMap } from 'grpc-health-check';
+import { HealthImplementation, ServingStatusMap } from "grpc-health-check";
+import http from "http";
+import { ListenOptions } from "net";
 
 // Correct path to the proto file
 const PROTO_PATH = "./src/ito.proto";
-const HEALTH_PROTO_PATH = "node_modules/grpc-health-check/proto/health/v1/health.proto";
+const HEALTH_PROTO_PATH =
+  "node_modules/grpc-health-check/proto/health/v1/health.proto";
 
-const itoPackageDefinition = protoLoader.loadSync([PROTO_PATH, HEALTH_PROTO_PATH]);
-const itoProto = grpc.loadPackageDefinition(itoPackageDefinition) as unknown as ProtoGrpcType;
+const itoPackageDefinition = protoLoader.loadSync([
+  PROTO_PATH,
+  HEALTH_PROTO_PATH,
+]);
+const itoProto = grpc.loadPackageDefinition(
+  itoPackageDefinition
+) as unknown as ProtoGrpcType;
 
 const statusMap: ServingStatusMap = {
-  'ito.ItoService': 'SERVING',
-  '': 'NOT_SERVING',
+  "ito.ItoService": "SERVING",
+  "": "NOT_SERVING",
 };
 
 // Construct the service implementation
@@ -60,7 +68,7 @@ const itoServer: ItoServiceHandlers = {
     });
 
     call.on("error", (err: Error) => {
-        console.error("Error during stream:", err);
+      console.error("Error during stream:", err);
     });
 
     call.on("end", () => {
@@ -68,7 +76,9 @@ const itoServer: ItoServiceHandlers = {
       const fullAudio: Buffer = Buffer.concat(audioChunks);
 
       // TODO: Replace with actual call to Groq/Gemini STT
-      console.log(`Processing final concatenated audio of size: ${fullAudio.length} bytes.`);
+      console.log(
+        `Processing final concatenated audio of size: ${fullAudio.length} bytes.`
+      );
       const dummyTranscript = "This is a transcript from the streamed audio.";
 
       callback(null, { transcript: dummyTranscript });
@@ -85,13 +95,34 @@ export const startServer = async () => {
   reflectionService.addToServer(server);
 
   const port = "0.0.0.0:3000";
-  server.bindAsync(port, grpc.ServerCredentials.createInsecure(), (err, port) => {
-    if (err) {
-      console.error(err);
-      return;
+  server.bindAsync(
+    port,
+    grpc.ServerCredentials.createInsecure(),
+    (err, port) => {
+      if (err) {
+        console.error(err);
+        return;
+      }
+      console.log(`gRPC server listening on ${port}`);
     }
-    console.log(`gRPC server listening on ${port}`);
-  });
+  );
 
-  healthImpl.setStatus('', 'SERVING');
-}
+  healthImpl.setStatus("", "SERVING");
+};
+
+// This is completely unrelated to the gRPC server.
+// We use this to provide a simple HTTP health check endpoint for load balancers.
+const server = http.createServer((req, res) => {
+  if (req.url === "/healthz") {
+    res.writeHead(200);
+    res.end("OK");
+  } else {
+    res.writeHead(404);
+    res.end();
+  }
+});
+
+const opts: ListenOptions = { port: 3000, exclusive: false };
+server.listen(opts, () => {
+  console.log("Health endpoint listening on port 3000");
+});

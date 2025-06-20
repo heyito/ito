@@ -1,0 +1,32 @@
+import { Stack, StackProps, Tags } from "aws-cdk-lib";
+import { Peer, Port, SecurityGroup } from "aws-cdk-lib/aws-ec2";
+import { FargateService } from "aws-cdk-lib/aws-ecs";
+import { DatabaseCluster } from "aws-cdk-lib/aws-rds";
+import { Construct } from "constructs";
+
+export interface SecurityStackProps extends StackProps {
+  fargateService: FargateService;
+  dbSecurityGroupId: string;
+}
+
+export class SecurityStack extends Stack {
+  constructor(scope: Construct, id: string, props: SecurityStackProps) {
+    super(scope, id, props);
+
+    const dbSG = SecurityGroup.fromSecurityGroupId(
+      this,
+      "ImportedDbSG",
+      props.dbSecurityGroupId
+    );
+
+    dbSG.addIngressRule(
+      Peer.securityGroupId(
+        props.fargateService.connections.securityGroups[0].securityGroupId
+      ),
+      Port.tcp(5432),
+      "Allow app to connect to aurora"
+    );
+
+    Tags.of(this).add("Project", "Ito");
+  }
+}

@@ -72,17 +72,12 @@ function handleProtocolUrl(url: string) {
       const state = urlObj.searchParams.get('state')
 
       if (authCode && state) {
-        console.log('Auth code received:', authCode, state)
-
         // Find the main window (not the pill window) and send the auth code
         const mainWindow = getMainWindow()
         if (mainWindow && !mainWindow.isDestroyed()) {
-          console.log('Found main window via getMainWindow()')
-          console.log('Sending auth code to renderer process')
           mainWindow.webContents.send('auth-code-received', authCode, state)
 
           // Focus and show the window with more aggressive methods
-          console.log('Showing window')
           mainWindow.show()
           mainWindow.focus()
           mainWindow.setAlwaysOnTop(true)

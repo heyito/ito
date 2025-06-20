@@ -12,14 +12,20 @@ import {
   DialogTitle,
 } from '../../../ui/dialog'
 import { useAuthStore } from '@/app/store/useAuthStore'
+import { useAuth } from '@/app/components/auth/useAuth'
 
 export default function AccountSettingsContent() {
-  const { user, setName } = useAuthStore()
+  const { user, setName, clearAuth } = useAuthStore()
+  const { logoutUser } = useAuth()
   const { loadNotes } = useNotesStore()
   const { loadEntries } = useDictionaryStore()
   const { resetOnboarding } = useOnboardingStore()
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+
+  const handleSignOut = () => {
+    logoutUser()
+  }
 
   const handleDeleteAccount = () => {
     // Clear all electron store data
@@ -28,6 +34,10 @@ export default function AccountSettingsContent() {
     window.electron.store.set('notes', [])
     window.electron.store.set('dictionary', [])
     window.electron.store.set('onboarding', {})
+    window.electron.store.set('auth', {})
+
+    // Clear auth state
+    clearAuth()
 
     // Reset all stores to their initial state
     resetOnboarding()
@@ -37,8 +47,7 @@ export default function AccountSettingsContent() {
     // Close the dialog
     setShowDeleteDialog(false)
 
-    // Reset settings by reloading the page or triggering a full app restart
-    window.location.reload()
+    // Note: The app will automatically navigate to onboarding since user is no longer authenticated
   }
 
   return (
@@ -69,6 +78,7 @@ export default function AccountSettingsContent() {
         <Button
           variant="outline"
           size="lg"
+          onClick={handleSignOut}
           className="px-6 py-3 bg-neutral-200 text-neutral-700 hover:bg-neutral-300"
         >
           Sign out

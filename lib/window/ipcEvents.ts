@@ -6,7 +6,8 @@ import {
   systemPreferences,
 } from 'electron'
 import os from 'os'
-import store from '../main/store'
+import { app } from 'electron'
+import store, { generateNewAuthState } from '../main/store'
 import {
   startKeyListener,
   KeyListenerProcess,
@@ -182,20 +183,26 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
   )
   handleIPC('web-open-url', (_e, url) => shell.openExternal(url))
 
+  // Generate new auth state
+  handleIPC('generate-new-auth-state', () => {
+    const newAuthState = generateNewAuthState()
+
+    // Update the auth state in the store
+    const currentAuth = store.get('auth')
+    store.set('auth', {
+      ...currentAuth,
+      state: newAuthState,
+    })
+
+    return newAuthState
+  })
+
   // Auth token exchange
   handleIPC('exchange-auth-code', async (_e, { authCode, state, config }) => {
     try {
-      console.log('Exchanging auth code for tokens in main process')
-
       const authStore = store.get('auth')
       const codeVerifier = authStore.state?.codeVerifier
       const storedState = authStore.state?.state
-
-      console.log('Code verifier:', codeVerifier)
-      console.log('Stored state:', storedState)
-      console.log('Received state:', state)
-      console.log('Auth code:', authCode)
-      console.log('Config:', config)
 
       // Validate state parameter
       if (storedState !== state) {
@@ -223,6 +230,7 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
       console.log('Request URL:', `https://${config.domain}/oauth/token`)
       console.log('Request method: POST')
       console.log('Content-Type: application/x-www-form-urlencoded')
+      console.log('Config redirectUri:', config.redirectUri)
       console.log('Request body:', tokenParams.toString())
 
       const response = await fetch(`https://${config.domain}/oauth/token`, {

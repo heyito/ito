@@ -97,8 +97,8 @@
             </svg>
         </div>
         
-        <div class="auth-text">
-            Log in as {{userEmail}}
+        <div class="auth-text" id="authText">
+            Log in successful
         </div>
         
         <button class="button" onclick="openApp()">
@@ -107,9 +107,29 @@
     </div>
 
     <script>
+        // Extract URL parameters
+        function getUrlParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // Get auth parameters from URL
+        const authCode = getUrlParameter('code');
+        const state = getUrlParameter('state');
+        const userEmail = getUrlParameter('email');
+
+        // Update the auth text with user email if available
+        if (userEmail) {
+            document.getElementById('authText').textContent = `Log in as ${userEmail}`;
+        }
+
         function openApp() {
-            // Open the Ito app with a custom protocol
-            window.location.href = 'ito://auth/success?code={{authCode}}';
+            if (authCode && state) {
+                // Open the Ito app with a custom protocol
+                window.location.href = `ito://auth/callback?code=${authCode}&state=${state}`;
+            } else {
+                console.error('Missing required authentication parameters');
+            }
         }
 
     </script>

@@ -5,12 +5,10 @@ import {
   useAuthStore,
   type AuthUser,
   type AuthTokens,
-} from '../../app/store/useAuthStore'
+} from '../../store/useAuthStore'
 
 export const useAuth = () => {
   const {
-    loginWithRedirect,
-    loginWithPopup,
     logout,
     user,
     isAuthenticated: auth0IsAuthenticated,
@@ -18,7 +16,6 @@ export const useAuth = () => {
     error: auth0Error,
     getAccessTokenSilently,
     getIdTokenClaims,
-    handleRedirectCallback,
   } = useAuth0()
 
   // Get auth state from our store
@@ -28,10 +25,7 @@ export const useAuth = () => {
     tokens,
     isLoading: storeIsLoading,
     error: storeError,
-    setAuthData,
     clearAuth,
-    setLoading,
-    setError,
   } = useAuthStore()
 
   // Combine Auth0 and store state - prioritize store state for external auth
@@ -56,7 +50,7 @@ export const useAuth = () => {
   // Handle auth code from protocol URL - only set up listener once globally
   useEffect(() => {
     if (!window.api?.on) {
-      console.log('window.api.on not available')
+      console.warn('window.api.on not available')
       return
     }
 
@@ -65,21 +59,15 @@ export const useAuth = () => {
       return
     }
 
-    console.log('Setting up auth-code-received listener')
-
     // Mark that we've set up the listener
     ;(window as any).__authCodeListenerSetup = true
 
     const cleanup = window.api.on(
       'auth-code-received',
       async (authCode: string, state: string) => {
-        console.log('🎉 AUTH CODE RECEIVED IN RENDERER:', authCode, state)
-
         try {
           // Import Auth0 config
           const { Auth0Config } = await import('./config')
-
-          console.log('Attempting to exchange auth code for tokens via IPC')
 
           // Exchange authorization code for tokens via main process
           const result = await window.api.invoke('exchange-auth-code', {
@@ -92,9 +80,6 @@ export const useAuth = () => {
             throw new Error(result.error)
           }
 
-          console.log('Successfully exchanged auth code for tokens')
-          console.log('User info:', result.userInfo)
-
           // Store tokens and user info in the auth store
           if (result.tokens && result.userInfo) {
             useAuthStore
@@ -103,11 +88,6 @@ export const useAuth = () => {
                 result.tokens as AuthTokens,
                 result.userInfo as AuthUser,
               )
-
-            // Show success message
-            alert(
-              `Authentication successful! Welcome ${result.userInfo?.name || result.userInfo?.email || 'User'}!`,
-            )
           } else {
             throw new Error('Missing tokens or user info in response')
           }
@@ -136,16 +116,22 @@ export const useAuth = () => {
 
       // Generate new auth state if not available
       if (!authState) {
-        // Get fresh auth state from the main process
-        const storedAuth = window.electron?.store?.get('auth')
-        authState = storedAuth?.state
+        try {
+          // Generate fresh auth state from the main process
+          authState = await window.api.generateNewAuthState()
 
-        if (!authState) {
-          throw new Error('Auth state not available. Please restart the app.')
+          if (!authState) {
+            throw new Error('Generated auth state is null')
+          }
+
+          // Update the store with the new auth state
+          useAuthStore.getState().updateState(authState)
+        } catch (error) {
+          console.error('Failed to generate new auth state:', error)
+          throw new Error(
+            'Failed to generate auth state. Please restart the app.',
+          )
         }
-
-        // Update the store with the current auth state
-        useAuthStore.getState().updateState(authState)
       }
 
       const { Auth0Config } = await import('./config')
@@ -165,8 +151,6 @@ export const useAuth = () => {
       if (Auth0Config.audience) {
         params.append('audience', Auth0Config.audience)
       }
-
-      console.log('Auth URL params:', params.toString())
 
       if (connection) {
         params.append('connection', connection)

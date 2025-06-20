@@ -37,32 +37,8 @@ const api = {
     ipcRenderer.on('key-event', handler);
     return () => ipcRenderer.removeListener('key-event', handler);
   },
-  // All other IPC calls that the UI makes
-  // These now just pass through, as the main process handles the window context
-  'init-window': () => ipcRenderer.invoke('init-window'),
-  'is-window-minimizable': () => ipcRenderer.invoke('is-window-minimizable'),
-  'is-window-maximizable': () => ipcRenderer.invoke('is-window-maximizable'),
-  'window-minimize': () => ipcRenderer.invoke('window-minimize'),
-  'window-maximize': () => ipcRenderer.invoke('window-maximize'),
-  'window-close': () => ipcRenderer.invoke('window-close'),
-  'window-maximize-toggle': () => ipcRenderer.invoke('window-maximize-toggle'),
-  'web-undo': () => ipcRenderer.invoke('web-undo'),
-  'web-redo': () => ipcRenderer.invoke('web-redo'),
-  'web-cut': () => ipcRenderer.invoke('web-cut'),
-  'web-copy': () => ipcRenderer.invoke('web-copy'),
-  'web-paste': () => ipcRenderer.invoke('web-paste'),
-  'web-delete': () => ipcRenderer.invoke('web-delete'),
-  'web-select-all': () => ipcRenderer.invoke('web-select-all'),
-  'web-reload': () => ipcRenderer.invoke('web-reload'),
-  'web-force-reload': () => ipcRenderer.invoke('web-force-reload'),
-  'web-toggle-devtools': () => ipcRenderer.invoke('web-toggle-devtools'),
-  'web-actual-size': () => ipcRenderer.invoke('web-actual-size'),
-  'web-zoom-in': () => ipcRenderer.invoke('web-zoom-in'),
-  'web-zoom-out': () => ipcRenderer.invoke('web-zoom-out'),
-  'web-toggle-fullscreen': () => ipcRenderer.invoke('web-toggle-fullscreen'),
-  'web-open-url': (url: string) => ipcRenderer.invoke('web-open-url', url),
-  'check-accessibility-permission': (prompt: boolean) => ipcRenderer.invoke('check-accessibility-permission', prompt),
-  'check-microphone-permission': (prompt: boolean) => ipcRenderer.invoke('check-microphone-permission', prompt),
+  // Auth methods
+  generateNewAuthState: () => ipcRenderer.invoke('generate-new-auth-state'),
 }
 
 export default api

@@ -5,10 +5,10 @@ import WelcomeKit from '@/app/components/welcome/WelcomeKit';
 import Pill from '@/app/components/Pill';
 import AuthCallback from '@/app/components/auth/AuthCallback';
 import { useOnboardingStore } from '@/app/store/useOnboardingStore';
-import { useAuth } from '@/lib/auth/useAuth';
+import { useAuth } from '@/app/components/auth/useAuth';
 import GlobalKeyListener from './components/GlobalKeyListener';
 import { WindowContextProvider } from '@/lib/window';
-import { Auth0Provider } from '@/lib/auth/Auth0Provider';
+import { Auth0Provider } from '@/app/components/auth/Auth0Provider';
 import { useEffect } from 'react';
 
 const MainApp = () => {

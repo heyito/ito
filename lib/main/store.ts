@@ -104,4 +104,7 @@ const store = new Store<AppStore>({
   },
 })
 
+// Delete store for testing
+// store.clear()
+
 export default store

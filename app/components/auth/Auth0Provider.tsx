@@ -22,7 +22,6 @@ export const Auth0Provider: React.FC<Auth0ProviderProps> = ({ children }) => {
       clientId={Auth0Config.clientId}
       authorizationParams={{
         redirect_uri: Auth0Config.redirectUri,
-        audience: Auth0Config.audience,
         scope: Auth0Config.scope
       }}
       useRefreshTokens={Auth0Config.useRefreshTokens}

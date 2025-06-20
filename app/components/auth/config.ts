@@ -5,7 +5,8 @@
 export const Auth0Config = {
   domain: 'dev-8rsdprb2tatdfcps.us.auth0.com',
   clientId: 'eYuhxwH6RqMVPCjpKXU0MtEV6Yrm4Ku2',
-  redirectUri: 'ito://auth/callback',
+  audience: undefined as string | undefined, // Optional audience for API access
+  redirectUri: 'http://ito-public.s3-website-us-west-2.amazonaws.com',
   scope: 'openid profile email',
   // Electron-specific settings
   useRefreshTokens: true,
@@ -22,7 +23,7 @@ export const Auth0Connections = {
 
 // Validate configuration
 export const validateAuth0Config = () => {
-  const required = ['domain', 'clientId', 'audience']
+  const required = ['domain', 'clientId'] // audience is optional
   const missing = required.filter(
     key => !Auth0Config[key as keyof typeof Auth0Config],
   )

@@ -6,7 +6,7 @@ import AppleIcon from '../../icons/AppleIcon'
 import GitHubIcon from '../../icons/GitHubIcon'
 import MicrosoftIcon from '../../icons/MicrosoftIcon'
 import { useState, useEffect } from 'react'
-import { useAuth } from '../../../../lib/auth/useAuth'
+import { useAuth } from '../../auth/useAuth'
 
 export default function CreateAccountContent() {
   const { incrementOnboardingStep } = useOnboardingStore()

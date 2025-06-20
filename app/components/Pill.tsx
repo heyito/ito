@@ -1,33 +1,38 @@
 import React from 'react';
 
-// THE CORRECTED FIX: Target #app, which is the actual ID of your root element.
 const globalStyles = `
   html, body, #app {
     height: 100%;
     margin: 0;
-    overflow: hidden;
   }
 `;
 
 const Pill = () => {
-  const pillStyle: React.CSSProperties = {
+  const containerStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(28, 28, 30, 0.7)',
-    backdropFilter: 'blur(12px)',
     width: '100%',
-    height: '100%', // This will now inherit the correct height
-    borderRadius: '21px', // Half of the desired 42px height
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    height: '100%',
+  };
+
+  // This is your original pill style, it does not need to change
+  const pillStyle: React.CSSProperties = {
+    backgroundColor: '#808080',
+    width: '48px',
+    height: '8px',
+    borderRadius: '21px',
+    border: '1px solid #A9A9A9',
     boxSizing: 'border-box',
+    backgroundClip: 'padding-box',
   };
 
   return (
     <>
       <style>{globalStyles}</style>
-      <div style={pillStyle}>
-        {/* The correctly styled pill will now appear. */}
+      <div style={containerStyle}>
+        <div style={pillStyle}>
+        </div>
       </div>
     </>
   );

@@ -55,7 +55,7 @@ export function createAppWindow(): BrowserWindow {
 // --- Updated createPillWindow function ---
 export function createPillWindow(): void {
   pillWindow = new BrowserWindow({
-    width: 48,
+    width: 60,
     height: 8,
     show: true,
     frame: false,
@@ -89,6 +89,10 @@ export function createPillWindow(): void {
       : `${pathToFileURL(join(__dirname, '../renderer/index.html'))}#/pill`
 
   pillWindow.loadURL(pillUrl)
+
+  // Uncomment the next line to open the DevTools for debugging the pill window.
+  // This is useful during development to inspect the pill's UI and behavior.
+  // pillWindow.webContents.openDevTools({ mode: 'detach' });
 
   // Clean up the reference when the window is closed.
   pillWindow.on('closed', () => {

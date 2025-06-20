@@ -226,13 +226,6 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
         tokenParams.append('audience', config.audience)
       }
 
-      console.log('=== TOKEN EXCHANGE DEBUG ===')
-      console.log('Request URL:', `https://${config.domain}/oauth/token`)
-      console.log('Request method: POST')
-      console.log('Content-Type: application/x-www-form-urlencoded')
-      console.log('Config redirectUri:', config.redirectUri)
-      console.log('Request body:', tokenParams.toString())
-
       const response = await fetch(`https://${config.domain}/oauth/token`, {
         method: 'POST',
         headers: {
@@ -255,7 +248,6 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
       }
 
       const tokens = await response.json()
-      console.log('Successfully exchanged auth code for tokens')
 
       // Extract user info from ID token if available
       let userInfo: any = null

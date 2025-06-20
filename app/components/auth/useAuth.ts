@@ -6,6 +6,7 @@ import {
   type AuthUser,
   type AuthTokens,
 } from '../../store/useAuthStore'
+import { useMainStore } from '@/app/store/useMainStore'
 
 export const useAuth = () => {
   const {
@@ -88,6 +89,8 @@ export const useAuth = () => {
                 result.tokens as AuthTokens,
                 result.userInfo as AuthUser,
               )
+
+            useMainStore.getState().setCurrentPage('home')
           } else {
             throw new Error('Missing tokens or user info in response')
           }

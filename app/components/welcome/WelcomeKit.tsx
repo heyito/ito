@@ -11,9 +11,11 @@ import { useEffect } from 'react'
 import './styles.css'
 import { usePermissionsStore } from '../../store/usePermissionsStore'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
+import { useAuthStore } from '@/app/store/useAuthStore'
 
 export default function WelcomeKit() {
   const { onboardingStep } = useOnboardingStore()
+  const { user } = useAuthStore()
 
   const { setAccessibilityEnabled, setMicrophoneEnabled } =
     usePermissionsStore()
@@ -31,6 +33,11 @@ export default function WelcomeKit() {
         setMicrophoneEnabled(enabled)
       })
   }, [setAccessibilityEnabled, setMicrophoneEnabled])
+
+  // Show signin if user is not authenticated
+  if (!user) {
+    return <CreateAccountContent />
+  }
 
   return (
     <div className="w-full h-full bg-background">

@@ -52,16 +52,8 @@ if (!gotTheLock) {
 
 // Handle protocol URL
 function handleProtocolUrl(url: string) {
-  console.log('Protocol URL received:', url)
-
   try {
     const urlObj = new URL(url)
-    console.log('Parsed URL components:')
-    console.log('- Protocol:', urlObj.protocol)
-    console.log('- Hostname:', urlObj.hostname)
-    console.log('- Pathname:', urlObj.pathname)
-    console.log('- Search:', urlObj.search)
-    console.log('- SearchParams:', urlObj.searchParams.toString())
 
     if (
       urlObj.protocol === `${PROTOCOL}:` &&

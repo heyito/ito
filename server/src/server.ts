@@ -185,7 +185,7 @@ export const startServer = async () => {
       // Render the success page with user information
       const html = renderTemplate(callbackTemplate, {
         userEmail: 'evan@demoxlabs.xyz', // TODO: Extract from Auth0 token or state
-        authCode: code.substring(0, 20) + '...',
+        authCode: code,
       })
 
       reply.type('text/html')

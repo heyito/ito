@@ -66,19 +66,20 @@ function handleProtocolUrl(url: string) {
     if (
       urlObj.protocol === `${PROTOCOL}:` &&
       urlObj.hostname === 'auth' &&
-      urlObj.pathname === '/success'
+      urlObj.pathname === '/callback'
     ) {
       const authCode = urlObj.searchParams.get('code')
+      const state = urlObj.searchParams.get('state')
 
-      if (authCode) {
-        console.log('Auth code received:', authCode)
+      if (authCode && state) {
+        console.log('Auth code received:', authCode, state)
 
         // Find the main window (not the pill window) and send the auth code
         const mainWindow = getMainWindow()
         if (mainWindow && !mainWindow.isDestroyed()) {
           console.log('Found main window via getMainWindow()')
           console.log('Sending auth code to renderer process')
-          mainWindow.webContents.send('auth-code-received', authCode)
+          mainWindow.webContents.send('auth-code-received', authCode, state)
 
           // Focus and show the window with more aggressive methods
           console.log('Showing window')

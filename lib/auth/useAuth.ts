@@ -1,14 +1,11 @@
 import { useAuth0 } from '@auth0/auth0-react'
 import { useCallback, useEffect } from 'react'
 import { Auth0Connections } from './config'
-
-export interface AuthUser {
-  id: string
-  email?: string
-  name?: string
-  picture?: string
-  emailVerified?: boolean
-}
+import {
+  useAuthStore,
+  type AuthUser,
+  type AuthTokens,
+} from '../../app/store/useAuthStore'
 
 export const useAuth = () => {
   const {
@@ -16,16 +13,34 @@ export const useAuth = () => {
     loginWithPopup,
     logout,
     user,
-    isAuthenticated,
-    isLoading,
-    error,
+    isAuthenticated: auth0IsAuthenticated,
+    isLoading: auth0IsLoading,
+    error: auth0Error,
     getAccessTokenSilently,
     getIdTokenClaims,
     handleRedirectCallback,
   } = useAuth0()
 
+  // Get auth state from our store
+  const {
+    isAuthenticated: storeIsAuthenticated,
+    user: storeUser,
+    tokens,
+    isLoading: storeIsLoading,
+    error: storeError,
+    setAuthData,
+    clearAuth,
+    setLoading,
+    setError,
+  } = useAuthStore()
+
+  // Combine Auth0 and store state - prioritize store state for external auth
+  const isAuthenticated = storeIsAuthenticated || auth0IsAuthenticated
+  const isLoading = storeIsLoading || auth0IsLoading
+  const error = storeError || auth0Error
+
   // Convert Auth0 user to our user interface
-  const authUser: AuthUser | null = user
+  const auth0User: AuthUser | null = user
     ? {
         id: user.sub || '',
         email: user.email,
@@ -35,64 +50,67 @@ export const useAuth = () => {
       }
     : null
 
-  // Handle auth code from protocol URL
+  // Prioritize store user over Auth0 user
+  const authUser = storeUser || auth0User
+
+  // Handle auth code from protocol URL - only set up listener once globally
   useEffect(() => {
     if (!window.api?.on) {
       console.log('window.api.on not available')
       return
     }
 
+    // Check if listener is already set up
+    if ((window as any).__authCodeListenerSetup) {
+      return
+    }
+
     console.log('Setting up auth-code-received listener')
+
+    // Mark that we've set up the listener
+    ;(window as any).__authCodeListenerSetup = true
 
     const cleanup = window.api.on(
       'auth-code-received',
-      async (authCode: string) => {
-        console.log('🎉 AUTH CODE RECEIVED IN RENDERER:', authCode)
+      async (authCode: string, state: string) => {
+        console.log('🎉 AUTH CODE RECEIVED IN RENDERER:', authCode, state)
 
         try {
-          alert(`Auth code received: ${authCode.substring(0, 20)}...`)
-
           // Import Auth0 config
           const { Auth0Config } = await import('./config')
 
-          console.log('Attempting to exchange auth code for tokens')
+          console.log('Attempting to exchange auth code for tokens via IPC')
 
-          // Exchange authorization code for tokens
-          const tokenResponse = await fetch(
-            `https://${Auth0Config.domain}/oauth/token`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                grant_type: 'authorization_code',
-                client_id: Auth0Config.clientId,
-                code: authCode,
-                redirect_uri: Auth0Config.redirectUri,
-              }),
-            },
-          )
+          // Exchange authorization code for tokens via main process
+          const result = await window.api.invoke('exchange-auth-code', {
+            authCode,
+            state,
+            config: Auth0Config,
+          })
 
-          console.log('Token response status:', tokenResponse.status)
-
-          if (!tokenResponse.ok) {
-            const errorText = await tokenResponse.text()
-            throw new Error(
-              `Token exchange failed: ${tokenResponse.status} ${errorText}`,
-            )
+          if (!result.success) {
+            throw new Error(result.error)
           }
 
-          const tokens = await tokenResponse.json()
-          console.log(
-            'Successfully exchanged auth code for tokens:',
-            Object.keys(tokens),
-          )
+          console.log('Successfully exchanged auth code for tokens')
+          console.log('User info:', result.userInfo)
 
-          // For now, just show success and let the user know they need to log in normally
-          alert(
-            'Authentication successful! Please close this app and log in through the normal flow.',
-          )
+          // Store tokens and user info in the auth store
+          if (result.tokens && result.userInfo) {
+            useAuthStore
+              .getState()
+              .setAuthData(
+                result.tokens as AuthTokens,
+                result.userInfo as AuthUser,
+              )
+
+            // Show success message
+            alert(
+              `Authentication successful! Welcome ${result.userInfo?.name || result.userInfo?.email || 'User'}!`,
+            )
+          } else {
+            throw new Error('Missing tokens or user info in response')
+          }
         } catch (error) {
           console.error('Error handling auth code from protocol URL:', error)
           alert(
@@ -102,7 +120,10 @@ export const useAuth = () => {
       },
     )
 
-    return cleanup
+    return () => {
+      cleanup()
+      ;(window as any).__authCodeListenerSetup = false
+    }
   }, [])
 
   // External browser authentication - now the primary method
@@ -111,6 +132,22 @@ export const useAuth = () => {
       connection?: string,
       options?: { email?: string; mode?: 'login' | 'signup' },
     ) => {
+      let authState = useAuthStore.getState().state
+
+      // Generate new auth state if not available
+      if (!authState) {
+        // Get fresh auth state from the main process
+        const storedAuth = window.electron?.store?.get('auth')
+        authState = storedAuth?.state
+
+        if (!authState) {
+          throw new Error('Auth state not available. Please restart the app.')
+        }
+
+        // Update the store with the current auth state
+        useAuthStore.getState().updateState(authState)
+      }
+
       const { Auth0Config } = await import('./config')
 
       const params = new URLSearchParams({
@@ -119,7 +156,17 @@ export const useAuth = () => {
         redirect_uri: Auth0Config.redirectUri,
         scope: Auth0Config.scope,
         prompt: 'select_account',
+        state: authState.state,
+        code_challenge: authState.codeChallenge,
+        code_challenge_method: 'S256',
       })
+
+      // Add audience if configured
+      if (Auth0Config.audience) {
+        params.append('audience', Auth0Config.audience)
+      }
+
+      console.log('Auth URL params:', params.toString())
 
       if (connection) {
         params.append('connection', connection)
@@ -186,12 +233,12 @@ export const useAuth = () => {
     [openExternalAuth],
   )
 
-  // SSO authentication - now uses external browser
-  const loginWithSSO = useCallback(async () => {
+  // GitHub authentication - now uses external browser
+  const loginWithGitHub = useCallback(async () => {
     try {
-      await openExternalAuth(undefined, { mode: 'login' })
+      await openExternalAuth(Auth0Connections.github)
     } catch (error) {
-      console.error('SSO login error:', error)
+      console.error('GitHub login error:', error)
       throw error
     }
   }, [openExternalAuth])
@@ -199,21 +246,33 @@ export const useAuth = () => {
   // Get access token for API calls
   const getAccessToken = useCallback(async () => {
     try {
+      // First try to get from our store (for external auth)
+      if (tokens?.access_token) {
+        return tokens.access_token
+      }
+
+      // Fallback to Auth0 silent auth (for popup/redirect auth)
       return await getAccessTokenSilently()
     } catch (error) {
       console.error('Error getting access token:', error)
       throw error
     }
-  }, [getAccessTokenSilently])
+  }, [getAccessTokenSilently, tokens])
 
   // Logout
   const logoutUser = useCallback(() => {
-    logout({
-      logoutParams: {
-        returnTo: window.location.origin,
-      },
-    })
-  }, [logout])
+    // Clear our auth store
+    clearAuth()
+
+    // Also logout from Auth0 if using Auth0 session
+    if (auth0IsAuthenticated) {
+      logout({
+        logoutParams: {
+          returnTo: window.location.origin,
+        },
+      })
+    }
+  }, [logout, clearAuth, auth0IsAuthenticated])
 
   return {
     // Auth state
@@ -227,7 +286,7 @@ export const useAuth = () => {
     loginWithMicrosoft,
     loginWithApple,
     loginWithEmail,
-    loginWithSSO,
+    loginWithGitHub,
     logoutUser,
 
     // Utilities

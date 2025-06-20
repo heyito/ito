@@ -10,9 +10,6 @@ interface SettingsState {
   microphoneDeviceId: string
   microphoneName: string
   keyboardShortcut: string[]
-  firstName: string
-  lastName: string
-  email: string
   setShareAnalytics: (share: boolean) => void
   setLaunchAtLogin: (launch: boolean) => void
   setShowItoBarAlways: (show: boolean) => void
@@ -21,9 +18,6 @@ interface SettingsState {
   setMuteAudioWhenDictating: (enabled: boolean) => void
   setMicrophoneDeviceId: (deviceId: string, name?: string) => void
   setKeyboardShortcut: (shortcut: string[]) => void
-  setFirstName: (firstName: string) => void
-  setLastName: (lastName: string) => void
-  setEmail: (email: string) => void
 }
 
 // Initialize from electron store
@@ -65,9 +59,6 @@ const syncToStore = (state: Partial<SettingsState>) => {
     microphoneName: state.microphoneName ?? currentSettings.microphoneName,
     keyboardShortcut:
       state.keyboardShortcut ?? currentSettings.keyboardShortcut,
-    firstName: state.firstName ?? currentSettings.firstName,
-    lastName: state.lastName ?? currentSettings.lastName,
-    email: state.email ?? currentSettings.email,
   })
 }
 
@@ -94,9 +85,6 @@ export const useSettingsStore = create<SettingsState>(set => {
     microphoneDeviceId: initialState.microphoneDeviceId,
     microphoneName: initialState.microphoneName,
     keyboardShortcut: initialState.keyboardShortcut,
-    firstName: initialState.firstName,
-    lastName: initialState.lastName,
-    email: initialState.email,
     setShareAnalytics: createSetter('shareAnalytics'),
     setLaunchAtLogin: createSetter('launchAtLogin'),
     setShowItoBarAlways: createSetter('showItoBarAlways'),
@@ -120,8 +108,5 @@ export const useSettingsStore = create<SettingsState>(set => {
         syncToStore(newState)
         return newState
       }),
-    setFirstName: createSetter('firstName'),
-    setLastName: createSetter('lastName'),
-    setEmail: createSetter('email'),
   }
 })

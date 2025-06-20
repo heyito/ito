@@ -263,7 +263,6 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
             email: payload.email,
             name: payload.name,
             picture: payload.picture,
-            emailVerified: payload.email_verified,
           }
         } catch (jwtError) {
           console.warn('Failed to decode ID token:', jwtError)

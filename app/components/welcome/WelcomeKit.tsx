@@ -1,4 +1,5 @@
 import CreateAccountContent from './contents/CreateAccountContent'
+import SignInContent from './contents/SignInContent'
 import SignupContent from './contents/SignupContent'
 import DataControlContent from './contents/DataControlContent'
 import PermissionsContent from './contents/PermissionsContent'
@@ -15,7 +16,8 @@ import { useAuthStore } from '@/app/store/useAuthStore'
 
 export default function WelcomeKit() {
   const { onboardingStep } = useOnboardingStore()
-  const { user } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
+
 
   const { setAccessibilityEnabled, setMicrophoneEnabled } =
     usePermissionsStore()
@@ -34,9 +36,15 @@ export default function WelcomeKit() {
       })
   }, [setAccessibilityEnabled, setMicrophoneEnabled])
 
-  // Show signin if user is not authenticated
-  if (!user) {
-    return <CreateAccountContent />
+  // Show signin/signup based on whether user has previous auth data
+  if (!isAuthenticated) {    
+    if (user) {
+      // Returning user who needs to sign back in
+      return <SignInContent />
+    } else {
+      // New user who needs to create an account
+      return <CreateAccountContent />
+    }
   }
 
   return (

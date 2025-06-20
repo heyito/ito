@@ -42,7 +42,8 @@ export const useAuth = () => {
         email: user.email,
         name: user.name,
         picture: user.picture,
-        emailVerified: user.email_verified,
+        provider: user.sub?.includes('|') ? user.sub.split('|')[0] : 'unknown',
+        lastSignInAt: new Date().toISOString(),
       }
     : null
 
@@ -84,11 +85,18 @@ export const useAuth = () => {
 
           // Store tokens and user info in the auth store
           if (result.tokens && result.userInfo) {
+            // Extract provider from Auth0 user ID (format: "provider|id")
+            const providerId = result.userInfo.id || ''
+            const provider = providerId.includes('|')
+              ? providerId.split('|')[0]
+              : 'unknown'
+
             useAuthStore
               .getState()
               .setAuthData(
                 result.tokens as AuthTokens,
                 result.userInfo as AuthUser,
+                provider,
               )
 
             useMainStore.getState().setCurrentPage('home')
@@ -258,19 +266,22 @@ export const useAuth = () => {
   }, [getAccessTokenSilently, tokens])
 
   // Logout
-  const logoutUser = useCallback(() => {
-    // Clear our auth store
-    clearAuth()
+  const logoutUser = useCallback(
+    (completelySignOut: boolean = false) => {
+      // Clear our auth store, preserving user data by default
+      clearAuth(!completelySignOut)
 
-    // Also logout from Auth0 if using Auth0 session
-    if (auth0IsAuthenticated) {
-      logout({
-        logoutParams: {
-          returnTo: window.location.origin,
-        },
-      })
-    }
-  }, [logout, clearAuth, auth0IsAuthenticated])
+      // Also logout from Auth0 if using Auth0 session
+      if (auth0IsAuthenticated) {
+        logout({
+          logoutParams: {
+            returnTo: window.location.origin,
+          },
+        })
+      }
+    },
+    [logout, clearAuth, auth0IsAuthenticated],
+  )
 
   return {
     // Auth state

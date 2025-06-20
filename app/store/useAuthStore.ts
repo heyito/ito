@@ -13,6 +13,8 @@ export interface AuthUser {
   email?: string
   name?: string
   picture?: string
+  provider?: string
+  lastSignInAt?: string
 }
 
 export interface AuthTokens {
@@ -34,8 +36,8 @@ interface AuthStore {
   isSelfHosted: boolean
 
   // Actions
-  setAuthData: (tokens: AuthTokens, user: AuthUser) => void
-  clearAuth: () => void
+  setAuthData: (tokens: AuthTokens, user: AuthUser, provider?: string) => void
+  clearAuth: (preserveUser?: boolean) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
   updateUser: (user: Partial<AuthUser>) => void
@@ -99,23 +101,31 @@ export const useAuthStore = create<AuthStore>((set, get) => {
   return {
     ...initialState,
 
-    setAuthData: (tokens: AuthTokens, user: AuthUser) => {
+    setAuthData: (tokens: AuthTokens, user: AuthUser, provider?: string) => {
+      const enhancedUser: AuthUser = {
+        ...user,
+        provider,
+        lastSignInAt: new Date().toISOString(),
+      }
+
       const newState = {
         isAuthenticated: true,
         tokens,
-        user,
+        user: enhancedUser,
         state: get().state || null,
         error: null,
       }
 
-      syncToStore({ tokens, user })
+      syncToStore({ tokens, user: enhancedUser })
       set(newState)
     },
 
-    clearAuth: () => {
+    clearAuth: (preserveUser: boolean = true) => {
+      const currentUser = get().user
+
       const newState = {
         isAuthenticated: false,
-        user: null,
+        user: preserveUser ? currentUser : null,
         tokens: null,
         state: null,
         error: null,
@@ -124,7 +134,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
 
       syncToStore({
         tokens: null,
-        user: null,
+        user: preserveUser ? currentUser : null,
         state: null,
         isSelfHosted: false,
       })
@@ -169,6 +179,8 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     setSelfHostedMode: () => {
       const selfHostedUser: AuthUser = {
         id: uuidv4(),
+        provider: 'self-hosted',
+        lastSignInAt: new Date().toISOString(),
       }
 
       const newState = {

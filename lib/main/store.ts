@@ -37,7 +37,8 @@ interface AuthUser {
   email?: string
   name?: string
   picture?: string
-  emailVerified?: boolean
+  provider?: string
+  lastSignInAt?: string
 }
 
 interface AuthTokens {

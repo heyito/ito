@@ -19,7 +19,7 @@
     "postinstall": "electron-builder install-app-deps",
     "vite:build:app": "electron-vite build",
     "build:rust": "./build-binaries.sh",
-    "build:rust:mac": "./build-binaries.sh --mac",
+    "build:rust:mac": "./build-binaries.sh --mac --universal",
     "electron:build:win": "./build-binaries.sh && electron-builder --win --x64",
     "electron:build:mac": "./build-binaries.sh && electron-builder --mac --universal",
     "electron:build:mac-only": "SKIP_WINDOWS=1 electron-vite build && electron-builder --mac --universal",

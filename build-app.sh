@@ -65,9 +65,6 @@ setup_rust_env() {
 check_prerequisites() {
     print_status "Checking prerequisites..."
     
-    setup_node_env
-    setup_rust_env
-    
     if ! command -v node &> /dev/null; then
         print_error "Node.js is not installed or not in PATH"
         exit 1
@@ -97,39 +94,8 @@ check_prerequisites() {
 # Build native Rust modules
 build_native_modules() {
     print_status "Building native Rust modules..."
-    
-    # Ensure required targets are installed
-    print_info "Adding required Rust targets..."
-    rustup target add x86_64-apple-darwin
-    rustup target add aarch64-apple-darwin
-    
-    # Change to the key listener directory
-    cd native/global-key-listener
-    
-    print_info "Cleaning up old build artifacts..."
-    rm -rf "target/arm64-apple-darwin"
-    rm -rf "target/x64-apple-darwin"
-    
-    # Build for each target
-    print_info "Building for x86_64-apple-darwin (Intel Mac)..."
-    cargo build --release --target x86_64-apple-darwin
-    
-    print_info "Building for aarch64-apple-darwin (Apple Silicon)..."
-    cargo build --release --target aarch64-apple-darwin
-    
-    print_status "Renaming Rust target directories for electron-builder..."
-    # This aligns the directory names with electron-builder's {arch} variable.
-    mv "target/aarch64-apple-darwin" "target/arm64-apple-darwin"
-    mv "target/x86_64-apple-darwin" "target/x64-apple-darwin"
-
-    # Return to project root before copying
-    cd ../..
-
-    print_info "Copying universal binary to resources directory..."
-    mkdir -p "resources/binaries"
-    cp "native/global-key-listener/target/global-key-listener" "resources/binaries/global-key-listener"
-    
-    print_status "Native modules built and copied successfully!"
+    ./build-binaries.sh --mac --universal
+    print_status "Native modules built successfully!"
 }
 
 # Build Electron application
@@ -187,9 +153,12 @@ main() {
     clear_output_dir
     echo
     
-    # Setup environments
-    setup_node_env
-    setup_rust_env
+    # In CI, the environment is set up by the workflow.
+    if [ -z "$CI" ]; then
+        # Setup environments
+        setup_node_env
+        setup_rust_env
+    fi
     
     # Check prerequisites
     check_prerequisites

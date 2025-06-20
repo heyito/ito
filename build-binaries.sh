@@ -68,6 +68,11 @@ if [ "$BUILD_MAC" = true ]; then
             -output "$UNIVERSAL_DIR/$BINARY_NAME"
         
         print_status "Universal binary created at $UNIVERSAL_DIR/$BINARY_NAME"
+
+        print_status "Renaming Rust target directories for electron-builder..."
+        # This aligns the directory names with electron-builder's {arch} variable.
+        mv "target/aarch64-apple-darwin" "target/arm64-apple-darwin"
+        mv "target/x86_64-apple-darwin" "target/x64-apple-darwin"
     fi
 fi
 

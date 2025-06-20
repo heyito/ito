@@ -1,4 +1,4 @@
-import { app, BrowserWindow, protocol } from 'electron'
+import { app, BrowserWindow, protocol, systemPreferences } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import {
   createAppWindow,
@@ -7,6 +7,7 @@ import {
   startPillPositioner,
 } from './app'
 import { initializeLogging } from './logger'
+import { startKeyListener } from '../media/keyboard'
 
 // Register the custom 'res' protocol and mark it as privileged.
 // This must be done before the app is ready.
@@ -33,10 +34,17 @@ app.whenReady().then(() => {
 
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
-  // Create app window
-  createAppWindow()
+  
+  // Create windows
+  const mainWindow = createAppWindow()
   createPillWindow()
   startPillPositioner()
+
+  // Start key listener if we already have permissions
+  if (systemPreferences.isTrustedAccessibilityClient(false)) {
+    console.log('Accessibility permissions already granted. Starting key listener.')
+    startKeyListener(mainWindow)
+  }
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.

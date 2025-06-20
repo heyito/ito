@@ -7,91 +7,87 @@ import os from 'os'
 // Global key listener process singleton
 export let KeyListenerProcess: ReturnType<typeof spawn> | null = null
 
-// Initialize the key listener singleton
-export const initializeKeyListener = (mainWindow: BrowserWindow) => {
-  if (KeyListenerProcess) {
-    return
-  }
-
+// This function now just returns the configured path. It doesn't start anything.
+function getBinaryPath(): string | null {
   const isDev = !app.isPackaged
   const platform = os.platform()
-  const arch = os.arch()
-
-  // Determine the binary name based on platform
+  
   const binaryName =
     platform === 'win32' ? 'global-key-listener.exe' : 'global-key-listener'
 
-  // Determine the target directory based on platform and architecture
   const getTargetDir = () => {
     if (isDev) {
-      const targetBase = join(
-        __dirname,
-        '../../native/global-key-listener/target'
-      )
+      const targetBase = join(__dirname, '../../native/global-key-listener/target')
       if (platform === 'darwin') {
-        return arch === 'arm64'
-          ? join(targetBase, 'aarch64-apple-darwin/release')
-          : join(targetBase, 'x86_64-apple-darwin/release')
+        return join(targetBase, 'universal')
       } else if (platform === 'win32') {
         return join(targetBase, 'x86_64-pc-windows-gnu/release')
       }
+      // Fallback for unsupported dev platforms
+      return null
     }
-    // For production builds, the binary is in the Resources/binaries directory
+    // For production builds
     return join(process.resourcesPath, 'binaries')
   }
 
-  const binaryPath = join(getTargetDir(), binaryName)
+  const targetDir = getTargetDir()
+  if (!targetDir) {
+    console.error(`Cannot determine key listener binary path for platform ${platform}`)
+    return null
+  }
+  return join(targetDir, binaryName)
+}
+
+// Starts the key listener process
+export const startKeyListener = (mainWindow: BrowserWindow) => {
+  if (KeyListenerProcess) {
+    console.warn('Key listener already running.')
+    return
+  }
+
+  const binaryPath = getBinaryPath()
+  if (!binaryPath) {
+    console.error('Could not determine key listener binary path.')
+    return
+  }
 
   console.log('--- Key Listener Initialization ---')
-  console.log(`Platform: ${platform}, Arch: ${arch}`)
-  console.log(`Is Development: ${isDev}`)
-  console.log(`Calculated Target Directory: ${getTargetDir()}`)
-  console.log(`Attempting to spawn binary at: ${binaryPath}`)
+  console.log(`Platform: ${os.platform()}, Arch: ${os.arch()}`)
+  console.log(`Is Development: ${!app.isPackaged}`)
+  console.log(`Attempting to spawn key listener at: ${binaryPath}`)
 
   try {
-    // Set up environment variables
     const env = {
       ...process.env,
-      RUST_BACKTRACE: '1', // Enable Rust backtraces
-      OBJC_DISABLE_INITIALIZE_FORK_SAFETY: 'YES', // Fix macOS fork safety issues
+      RUST_BACKTRACE: '1',
+      OBJC_DISABLE_INITIALIZE_FORK_SAFETY: 'YES',
     }
 
-    // Spawn the process with detached: true to prevent it from being terminated when the parent exits
     KeyListenerProcess = spawn(binaryPath, [], {
       stdio: ['pipe', 'pipe', 'pipe'],
       env,
       detached: true,
     })
 
-    console.log('Key listener process object created.')
-
     if (!KeyListenerProcess) {
-      console.error('Failed to spawn key listener process object is null.')
       throw new Error('Failed to spawn process')
     }
 
-    // Unref the process to allow the parent to exit independently
     KeyListenerProcess.unref()
 
     let buffer = ''
     KeyListenerProcess.stdout?.on('data', (data) => {
-      const output = data.toString()
-      console.log('Key listener stdout:', output)
-      const chunk = output
+      const chunk = data.toString()
       buffer += chunk
-
-      // Split on newlines and process complete events
       const lines = buffer.split('\n')
-      buffer = lines.pop() || '' // Keep the last incomplete line in the buffer
+      buffer = lines.pop() || ''
       for (const line of lines) {
         if (line.trim()) {
           try {
             const event = JSON.parse(line)
-            if (mainWindow.webContents.isDestroyed()) {
-              console.warn('Window is destroyed, skipping key event')
-              return
+            if (!mainWindow.webContents.isDestroyed()) {
+              mainWindow.webContents.send('key-event', event)
             }
-            mainWindow.webContents.send('key-event', event)
           } catch (e) {
             console.error('Failed to parse key event:', line, e)
           }
@@ -110,24 +106,12 @@ export const initializeKeyListener = (mainWindow: BrowserWindow) => {
 
     KeyListenerProcess.on('close', (code, signal) => {
       console.warn(
-        'Key listener process exited with code:',
-        code,
-        'signal:',
-        signal
+        `Key listener process exited with code: ${code}, signal: ${signal}`
       )
       KeyListenerProcess = null
     })
 
-    console.log('Key listener process event handlers attached.')
-
-    // Send a test command to verify the process is working
-    setTimeout(() => {
-      if (KeyListenerProcess) {
-        KeyListenerProcess.stdin?.write(
-          JSON.stringify({ command: 'get_blocked' }) + '\n'
-        )
-      }
-    }, 1000)
+    console.log('Key listener started successfully.')
   } catch (error) {
     console.error('Failed to start key listener:', error)
     KeyListenerProcess = null

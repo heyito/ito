@@ -3,13 +3,12 @@ import { join } from 'path'
 import { registerWindowIPC } from '@/lib/window/ipcEvents'
 import appIcon from '@/resources/build/icon.png?asset'
 import { pathToFileURL } from 'url'
-import { initializeKeyListener } from '../media/keyboard'
 
 // Keep a reference to the pill window to prevent it from being garbage collected.
 let pillWindow: BrowserWindow | null = null
 
 // --- No changes to createAppWindow ---
-export function createAppWindow(): void {
+export function createAppWindow(): BrowserWindow {
   // Create the main window.
   const mainWindow = new BrowserWindow({
     width: 1270,
@@ -28,8 +27,6 @@ export function createAppWindow(): void {
       sandbox: false,
     },
   })
-
-  initializeKeyListener(mainWindow)
 
   // Register IPC events for the main window.
   registerWindowIPC(mainWindow)
@@ -50,6 +47,8 @@ export function createAppWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+  
+  return mainWindow
 }
 
 

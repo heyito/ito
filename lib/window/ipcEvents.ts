@@ -3,7 +3,7 @@ import os from 'os'
 import { app } from 'electron'
 import store from '../main/store'
 import {
-  initializeKeyListener,
+  startKeyListener,
   KeyListenerProcess,
   stopKeyListener,
 } from '../media/keyboard'
@@ -25,10 +25,9 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
   // Hide the menu bar
   mainWindow.setMenuBarVisibility(false)
 
-  handleIPC('start-key-listener', () => {
-    if (!KeyListenerProcess) {
-      initializeKeyListener(mainWindow)
-    }
+  handleIPC('start-key-listener-service', () => {
+    console.log('Received request to start key listener service.')
+    startKeyListener(mainWindow)
     return true
   })
 

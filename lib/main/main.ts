@@ -3,11 +3,12 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import {
   createAppWindow,
   createPillWindow,
+  mainWindow,
   registerResourcesProtocol,
   startPillPositioner,
 } from './app'
 import { initializeLogging } from './logger'
-import { startKeyListener } from '../media/keyboard'
+import { registerIPC } from '../window/ipcEvents'
 
 // Register the custom 'res' protocol and mark it as privileged.
 // This must be done before the app is ready.
@@ -36,15 +37,17 @@ app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
   
   // Create windows
-  const mainWindow = createAppWindow()
+  createAppWindow()
   createPillWindow()
   startPillPositioner()
 
-  // Start key listener if we already have permissions
-  if (systemPreferences.isTrustedAccessibilityClient(false)) {
-    console.log('Accessibility permissions already granted. Starting key listener.')
-    startKeyListener(mainWindow)
-  }
+  app.on('activate', function () {
+    // On macOS it's common to re-create a window in the app when the
+    // dock icon is clicked and there are no other windows open.
+    if (mainWindow === null) {
+      createAppWindow()
+    }
+  })
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
@@ -53,13 +56,7 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createAppWindow()
-    }
-  })
+  registerIPC()
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common

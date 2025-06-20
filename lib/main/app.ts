@@ -1,11 +1,13 @@
-import { BrowserWindow, shell, screen, app, protocol, net } from 'electron'
+import { BrowserWindow, shell, screen, app, protocol, net, systemPreferences } from 'electron'
 import { join } from 'path'
-import { registerWindowIPC } from '@/lib/window/ipcEvents'
 import appIcon from '@/resources/build/icon.png?asset'
 import { pathToFileURL } from 'url'
+import { startKeyListener, stopKeyListener } from '../media/keyboard'
 
 // Keep a reference to the pill window to prevent it from being garbage collected.
 let pillWindow: BrowserWindow | null = null
+// Keep a reference to the main window
+export let mainWindow: BrowserWindow | null = null
 
 export function getPillWindow(): BrowserWindow | null {
   return pillWindow
@@ -14,7 +16,7 @@ export function getPillWindow(): BrowserWindow | null {
 // --- No changes to createAppWindow ---
 export function createAppWindow(): BrowserWindow {
   // Create the main window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1270,
     height: 800,
     show: false,
@@ -32,11 +34,21 @@ export function createAppWindow(): BrowserWindow {
     },
   })
 
-  // Register IPC events for the main window.
-  registerWindowIPC(mainWindow)
+  // Start the key listener if we have permissions.
+  if (systemPreferences.isTrustedAccessibilityClient(false)) {
+    console.log('Accessibility permissions found, starting key listener.')
+    startKeyListener(mainWindow)
+  }
+
+  // Stop the key listener when the window is closed.
+  mainWindow.on('closed', () => {
+    console.log('Main window closed, stopping key listener.')
+    stopKeyListener()
+    mainWindow = null // Clear the reference
+  })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow!.show()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {

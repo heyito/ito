@@ -7,6 +7,10 @@ import { pathToFileURL } from 'url'
 // Keep a reference to the pill window to prevent it from being garbage collected.
 let pillWindow: BrowserWindow | null = null
 
+export function getPillWindow(): BrowserWindow | null {
+  return pillWindow
+}
+
 // --- No changes to createAppWindow ---
 export function createAppWindow(): BrowserWindow {
   // Create the main window.
@@ -52,11 +56,12 @@ export function createAppWindow(): BrowserWindow {
 }
 
 
-// --- Updated createPillWindow function ---
+const PILL_MAX_WIDTH = 120
+const PILL_MAX_HEIGHT = 40
 export function createPillWindow(): void {
   pillWindow = new BrowserWindow({
-    width: 60,
-    height: 8,
+    width: PILL_MAX_WIDTH,
+    height: PILL_MAX_HEIGHT,
     show: true,
     frame: false,
     transparent: true,

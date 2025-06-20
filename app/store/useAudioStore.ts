@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { setupMicrophone } from '@/app/media/microphone'
+import { setupMicrophone, setupVolumeMonitoring } from '@/app/media/microphone'
 import { useSettingsStore } from './useSettingsStore'
 
 // This is a stub for your gRPC service.
@@ -16,6 +16,7 @@ interface AudioState {
   isShortcutEnabled: boolean
   mediaRecorder: MediaRecorder | null
   mediaStream: MediaStream | null
+  stopVolumeMonitor: (() => void) | null // To hold the cleanup function
   setIsShortcutEnabled: (enabled: boolean) => void
   startRecording: (deviceId: string) => Promise<void>
   stopRecording: () => void
@@ -26,6 +27,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   isShortcutEnabled: true, // The shortcut is enabled by default.
   mediaRecorder: null,
   mediaStream: null,
+  stopVolumeMonitor: null, // Initialize with null
 
   /**
    * Enables or disables the global keyboard shortcut listener.
@@ -39,14 +41,22 @@ export const useAudioStore = create<AudioState>((set, get) => ({
    * Starts capturing audio from the selected microphone.
    */
   startRecording: async (deviceId: string) => {
-    const { isRecording, isShortcutEnabled } = get()
+    const { isRecording, isShortcutEnabled, stopVolumeMonitor } = get()
     // Prevent starting a new recording if one is already active or if shortcuts are disabled.
     if (isRecording || !isShortcutEnabled) return
+
+    // Clean up any old monitor just in case.
+    if (stopVolumeMonitor) stopVolumeMonitor()
 
     console.log('Starting audio capture...')
     try {
       // Set up the microphone and get the media stream.
       const { stream } = await setupMicrophone(deviceId)
+
+      // Start volume monitoring and send updates to the main process.
+      const stopMonitor = await setupVolumeMonitoring((volume) => {
+        window.api.send('volume-update', volume)
+      }, deviceId)
 
       // Create a new MediaRecorder instance with the stream.
       const recorder = new MediaRecorder(stream)
@@ -62,7 +72,8 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       // When the recorder stops, clean up the stream and reset the state.
       recorder.onstop = () => {
         stream.getTracks().forEach((track) => track.stop()) // Release the microphone.
-        set({ isRecording: false, mediaRecorder: null, mediaStream: null })
+        get().stopVolumeMonitor?.() // Stop the volume monitor.
+        set({ isRecording: false, mediaRecorder: null, mediaStream: null, stopVolumeMonitor: null })
         console.log('Audio capture stopped and resources released.')
       }
 
@@ -70,11 +81,12 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       recorder.start(1000)
 
       // Update the state to reflect that we are now recording.
-      set({ isRecording: true, mediaRecorder: recorder, mediaStream: stream })
+      set({ isRecording: true, mediaRecorder: recorder, mediaStream: stream, stopVolumeMonitor: stopMonitor })
     } catch (error) {
       console.error('Failed to start audio capture:', error)
+      get().stopVolumeMonitor?.() // Ensure cleanup on error.
       // Ensure state is clean in case of an error.
-      set({ isRecording: false, mediaRecorder: null, mediaStream: null })
+      set({ isRecording: false, mediaRecorder: null, mediaStream: null, stopVolumeMonitor: null })
     }
   },
 
@@ -85,7 +97,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     const { mediaRecorder } = get()
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       console.log('Stopping audio capture...')
-      mediaRecorder.stop()
+      mediaRecorder.stop() // This will trigger the 'onstop' event handler for cleanup.
     }
   },
 }))

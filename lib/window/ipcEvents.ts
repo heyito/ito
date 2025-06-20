@@ -7,6 +7,7 @@ import {
   KeyListenerProcess,
   stopKeyListener,
 } from '../media/keyboard'
+import { getPillWindow } from '../main/app'
 // import { getPillWindow } from '../main/app'
 
 const handleIPC = (channel: string, handler: (...args: any[]) => void) => {
@@ -138,7 +139,12 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
   })
 }
 
-// ipcMain.on('recording-state-changed', (_event, state: { isRecording: boolean; deviceId: string }) => {
-//   // Its ONLY job is to forward the state to the pill's renderer.
-//   getPillWindow()?.webContents.send('recording-state-update', state)
-// })
+ipcMain.on('recording-state-changed', (_event, state: { isRecording: boolean; deviceId: string }) => {
+  // Its ONLY job is to forward the state to the pill's renderer.
+  getPillWindow()?.webContents.send('recording-state-update', state)
+})
+
+// Forwards volume data from the main window to the pill window
+ipcMain.on('volume-update', (_event, volume: number) => {
+  getPillWindow()?.webContents.send('volume-update', volume)
+})

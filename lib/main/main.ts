@@ -9,6 +9,7 @@ import {
 } from './app'
 import { initializeLogging } from './logger'
 import { registerIPC } from '../window/ipcEvents'
+import { startKeyListener } from '../media/keyboard'
 
 // Register the custom 'res' protocol and mark it as privileged.
 // This must be done before the app is ready.
@@ -41,6 +42,12 @@ app.whenReady().then(() => {
   createPillWindow()
   startPillPositioner()
 
+  // Start the key listener if we have permissions.
+  if (systemPreferences.isTrustedAccessibilityClient(false)) {
+    console.log('Accessibility permissions found, starting key listener.')
+    startKeyListener()
+  }
+
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
@@ -63,9 +70,10 @@ app.whenReady().then(() => {
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
+  // We want the app to stay alive so the pill window can function
+  // if (process.platform !== 'darwin') {
+  //   app.quit()
+  // }
 })
 
 // In this file, you can include the rest of your app's specific main process

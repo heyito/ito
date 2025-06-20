@@ -39,7 +39,7 @@ function getBinaryPath(): string | null {
 }
 
 // Starts the key listener process
-export const startKeyListener = (mainWindow: BrowserWindow) => {
+export const startKeyListener = () => {
   if (KeyListenerProcess) {
     console.warn('Key listener already running.')
     return
@@ -85,9 +85,11 @@ export const startKeyListener = (mainWindow: BrowserWindow) => {
         if (line.trim()) {
           try {
             const event = JSON.parse(line)
-            if (!mainWindow.webContents.isDestroyed()) {
-              mainWindow.webContents.send('key-event', event)
-            }
+            BrowserWindow.getAllWindows().forEach((window) => {
+              if (!window.webContents.isDestroyed()) {
+                window.webContents.send('key-event', event)
+              }
+            })
           } catch (e) {
             console.error('Failed to parse key event:', line, e)
           }

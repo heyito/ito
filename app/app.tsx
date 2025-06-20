@@ -17,7 +17,15 @@ export default function App() {
     <HashRouter>
       <Routes>
         {/* Route for the pill window */}
-        <Route path="/pill" element={<Pill />} />
+        <Route
+          path="/pill"
+          element={
+            <>
+              <GlobalKeyListener />
+              <Pill />
+            </>
+          }
+        />
 
         {/* Default route for the main application window */}
         <Route

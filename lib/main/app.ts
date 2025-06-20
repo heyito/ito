@@ -34,16 +34,8 @@ export function createAppWindow(): BrowserWindow {
     },
   })
 
-  // Start the key listener if we have permissions.
-  if (systemPreferences.isTrustedAccessibilityClient(false)) {
-    console.log('Accessibility permissions found, starting key listener.')
-    startKeyListener(mainWindow)
-  }
-
   // Stop the key listener when the window is closed.
   mainWindow.on('closed', () => {
-    console.log('Main window closed, stopping key listener.')
-    stopKeyListener()
     mainWindow = null // Clear the reference
   })
 

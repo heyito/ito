@@ -57,7 +57,7 @@ export default function MicrophoneTestContent() {
       }
 
       // Setup new microphone
-      const newCleanup = await setupVolumeMonitoring(
+      const { cleanup: newCleanup } = await setupVolumeMonitoring(
         volume => setVolume(volume),
         deviceId,
       )

@@ -146,8 +146,11 @@ async function setupVolumeMonitoring(
 
     monitorVolume()
 
-    // Return cleanup function
-    return cleanup
+    // Return cleanup function and the stream
+    if (!currentMicrophone) {
+      throw new Error('Microphone not initialized in setupVolumeMonitoring')
+    }
+    return { cleanup, stream: currentMicrophone.stream }
   } catch (error) {
     cleanup()
     throw error

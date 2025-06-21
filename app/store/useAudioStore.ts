@@ -13,6 +13,7 @@ const grpcStub = {
 
 interface AudioState {
   isRecording: boolean
+  isBusy: boolean
   isShortcutEnabled: boolean
   mediaRecorder: MediaRecorder | null
   mediaStream: MediaStream | null
@@ -24,6 +25,7 @@ interface AudioState {
 
 export const useAudioStore = create<AudioState>((set, get) => ({
   isRecording: false,
+  isBusy: false,
   isShortcutEnabled: true, // The shortcut is enabled by default.
   mediaRecorder: null,
   mediaStream: null,
@@ -41,43 +43,45 @@ export const useAudioStore = create<AudioState>((set, get) => ({
    * Starts capturing audio from the selected microphone.
    */
   startRecording: async (deviceId: string) => {
-    // Prevent starting a new recording if one is already active.
-    if (get().isRecording) return
+    // If we're already in the process of starting/stopping, or already recording, do nothing.
+    if (get().isBusy || get().isRecording) {
+      return
+    }
 
-    // Optimistically set recording state to true.
-    set({ isRecording: true })
+    set({ isBusy: true })
 
-    console.log('Starting audio capture...')
-
-    // Clean up any old monitor just in case.
     const stopMonitor = get().stopVolumeMonitor
     if (stopMonitor) stopMonitor()
 
+    let stream: MediaStream | null = null
+    let monitorCleanup: (() => void) | null = null
+
     try {
-      const { stream } = await setupMicrophone(deviceId)
+      // Now that we're busy, we can set the recording state.
+      set({ isRecording: true })
+
+      const volumeSetup = await setupVolumeMonitoring((volume) => {
+        window.api.send('volume-update', volume)
+      }, deviceId)
+
+      stream = volumeSetup.stream
+      monitorCleanup = volumeSetup.cleanup
 
       // After awaiting, check if a stop command was issued during setup.
       if (!get().isRecording) {
         console.log('Recording cancelled during initialization.')
-        stream.getTracks().forEach(track => track.stop())
+        // The monitorCleanup function handles stream and audio context cleanup.
+        monitorCleanup()
         return // Abort if stopRecording was called.
+      }
+
+      if (!stream) {
+        throw new Error('Failed to setup microphone stream.')
       }
 
       // We need to use a specific mimeType for the media recorder.
       const mimeType = 'audio/webm'
       const mediaRecorder = new MediaRecorder(stream, { mimeType })
-
-      // Setup a function to monitor the volume.
-      const monitorCleanup = await setupVolumeMonitoring((volume) => {
-        window.api.send('volume-update', volume)
-      }, deviceId)
-
-      // When the media recorder receives a chunk of audio data, send it to the gRPC service.
-      mediaRecorder.ondataavailable = event => {
-        if (event.data.size > 0) {
-          grpcStub.sendAudioChunk(event.data)
-        }
-      }
 
       mediaRecorder.onstart = () => {
         console.log('MediaRecorder started.')
@@ -85,23 +89,37 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
       mediaRecorder.onstop = () => {
         console.log('MediaRecorder stopped, cleaning up resources.')
-        stream.getTracks().forEach(track => track.stop())
-        const stopMonitor = get().stopVolumeMonitor
-        if (stopMonitor) stopMonitor()
+        // The currently stored stopVolumeMonitor is the correct cleanup function.
+        const currentStopMonitor = get().stopVolumeMonitor
+        if (currentStopMonitor) {
+          currentStopMonitor()
+        }
         set({ mediaRecorder: null, mediaStream: null, stopVolumeMonitor: null })
       }
 
       // Start recording, collecting audio into chunks every 500ms.
       mediaRecorder.start(500)
 
+      // FINAL CHECK: A stop command could have arrived while we were setting up.
+      // If so, we need to abort and clean up what we've created.
+      if (!get().isRecording) {
+        console.log('Recording cancelled just before finalizing state.')
+        mediaRecorder.stop() // This triggers the onstop handler for full cleanup.
+        return
+      }
+
       // Store the recorder and stream so they can be stopped later.
       set({ mediaRecorder, mediaStream: stream, stopVolumeMonitor: monitorCleanup })
     } catch (error) {
       console.error('Failed to start audio capture:', error)
-      // Ensure we clean up and reset state on failure
-      get().mediaStream?.getTracks().forEach(track => track.stop())
-      get().stopVolumeMonitor?.()
+      // If an error occurred, call the cleanup function if it exists.
+      if (monitorCleanup) {
+        monitorCleanup()
+      }
       set({ isRecording: false, mediaRecorder: null, mediaStream: null, stopVolumeMonitor: null })
+    } finally {
+      // Always release the busy lock
+      set({ isBusy: false })
     }
   },
 
@@ -111,20 +129,15 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   stopRecording: () => {
     const { mediaRecorder } = get()
 
-    // Set recording to false immediately to signal intent to stop.
-    // This is crucial for the race condition fix.
+    // Signal the intent to stop recording immediately.
+    // The various checks in the startRecording flow will handle aborting the process.
     set({ isRecording: false })
 
-    // If the recorder exists, stop it. The 'onstop' event will handle cleanup.
-    if (mediaRecorder) {
+    // If the recorder exists and is active, stop it.
+    // The 'onstop' event will handle the final cleanup.
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
       console.log('Stopping recording...')
-      if (mediaRecorder.state === 'recording') {
-        mediaRecorder.stop()
-      }
-    } else {
-      // If the recorder doesn't exist, it means startRecording was called but hasn't completed.
-      // The change in `isRecording` state will be detected by the check within `startRecording`.
-      console.log('Stopping a pending recording.')
+      mediaRecorder.stop()
     }
   },
 }))

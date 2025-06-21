@@ -5,17 +5,26 @@ import { KeyState, normalizeKeyEvent } from '@/app/utils/keyboard'
 import { type KeyEvent } from '@/lib/preload/index.d'
 
 export const useGlobalShortcut = () => {
-  const { getState: getAudioState, setState: setAudioState } = useAudioStore
-  const { getState: getSettingsState } = useSettingsStore
+  const { getState: getAudioState } = useAudioStore
+  const { getState: getSettingsStore, subscribe } = useSettingsStore
 
-  const keyStateRef = useRef(new KeyState())
+  // We only need to initialize KeyState once. It will be updated via the store subscription.
+  const keyStateRef = useRef(new KeyState(getSettingsStore().keyboardShortcut))
   const isShortcutActiveRef = useRef(false)
 
   useEffect(() => {
+    // Subscribe to changes in the settings store.
+    // When the keyboard shortcut changes, update our KeyState instance.
+    const unsubscribe = subscribe(
+      (state) => {
+        console.log('Shortcut changed, updating blocked keys:', state.keyboardShortcut)
+        keyStateRef.current.updateShortcut(state.keyboardShortcut)
+      },
+    )
+
     const handleKeyEvent = (event: KeyEvent) => {
-      const { isRecording, isShortcutEnabled, startRecording, stopRecording } =
-        getAudioState()
-      const { keyboardShortcut, microphoneDeviceId } = getSettingsState()
+      const { isShortcutEnabled, startRecording, stopRecording } = getAudioState()
+      const { keyboardShortcut } = getSettingsStore()
 
       if (normalizeKeyEvent(event) === 'fn_fast' || !isShortcutEnabled) {
         return
@@ -31,7 +40,7 @@ export const useGlobalShortcut = () => {
         // --- Shortcut Pressed ---
         isShortcutActiveRef.current = true
         console.log('Shortcut ACTIVATED, starting recording...')
-        startRecording(microphoneDeviceId)
+        startRecording(getSettingsStore().microphoneDeviceId)
       } else if (!areShortcutKeysHeld && isShortcutActiveRef.current) {
         // --- Shortcut Released ---
         isShortcutActiveRef.current = false
@@ -40,12 +49,14 @@ export const useGlobalShortcut = () => {
       }
     }
 
-    const cleanup: any = window.api.onKeyEvent(handleKeyEvent)
+    const cleanupKeyListener: any = window.api.onKeyEvent(handleKeyEvent)
+
     return () => {
-      console.log('Cleaning up global shortcut listener.')
-      cleanup()
+      console.log('Cleaning up global shortcut listener and subscription.')
+      unsubscribe()
+      cleanupKeyListener()
     }
-  }, [])
+  }, [getAudioState, getSettingsStore, subscribe]) // Dependencies for effect
 
   return null
 }

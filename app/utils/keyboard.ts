@@ -69,6 +69,23 @@ const keyNameMap: Record<string, string> = {
 }
 
 /**
+ * A reverse mapping of normalized key names to their raw `rdev` counterparts.
+ * This is a one-to-many relationship (e.g., 'command' maps to ['MetaLeft', 'MetaRight']).
+ */
+const reverseKeyNameMap: Record<string, string[]> = Object.entries(
+  keyNameMap,
+).reduce(
+  (acc, [rawKey, normalizedKey]) => {
+    if (!acc[normalizedKey]) {
+      acc[normalizedKey] = []
+    }
+    acc[normalizedKey].push(rawKey)
+    return acc
+  },
+  {} as Record<string, string[]>,
+)
+
+/**
  * Normalizes a key event into a format suitable for UI display
  * @param event The key event from the global key listener
  * @returns The normalized key name for UI display
@@ -95,30 +112,20 @@ export function normalizeKeyEvent(event: KeyEvent): string {
  */
 export class KeyState {
   private pressedKeys: Set<string> = new Set()
-  private isFunctionKeyShortcut: boolean = false
+  private shortcut: string[] = []
 
   constructor(shortcut: string[] = []) {
-    // Check if the shortcut includes the Function key
-    this.isFunctionKeyShortcut = shortcut.some(
-      key => key.toLowerCase() === 'fn' || key.toLowerCase() === 'function',
-    )
+    this.updateShortcut(shortcut)
   }
 
   /**
-   * Updates the shortcut for the key state
-   * @param shortcut The shortcut to set
+   * Updates the shortcut and instructs the native listener to block the relevant keys.
+   * @param shortcut The shortcut to set, as an array of normalized key names.
    */
   updateShortcut(shortcut: string[]) {
-    this.isFunctionKeyShortcut = shortcut.some(
-      key => key.toLowerCase() === 'fn' || key.toLowerCase() === 'function',
-    )
-
-    // Unblock all the keys
-    window.api.unblockKey('Unknown(179)')
-
-    // Block the new keys
-    const newKeysToBlock = this.getKeysToBlock()
-    window.api.blockKeys(newKeysToBlock)
+    this.shortcut = shortcut
+    const keysToBlock = this.getKeysToBlock()
+    window.api.blockKeys(keysToBlock)
   }
 
   /**
@@ -165,13 +172,21 @@ export class KeyState {
   }
 
   /**
-   * Gets the keys that should be blocked for this shortcut
+   * Gets the raw `rdev` key names that should be blocked for the current shortcut.
    * @returns Array of keys to block
    */
-  getKeysToBlock(): string[] {
-    if (this.isFunctionKeyShortcut) {
-      return ['Unknown(179)']
+  private getKeysToBlock(): string[] {
+    // Use the reverse map to find all raw keys for the normalized shortcut keys.
+    const keys = this.shortcut.flatMap(
+      (normalizedKey) => reverseKeyNameMap[normalizedKey] || [],
+    )
+
+    // Also block the special "fast fn" key if fn is part of the shortcut.
+    if (this.shortcut.includes('fn')) {
+      keys.push('Unknown(179)')
     }
-    return []
+
+    // Return a unique set of keys.
+    return [...new Set(keys)]
   }
 }

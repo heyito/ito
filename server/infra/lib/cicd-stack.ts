@@ -33,6 +33,7 @@ export class GitHubOidcStack extends Stack {
 
     const appEcrRole = new Role(this, 'ItoGitHubCiCdRole', {
       assumedBy: principal,
+      roleName: 'ItoGitHubCiCdRole',
       description: 'GitHub Actions can assume this via OIDC',
     })
 

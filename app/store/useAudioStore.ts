@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { setupMicrophone, setupVolumeMonitoring } from '@/app/media/microphone'
+import { setupVolumeMonitoring } from '@/app/media/microphone'
 import { useSettingsStore } from './useSettingsStore'
 
 // This is a stub for your gRPC service.

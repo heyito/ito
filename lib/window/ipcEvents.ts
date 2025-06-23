@@ -21,9 +21,9 @@ export function registerIPC() {
   ipcMain.on('electron-store-set', (_event, key, val) => { store.set(key, val) })
 
   // Key Listener
-  handleIPC('start-key-listener-service', (e) => {
-    const window = BrowserWindow.fromWebContents(e.sender)
-    if (window) startKeyListener(window)
+  handleIPC('start-key-listener-service', () => {
+    console.log('start-key-listener-service invoked')
+    startKeyListener()
   })
   handleIPC('stop-key-listener', () => stopKeyListener())
   handleIPC('block-keys', (_e, keys: string[]) => {

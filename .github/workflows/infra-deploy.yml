@@ -22,7 +22,8 @@ jobs:
 
     - name: Setup Node.js & CDK
       uses: actions/setup-node@v3
-      with: node-version:18
+      with: 
+        node-version: '18'
     - run: npm ci
     - run: npx aws-cdk --version
 

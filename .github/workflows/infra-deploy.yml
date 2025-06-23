@@ -1,0 +1,51 @@
+# .github/workflows/infra-deploy.yml
+name: Infra CDK
+
+on:
+  push:
+    paths:
+      - 'server/infra/**'
+    branches: [ main ]
+
+permissions:
+  contents: read
+  id-token: write     # OIDC for assume-role
+
+jobs:
+  cdk-deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout infra
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js & CDK
+      uses: actions/setup-node@v3
+      with: node-version:18
+    - run: npm ci
+    - run: npx aws-cdk --version
+
+    - name: Configure AWS credentials (OIDC)
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        role-to-assume: arn:aws:iam::287641434880:role/ItoGitHubCiCdRole
+        aws-region: us-west-2
+
+    - name: Synthesize CDK
+      working-directory: server/infra
+      run: npx cdk synth
+
+    - name: Approve production
+      if: github.event.pull_request.merged == true
+      uses: peter-evans/slash-command-dispatch@v2
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        reaction-token: ${{ secrets.GITHUB_TOKEN }}
+        commands: approve-prod
+
+    - name: Deploy to prod
+      if: steps.approve-prod.outputs.command == 'approve-prod'
+      working-directory: server/infra
+      run: npx cdk deploy ItoNetworking ItoPlatform ItoService ItoSecurity ItoObservability \
+            --require-approval manual

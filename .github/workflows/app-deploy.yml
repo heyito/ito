@@ -1,0 +1,49 @@
+# .github/workflows/app-deploy.yml
+name: App CI/CD
+
+on:
+  push:
+    paths:
+      - "server/src/**"
+      - "server/Dockerfile"
+      - "server/package.json"
+      - "server/yarn.lock"
+    branches: [ main ]
+
+permissions:
+  contents: read
+  id-token: write     # needed for OIDC
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials (OIDC)
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        role-to-assume: arn:aws:iam::287641434880:role/ItoGitHubCiCdRole
+        aws-region: us-west-2
+
+    - name: Login to ECR
+      run: aws ecr get-login-password | docker login \
+             --username AWS \
+             --password-stdin 287641434880.dkr.ecr.us-west-2.amazonaws.com
+
+    - name: Build & push multi-arch image
+      run: |
+        docker buildx create --use
+        docker buildx build \
+          --platform linux/arm64,linux/amd64 \
+          --tag 287641434880.dkr.ecr.us-west-2.amazonaws.com/ito-server:latest \
+          --push .
+    - name: Force new ECS deployment
+      run: |
+        aws ecs update-service \
+          --cluster ItoService-ItoEcsCluster \
+          --service ItoFargateService \
+          --force-new-deployment

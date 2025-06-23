@@ -2,6 +2,13 @@ name: Build and Release
 
 on:
   push:
+    paths:
+      - "lib/**"
+      - "native/**"
+      - "resources/**"
+      - "app/**"
+    paths-ignore:
+      - "server/**"
     branches: [main]
 
 jobs:

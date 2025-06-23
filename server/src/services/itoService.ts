@@ -20,21 +20,6 @@ import type { HandlerContext } from '@connectrpc/connect'
 // Export the service implementation as a function that takes a ConnectRouter
 export default (router: ConnectRouter) => {
   router.service(ItoServiceDesc, {
-    // Health check implementation
-    async healthCheck(request: HealthCheckRequest, context: HandlerContext) {
-      // Auth0 authentication is handled at the Fastify route level
-      // Extract the authenticated user from the context
-      const user = authenticateWithScopes(context)
-
-      console.log(`HealthCheck request from user: ${user.sub}`)
-
-      return create(HealthCheckResponseSchema, {
-        status: 'SERVING',
-        userId: user.sub,
-        message: 'Service is healthy and authenticated',
-      })
-    },
-
     // Transcribe file implementation
     async transcribeFile(
       request: TranscribeFileRequest,

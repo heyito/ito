@@ -84,12 +84,12 @@ export class GitHubOidcStack extends Stack {
     )
 
     // ─── CDK bootstrap version lookup (wildcard qualifier) ────────────────────
-    const ssmBootstrapPath = `arn:aws:ssm:${this.region}:${this.account}:parameter/cdk-bootstrap/*`
+    const ssmBootstrapBase = `arn:aws:ssm:${this.region}:${this.account}:parameter/cdk-bootstrap/*`
     appEcrRole.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ['ssm:GetParameter', 'ssm:GetParameters'],
-        resources: [ssmBootstrapPath],
+        resources: [ssmBootstrapBase, `${ssmBootstrapBase}/*`],
       }),
     )
 

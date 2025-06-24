@@ -1,5 +1,6 @@
 import { ConnectError, Code } from '@connectrpc/connect'
 import type { HandlerContext } from '@connectrpc/connect'
+import { userContextKey } from './userContext.js'
 
 // Type definition for the authenticated user from Auth0 Fastify plugin
 export interface Auth0User {
@@ -12,28 +13,19 @@ export interface Auth0User {
   [key: string]: any // Additional claims
 }
 
-// Extract the authenticated user from Fastify request context
+// Extract the authenticated user from the RPC context using the context key
 export const extractAuth0User = (context: HandlerContext): Auth0User => {
-  // The Connect RPC Fastify plugin should pass the Fastify request
-  // through to the context. We need to access it to get the Auth0 user.
-  const request = (context as any).request
+  const user = context.values.get(userContextKey)
 
-  if (!request) {
+  if (!user) {
+    // This error means the interceptor failed or auth was not applied.
     throw new ConnectError(
-      'Request object not available in Connect RPC context',
-      Code.Internal,
-    )
-  }
-
-  // Check if the user was authenticated by the Auth0 Fastify plugin
-  if (!request.user) {
-    throw new ConnectError(
-      'Authentication required. Please provide a valid Bearer token.',
+      'User not found on RPC context. Authentication may have failed.',
       Code.Unauthenticated,
     )
   }
 
-  return request.user as Auth0User
+  return user
 }
 
 // Helper function to authenticate Connect RPC calls using Auth0 Fastify plugin

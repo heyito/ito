@@ -6,6 +6,9 @@ import dotenv from 'dotenv'
 import { readFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { Auth0User } from './middleware/connectAuth0Bridge.js'
+import { userContextKey } from './middleware/userContext.js'
+import { createContextValues } from '@connectrpc/connect'
 
 dotenv.config()
 
@@ -73,6 +76,15 @@ export const startServer = async () => {
     // Register the Connect RPC plugin with our service routes
     await fastify.register(fastifyConnectPlugin, {
       routes: itoServiceRoutes,
+      // This is the bridge from Fastify to Connect RPC.
+      // It takes the `user` from the fastify request and puts it in the RPC context.
+      contextValues: req => {
+        const context = createContextValues()
+        if (req.user) {
+          context.set(userContextKey, req.user as Auth0User)
+        }
+        return context
+      },
     })
   })
 
@@ -92,7 +104,7 @@ export const startServer = async () => {
       return {
         status: 'ok',
         service: 'ito-server',
-        user: request.user.sub,
+        user: (request.user as Auth0User).sub,
         authenticated: true,
       }
     },

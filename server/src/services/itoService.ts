@@ -16,10 +16,28 @@ import {
 import { authenticateWithScopes } from '../middleware/connectAuth0Bridge.js'
 import { create } from '@bufbuild/protobuf'
 import type { HandlerContext } from '@connectrpc/connect'
+import { userContextKey } from '../middleware/userContext.js'
 
 // Export the service implementation as a function that takes a ConnectRouter
 export default (router: ConnectRouter) => {
   router.service(ItoServiceDesc, {
+    // Health check implementation
+    async healthCheck(
+      request: HealthCheckRequest,
+      context: HandlerContext,
+    ): Promise<HealthCheckResponse> {
+      const user = context.values.get(userContextKey)
+      if (!user) {
+        throw new Error('User not authenticated')
+      }
+
+      console.log(`Received HealthCheck request from user: ${user.sub}`)
+
+      return create(HealthCheckResponseSchema, {
+        status: 'ok',
+      })
+    },
+
     // Transcribe file implementation
     async transcribeFile(
       request: TranscribeFileRequest,

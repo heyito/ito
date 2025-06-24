@@ -1,6 +1,6 @@
 import { useAuth0 } from '@auth0/auth0-react'
 import { useCallback, useEffect } from 'react'
-import { Auth0Connections } from './config'
+import { Auth0Connections, Auth0Config } from './config'
 import {
   useAuthStore,
   type AuthUser,
@@ -69,9 +69,6 @@ export const useAuth = () => {
       'auth-code-received',
       async (authCode: string, state: string) => {
         try {
-          // Import Auth0 config
-          const { Auth0Config } = await import('./config')
-
           // Exchange authorization code for tokens via main process
           const result = await window.api.invoke('exchange-auth-code', {
             authCode,
@@ -145,8 +142,6 @@ export const useAuth = () => {
           )
         }
       }
-
-      const { Auth0Config } = await import('./config')
 
       const params = new URLSearchParams({
         response_type: 'code',

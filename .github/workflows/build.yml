@@ -1,17 +1,17 @@
 name: Build and Release
 
 on:
-  push:
-    paths:
-      - 'lib/**'
-      - 'native/**'
-      - 'resources/**'
-      - 'app/**'
-    branches: [main]
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+        description: 'The environment to build for'
 
 jobs:
   build:
     runs-on: macos-latest
+    environment: ${{ inputs.environment }}
 
     steps:
       - name: Checkout repository
@@ -29,19 +29,27 @@ jobs:
           toolchain: stable
           targets: 'x86_64-apple-darwin,aarch64-apple-darwin'
 
+      - name: Set up environment
+        run: |
+          echo "VITE_AUTH0_DOMAIN=\"${{ secrets.VITE_AUTH0_DOMAIN }}\"" >> .env
+          echo "VITE_AUTH0_CLIENT_ID=\"${{ secrets.VITE_AUTH0_CLIENT_ID }}\"" >> .env
+          echo "VITE_AUTH0_AUDIENCE=\"${{ secrets.VITE_AUTH0_AUDIENCE }}\"" >> .env
+          echo "VITE_AUTH0_REDIRECT_URI=\"${{ secrets.VITE_AUTH0_REDIRECT_URI }}\"" >> .env
+          echo "APPLE_ID=\"${{ secrets.APPLE_ID }}\"" >> .env
+          echo "APPLE_TEAM_ID=\"${{ secrets.APPLE_TEAM_ID }}\"" >> .env
+          echo "APPLE_APP_SPECIFIC_PASSWORD=\"${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}\"" >> .env
+          echo "CSC_LINK=\"release.p12\"" >> .env
+          echo "CSC_KEY_PASSWORD=\"${{ secrets.MACOS_CERT_PASSWORD }}\"" >> .env
+          echo "GH_TOKEN=\"${{ secrets.GITHUB_TOKEN }}\"" >> .env
+          echo "Created .env file:"
+          cat .env
+
       - name: Decode and install certificate
         run: |
           echo "${{ secrets.MACOS_CERT_BASE64 }}" | base64 --decode > release.p12
 
       - name: Build and package application
         run: ./build-app.sh
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          CSC_LINK: release.p12
-          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Installer DMG
         uses: actions/upload-artifact@v4

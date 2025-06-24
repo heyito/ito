@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { useSettingsStore } from '../../../../store/useSettingsStore'
 import { useNotesStore } from '../../../../store/useNotesStore'
 import { useDictionaryStore } from '../../../../store/useDictionaryStore'
 import { useOnboardingStore } from '../../../../store/useOnboardingStore'
@@ -12,15 +11,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../ui/dialog'
+import { useAuthStore } from '@/app/store/useAuthStore'
+import { useAuth } from '@/app/components/auth/useAuth'
 
 export default function AccountSettingsContent() {
-  const { firstName, lastName, email, setFirstName, setLastName } =
-    useSettingsStore()
+  const { user, setName, clearAuth } = useAuthStore()
+  const { logoutUser } = useAuth()
   const { loadNotes } = useNotesStore()
   const { loadEntries } = useDictionaryStore()
   const { resetOnboarding } = useOnboardingStore()
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+
+  const handleSignOut = () => {
+    logoutUser()
+  }
 
   const handleDeleteAccount = () => {
     // Clear all electron store data
@@ -29,6 +34,10 @@ export default function AccountSettingsContent() {
     window.electron.store.set('notes', [])
     window.electron.store.set('dictionary', [])
     window.electron.store.set('onboarding', {})
+    window.electron.store.set('auth', {})
+
+    // Clear auth state
+    clearAuth(false)
 
     // Reset all stores to their initial state
     resetOnboarding()
@@ -38,8 +47,7 @@ export default function AccountSettingsContent() {
     // Close the dialog
     setShowDeleteDialog(false)
 
-    // Reset settings by reloading the page or triggering a full app restart
-    window.location.reload()
+    // Note: The app will automatically navigate to onboarding since user is no longer authenticated
   }
 
   return (
@@ -47,24 +55,11 @@ export default function AccountSettingsContent() {
       <div className="space-y-6">
         {/* First name */}
         <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-gray-900">
-            First name
-          </label>
+          <label className="text-sm font-medium text-gray-900">Name</label>
           <input
             type="text"
-            value={firstName}
-            onChange={e => setFirstName(e.target.value)}
-            className="w-80 bg-white border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-
-        {/* Last name */}
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-gray-900">Last name</label>
-          <input
-            type="text"
-            value={lastName}
-            onChange={e => setLastName(e.target.value)}
+            value={user?.name}
+            onChange={e => setName(e.target.value)}
             className="w-80 bg-white border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
@@ -72,7 +67,7 @@ export default function AccountSettingsContent() {
         {/* Email */}
         <div className="flex items-center justify-between py-3 my-1">
           <label className="text-sm font-medium text-gray-900">Email</label>
-          <div className="w-80 text-sm text-gray-600 px-4">{email}</div>
+          <div className="w-80 text-sm text-gray-600 px-4">{user?.email}</div>
         </div>
       </div>
 
@@ -81,6 +76,7 @@ export default function AccountSettingsContent() {
         <Button
           variant="outline"
           size="lg"
+          onClick={handleSignOut}
           className="px-6 py-3 bg-neutral-200 text-neutral-700 hover:bg-neutral-300"
         >
           Sign out

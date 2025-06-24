@@ -80,7 +80,7 @@ export default [
       }],
 
       // General rules
-      'no-console': ['warn', { allow: ['warn', 'error', 'log'] }],
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
       '@typescript-eslint/no-explicit-any': 'off',
 
       // Global modification rules

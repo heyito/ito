@@ -7,6 +7,7 @@ import {
 } from '../../ui/dropdown-menu'
 import AvatarIcon from '../../icons/AvatarIcon'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
+import { useAuthStore } from '@/app/store/useAuthStore'
 
 const sources = [
   'Twitter',
@@ -18,16 +19,20 @@ const sources = [
   'Other',
 ]
 
-export default function SignupContent() {
+export default function ReferralContent() {
   const { incrementOnboardingStep, referralSource, setReferralSource } =
     useOnboardingStore()
+  const { user } = useAuthStore()
+  const firstName = user?.name?.split(' ')[0]
 
   return (
     <div className="flex flex-row h-full w-full bg-background">
       <div className="flex flex-col w-[45%] justify-center items-start pl-24">
         <div className="flex flex-col h-full min-h-[400px] justify-between py-12">
           <div className="pt-32">
-            <h1 className="text-3xl mb-4">Welcome!</h1>
+            <h1 className="text-3xl mb-4">
+              Welcome {firstName ? `, ${firstName}!` : '!'}
+            </h1>
             <p className="mb-6 text-base text-muted-foreground">
               Where did you hear about us?
             </p>

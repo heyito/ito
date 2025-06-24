@@ -1,7 +1,16 @@
-import { BrowserWindow, shell, screen, app, protocol, net, systemPreferences } from 'electron'
+import {
+  BrowserWindow,
+  shell,
+  screen,
+  app,
+  protocol,
+  net,
+  systemPreferences,
+} from 'electron'
 import { join } from 'path'
 import appIcon from '@/resources/build/icon.png?asset'
 import { pathToFileURL } from 'url'
+import { startKeyListener, stopKeyListener } from '../media/keyboard'
 
 // Keep a reference to the pill window to prevent it from being garbage collected.
 let pillWindow: BrowserWindow | null = null
@@ -33,18 +42,18 @@ export function createAppWindow(): BrowserWindow {
     },
   })
 
-  // Stop the key listener when the window is closed.
-  mainWindow.on('closed', () => {
-    mainWindow = null // Clear the reference
-  })
-
   mainWindow.on('ready-to-show', () => {
     mainWindow!.show()
   })
 
-  mainWindow.webContents.setWindowOpenHandler((details) => {
+  mainWindow.webContents.setWindowOpenHandler(details => {
     shell.openExternal(details.url)
     return { action: 'deny' }
+  })
+
+  // Clean up the reference when the window is closed.
+  mainWindow.on('closed', () => {
+    mainWindow = null
   })
 
   // HMR for renderer base on electron-vite cli.
@@ -54,10 +63,9 @@ export function createAppWindow(): BrowserWindow {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
-  
+
   return mainWindow
 }
-
 
 const PILL_MAX_WIDTH = 120
 const PILL_MAX_HEIGHT = 40
@@ -87,7 +95,10 @@ export function createPillWindow(): void {
     pillWindow.setAlwaysOnTop(true, 'screen-saver', 1)
     pillWindow.setFullScreenable(false)
 
-    pillWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true,})
+    pillWindow.setVisibleOnAllWorkspaces(true, {
+      visibleOnFullScreen: true,
+      skipTransformProcessType: true,
+    })
   }
 
   // Use a URL hash to tell our React app to load the pill component.
@@ -135,7 +146,7 @@ export function startPillPositioner() {
 
 // --- No changes to other functions ---
 export function registerResourcesProtocol() {
-  protocol.handle('res', async (request) => {
+  protocol.handle('res', async request => {
     try {
       const url = new URL(request.url)
       // Combine hostname and pathname to get the full path

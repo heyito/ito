@@ -178,7 +178,7 @@ export class KeyState {
   private getKeysToBlock(): string[] {
     // Use the reverse map to find all raw keys for the normalized shortcut keys.
     const keys = this.shortcut.flatMap(
-      (normalizedKey) => reverseKeyNameMap[normalizedKey] || [],
+      normalizedKey => reverseKeyNameMap[normalizedKey] || [],
     )
 
     // Also block the special "fast fn" key if fn is part of the shortcut.

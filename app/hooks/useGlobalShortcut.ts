@@ -15,15 +15,17 @@ export const useGlobalShortcut = () => {
   useEffect(() => {
     // Subscribe to changes in the settings store.
     // When the keyboard shortcut changes, update our KeyState instance.
-    const unsubscribe = subscribe(
-      (state) => {
-        console.log('Shortcut changed, updating blocked keys:', state.keyboardShortcut)
-        keyStateRef.current.updateShortcut(state.keyboardShortcut)
-      },
-    )
+    const unsubscribe = subscribe(state => {
+      console.log(
+        'Shortcut changed, updating blocked keys:',
+        state.keyboardShortcut,
+      )
+      keyStateRef.current.updateShortcut(state.keyboardShortcut)
+    })
 
     const handleKeyEvent = (event: KeyEvent) => {
-      const { isShortcutEnabled, startRecording, stopRecording } = getAudioState()
+      const { isShortcutEnabled, startRecording, stopRecording } =
+        getAudioState()
       const { keyboardShortcut } = getSettingsStore()
 
       if (normalizeKeyEvent(event) === 'fn_fast' || !isShortcutEnabled) {
@@ -34,7 +36,7 @@ export const useGlobalShortcut = () => {
       const currentlyPressedKeys = keyStateRef.current.getPressedKeys()
       const areShortcutKeysHeld =
         keyboardShortcut.length > 0 &&
-        keyboardShortcut.every((key) => currentlyPressedKeys.includes(key))
+        keyboardShortcut.every(key => currentlyPressedKeys.includes(key))
 
       if (areShortcutKeysHeld && !isShortcutActiveRef.current) {
         // --- Shortcut Pressed ---

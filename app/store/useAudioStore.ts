@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { setupVolumeMonitoring } from '@/app/media/microphone'
+import { setupMicrophone, setupVolumeMonitoring } from '@/app/media/microphone'
 import { useSettingsStore } from './useSettingsStore'
 
 // This is a stub for your gRPC service.
@@ -53,7 +53,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
     let monitorCleanup: (() => void) | null = null
     try {
-      const volumeSetup = await setupVolumeMonitoring((volume) => {
+      const volumeSetup = await setupVolumeMonitoring(volume => {
         window.api.send('volume-update', volume)
       }, deviceId)
       monitorCleanup = volumeSetup.cleanup

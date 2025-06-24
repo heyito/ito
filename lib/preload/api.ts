@@ -24,8 +24,10 @@ const api = {
   receive: (channel: string, func: (...args: any[]) => void) => {
     ipcRenderer.on(channel, (_, ...args) => func(...args))
   },
-  invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args),
-  removeAllListeners: (channel: string) => ipcRenderer.removeAllListeners(channel),
+  invoke: (channel: string, ...args: any[]) =>
+    ipcRenderer.invoke(channel, ...args),
+  removeAllListeners: (channel: string) =>
+    ipcRenderer.removeAllListeners(channel),
   // Key listener methods
   startKeyListener: () => ipcRenderer.invoke('start-key-listener-service'),
   stopKeyListener: () => ipcRenderer.invoke('stop-key-listener'),
@@ -33,10 +35,12 @@ const api = {
   unblockKey: (key: string) => ipcRenderer.invoke('unblock-key', key),
   getBlockedKeys: () => ipcRenderer.invoke('get-blocked-keys'),
   onKeyEvent: (callback: (event: any) => void) => {
-    const handler = (_: any, event: any) => callback(event);
-    ipcRenderer.on('key-event', handler);
-    return () => ipcRenderer.removeListener('key-event', handler);
+    const handler = (_: any, event: any) => callback(event)
+    ipcRenderer.on('key-event', handler)
+    return () => ipcRenderer.removeListener('key-event', handler)
   },
+  // Auth methods
+  generateNewAuthState: () => ipcRenderer.invoke('generate-new-auth-state'),
   // All other IPC calls that the UI makes
   // These now just pass through, as the main process handles the window context
   'init-window': () => ipcRenderer.invoke('init-window'),
@@ -61,8 +65,10 @@ const api = {
   'web-zoom-out': () => ipcRenderer.invoke('web-zoom-out'),
   'web-toggle-fullscreen': () => ipcRenderer.invoke('web-toggle-fullscreen'),
   'web-open-url': (url: string) => ipcRenderer.invoke('web-open-url', url),
-  'check-accessibility-permission': (prompt: boolean) => ipcRenderer.invoke('check-accessibility-permission', prompt),
-  'check-microphone-permission': (prompt: boolean) => ipcRenderer.invoke('check-microphone-permission', prompt),
+  'check-accessibility-permission': (prompt: boolean) =>
+    ipcRenderer.invoke('check-accessibility-permission', prompt),
+  'check-microphone-permission': (prompt: boolean) =>
+    ipcRenderer.invoke('check-microphone-permission', prompt),
 }
 
 export default api

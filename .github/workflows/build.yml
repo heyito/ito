@@ -3,10 +3,10 @@ name: Build and Release
 on:
   push:
     paths:
-      - "lib/**"
-      - "native/**"
-      - "resources/**"
-      - "app/**"
+      - 'lib/**'
+      - 'native/**'
+      - 'resources/**'
+      - 'app/**'
     branches: [main]
 
 jobs:
@@ -27,12 +27,12 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          targets: "x86_64-apple-darwin,aarch64-apple-darwin"
+          targets: 'x86_64-apple-darwin,aarch64-apple-darwin'
 
       - name: Decode and install certificate
         run: |
           echo "${{ secrets.MACOS_CERT_BASE64 }}" | base64 --decode > release.p12
-      
+
       - name: Build and package application
         run: ./build-app.sh
         env:
@@ -47,4 +47,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Ito-Installer
-          path: dist/Ito-Installer.dmg 
+          path: dist/Ito-Installer.dmg

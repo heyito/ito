@@ -10,6 +10,7 @@ import {
 import { initializeLogging } from './logger'
 import { registerIPC } from '../window/ipcEvents'
 import { startKeyListener } from '../media/keyboard'
+import { setupProtocolHandling } from '../protocol'
 
 // Register the custom 'res' protocol and mark it as privileged.
 // This must be done before the app is ready.
@@ -31,12 +32,15 @@ app.whenReady().then(() => {
   // Initialize logging as the first step
   initializeLogging()
 
+  // Setup protocol handling for deep links
+  setupProtocolHandling()
+
   // Register the handler for the 'res' protocol now that the app is ready.
   registerResourcesProtocol()
 
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
-  
+
   // Create windows
   createAppWindow()
   createPillWindow()

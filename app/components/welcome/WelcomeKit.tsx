@@ -1,4 +1,6 @@
-import SignupContent from './contents/SignupContent'
+import CreateAccountContent from './contents/CreateAccountContent'
+import SignInContent from './contents/SignInContent'
+import ReferralContent from './contents/ReferralContent'
 import DataControlContent from './contents/DataControlContent'
 import PermissionsContent from './contents/PermissionsContent'
 import MicrophoneTestContent from './contents/MicrophoneTestContent'
@@ -10,9 +12,11 @@ import { useEffect } from 'react'
 import './styles.css'
 import { usePermissionsStore } from '../../store/usePermissionsStore'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
+import { useAuthStore } from '@/app/store/useAuthStore'
 
 export default function WelcomeKit() {
   const { onboardingStep } = useOnboardingStore()
+  const { isAuthenticated, user } = useAuthStore()
 
   const { setAccessibilityEnabled, setMicrophoneEnabled } =
     usePermissionsStore()
@@ -31,23 +35,36 @@ export default function WelcomeKit() {
       })
   }, [setAccessibilityEnabled, setMicrophoneEnabled])
 
+  // Show signin/signup based on whether user has previous auth data
+  if (!isAuthenticated) {
+    if (user) {
+      // Returning user who needs to sign back in
+      return <SignInContent />
+    } else {
+      // New user who needs to create an account
+      return <CreateAccountContent />
+    }
+  }
+
   return (
     <div className="w-full h-full bg-background">
       {onboardingStep === 0 ? (
-        <SignupContent />
+        <CreateAccountContent />
       ) : onboardingStep === 1 ? (
-        <DataControlContent />
+        <ReferralContent />
       ) : onboardingStep === 2 ? (
-        <PermissionsContent />
+        <DataControlContent />
       ) : onboardingStep === 3 ? (
-        <MicrophoneTestContent />
+        <PermissionsContent />
       ) : onboardingStep === 4 ? (
-        <KeyboardTestContent />
+        <MicrophoneTestContent />
       ) : onboardingStep === 5 ? (
-        <GoodToGoContent />
+        <KeyboardTestContent />
       ) : onboardingStep === 6 ? (
-        <AnyAppContent />
+        <GoodToGoContent />
       ) : onboardingStep === 7 ? (
+        <AnyAppContent />
+      ) : onboardingStep === 8 ? (
         <TryItOutContent />
       ) : null}
     </div>

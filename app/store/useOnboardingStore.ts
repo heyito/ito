@@ -16,9 +16,9 @@ interface OnboardingState {
 }
 
 const getOnboardingCategory = (onboardingStep: number): OnboardingCategory => {
-  if (onboardingStep < 3) return 'sign-up'
-  if (onboardingStep < 4) return 'permissions'
-  if (onboardingStep < 7) return 'set-up'
+  if (onboardingStep < 2) return 'sign-up'
+  if (onboardingStep < 3) return 'permissions'
+  if (onboardingStep < 6) return 'set-up'
   return 'try-it'
 }
 
@@ -58,9 +58,8 @@ export const useOnboardingStore = create<OnboardingState>(set => {
   const initialState = getInitialState()
 
   return {
-    // onboardingStep: initialState.onboardingStep,
-    onboardingStep: 0,
-    totalOnboardingSteps: 9,
+    onboardingStep: initialState.onboardingStep,
+    totalOnboardingSteps: 8,
     onboardingCompleted: initialState.onboardingCompleted,
     onboardingCategory: getOnboardingCategory(initialState.onboardingStep),
     referralSource: null,

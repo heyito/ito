@@ -44,23 +44,6 @@ jobs:
         working-directory: server/infra
         run: npx cdk synth
 
-      - name: Approve production
-        id: approve-prod
-        if: github.event.pull_request.merged == 'true'
-        uses: peter-evans/slash-command-dispatch@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          reaction-token: ${{ secrets.GITHUB_TOKEN }}
-          commands: approve-prod
-
       - name: Deploy to production
-        if: steps.approve-prod.outputs.command == 'approve-prod'
         working-directory: server/infra
-        run: |
-          npx cdk deploy \
-            ItoNetworking \
-            ItoPlatform \
-            ItoService \
-            ItoSecurity \
-            ItoObservability \
-            --require-approval manual
+        run: npx cdk deploy --all --require-approval never

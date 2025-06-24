@@ -18,7 +18,7 @@ export class GitHubOidcStack extends Stack {
   constructor(scope: Construct, id: string, props: GitHubOidcStackProps) {
     super(scope, id, props)
 
-    // reference existing GitHub OIDC provider
+    // ─── reference the existing GitHub OIDC provider ───────────────────────────
     const oidcProviderArn = `arn:aws:iam::${this.account}:oidc-provider/token.actions.githubusercontent.com`
     const oidc = OpenIdConnectProvider.fromOpenIdConnectProviderArn(
       this,
@@ -26,7 +26,7 @@ export class GitHubOidcStack extends Stack {
       oidcProviderArn,
     )
 
-    // allow only workflows from your repo/org
+    // ─── allow only workflows from your repo/org ────────────────────────────────
     const principal = new OpenIdConnectPrincipal(oidc, {
       StringLike: {
         'token.actions.githubusercontent.com:sub': `repo:demox-labs/ito-rewrite:*`,
@@ -34,22 +34,26 @@ export class GitHubOidcStack extends Stack {
       },
     })
 
+    // ─── create the CI/CD role ─────────────────────────────────────────────────
     const appEcrRole = new Role(this, 'ItoGitHubCiCdRole', {
       assumedBy: principal,
       roleName: 'ItoGitHubCiCdRole',
       description: 'GitHub Actions can assume this via OIDC',
     })
 
-    // ECR: auth & push
+    // ─── ECR: login + push ─────────────────────────────────────────────────────
     appEcrRole.addToPolicy(
       new PolicyStatement({
+        effect: Effect.ALLOW,
         actions: ['ecr:GetAuthorizationToken'],
-        resources: ['*'],
+        resources: ['*'], // auth token is account-wide
       }),
     )
+
     const repoArn = props.serviceRepo.repositoryArn
     appEcrRole.addToPolicy(
       new PolicyStatement({
+        effect: Effect.ALLOW,
         actions: [
           'ecr:BatchCheckLayerAvailability',
           'ecr:GetDownloadUrlForLayer',
@@ -64,10 +68,11 @@ export class GitHubOidcStack extends Stack {
       }),
     )
 
-    // CloudFormation on any stack named Ito*
+    // ─── CloudFormation on any of our “Ito*” stacks ──────────────────────────────
     const cfnArnPattern = `arn:aws:cloudformation:${this.region}:${this.account}:stack/${ITO_PREFIX}*/*`
     appEcrRole.addToPolicy(
       new PolicyStatement({
+        effect: Effect.ALLOW,
         actions: [
           'cloudformation:CreateChangeSet',
           'cloudformation:ExecuteChangeSet',
@@ -78,38 +83,42 @@ export class GitHubOidcStack extends Stack {
       }),
     )
 
-    // Read CDK bootstrap version
-    const bootstrapParamArn = `arn:aws:ssm:${this.region}:${this.account}:parameter/cdk-bootstrap/hnb659fds/*`
+    // ─── CDK bootstrap version lookup (wildcard qualifier) ────────────────────
+    const ssmBootstrapPath = `arn:aws:ssm:${this.region}:${this.account}:parameter/cdk-bootstrap/*`
     appEcrRole.addToPolicy(
       new PolicyStatement({
+        effect: Effect.ALLOW,
         actions: ['ssm:GetParameter', 'ssm:GetParameters'],
-        resources: [bootstrapParamArn],
+        resources: [ssmBootstrapPath],
       }),
     )
 
-    // S3: allow publishing into the CDK assets bucket
-    const assetsBucketName = `cdk-hnb659fds-assets-${this.account}-${this.region}`
-    const assetsBucketArn = `arn:aws:s3:::${assetsBucketName}`
+    // ─── S3: publishing assets into the CDK assets bucket (wildcard bootstrap) ─
+    // bucket name pattern is: cdk-<qualifier>-assets-<acct>-<region>
+    const bucketPattern = `arn:aws:s3:::cdk-hnb*assets-${this.account}-${this.region}`
     appEcrRole.addToPolicy(
       new PolicyStatement({
+        effect: Effect.ALLOW,
         actions: ['s3:GetBucketLocation', 's3:ListBucket', 's3:GetBucketAcl'],
-        resources: [assetsBucketArn],
+        resources: [bucketPattern],
       }),
     )
     appEcrRole.addToPolicy(
       new PolicyStatement({
+        effect: Effect.ALLOW,
         actions: ['s3:GetObject', 's3:PutObject', 's3:PutObjectAcl'],
-        resources: [`${assetsBucketArn}/*`],
+        resources: [`${bucketPattern}/*`],
       }),
     )
 
-    const deployRoleArn = `arn:aws:iam::${this.account}:role/cdk-hnb659fds-deploy-role-${this.account}-${this.region}`
-    const publishRoleArn = `arn:aws:iam::${this.account}:role/cdk-hnb659fds-file-publishing-role-${this.account}-${this.region}`
-
+    // ─── allow CDK bootstrap roles to be assumed (wildcard qualifier) ──────────
+    const deployRolePattern = `arn:aws:iam::${this.account}:role/cdk-hnb*-deploy-role-${this.account}-${this.region}`
+    const publishRolePattern = `arn:aws:iam::${this.account}:role/cdk-hnb*-file-publishing-role-${this.account}-${this.region}`
     appEcrRole.addToPolicy(
       new PolicyStatement({
+        effect: Effect.ALLOW,
         actions: ['sts:AssumeRole'],
-        resources: [deployRoleArn, publishRoleArn],
+        resources: [deployRolePattern, publishRolePattern],
       }),
     )
   }

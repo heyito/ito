@@ -1,13 +1,6 @@
-import {
-  type BrowserWindow,
-  ipcMain,
-  screen,
-  shell,
-  systemPreferences,
-} from 'electron'
+import { BrowserWindow, ipcMain, screen, shell, systemPreferences, app } from 'electron'
 import os from 'os'
-import { app } from 'electron'
-import store, { generateNewAuthState } from '../main/store'
+import store from '../main/store'
 import {
   startKeyListener,
   KeyListenerProcess,
@@ -99,44 +92,7 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
   // Hide the menu bar
   mainWindow.setMenuBarVisibility(false)
 
-  handleIPC('start-key-listener', () => {
-    if (!KeyListenerProcess) {
-      initializeKeyListener(mainWindow)
-    }
-    return true
-  })
-
-  handleIPC('stop-key-listener', () => {
-    stopKeyListener()
-    return true
-  })
-
-  handleIPC('block-keys', (_e, keys: string[]) => {
-    if (KeyListenerProcess) {
-      KeyListenerProcess.stdin?.write(
-        JSON.stringify({ command: 'block', keys }) + '\n',
-      )
-    }
-  })
-
-  handleIPC('unblock-key', (_e, key: string) => {
-    if (KeyListenerProcess) {
-      KeyListenerProcess.stdin?.write(
-        JSON.stringify({ command: 'unblock', key }) + '\n',
-      )
-    }
-  })
-
-  handleIPC('get-blocked-keys', () => {
-    if (KeyListenerProcess) {
-      KeyListenerProcess.stdin?.write(
-        JSON.stringify({ command: 'get_blocked' }) + '\n',
-      )
-    }
-  })
-
-  // Register window IPC
-  handleIPC('init-window', () => {
+  handleIPC(`init-window-${mainWindow.id}`, () => {
     const { width, height } = mainWindow.getBounds()
     const minimizable = mainWindow.isMinimizable()
     const maximizable = mainWindow.isMaximizable()
@@ -161,138 +117,34 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
   })
 
   const webContents = mainWindow.webContents
-  handleIPC('web-undo', () => webContents.undo())
-  handleIPC('web-redo', () => webContents.redo())
-  handleIPC('web-cut', () => webContents.cut())
-  handleIPC('web-copy', () => webContents.copy())
-  handleIPC('web-paste', () => webContents.paste())
-  handleIPC('web-delete', () => webContents.delete())
-  handleIPC('web-select-all', () => webContents.selectAll())
-  handleIPC('web-reload', () => webContents.reload())
-  handleIPC('web-force-reload', () => webContents.reloadIgnoringCache())
-  handleIPC('web-toggle-devtools', () => webContents.toggleDevTools())
-  handleIPC('web-actual-size', () => webContents.setZoomLevel(0))
-  handleIPC('web-zoom-in', () =>
-    webContents.setZoomLevel(webContents.zoomLevel + 0.5),
+  handleIPC(`web-undo-${mainWindow.id}`, () => webContents.undo())
+  handleIPC(`web-redo-${mainWindow.id}`, () => webContents.redo())
+  handleIPC(`web-cut-${mainWindow.id}`, () => webContents.cut())
+  handleIPC(`web-copy-${mainWindow.id}`, () => webContents.copy())
+  handleIPC(`web-paste-${mainWindow.id}`, () => webContents.paste())
+  handleIPC(`web-delete-${mainWindow.id}`, () => webContents.delete())
+  handleIPC(`web-select-all-${mainWindow.id}`, () => webContents.selectAll())
+  handleIPC(`web-reload-${mainWindow.id}`, () => webContents.reload())
+  handleIPC(`web-force-reload-${mainWindow.id}`, () => webContents.reloadIgnoringCache())
+  handleIPC(`web-toggle-devtools-${mainWindow.id}`, () => webContents.toggleDevTools())
+  handleIPC(`web-actual-size-${mainWindow.id}`, () => webContents.setZoomLevel(0))
+  handleIPC(`web-zoom-in-${mainWindow.id}`, () =>
+    webContents.setZoomLevel(webContents.zoomLevel + 0.5)
   )
-  handleIPC('web-zoom-out', () =>
-    webContents.setZoomLevel(webContents.zoomLevel - 0.5),
+  handleIPC(`web-zoom-out-${mainWindow.id}`, () =>
+    webContents.setZoomLevel(webContents.zoomLevel - 0.5)
   )
-  handleIPC('web-toggle-fullscreen', () =>
-    mainWindow.setFullScreen(!mainWindow.fullScreen),
+  handleIPC(`web-toggle-fullscreen-${mainWindow.id}`, () =>
+    mainWindow.setFullScreen(!mainWindow.fullScreen)
   )
-  handleIPC('web-open-url', (_e, url) => shell.openExternal(url))
-
-  // Generate new auth state
-  handleIPC('generate-new-auth-state', () => {
-    const newAuthState = generateNewAuthState()
-
-    // Update the auth state in the store
-    const currentAuth = store.get('auth')
-    store.set('auth', {
-      ...currentAuth,
-      state: newAuthState,
-    })
-
-    return newAuthState
-  })
-
-  // Auth token exchange
-  handleIPC('exchange-auth-code', async (_e, { authCode, state, config }) => {
-    try {
-      const authStore = store.get('auth')
-      const codeVerifier = authStore.state?.codeVerifier
-      const storedState = authStore.state?.state
-
-      // Validate state parameter
-      if (storedState !== state) {
-        throw new Error(`State mismatch: expected ${storedState}, got ${state}`)
-      }
-
-      if (!codeVerifier) {
-        throw new Error('Code verifier not found in store')
-      }
-
-      const tokenParams = new URLSearchParams({
-        grant_type: 'authorization_code',
-        client_id: config.clientId,
-        code: authCode,
-        redirect_uri: config.redirectUri,
-        code_verifier: codeVerifier,
-      })
-
-      // Add audience if present in config
-      if (config.audience) {
-        tokenParams.append('audience', config.audience)
-      }
-
-      const response = await fetch(`https://${config.domain}/oauth/token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: tokenParams.toString(),
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('Token exchange failed:')
-        console.error('Status:', response.status)
-        console.error('Status Text:', response.statusText)
-        console.error('Response:', errorText)
-        console.error('Request params:', tokenParams.toString())
-
-        throw new Error(
-          `Token exchange failed: ${response.status} ${response.statusText} - ${errorText}`,
-        )
-      }
-
-      const tokens = await response.json()
-
-      // Extract user info from ID token if available
-      let userInfo: any = null
-      if (tokens.id_token) {
-        try {
-          // Decode JWT payload (basic decode, no verification since it's from Auth0)
-          const base64Payload = tokens.id_token.split('.')[1]
-          const payload = JSON.parse(
-            Buffer.from(base64Payload, 'base64').toString(),
-          )
-          userInfo = {
-            id: payload.sub,
-            email: payload.email,
-            name: payload.name,
-            picture: payload.picture,
-          }
-        } catch (jwtError) {
-          console.warn('Failed to decode ID token:', jwtError)
-        }
-      }
-
-      return {
-        success: true,
-        tokens,
-        userInfo,
-      }
-    } catch (error) {
-      console.error('Token exchange error in main process:', error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      }
-    }
-  })
-
+  handleIPC(`web-open-url-${mainWindow.id}`, (_e, url) => shell.openExternal(url))
   // Accessibility permission check
   handleIPC(
     `check-accessibility-permission-${mainWindow.id}`,
     (_event, prompt: boolean = false) => {
-      console.log(
-        'check-accessibility-permission',
-        systemPreferences.isTrustedAccessibilityClient(prompt),
-      )
+      console.log('check-accessibility-permission', systemPreferences.isTrustedAccessibilityClient(prompt))
       return systemPreferences.isTrustedAccessibilityClient(prompt)
-    },
+    }
   )
 
   // Microphone permission check
@@ -300,13 +152,14 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
     `check-microphone-permission-${mainWindow.id}`,
     (_event, prompt: boolean = false) => {
       console.log('check-microphone-permission prompt', prompt)
-      if (prompt) return systemPreferences.askForMediaAccess('microphone')
-      console.log(
-        'check-microphone-permission getMediaAccessStatus',
-        systemPreferences.getMediaAccessStatus('microphone'),
-      )
+      if (prompt) {
+        const res = systemPreferences.askForMediaAccess('microphone')
+        console.log('check-microphone-permission askForMediaAccess', res)
+        return res
+      }
+      console.log('check-microphone-permission getMediaAccessStatus', systemPreferences.getMediaAccessStatus('microphone'))
       return systemPreferences.getMediaAccessStatus('microphone') === 'granted'
-    },
+    }
   )
 
   // We must remove handlers when the window is closed to prevent memory leaks

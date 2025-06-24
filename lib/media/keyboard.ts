@@ -11,18 +11,15 @@ export let KeyListenerProcess: ReturnType<typeof spawn> | null = null
 function getBinaryPath(): string | null {
   const isDev = !app.isPackaged
   const platform = os.platform()
-
+  
   const binaryName =
     platform === 'win32' ? 'global-key-listener.exe' : 'global-key-listener'
 
   const getTargetDir = () => {
     if (isDev) {
-      const targetBase = join(
-        __dirname,
-        '../../native/global-key-listener/target',
-      )
+      const targetBase = join(__dirname, '../../native/global-key-listener/target')
       if (platform === 'darwin') {
-        return join(targetBase, 'aarch64-apple-darwin/release')
+        return join(targetBase, 'universal')
       } else if (platform === 'win32') {
         return join(targetBase, 'x86_64-pc-windows-gnu/release')
       }
@@ -35,9 +32,7 @@ function getBinaryPath(): string | null {
 
   const targetDir = getTargetDir()
   if (!targetDir) {
-    console.error(
-      `Cannot determine key listener binary path for platform ${platform}`,
-    )
+    console.error(`Cannot determine key listener binary path for platform ${platform}`)
     return null
   }
   return join(targetDir, binaryName)
@@ -81,7 +76,7 @@ export const startKeyListener = () => {
     KeyListenerProcess.unref()
 
     let buffer = ''
-    KeyListenerProcess.stdout?.on('data', data => {
+    KeyListenerProcess.stdout?.on('data', (data) => {
       const chunk = data.toString()
       buffer += chunk
       const lines = buffer.split('\n')
@@ -102,18 +97,18 @@ export const startKeyListener = () => {
       }
     })
 
-    KeyListenerProcess.stderr?.on('data', data => {
+    KeyListenerProcess.stderr?.on('data', (data) => {
       console.error('Key listener stderr:', data.toString())
     })
 
-    KeyListenerProcess.on('error', error => {
+    KeyListenerProcess.on('error', (error) => {
       console.error('Key listener process spawn error:', error)
       KeyListenerProcess = null
     })
 
     KeyListenerProcess.on('close', (code, signal) => {
       console.warn(
-        `Key listener process exited with code: ${code}, signal: ${signal}`,
+        `Key listener process exited with code: ${code}, signal: ${signal}`
       )
       KeyListenerProcess = null
     })

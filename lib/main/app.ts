@@ -5,7 +5,12 @@ import { pathToFileURL } from 'url'
 
 // Keep a reference to the pill window to prevent it from being garbage collected.
 let pillWindow: BrowserWindow | null = null
-let mainWindow: BrowserWindow | null = null
+// Keep a reference to the main window
+export let mainWindow: BrowserWindow | null = null
+
+export function getPillWindow(): BrowserWindow | null {
+  return pillWindow
+}
 
 // --- No changes to createAppWindow ---
 export function createAppWindow(): BrowserWindow {
@@ -28,21 +33,18 @@ export function createAppWindow(): BrowserWindow {
     },
   })
 
-  // Register IPC events for the main window.
-  registerWindowIPC(mainWindow)
+  // Stop the key listener when the window is closed.
+  mainWindow.on('closed', () => {
+    mainWindow = null // Clear the reference
+  })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow?.show()
+    mainWindow!.show()
   })
 
-  mainWindow.webContents.setWindowOpenHandler(details => {
+  mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
-  })
-
-  // Clean up the reference when the window is closed.
-  mainWindow.on('closed', () => {
-    mainWindow = null
   })
 
   // HMR for renderer base on electron-vite cli.
@@ -56,12 +58,9 @@ export function createAppWindow(): BrowserWindow {
   return mainWindow
 }
 
-// Getter function to access the main window
-export function getMainWindow(): BrowserWindow | null {
-  return mainWindow
-}
 
-// --- Updated createPillWindow function ---
+const PILL_MAX_WIDTH = 120
+const PILL_MAX_HEIGHT = 40
 export function createPillWindow(): void {
   pillWindow = new BrowserWindow({
     width: PILL_MAX_WIDTH,
@@ -88,10 +87,7 @@ export function createPillWindow(): void {
     pillWindow.setAlwaysOnTop(true, 'screen-saver', 1)
     pillWindow.setFullScreenable(false)
 
-    pillWindow.setVisibleOnAllWorkspaces(true, {
-      visibleOnFullScreen: true,
-      skipTransformProcessType: true,
-    })
+    pillWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true,})
   }
 
   // Use a URL hash to tell our React app to load the pill component.
@@ -138,8 +134,8 @@ export function startPillPositioner() {
 }
 
 // --- No changes to other functions ---
-function registerResourcesProtocol() {
-  protocol.handle('res', async request => {
+export function registerResourcesProtocol() {
+  protocol.handle('res', async (request) => {
     try {
       const url = new URL(request.url)
       // Combine hostname and pathname to get the full path

@@ -4,5 +4,9 @@
     "us-west-2b",
     "us-west-2c",
     "us-west-2d"
-  ]
+  ],
+  "hosted-zone:account=287641434880:domainName=ito-api.com:region=us-west-2": {
+    "Id": "/hostedzone/Z008510939MEEVRBSLOAJ",
+    "Name": "ito-api.com."
+  }
 }

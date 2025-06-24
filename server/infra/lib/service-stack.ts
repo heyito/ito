@@ -7,7 +7,10 @@ import {
   Tags,
 } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
-import { Certificate } from 'aws-cdk-lib/aws-certificatemanager'
+import {
+  Certificate,
+  CertificateValidation,
+} from 'aws-cdk-lib/aws-certificatemanager'
 import {
   ApplicationProtocol,
   Protocol,
@@ -36,6 +39,8 @@ import { DatabaseCluster } from 'aws-cdk-lib/aws-rds'
 import { Vpc } from 'aws-cdk-lib/aws-ec2'
 import { PolicyStatement, ServicePrincipal } from 'aws-cdk-lib/aws-iam'
 import { Repository } from 'aws-cdk-lib/aws-ecr'
+import { ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53'
+import { LoadBalancerTarget } from 'aws-cdk-lib/aws-route53-targets'
 
 export interface ServiceStackProps extends StackProps {
   dbSecretArn: string
@@ -55,12 +60,15 @@ export class ServiceStack extends Stack {
       props.dbSecretArn,
     )
 
-    // Cloudflare DNS - CNAME setup for HTTPs
-    const cert = Certificate.fromCertificateArn(
-      this,
-      'ItoCert',
-      'arn:aws:acm:us-west-2:287641434880:certificate/bc787183-0191-49db-a955-b28bd5960cca',
-    )
+    const zone = HostedZone.fromLookup(this, 'HostedZone', {
+      domainName: 'ito-api.com',
+    })
+
+    const domainName = 'api.ito-api.com'
+    const cert = new Certificate(this, 'SiteCert', {
+      domainName,
+      validation: CertificateValidation.fromDns(zone),
+    })
 
     const cluster = new Cluster(this, 'ItoEcsCluster', {
       vpc: props.vpc,
@@ -110,6 +118,8 @@ export class ServiceStack extends Stack {
           logDriver: new AwsLogDriver({ streamPrefix: 'ito-server' }),
         },
         protocol: ApplicationProtocol.HTTPS,
+        domainZone: zone,
+        domainName,
         certificate: cert,
         redirectHTTP: true,
         sslPolicy: SslPolicy.RECOMMENDED,

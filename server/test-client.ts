@@ -1,96 +1,96 @@
-import * as grpc from "@grpc/grpc-js";
-import * as protoLoader from "@grpc/proto-loader";
-import * as fs from "fs";
+import { createClient } from '@connectrpc/connect'
+import { createConnectTransport } from '@connectrpc/connect-node'
+import {
+  ItoService,
+  TranscribeFileRequestSchema,
+} from './src/generated/ito_pb.js'
+import { create } from '@bufbuild/protobuf'
 
-// 1. Import the pre-compiled service definition directly from the library
-import { service as healthServiceDefinition } from 'grpc-health-check';
+// Mock JWT token for testing (replace with actual Auth0 token)
+const TEST_JWT_TOKEN = process.env.TEST_JWT_TOKEN || 'your-jwt-token-here'
 
-// Import the Ito service type from your generated types
-import { ProtoGrpcType as ItoProtoType } from "./src/generated/ito";
+const transport = createConnectTransport({
+  baseUrl: 'http://localhost:3000',
+  httpVersion: '1.1', // Use HTTP/1.1 for simplicity
+})
 
-// --- Configuration ---
-const ITO_PROTO_PATH = "./src/ito.proto";
-const SERVER_ADDRESS = "localhost:3000";
+const client = createClient(ItoService, transport)
 
-
-// --- Load Service Definitions ---
-
-// Load your Ito service definition using proto-loader (this is still correct for your own service)
-const itoPackageDefinition = protoLoader.loadSync(ITO_PROTO_PATH);
-const itoProto = grpc.loadPackageDefinition(itoPackageDefinition) as unknown as ItoProtoType;
-
-
-// --- Create Clients ---
-
-// Create a client for your ItoService
-const itoClient = new itoProto.ito.ItoService(
-  SERVER_ADDRESS,
-  grpc.credentials.createInsecure()
-);
-
-// 2. Create the Health Client using the imported service definition object
-// This mirrors the official test file's method and avoids all file system lookups.
-const HealthClientConstructor = grpc.makeClientConstructor(healthServiceDefinition, 'Health');
-const healthClient = new HealthClientConstructor(
-    SERVER_ADDRESS,
-    grpc.credentials.createInsecure()
-); // Cast to the generated type for type-safety
-
-
-/**
- * Checks the health of a gRPC service.
- */
-function checkServerHealth(service: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const request = { service };
-
-    healthClient.check(request, (error, response) => {
-      if (error) {
-        console.error(`Health check failed for service "${service}":`, error.message);
-        return reject(error);
-      }
-      
-      if (response?.status === 'SERVING') {
-        console.log(`Health check for "${service || 'Server Overall'}" PASSED. Status: SERVING.`);
-        resolve();
-      } else {
-        const errorMsg = `Health check for "${service || 'Server Overall'}" FAILED. Status: ${response?.status}`;
-        console.error(errorMsg);
-        reject(new Error(errorMsg));
-      }
-    });
-  });
+// Create headers with Auth0 JWT token
+const createAuthHeaders = (token: string) => {
+  return { authorization: `Bearer ${token}` }
 }
 
-async function main() {
-    try {
-        console.log("--- Checking Server Health ---");
-        await checkServerHealth('');
-        await checkServerHealth('ito.ItoService');
+// Test the TranscribeFile method with authentication
+async function testTranscribeFile() {
+  console.log('Testing TranscribeFile with Auth0 authentication...')
 
-        const dummyAudioFile = "dummy-audio.wav";
-        fs.writeFileSync(dummyAudioFile, "this is not real audio data");
-        const audioBuffer = fs.readFileSync(dummyAudioFile);
+  const audioData = new TextEncoder().encode('fake-audio-data')
+  const request = create(TranscribeFileRequestSchema, {
+    audioData: audioData,
+  })
+  const headers = createAuthHeaders(TEST_JWT_TOKEN)
 
-        console.log("\n--- Calling TranscribeFile ---");
-        itoClient.TranscribeFile({ audioData: audioBuffer }, (err, response) => {
-            if (err) {
-                console.error("TranscribeFile Error:", err.message);
-            } else {
-                console.log("Response Received:", response?.transcript);
-            }
+  try {
+    const response = await client.transcribeFile(request, { headers })
+    console.log('✓ TranscribeFile response:', response)
+    return response
+  } catch (error) {
+    console.error('✗ TranscribeFile error:', error)
+    throw error
+  }
+}
 
-            fs.unlinkSync(dummyAudioFile);
-            itoClient.close();
-            healthClient.close();
-        });
+// Test the public health endpoint using fetch
+async function testHealthEndpoint() {
+  console.log('Testing public HTTP health endpoint...')
 
-    } catch (error) {
-        console.error("\nServer is not healthy. Aborting operation.");
-        itoClient.close();
-        healthClient.close();
-        process.exit(1);
+  try {
+    const response = await fetch('http://localhost:3000/health')
+    const data = await response.json()
+    console.log('✓ Public health endpoint response:', data)
+    return data
+  } catch (error) {
+    console.error('✗ Health endpoint test error:', error)
+    throw error
+  }
+}
+
+// Main test function
+async function runTests() {
+  console.log('='.repeat(70))
+  console.log('🧪 Connect RPC + Auth0 Fastify Integration Test')
+  console.log('='.repeat(70))
+
+  try {
+    console.log('TEST_JWT_TOKEN', TEST_JWT_TOKEN)
+
+    // Test HTTP endpoints first
+    console.log('\n📡 Testing HTTP Endpoints:')
+    await testHealthEndpoint()
+
+    if (TEST_JWT_TOKEN !== 'your-jwt-token-here') {
+      console.log('\n🚀 Testing Authenticated Connect RPC calls:')
+      await testTranscribeFile()
+      console.log('✓ TranscribeFile with Auth0 authentication working')
+
+      console.log('\n🎉 All tests with authentication passed!')
+    } else {
+      console.log(
+        '\n⚠️  To test authenticated RPC calls, set TEST_JWT_TOKEN environment variable',
+      )
+      console.log('   Get a token from your Auth0 application and run:')
+      console.log('   export TEST_JWT_TOKEN="your-actual-jwt-token"')
+      console.log('   npm run test-connect')
     }
+
+    console.log('\n✅ All tests completed successfully!')
+  } catch (error) {
+    console.error('\n❌ Test failed:', error)
+    process.exit(1)
+  }
+
+  process.exit(0)
 }
 
-main();
+runTests()

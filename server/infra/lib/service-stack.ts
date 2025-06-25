@@ -129,7 +129,7 @@ export class ServiceStack extends Stack {
     fargateService.targetGroup.configureHealthCheck({
       protocol: Protocol.HTTP,
       port: '3000',
-      path: '/healthz',
+      path: '/health',
       interval: Duration.seconds(30),
       timeout: Duration.seconds(5),
       healthyThresholdCount: 2,

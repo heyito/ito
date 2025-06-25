@@ -1,128 +1,64 @@
-import * as grpc from "@grpc/grpc-js";
-import * as protoLoader from "@grpc/proto-loader";
-// Correct path to the generated types
-import { ProtoGrpcType } from "./generated/ito.js";
-// Correct path to the generated service handler type
-import { ItoServiceHandlers } from "./generated/ito/ItoService.js";
-import { PassThrough } from "stream";
-import { ReflectionService } from "@grpc/reflection";
-import { HealthImplementation, ServingStatusMap } from "grpc-health-check";
-import http from "http";
-import { ListenOptions } from "net";
+import { fastify } from 'fastify'
+import { fastifyConnectPlugin } from '@connectrpc/connect-fastify'
+import Auth0 from '@auth0/auth0-fastify-api'
+import itoServiceRoutes from './services/itoService.js'
+import dotenv from 'dotenv'
 
-// Correct path to the proto file
-const PROTO_PATH = "./src/ito.proto";
-const HEALTH_PROTO_PATH =
-  "node_modules/grpc-health-check/proto/health/v1/health.proto";
+dotenv.config()
 
-const itoPackageDefinition = protoLoader.loadSync([
-  PROTO_PATH,
-  HEALTH_PROTO_PATH,
-]);
-const itoProto = grpc.loadPackageDefinition(
-  itoPackageDefinition
-) as unknown as ProtoGrpcType;
-
-const statusMap: ServingStatusMap = {
-  "ito.ItoService": "SERVING",
-  "": "NOT_SERVING",
-};
-
-// Construct the service implementation
-const healthImpl = new HealthImplementation(statusMap);
-
-// Use a consistent name for the server implementation
-const itoServer: ItoServiceHandlers = {
-  /**
-   * Implementation for the Unary (whole file) RPC method.
-   */
-  TranscribeFile(call, callback) {
-    // Add a check to ensure audio_data exists
-    if (!call.request.audioData) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        details: "No audio data received",
-      });
-    }
-
-    console.log("Received TranscribeFile request.");
-    const audioData: Buffer = call.request.audioData;
-
-    console.log(`Processing audio file of size: ${audioData.length} bytes.`);
-    // TODO: Replace with actual call to Groq/Gemini STT
-    const dummyTranscript = "This is a transcript from the whole file.";
-
-    callback(null, { transcript: dummyTranscript });
-  },
-
-  /**
-   * Implementation for the Client-Streaming RPC method.
-   */
-  TranscribeStream(call, callback) {
-    console.log("Client has started streaming audio.");
-    const audioChunks: Buffer[] = [];
-
-    call.on("data", (chunk: { audio_data: Buffer }) => {
-      console.log(`Received audio chunk of size: ${chunk.audio_data.length}`);
-      audioChunks.push(chunk.audio_data);
-    });
-
-    call.on("error", (err: Error) => {
-      console.error("Error during stream:", err);
-    });
-
-    call.on("end", () => {
-      console.log("Client finished streaming. Processing final audio.");
-      const fullAudio: Buffer = Buffer.concat(audioChunks);
-
-      // TODO: Replace with actual call to Groq/Gemini STT
-      console.log(
-        `Processing final concatenated audio of size: ${fullAudio.length} bytes.`
-      );
-      const dummyTranscript = "This is a transcript from the streamed audio.";
-
-      callback(null, { transcript: dummyTranscript });
-    });
-  },
-};
-
+// Create the main server function
 export const startServer = async () => {
-  const server = new grpc.Server();
-  // Ensure we use the correct service definition and implementation
-  server.addService(itoProto.ito.ItoService.service, itoServer);
-  healthImpl.addToServer(server);
-  const reflectionService = new ReflectionService(itoPackageDefinition);
-  reflectionService.addToServer(server);
+  const server = fastify({
+    logger: true,
+  })
 
-  const port = "0.0.0.0:3000";
-  server.bindAsync(
-    port,
-    grpc.ServerCredentials.createInsecure(),
-    (err, port) => {
-      if (err) {
-        console.error(err);
-        return;
-      }
-      console.log(`gRPC server listening on ${port}`);
-    }
-  );
-
-  healthImpl.setStatus("", "SERVING");
-};
-
-// This is completely unrelated to the gRPC server.
-// We use this to provide a simple HTTP health check endpoint for load balancers.
-const server = http.createServer((req, res) => {
-  if (req.url === "/healthz") {
-    res.writeHead(200);
-    res.end("OK");
-  } else {
-    res.writeHead(404);
-    res.end();
+  // Validate Auth0 configuration
+  if (!process.env.AUTH0_DOMAIN || !process.env.AUTH0_AUDIENCE) {
+    server.log.error('Auth0 domain or audience not configured in .env file')
+    process.exit(1)
   }
-});
 
-const opts: ListenOptions = { port: 3000, exclusive: false };
-server.listen(opts, () => {
-  console.log("Health endpoint listening on port 3000");
-});
+  // Register the Auth0 plugin
+  const REQUIRE_AUTH = process.env.REQUIRE_AUTH === 'true'
+  const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN
+  const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE
+  if (REQUIRE_AUTH && (!AUTH0_DOMAIN || !AUTH0_AUDIENCE)) {
+    server.log.error('Auth0 domain or audience not configured in .env file')
+    process.exit(1)
+  }
+
+  await server.register(Auth0, {
+    domain: process.env.AUTH0_DOMAIN,
+    audience: process.env.AUTH0_AUDIENCE,
+  })
+
+  // Register Connect RPC plugin in a context that conditionally applies Auth0 authentication
+  await server.register(async function (fastify) {
+    // Apply Auth0 authentication to all routes in this context only if REQUIRE_AUTH is true
+    if (REQUIRE_AUTH) {
+      fastify.addHook('preHandler', fastify.requireAuth())
+    }
+
+    // Register the Connect RPC plugin with our service routes
+    await fastify.register(fastifyConnectPlugin, {
+      routes: itoServiceRoutes,
+    })
+  })
+
+  // Health check endpoint (public)
+  server.get('/health', async (_request, _reply) => {
+    return { status: 'ok', service: 'ito-server' }
+  })
+
+  // Start the server
+  const port = 3000
+  const host = '0.0.0.0'
+
+  try {
+    await server.listen({ port, host })
+    console.log(`🚀 Connect RPC server listening on ${host}:${port}`)
+  } catch (err) {
+    server.log.error(err)
+    process.exit(1)
+  }
+}

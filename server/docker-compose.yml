@@ -1,25 +1,25 @@
-version: "3.8"
+version: '3.8'
 
 services:
   ito-grpc-server:
     build: .
     ports:
-      - "3000:3000"
+      - '3000:3000'
     env_file:
-      - ./.env.development
+      - ./.env
     volumes:
       - .:/app
       - /app/node_modules
-    command: yarn start
+    command: bun run start
     container_name: ito-server
     restart: always
     depends_on:
       - db
     environment:
       NODE_ENV: development
-      PORT: "3000"
+      PORT: '3000'
       DB_HOST: localhost
-      DB_PORT: "5432"
+      DB_PORT: '5432'
       DB_USER: devuser
       DB_PASSWORD: devpass
       DB_NAME: devdb
@@ -32,7 +32,7 @@ services:
       POSTGRES_PASSWORD: devpass
       POSTGRES_DB: devdb
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
 

@@ -46,4 +46,5 @@ jobs:
 
       - name: Deploy to production
         working-directory: server/infra
-        run: npx cdk deploy --all --require-approval never
+        run: echo "skip for now" 
+        # run: npx cdk deploy --all --require-approval never

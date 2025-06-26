@@ -18,7 +18,7 @@ import {
   SslPolicy,
 } from 'aws-cdk-lib/aws-elasticloadbalancingv2'
 import { BlockPublicAccess, Bucket } from 'aws-cdk-lib/aws-s3'
-import { DB_NAME } from './constants'
+import { CLUSTER_NAME, DB_NAME, SERVICE_NAME } from './constants'
 import {
   AwsLogDriver,
   Cluster,
@@ -69,7 +69,7 @@ export class ServiceStack extends Stack {
 
     const cluster = new Cluster(this, 'ItoEcsCluster', {
       vpc: props.vpc,
-      clusterName: `${stageName}-ito-cluster`,
+      clusterName: `${stageName}-${CLUSTER_NAME}`,
     })
 
     const logBucket = new Bucket(this, 'ItoAlbLogsBucket', {
@@ -87,7 +87,7 @@ export class ServiceStack extends Stack {
       'ItoFargateService',
       {
         cluster,
-        serviceName: `${stageName}-ito-service`,
+        serviceName: `${stageName}-${SERVICE_NAME}`,
         cpu: 256,
         memoryLimitMiB: 512,
         desiredCount: 1,

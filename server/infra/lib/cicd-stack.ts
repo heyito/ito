@@ -8,7 +8,13 @@ import {
   Effect,
 } from 'aws-cdk-lib/aws-iam'
 import { Repository } from 'aws-cdk-lib/aws-ecr'
-import { ITO_PREFIX, SERVER_NAME } from './constants'
+import {
+  CLUSTER_NAME,
+  ITO_PREFIX,
+  SERVER_NAME,
+  SERVICE_NAME,
+} from './constants'
+import { Cluster } from 'aws-cdk-lib/aws-ecs'
 
 export interface GitHubOidcStackProps extends StackProps {
   stages: string[]
@@ -59,6 +65,7 @@ export class GitHubOidcStack extends Stack {
           effect: Effect.ALLOW,
           actions: [
             'ecr:BatchCheckLayerAvailability',
+            'ecr:BatchGetImage',
             'ecr:GetDownloadUrlForLayer',
             'ecr:InitiateLayerUpload',
             'ecr:UploadLayerPart',
@@ -68,6 +75,22 @@ export class GitHubOidcStack extends Stack {
             'ecr:ListImages',
           ],
           resources: [repoArn, `${repoArn}/*`],
+        }),
+      )
+
+      ciCdRole.addToPolicy(
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'ecs:DescribeServices',
+            'ecs:UpdateService',
+            'ecs:ListClusters',
+            'ecs:DescribeClusters',
+          ],
+          resources: [
+            `arn:aws:ecs:${this.region}:${this.account}:cluster/${stage}-${CLUSTER_NAME}`,
+            `arn:aws:ecs:${this.region}:${this.account}:service/${stage}-${CLUSTER_NAME}/${stage}-${SERVICE_NAME}`,
+          ],
         }),
       )
     })

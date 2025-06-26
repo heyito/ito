@@ -42,18 +42,18 @@ jobs:
       environment: ${{ inputs.environment }}
     secrets: inherit
 
-  deploy-app:
-    needs: paths-check
-    if: ${{ needs.paths-check.outputs.server_changed == 'true' }}
-    uses: ./.github/workflows/app-deploy.yml
-    with:
-      environment: ${{ inputs.environment }}
-    secrets: inherit
-
   deploy-infra:
     needs: paths-check
     if: ${{ needs.paths-check.outputs.infra_changed == 'true' }}
     uses: ./.github/workflows/infra-deploy.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  deploy-app:
+    needs: paths-check
+    if: ${{ needs.paths-check.outputs.server_changed == 'true' }}
+    uses: ./.github/workflows/app-deploy.yml
     with:
       environment: ${{ inputs.environment }}
     secrets: inherit

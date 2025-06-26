@@ -44,6 +44,7 @@ jobs:
               --password-stdin 287641434880.dkr.ecr.us-west-2.amazonaws.com
 
     - name: Build & push multi-arch image
+      working-directory: server
       run: |
         docker buildx create --use
         docker buildx build \

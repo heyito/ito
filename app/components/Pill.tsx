@@ -16,22 +16,35 @@ const globalStyles = `
   }
 `
 
-// A new component to very basic audio visualization
-const AudioBars = ({ volume }: { volume: number }) => {
-  // Base heights for visual variety
-  const bars = [0.4, 0.7, 1, 0.8, 0.5, 0.6, 0.3]
+const BAR_UPDATE_INTERVAL = 48
 
-  const barStyle = (baseHeight: number): React.CSSProperties => {
-    // Amplify volume for a more noticeable effect and clamp the value
-    const scale = Math.max(0.05, Math.min(1, volume * 4))
+// A new component to very basic audio visualization
+const AudioBars = ({ volumeHistory }: { volumeHistory: number[] }) => {
+  // Base heights for visual variety
+  const bars = Array(42).fill(1)
+  const [activeBarIndex, setActiveBarIndex] = useState(0)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveBarIndex((prevIndex) => (prevIndex + 1) % bars.length)
+    }, BAR_UPDATE_INTERVAL)
+
+    return () => clearInterval(interval)
+  }, [bars.length])
+
+  const barStyle = (baseHeight: number, index: number): React.CSSProperties => {
+    const volume = volumeHistory[volumeHistory.length - index - 1] || 0
+    const scale = Math.max(0.05, Math.min(1, volume * 2.5))
+    const activeBarHeight = index === activeBarIndex ? 2 : 0
+    const height = activeBarHeight + baseHeight * 20 * scale
+    const clampedHeight = Math.min(Math.max(height, 1), 14)
 
     return {
-      width: '5px',
+      width: '1px',
       backgroundColor: 'white',
       borderRadius: '2.5px',
-      margin: '0 2.5px',
-      height: `${baseHeight * 20 * scale}px`, // Max height is 20px
-      transition: 'height 0.08s ease-out',
+      margin: '0 0.25px',
+      height: `${clampedHeight}px`,
     }
   }
 
@@ -39,13 +52,13 @@ const AudioBars = ({ volume }: { volume: number }) => {
     <div
       style={{
         display: 'flex',
-        alignItems: 'flex-end',
+        alignItems: 'center',
         justifyContent: 'center',
         height: '100%',
       }}
     >
       {bars.map((h, i) => (
-        <div key={i} style={barStyle(h)} />
+        <div key={i} style={barStyle(h, i)} />
       ))}
     </div>
   )
@@ -53,7 +66,9 @@ const AudioBars = ({ volume }: { volume: number }) => {
 
 const Pill = () => {
   const [isRecording, setIsRecording] = useState(false)
-  const [volume, setVolume] = useState(0)
+  // Fixed size array of volume values to be used for the audio bars, size is 21
+  const [volumeHistory, setVolumeHistory] = useState<number[]>([])
+  const [lastVolumeUpdate, setLastVolumeUpdate] = useState(0)
 
   useEffect(() => {
     // Listen for recording state changes from the main process
@@ -62,12 +77,23 @@ const Pill = () => {
       (state: { isRecording: boolean }) => {
         // No longer need to ask main to resize. Just update React state.
         setIsRecording(state.isRecording)
+        setVolumeHistory([])
       },
     )
 
     // Listen for volume updates from the main process
     const unsubVolume = window.api.on('volume-update', (vol: number) => {
-      setVolume(vol)
+      // throttle the volume updates to 80ms
+      const now = Date.now()
+      if (now - lastVolumeUpdate < BAR_UPDATE_INTERVAL) {
+        return
+      }
+      const newVolumeHistory = [...volumeHistory, vol]
+      if (newVolumeHistory.length > 42) {
+        newVolumeHistory.shift()
+      }
+      setVolumeHistory(newVolumeHistory)
+      setLastVolumeUpdate(now)
     })
 
     // Cleanup listeners when the component unmounts
@@ -75,13 +101,13 @@ const Pill = () => {
       unsubRecording()
       unsubVolume()
     }
-  }, []) // Dependency array is empty as the logic inside doesn't depend on state.
+  }, [volumeHistory, lastVolumeUpdate]) // Dependency array is empty as the logic inside doesn't depend on state.
 
   // Define dimensions for both states
   const idleWidth = 60
   const idleHeight = 8
-  const recordingWidth = 120
-  const recordingHeight = 40
+  const recordingWidth = 96
+  const recordingHeight = 36
 
   // A single, unified style for the pill. Its properties will be
   // smoothly transitioned by CSS.
@@ -113,7 +139,7 @@ const Pill = () => {
       <div style={pillStyle}>
         {/* Conditionally render the audio bars. They will fade in as the
             pill expands because they are part of the content. */}
-        {isRecording && <AudioBars volume={volume} />}
+        {isRecording && <AudioBars volumeHistory={volumeHistory} />}
       </div>
     </>
   )

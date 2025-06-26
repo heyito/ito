@@ -32,7 +32,6 @@ export default function App() {
             path="/pill"
             element={
               <>
-                <GlobalKeyListener />
                 <Pill />
               </>
             }

@@ -25,7 +25,7 @@ jobs:
     - name: Setup Bun
       uses: oven-sh/setup-bun@v1
       with:
-        bun-version: '1.x'   
+        bun-version: '1.1.20'   
 
     - name: Install dependencies
       run: bun install
@@ -53,7 +53,7 @@ jobs:
           --platform linux/arm64,linux/amd64 \
           --tag 287641434880.dkr.ecr.us-west-2.amazonaws.com/${{ inputs.environment }}-ito-server:latest \
           --push .
-          
+
     - name: Force new ECS deployment
       run: |
         aws ecs update-service \

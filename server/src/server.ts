@@ -12,25 +12,23 @@ export const startServer = async () => {
     logger: true,
   })
 
-  // Validate Auth0 configuration
-  if (!process.env.AUTH0_DOMAIN || !process.env.AUTH0_AUDIENCE) {
-    server.log.error('Auth0 domain or audience not configured in .env file')
-    process.exit(1)
-  }
-
   // Register the Auth0 plugin
   const REQUIRE_AUTH = process.env.REQUIRE_AUTH === 'true'
-  const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN
-  const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE
-  if (REQUIRE_AUTH && (!AUTH0_DOMAIN || !AUTH0_AUDIENCE)) {
-    server.log.error('Auth0 domain or audience not configured in .env file')
-    process.exit(1)
-  }
 
-  await server.register(Auth0, {
-    domain: process.env.AUTH0_DOMAIN,
-    audience: process.env.AUTH0_AUDIENCE,
-  })
+  if (REQUIRE_AUTH) {
+    const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN
+    const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE
+
+    if (!AUTH0_DOMAIN || !AUTH0_AUDIENCE) {
+      server.log.error('Auth0 client ID or secret not configured in .env file')
+      process.exit(1)
+    }
+
+    await server.register(Auth0, {
+      domain: AUTH0_DOMAIN,
+      audience: AUTH0_AUDIENCE,
+    })
+  }
 
   // Register Connect RPC plugin in a context that conditionally applies Auth0 authentication
   await server.register(async function (fastify) {

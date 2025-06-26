@@ -2,5 +2,4 @@ infra/
 node_modules/
 dist 
 .git/
-.env*
 test/

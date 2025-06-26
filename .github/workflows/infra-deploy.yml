@@ -51,4 +51,4 @@ jobs:
 
       - name: Deploy to production
         working-directory: server/infra
-        run: npx cdk deploy "Ito-${{ inputs.environment }}/*" --require-approval never
+        run: npx cdk deploy "Ito-${{ vars.AWS_STAGE }}/*" --require-approval never

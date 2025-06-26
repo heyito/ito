@@ -8,7 +8,7 @@ import {
 import { create } from '@bufbuild/protobuf'
 import type { HandlerContext } from '@connectrpc/connect'
 import { groqClient } from '../clients/groqClient.js'
-   
+
 /**
  * --- NEW: WAV Header Generation Function ---
  * Creates a 44-byte WAV header for raw PCM audio data.

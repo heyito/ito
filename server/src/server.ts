@@ -10,6 +10,7 @@ dotenv.config()
 export const startServer = async () => {
   const server = fastify({
     logger: true,
+    http2: true, // Enable HTTP/2 support
   })
 
   // Register the Auth0 plugin

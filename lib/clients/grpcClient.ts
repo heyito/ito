@@ -59,8 +59,9 @@ class GrpcClient {
     startStream() {
         console.info('[gRPC Service] Starting new transcription stream.');
 
-        // Reset state for a new stream
-        this.resetStreamState();
+        this.chunkQueue = [];
+        this.streamClosed = false;
+        this.newChunkNotifier = null;
 
         // Call the RPC method with our async generator.
         this.client.transcribeStream(this.createAudioStream())

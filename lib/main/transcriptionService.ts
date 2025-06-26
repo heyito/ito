@@ -15,7 +15,7 @@ class TranscriptionService {
   public startTranscription() {
     if (this.isTranscribing) {
       log.warn('[TranscriptionService] Already transcribing, stopping the previous session first.');
-      this.stopTranscription();
+      grpcClient.stopStream(); // Stop the previous session if it's still active
     }
     log.info('[TranscriptionService] Starting transcription.');
     this.isTranscribing = true;

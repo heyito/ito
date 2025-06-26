@@ -28,52 +28,19 @@ type MicrophoneToRender = {
 }
 
 async function getAvailableMicrophones(): Promise<Microphone[]> {
-  let stream: MediaStream | null = null
   try {
-    // First request microphone permission to ensure we get labels
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-
-    // Get all devices
-    const devices = await navigator.mediaDevices.enumerateDevices()
-
-    // Filter for audio input devices and exclude non-default virtual microphones
-    const microphones = devices
-      .filter(device => {
-        // Keep only audio input devices
-        if (device.kind !== 'audioinput') return false
-
-        // Keep the default device
-        if (
-          device.deviceId === 'default' ||
-          device.label.toLowerCase().includes('default')
-        )
-          return true
-
-        // Filter out virtual microphones that aren't the default
-        // Virtual microphones often have specific patterns in their labels
-        const label = device.label.toLowerCase()
-        const isVirtual =
-          label.includes('virtual') ||
-          label.includes('vb-audio') ||
-          label.includes('blackhole') ||
-          label.includes('loopback')
-
-        return !isVirtual
-      })
-      .map(device => ({
-        deviceId: device.deviceId,
-        label: device.label || `Microphone ${device.deviceId.slice(0, 5)}...`,
-      }))
-
-    return microphones
+    console.log('Fetching available native microphones...');
+    // This now gets the list directly from our Rust binary via the main process
+    const deviceNames: string[] = await window.api.invoke('get-native-audio-devices');
+    console.log('Available native microphones:', deviceNames);
+    // The deviceId and label are the same in this new system
+    return deviceNames.map(name => ({
+      deviceId: name,
+      label: name,
+    }));
   } catch (error) {
-    console.error('Error getting available microphones:', error)
-    throw error
-  } finally {
-    // Always stop the stream to release the microphone
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop())
-    }
+    console.error('Error getting available native microphones:', error);
+    return [];
   }
 }
 
@@ -81,80 +48,22 @@ async function setupVolumeMonitoring(
   callback: (volume: number) => void,
   deviceId?: string,
 ) {
-  let currentMicrophone: {
-    audioContext: AudioContext
-    source: MediaStreamAudioSourceNode
-    stream: MediaStream
-  } | null = null
-  let animationFrameId: number | null = null
+  // 1. Start the native audio capture.
+  window.api.send('start-native-recording', deviceId);
 
+  // 2. Listen for volume updates from the main process.
+  const cleanupListener = window.api.on('volume-update', callback);
+
+  // 3. Return a cleanup function.
   const cleanup = () => {
-    if (animationFrameId) {
-      cancelAnimationFrame(animationFrameId)
-      animationFrameId = null
-    }
-    if (currentMicrophone) {
-      currentMicrophone.stream.getTracks().forEach(track => track.stop())
-      currentMicrophone.audioContext.close()
-      currentMicrophone = null
-    }
-  }
+    // Stop listening to events to prevent memory leaks.
+    cleanupListener();
+    // Tell the native process to stop capturing audio.
+    window.api.send('stop-native-recording');
+  };
 
-  try {
-    // Clean up any existing microphone setup
-    cleanup()
-
-    // Setup new microphone
-    console.log('Setting up microphone with deviceId:', deviceId)
-    currentMicrophone = await setupMicrophone(deviceId)
-    if (!currentMicrophone) throw new Error('Failed to setup microphone')
-    const { audioContext, source } = currentMicrophone
-
-    // Create analyser node
-    const analyser = audioContext.createAnalyser()
-    analyser.fftSize = 256
-    analyser.smoothingTimeConstant = 0.8
-
-    // Connect source to analyser
-    source.connect(analyser)
-
-    // Create data array for frequency data
-    const dataArray = new Uint8Array(analyser.frequencyBinCount)
-
-    function getVolume() {
-      analyser.getByteFrequencyData(dataArray)
-
-      // Calculate average volume
-      let sum = 0
-      for (let i = 0; i < dataArray.length; i++) {
-        sum += dataArray[i]
-      }
-      const average = sum / dataArray.length
-
-      return average / 255 // Normalize to 0-1
-    }
-
-    // Monitor volume continuously
-    function monitorVolume() {
-      const volume = getVolume()
-
-      // Update UI or trigger events based on volume
-      callback(volume)
-
-      animationFrameId = requestAnimationFrame(monitorVolume)
-    }
-
-    monitorVolume()
-
-    // Return cleanup function and the stream
-    if (!currentMicrophone) {
-      throw new Error('Microphone not initialized in setupVolumeMonitoring')
-    }
-    return { cleanup, stream: currentMicrophone.stream }
-  } catch (error) {
-    cleanup()
-    throw error
-  }
+  // The stream object is no longer relevant here.
+  return { cleanup, stream: null };
 }
 
 const microphoneToRender = (microphone: Microphone): MicrophoneToRender => {

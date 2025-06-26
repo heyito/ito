@@ -35,6 +35,14 @@ const api = {
   // Key listener methods
   startKeyListener: () => ipcRenderer.invoke('start-key-listener-service'),
   stopKeyListener: () => ipcRenderer.invoke('stop-key-listener'),
+  startNativeRecording: () => ipcRenderer.invoke('start-native-recording'),
+  stopNativeRecording: () => ipcRenderer.invoke('stop-native-recording'),
+  getNativeAudioDevices: () => ipcRenderer.invoke('get-native-audio-devices'),
+  onVolumeUpdate: (callback: (volume: number) => void) => {
+    const handler = (_: any, volume: number) => callback(volume);
+    ipcRenderer.on('volume-update', handler);
+    return () => ipcRenderer.removeListener('volume-update', handler);
+  },
   blockKeys: (keys: string[]) => ipcRenderer.invoke('block-keys', keys),
   unblockKey: (key: string) => ipcRenderer.invoke('unblock-key', key),
   getBlockedKeys: () => ipcRenderer.invoke('get-blocked-keys'),
@@ -73,6 +81,8 @@ const api = {
     ipcRenderer.invoke('check-accessibility-permission', prompt),
   'check-microphone-permission': (prompt: boolean) =>
     ipcRenderer.invoke('check-microphone-permission', prompt),
+  'start-native-recording': (deviceId: string) => ipcRenderer.send('start-native-recording', deviceId),
+  'stop-native-recording': () => ipcRenderer.send('stop-native-recording'),
   dev: {
     revertLastMigration: () => ipcRenderer.invoke('dev:revert-last-migration'),
     wipeDatabase: () => ipcRenderer.invoke('dev:wipe-database'),

@@ -10,20 +10,17 @@ import {
 import { initializeLogging } from './logger'
 import { registerIPC } from '../window/ipcEvents'
 import { registerDevIPC } from '../window/ipcDev'
-import { startKeyListener } from '../media/keyboard'
-import { setupProtocolHandling } from '../protocol'
 import { initializeDatabase } from './sqlite/db'
+import { setupProtocolHandling } from '../protocol'
+import { startKeyListener, stopKeyListener } from '../media/keyboard'
+import { startAudioRecorder, stopAudioRecorder } from '../media/audio'
+// Import the grpcClient singleton
+import { grpcClient } from '../clients/grpcClient'
 
-// Register the custom 'res' protocol and mark it as privileged.
-// This must be done before the app is ready.
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'res',
-    privileges: {
-      standard: true,
-      secure: true,
-      supportFetchAPI: true,
-    },
+    privileges: { standard: true, secure: true, supportFetchAPI: true },
   },
 ])
 
@@ -48,8 +45,6 @@ app.whenReady().then(async () => {
 
   // Register the handler for the 'res' protocol now that the app is ready.
   registerResourcesProtocol()
-
-  // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
   // Create windows
@@ -57,23 +52,31 @@ app.whenReady().then(async () => {
   createPillWindow()
   startPillPositioner()
 
-  // Start the key listener if we have permissions.
+  // --- ADDED: Give the gRPC client a reference to the main window ---
+  // This allows it to send transcription results back to the renderer.
+  if (mainWindow) {
+    grpcClient.setMainWindow(mainWindow);
+  }
+
+  startAudioRecorder()
+
   if (systemPreferences.isTrustedAccessibilityClient(false)) {
     console.log('Accessibility permissions found, starting key listener.')
     startKeyListener()
   }
 
   app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
     if (mainWindow === null) {
       createAppWindow()
     }
   })
 
-  // Default open or close DevTools by F12 in development
-  // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
+  app.on('before-quit', () => {
+    console.log('App is quitting, cleaning up resources...')
+    stopKeyListener();
+    stopAudioRecorder();
+  })  
+
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -85,15 +88,6 @@ app.whenReady().then(async () => {
   }
 })
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
-  // We want the app to stay alive so the pill window can function
-  // if (process.platform !== 'darwin') {
-  //   app.quit()
-  // }
+  // We want the app to stay alive
 })
-
-// In this file, you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.

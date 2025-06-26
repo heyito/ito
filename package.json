@@ -5,8 +5,21 @@
   "main": "./out/main/main.js",
   "license": "MIT",
   "author": {
-    "name": "Guasam",
-    "url": "https://github.com/guasam"
+    "name": "Demox Labs",
+    "url": "https://github.com/demox-labs"
+  },
+  "build": {
+    "appId": "xyz.demox-labs.ito",
+    "asar": true,
+    "extraResources": [
+      {
+        "from": "lib/generated",
+        "to": "proto",
+        "filter": [
+          "**/*.proto"
+        ]
+      }
+    ]
   },
   "scripts": {
     "dev": "bun build:rust:mac && electron-vite dev -w",
@@ -40,6 +53,8 @@
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.3.0",
+    "@connectrpc/connect": "^2.0.2",
+    "@connectrpc/connect-node": "^2.0.2",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@emotion/react": "^11.14.0",

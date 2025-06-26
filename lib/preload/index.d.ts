@@ -21,6 +21,8 @@ declare global {
     api: typeof api & {
       startKeyListener: () => Promise<boolean>
       stopKeyListener: () => Promise<boolean>
+      startNativeRecording: (deviceId: string) => Promise<void>
+      stopNativeRecording: () => Promise<void>
       blockKeys: (keys: string[]) => Promise<void>
       unblockKey: (key: string) => Promise<void>
       getBlockedKeys: () => Promise<void>

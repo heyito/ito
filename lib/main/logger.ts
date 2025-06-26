@@ -19,8 +19,8 @@ export function initializeLogging() {
   // Set up IPC transport to receive logs from the renderer process
   log.initialize()
 
-  console.info('Logging initialized.')
+  log.info('Logging initialized.')
   if (app.isPackaged) {
-    console.info(`Log file is located at: ${log.transports.file.getFile().path}`)
+    log.info(`Log file is located at: ${log.transports.file.getFile().path}`)
   }
 } 

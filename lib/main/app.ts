@@ -10,7 +10,6 @@ import {
 import { join } from 'path'
 import appIcon from '@/resources/build/icon.png?asset'
 import { pathToFileURL } from 'url'
-import { startKeyListener, stopKeyListener } from '../media/keyboard'
 
 // Keep a reference to the pill window to prevent it from being garbage collected.
 let pillWindow: BrowserWindow | null = null

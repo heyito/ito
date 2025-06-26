@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import log from 'electron-log'
 import { useSettingsStore } from '@/app/store/useSettingsStore'
 import { useAudioStore } from '@/app/store/useAudioStore'
 import { KeyState, normalizeKeyEvent } from '@/app/utils/keyboard'
@@ -15,13 +16,12 @@ export const useGlobalShortcut = () => {
   useEffect(() => {
     // Subscribe to changes in the settings store.
     // When the keyboard shortcut changes, update our KeyState instance.
-    const unsubscribe = subscribe(state => {
-      console.log(
-        'Shortcut changed, updating blocked keys:',
-        state.keyboardShortcut,
-      )
-      keyStateRef.current.updateShortcut(state.keyboardShortcut)
-    })
+    const unsubscribe = subscribe(
+      (state) => {
+        log.info('Shortcut changed, updating blocked keys:', state.keyboardShortcut)
+        keyStateRef.current.updateShortcut(state.keyboardShortcut)
+      },
+    )
 
     const handleKeyEvent = (event: KeyEvent) => {
       const { isShortcutEnabled, startRecording, stopRecording } =
@@ -41,12 +41,12 @@ export const useGlobalShortcut = () => {
       if (areShortcutKeysHeld && !isShortcutActiveRef.current) {
         // --- Shortcut Pressed ---
         isShortcutActiveRef.current = true
-        console.log('Shortcut ACTIVATED, starting recording...')
+        log.info('Shortcut ACTIVATED, starting recording...')
         startRecording(getSettingsStore().microphoneDeviceId)
       } else if (!areShortcutKeysHeld && isShortcutActiveRef.current) {
         // --- Shortcut Released ---
         isShortcutActiveRef.current = false
-        console.log('Shortcut DEACTIVATED, stopping recording...')
+        log.info('Shortcut DEACTIVATED, stopping recording...')
         stopRecording()
       }
     }

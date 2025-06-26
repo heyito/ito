@@ -2,13 +2,12 @@
 name: App CI/CD
 
 on:
-  push:
-    paths:
-      - "server/src/**"
-      - "server/Dockerfile"
-      - "server/package.json"
-      - "server/yarn.lock"
-    branches: [ main ]
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+        description: 'The environment to build for'
 
 permissions:
   contents: read
@@ -17,7 +16,7 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: production
+    environment: ${{ inputs.environment }}
 
     steps:
     - name: Checkout code
@@ -39,11 +38,11 @@ jobs:
         docker buildx create --use
         docker buildx build \
           --platform linux/arm64,linux/amd64 \
-          --tag 287641434880.dkr.ecr.us-west-2.amazonaws.com/ito-server:latest \
+          --tag 287641434880.dkr.ecr.us-west-2.amazonaws.com/${{ inputs.environment }}-ito-server:latest \
           --push .
     - name: Force new ECS deployment
       run: |
         aws ecs update-service \
-          --cluster ItoService-ItoEcsCluster \
-          --service ItoFargateService \
+          --cluster ${{ inputs.environment }}-ito-cluster \
+          --service ${{ inputs.environment }}-ito-service \
           --force-new-deployment

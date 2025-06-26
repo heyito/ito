@@ -4,6 +4,7 @@ import {
   RemovalPolicy,
   Stack,
   StackProps,
+  Stage,
   Tags,
 } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
@@ -16,13 +17,7 @@ import {
   Protocol,
   SslPolicy,
 } from 'aws-cdk-lib/aws-elasticloadbalancingv2'
-import {
-  BlockPublicAccess,
-  Bucket,
-  BucketPolicy,
-  IBucket,
-} from 'aws-cdk-lib/aws-s3'
-import { Platform } from 'aws-cdk-lib/aws-ecr-assets'
+import { BlockPublicAccess, Bucket } from 'aws-cdk-lib/aws-s3'
 import { DB_NAME } from './constants'
 import {
   AwsLogDriver,
@@ -35,12 +30,11 @@ import {
 } from 'aws-cdk-lib/aws-ecs'
 import { ApplicationLoadBalancedFargateService } from 'aws-cdk-lib/aws-ecs-patterns'
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager'
-import { DatabaseCluster } from 'aws-cdk-lib/aws-rds'
 import { Vpc } from 'aws-cdk-lib/aws-ec2'
-import { PolicyStatement, ServicePrincipal } from 'aws-cdk-lib/aws-iam'
 import { Repository } from 'aws-cdk-lib/aws-ecr'
-import { ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53'
-import { LoadBalancerTarget } from 'aws-cdk-lib/aws-route53-targets'
+import { HostedZone } from 'aws-cdk-lib/aws-route53'
+import { AppStage } from '../bin/infra'
+import { isDev } from './helpers'
 
 export interface ServiceStackProps extends StackProps {
   dbSecretArn: string
@@ -54,6 +48,9 @@ export class ServiceStack extends Stack {
   constructor(scope: Construct, id: string, props: ServiceStackProps) {
     super(scope, id, props)
 
+    const stage = Stage.of(this) as AppStage
+    const stageName = stage.stageName
+
     const dbCredentialsSecret = Secret.fromSecretCompleteArn(
       this,
       'ImportedDbSecret',
@@ -64,7 +61,7 @@ export class ServiceStack extends Stack {
       domainName: 'ito-api.com',
     })
 
-    const domainName = 'api.ito-api.com'
+    const domainName = `${stageName}.ito-api.com`
     const cert = new Certificate(this, 'SiteCert', {
       domainName,
       validation: CertificateValidation.fromDns(zone),
@@ -72,11 +69,14 @@ export class ServiceStack extends Stack {
 
     const cluster = new Cluster(this, 'ItoEcsCluster', {
       vpc: props.vpc,
+      clusterName: `${stageName}-ito-cluster`,
     })
 
     const logBucket = new Bucket(this, 'ItoAlbLogsBucket', {
-      bucketName: 'ito-alb-logs',
-      removalPolicy: RemovalPolicy.RETAIN,
+      bucketName: `${stageName}-ito-alb-logs`,
+      removalPolicy: isDev(stageName)
+        ? RemovalPolicy.DESTROY
+        : RemovalPolicy.RETAIN,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       enforceSSL: true,
       versioned: true,
@@ -87,6 +87,7 @@ export class ServiceStack extends Stack {
       'ItoFargateService',
       {
         cluster,
+        serviceName: `${stageName}-ito-service`,
         cpu: 256,
         memoryLimitMiB: 512,
         desiredCount: 1,
@@ -96,9 +97,6 @@ export class ServiceStack extends Stack {
           cpuArchitecture: CpuArchitecture.ARM64,
         },
         taskImageOptions: {
-          // image: ContainerImage.fromAsset("../", {
-          //   platform: Platform.LINUX_ARM64,
-          // }),
           image: ContainerImage.fromEcrRepository(props.serviceRepo, 'latest'),
           containerPort: 3000,
           secrets: {
@@ -114,6 +112,9 @@ export class ServiceStack extends Stack {
           environment: {
             DB_HOST: props.dbEndpoint,
             DB_NAME,
+            REQUIRE_AUTH: isDev(stageName) ? 'false' : 'true',
+            AUTH0_DOMAIN: 'dev-8rsdprb2tatdfcps.us.auth0.com',
+            AUTH0_AUDIENCE: 'http://localhost:3000',
           },
           logDriver: new AwsLogDriver({ streamPrefix: 'ito-server' }),
         },

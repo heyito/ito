@@ -1,0 +1,58 @@
+name: Shared CI/CD Workflow
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+
+jobs:
+  paths-check:
+    runs-on: ubuntu-latest
+    outputs:
+      ui_changed:     ${{ steps.filter.outputs.build }}
+      server_changed: ${{ steps.filter.outputs.server }}
+      infra_changed:  ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Detect changed areas
+        id: filter
+        uses: dorny/paths-filter@v2
+        with:
+          build:
+            - 'lib/**'
+            - 'native/**'
+            - 'resources/**'
+            - 'app/**'
+          server:
+            - 'server/src/**'
+            - 'server/Dockerfile'
+            - 'server/package.json'
+            - 'server/yarn.lock'
+          infra:
+            - 'server/infra/**'
+
+  build:
+    needs: paths-check
+    if: ${{ needs.paths-check.outputs.ui_changed == 'true' }}
+    uses: ./.github/workflows/build.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  deploy-app:
+    needs: paths-check
+    if: ${{ needs.paths-check.outputs.server_changed == 'true' }}
+    uses: ./.github/workflows/app-deploy.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  deploy-infra:
+    needs: paths-check
+    if: ${{ needs.paths-check.outputs.infra_changed == 'true' }}
+    uses: ./.github/workflows/infra-deploy.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit

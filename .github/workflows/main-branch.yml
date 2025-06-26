@@ -1,13 +1,12 @@
-name: Build Production
+name: Production CI
 
 on:
   push:
-    branches:
-      - 'main'
+    branches: [ main ]
 
 jobs:
-  build:
-    uses: ./.github/workflows/build.yml
-    secrets: inherit
+  call-reusable:
+    uses: ./.github/workflows/shared-ci.yml
     with:
       environment: production
+    secrets: inherit

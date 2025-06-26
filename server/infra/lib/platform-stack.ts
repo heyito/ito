@@ -4,6 +4,7 @@ import {
   RemovalPolicy,
   Stack,
   StackProps,
+  Stage,
   Tags,
 } from 'aws-cdk-lib'
 import { SecurityGroup, Vpc } from 'aws-cdk-lib/aws-ec2'
@@ -16,8 +17,10 @@ import {
 } from 'aws-cdk-lib/aws-rds'
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager'
 import { Construct } from 'constructs'
-import { DB_NAME } from './constants'
+import { DB_NAME, SERVER_NAME } from './constants'
 import { Repository } from 'aws-cdk-lib/aws-ecr'
+import { AppStage } from '../bin/infra'
+import { isDev } from './helpers'
 
 export interface PlatformStackProps extends StackProps {
   vpc: Vpc
@@ -32,6 +35,9 @@ export class PlatformStack extends Stack {
   constructor(scope: Construct, id: string, props: PlatformStackProps) {
     super(scope, id, props)
 
+    const stage = Stage.of(this) as AppStage
+    const stageName = stage.stageName
+
     const dbSecurityGroup = new SecurityGroup(this, 'ItoDbSecurityGroup', {
       vpc: props.vpc,
       description: 'Allow ECS Fargate service to connect to Aurora',
@@ -39,7 +45,7 @@ export class PlatformStack extends Stack {
     })
 
     const dbCredentialsSecret = new Secret(this, 'ItoDbCredentials', {
-      secretName: 'prod/ito-db/admin-db',
+      secretName: `${stageName}/ito-db/dbadmin`,
       generateSecretString: {
         secretStringTemplate: JSON.stringify({ username: 'dbadmin' }),
         excludePunctuation: true,
@@ -57,8 +63,8 @@ export class PlatformStack extends Stack {
       vpc: props.vpc,
       securityGroups: [dbSecurityGroup],
       credentials: Credentials.fromSecret(dbCredentialsSecret),
-      defaultDatabaseName: DB_NAME,
-
+      defaultDatabaseName: `${DB_NAME}`,
+      clusterIdentifier: `${stageName}-${DB_NAME}Cluster`,
       writer: ClusterInstance.serverlessV2('WriterInstance'),
       readers: [
         ClusterInstance.serverlessV2('ReaderInstance', {
@@ -70,7 +76,9 @@ export class PlatformStack extends Stack {
       backup: {
         retention: Duration.days(7),
       },
-      removalPolicy: RemovalPolicy.RETAIN,
+      removalPolicy: isDev(stageName)
+        ? RemovalPolicy.DESTROY
+        : RemovalPolicy.RETAIN,
     })
 
     this.dbEndpoint = dbCluster.clusterEndpoint.hostname
@@ -81,8 +89,10 @@ export class PlatformStack extends Stack {
     })
 
     this.serviceRepo = new Repository(this, 'ItoServiceRepo', {
-      repositoryName: 'ito-server',
-      removalPolicy: RemovalPolicy.RETAIN,
+      repositoryName: `${stageName}-${SERVER_NAME}`,
+      removalPolicy: isDev(stageName)
+        ? RemovalPolicy.DESTROY
+        : RemovalPolicy.RETAIN,
       lifecycleRules: [{ maxImageCount: 20 }],
     })
 

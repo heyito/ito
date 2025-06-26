@@ -1,58 +1,76 @@
 import 'source-map-support/register'
 import * as cdk from 'aws-cdk-lib'
-import { PlatformStack } from '../lib/platform-stack'
+import { Stage, StageProps } from 'aws-cdk-lib'
+import { Construct } from 'constructs'
 import { NetworkStack } from '../lib/network-stack'
+import { PlatformStack } from '../lib/platform-stack'
 import { ServiceStack } from '../lib/service-stack'
 import { SecurityStack } from '../lib/security-stack'
 import { ObservabilityStack } from '../lib/observability-stack'
-import { GitHubOidcStack } from '../lib/cicd-stack'
 import { ITO_PREFIX } from '../lib/constants'
+import { GitHubOidcStack } from '../lib/cicd-stack'
+import { Repository } from 'aws-cdk-lib/aws-ecr'
+
+export interface AppStageProps extends StageProps {
+  stageName: string
+}
+
+export class AppStage extends Stage {
+  public readonly stageName: string
+
+  constructor(scope: Construct, id: string, props: AppStageProps) {
+    super(scope, id, props)
+
+    this.stageName = props.stageName
+
+    const network = new NetworkStack(this, `${ITO_PREFIX}Network`, {
+      env: props.env,
+    })
+
+    const platform = new PlatformStack(this, `${ITO_PREFIX}Platform`, {
+      env: props.env,
+      vpc: network.vpc,
+    })
+
+    const service = new ServiceStack(this, `${ITO_PREFIX}Service`, {
+      env: props.env,
+      vpc: network.vpc,
+      dbSecretArn: platform.dbSecretArn,
+      dbEndpoint: platform.dbEndpoint,
+      serviceRepo: platform.serviceRepo,
+    })
+
+    new SecurityStack(this, `${ITO_PREFIX}Security`, {
+      env: props.env,
+      fargateService: service.fargateService,
+      dbSecurityGroupId: platform.dbSecurityGroupId,
+    })
+
+    new ObservabilityStack(this, `${ITO_PREFIX}Observability`, {
+      env: props.env,
+      fargateService: service.fargateService,
+    })
+  }
+}
 
 const app = new cdk.App()
+
 const env = {
   account: process.env.CDK_DEFAULT_ACCOUNT,
   region: process.env.CDK_DEFAULT_REGION,
 }
 
-const network = new NetworkStack(app, `${ITO_PREFIX}Networking`, { env })
-
-const platform = new PlatformStack(app, `${ITO_PREFIX}Platform`, {
-  env,
-  vpc: network.vpc,
-})
-
-const service = new ServiceStack(app, `${ITO_PREFIX}Service`, {
-  env,
-  vpc: network.vpc,
-  dbSecretArn: platform.dbSecretArn,
-  dbEndpoint: platform.dbEndpoint,
-  serviceRepo: platform.serviceRepo,
-})
-
-const security = new SecurityStack(app, `${ITO_PREFIX}Security`, {
-  env,
-  fargateService: service.fargateService,
-  dbSecurityGroupId: platform.dbSecurityGroupId,
-})
-
-const observability = new ObservabilityStack(
-  app,
-  `${ITO_PREFIX}Observability`,
-  {
+const stages = ['dev', 'prod']
+stages.forEach(stageName => {
+  new AppStage(app, `${ITO_PREFIX}-${stageName}`, {
     env,
-    fargateService: service.fargateService,
-  },
-)
-
-const ciCd = new GitHubOidcStack(app, `${ITO_PREFIX}CiCd`, {
-  env,
-  serviceRepo: platform.serviceRepo,
+    stageName,
+  })
 })
 
-platform.addDependency(network)
-service.addDependency(platform)
-service.addDependency(network)
-security.addDependency(platform)
-security.addDependency(service)
-observability.addDependency(service)
-ciCd.addDependency(platform)
+new GitHubOidcStack(app, `${ITO_PREFIX}CiCd`, {
+  env,
+  stages,
+})
+
+app.synth()

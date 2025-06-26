@@ -1,13 +1,12 @@
-name: Build Development
+name: Dev CI
 
 on:
   push:
-    branches:
-      - 'dev'
+    branches: [ dev ]
 
 jobs:
-  build:
-    uses: ./.github/workflows/build.yml
-    secrets: inherit
+  call-reusable:
+    uses: ./.github/workflows/shared-ci.yml
     with:
       environment: develop
+    secrets: inherit

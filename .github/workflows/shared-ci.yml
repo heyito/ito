@@ -31,7 +31,6 @@ jobs:
               - server/src/**
               - server/Dockerfile
               - server/package.json
-              - server/yarn.lock
             infra:
               - server/infra/**
           list-files: 'none'

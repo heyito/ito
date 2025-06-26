@@ -1,97 +1,71 @@
 import { create } from 'zustand'
-import { v4 as uuidv4 } from 'uuid'
+import { useAuthStore } from './useAuthStore'
 
 export type Note = {
   id: string
   content: string
-  createdAt: Date
-  updatedAt: Date
+  user_id: string
+  interaction_id: string | null
+  created_at: string
+  updated_at: string
 }
 
 interface NotesStore {
   notes: Note[]
-  addNote: (content: string) => void
-  updateNote: (
-    id: string,
-    updates: Partial<Omit<Note, 'id' | 'createdAt'>>,
-  ) => void
-  deleteNote: (id: string) => void
-  loadNotes: () => void
-  saveNotes: () => void
-}
-
-// Initialize from electron store
-const getInitialNotes = (): Note[] => {
-  try {
-    const storedNotes = window.electron.store.get('notes')
-    if (storedNotes && Array.isArray(storedNotes)) {
-      return storedNotes.map(note => ({
-        ...note,
-        createdAt: new Date(note.createdAt),
-        updatedAt: new Date(note.updatedAt),
-      }))
-    }
-  } catch (error) {
-    console.error('Error loading notes from store:', error)
-  }
-  return []
-}
-
-// Sync to electron store
-const syncNotesToStore = (notes: Note[]) => {
-  try {
-    window.electron.store.set('notes', notes)
-  } catch (error) {
-    console.error('Error saving notes to store:', error)
-  }
+  loadNotes: () => Promise<void>
+  addNote: (content: string) => Promise<void>
+  updateNote: (id: string, content: string) => Promise<void>
+  deleteNote: (id: string) => Promise<void>
 }
 
 export const useNotesStore = create<NotesStore>((set, get) => ({
-  notes: getInitialNotes(),
+  notes: [],
 
-  addNote: (content: string) => {
-    const newNote: Note = {
-      id: uuidv4(),
-      content: content.trim(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
+  loadNotes: async () => {
+    try {
+      const notes = await window.api.notes.getAll()
+      set({ notes })
+    } catch (error) {
+      console.error('Failed to load notes from database:', error)
     }
-
-    set(state => {
-      const newNotes = [newNote, ...state.notes]
-      syncNotesToStore(newNotes)
-      return { notes: newNotes }
-    })
   },
 
-  updateNote: (
-    id: string,
-    updates: Partial<Omit<Note, 'id' | 'createdAt'>>,
-  ) => {
-    set(state => {
-      const newNotes = state.notes.map(note =>
-        note.id === id ? { ...note, ...updates, updatedAt: new Date() } : note,
-      )
-      syncNotesToStore(newNotes)
-      return { notes: newNotes }
-    })
+  addNote: async (content: string) => {
+    const { user } = useAuthStore.getState()
+    if (!user) {
+      console.error('Cannot add a note without a logged-in user.')
+      return
+    }
+    try {
+      const newNote = await window.api.notes.add({
+        content: content.trim(),
+        user_id: user.id,
+      })
+      set(state => ({ notes: [newNote, ...state.notes] }))
+    } catch (error) {
+      console.error('Failed to add note to database:', error)
+    }
   },
 
-  deleteNote: (id: string) => {
-    set(state => {
-      const newNotes = state.notes.filter(note => note.id !== id)
-      syncNotesToStore(newNotes)
-      return { notes: newNotes }
-    })
+  updateNote: async (id: string, content: string) => {
+    try {
+      await window.api.notes.updateContent(id, content)
+      // For an immediate UI update, we can call loadNotes again
+      // or manually update the state.
+      get().loadNotes()
+    } catch (error) {
+      console.error('Failed to update note in database:', error)
+    }
   },
 
-  loadNotes: () => {
-    const notes = getInitialNotes()
-    set({ notes })
-  },
-
-  saveNotes: () => {
-    const { notes } = get()
-    syncNotesToStore(notes)
+  deleteNote: async (id: string) => {
+    try {
+      await window.api.notes.delete(id)
+      set(state => ({
+        notes: state.notes.filter(note => note.id !== id),
+      }))
+    } catch (error) {
+      console.error('Failed to delete note from database:', error)
+    }
   },
 }))

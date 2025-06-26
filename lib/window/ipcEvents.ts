@@ -9,6 +9,7 @@ import {
 } from '../media/keyboard'
 import { getPillWindow } from '../main/app'
 import { exchangeAuthCode, generateNewAuthState } from '../auth/events'
+import { NotesTable, DictionaryTable } from '../main/sqlite/repo'
 // import { getPillWindow } from '../main/app'
 
 const handleIPC = (channel: string, handler: (...args: any[]) => any) => {
@@ -27,9 +28,8 @@ export function registerIPC() {
   })
 
   // Key Listener
-  handleIPC('start-key-listener-service', e => {
-    const window = BrowserWindow.fromWebContents(e.sender)
-    if (window) startKeyListener(window)
+  handleIPC('start-key-listener-service', () => {
+    startKeyListener()
   })
   handleIPC('stop-key-listener', () => stopKeyListener())
   handleIPC('block-keys', (_e, keys: string[]) => {
@@ -135,6 +135,26 @@ export function registerIPC() {
 
   // App lifecycle
   app.on('before-quit', () => stopKeyListener())
+
+  // Notes
+  handleIPC('notes:get-all', () => NotesTable.findAll())
+  handleIPC('notes:add', async (_e, note) => NotesTable.insert(note))
+  handleIPC('notes:update-content', async (_e, { id, content }) =>
+    NotesTable.updateContent(id, content),
+  )
+  handleIPC('notes:delete', async (_e, id) => NotesTable.softDelete(id))
+
+  // Dictionary
+  handleIPC('dictionary:get-all', () => DictionaryTable.findAll())
+  handleIPC('dictionary:add', async (_e, item) => DictionaryTable.insert(item))
+  handleIPC(
+    'dictionary:update',
+    async (_e, { id, word, pronunciation }) =>
+      DictionaryTable.update(id, word, pronunciation),
+  )
+  handleIPC('dictionary:delete', async (_e, id) =>
+    DictionaryTable.softDelete(id),
+  )
 }
 
 // Handlers that are specific to a given window instance

@@ -1,5 +1,4 @@
-import { ipcRenderer } from 'electron'
-import { KeyEvent } from '.'
+import { IpcRendererEvent, ipcRenderer } from 'electron'
 
 const api = {
   /**
@@ -7,13 +6,17 @@ const api = {
    * @param channel The channel name to send the message on.
    * @param data The data to send.
    */
-  send: (channel: string, ...args: any[]) => ipcRenderer.send(channel, ...args),
+  send: (channel: string, ...args: any[]) => {
+    ipcRenderer.send(channel, ...args)
+  },
   /**
-   * Subscribes to an event from the main process.
+   * Subscribe to an event, and return a cleanup function.
+   * @param channel The event channel to subscribe to.
+   * @param callback The callback to execute when the event is triggered.
    * @returns A cleanup function to unsubscribe.
    */
   on: (channel: string, callback: (...args: any[]) => void): (() => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, ...args: any[]) => {
+    const handler = (_event: IpcRendererEvent, ...args: any[]) => {
       callback(...args)
     }
     ipcRenderer.on(channel, handler)
@@ -24,8 +27,9 @@ const api = {
   receive: (channel: string, func: (...args: any[]) => void) => {
     ipcRenderer.on(channel, (_, ...args) => func(...args))
   },
-  invoke: (channel: string, ...args: any[]) =>
-    ipcRenderer.invoke(channel, ...args),
+  invoke: (channel: string, ...args: any[]) => {
+    return ipcRenderer.invoke(channel, ...args)
+  },
   removeAllListeners: (channel: string) =>
     ipcRenderer.removeAllListeners(channel),
   // Key listener methods
@@ -69,6 +73,24 @@ const api = {
     ipcRenderer.invoke('check-accessibility-permission', prompt),
   'check-microphone-permission': (prompt: boolean) =>
     ipcRenderer.invoke('check-microphone-permission', prompt),
+  dev: {
+    revertLastMigration: () => ipcRenderer.invoke('dev:revert-last-migration'),
+    wipeDatabase: () => ipcRenderer.invoke('dev:wipe-database'),
+  },
+  notes: {
+    getAll: () => ipcRenderer.invoke('notes:get-all'),
+    add: (note: any) => ipcRenderer.invoke('notes:add', note),
+    updateContent: (id: string, content: string) =>
+      ipcRenderer.invoke('notes:update-content', { id, content }),
+    delete: (id: string) => ipcRenderer.invoke('notes:delete', id),
+  },
+  dictionary: {
+    getAll: () => ipcRenderer.invoke('dictionary:get-all'),
+    add: (item: any) => ipcRenderer.invoke('dictionary:add', item),
+    update: (id: string, word: string, pronunciation: string | null) =>
+      ipcRenderer.invoke('dictionary:update', { id, word, pronunciation }),
+    delete: (id: string) => ipcRenderer.invoke('dictionary:delete', id),
+  },
 }
 
 export default api

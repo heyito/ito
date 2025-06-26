@@ -1,11 +1,12 @@
 import { create } from 'zustand'
-import { v4 as uuidv4 } from 'uuid'
+import { useAuthStore } from './useAuthStore'
+import type { DictionaryItem } from '../../lib/main/sqlite/models'
 
 export type DictionaryEntry = {
   id: string
   type: 'normal' | 'replacement'
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string // Changed to string to match DB
+  updatedAt: string // Changed to string to match DB
 } & (
   | {
       type: 'normal'
@@ -20,109 +21,120 @@ export type DictionaryEntry = {
 
 interface DictionaryStore {
   entries: DictionaryEntry[]
-  addEntry: (content: string) => void
-  addReplacement: (from: string, to: string) => void
+  loadEntries: () => Promise<void>
+  addEntry: (content: string) => Promise<void>
+  addReplacement: (from: string, to: string) => Promise<void>
   updateEntry: (
     id: string,
-    updates: Partial<Omit<DictionaryEntry, 'id' | 'createdAt'>>,
-  ) => void
-  deleteEntry: (id: string) => void
-  loadEntries: () => void
-  saveEntries: () => void
+    updates: Partial<Omit<DictionaryEntry, 'id' | 'createdAt' | 'type'>>,
+  ) => Promise<void>
+  deleteEntry: (id: string) => Promise<void>
 }
 
-// Initialize from electron store
-const getInitialEntries = (): DictionaryEntry[] => {
-  try {
-    const storedEntries = window.electron.store.get('dictionary')
-    if (storedEntries && Array.isArray(storedEntries)) {
-      return storedEntries.map(entry => ({
-        ...entry,
-        createdAt: new Date(entry.createdAt),
-        updatedAt: new Date(entry.updatedAt),
-      }))
+/**
+ * The backend stores a flat DictionaryItem, but the frontend uses a more
+ * structured DictionaryEntry. This function maps the backend type to the
+ * frontend type.
+ * We infer the type based on whether `pronunciation` is null.
+ */
+const mapItemToEntry = (item: DictionaryItem): DictionaryEntry => {
+  if (item.pronunciation === null || item.pronunciation === '') {
+    return {
+      id: item.id,
+      type: 'normal',
+      content: item.word,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
     }
-  } catch (error) {
-    console.error('Error loading dictionary entries from store:', error)
-  }
-  return []
-}
-
-// Sync to electron store
-const syncEntriesToStore = (entries: DictionaryEntry[]) => {
-  try {
-    window.electron.store.set('dictionary', entries)
-  } catch (error) {
-    console.error('Error saving dictionary entries to store:', error)
+  } else {
+    return {
+      id: item.id,
+      type: 'replacement',
+      from: item.word,
+      to: item.pronunciation,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+    }
   }
 }
 
 export const useDictionaryStore = create<DictionaryStore>((set, get) => ({
-  entries: getInitialEntries(),
+  entries: [],
 
-  addEntry: (content: string) => {
-    const newEntry: DictionaryEntry = {
-      id: uuidv4(),
-      type: 'normal',
-      content: content.trim(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    } as DictionaryEntry
-
-    set(state => {
-      const newEntries = [newEntry, ...state.entries]
-      syncEntriesToStore(newEntries)
-      return { entries: newEntries }
-    })
+  loadEntries: async () => {
+    try {
+      const items = await window.api.dictionary.getAll()
+      const entries = items.map(mapItemToEntry)
+      set({ entries })
+    } catch (error) {
+      console.error('Failed to load dictionary from database:', error)
+    }
   },
 
-  addReplacement: (from: string, to: string) => {
-    const newEntry: DictionaryEntry = {
-      id: uuidv4(),
-      type: 'replacement',
-      from: from.trim(),
-      to: to.trim(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    } as DictionaryEntry
-
-    set(state => {
-      const newEntries = [newEntry, ...state.entries]
-      syncEntriesToStore(newEntries)
-      return { entries: newEntries }
-    })
+  addEntry: async (content: string) => {
+    const { user } = useAuthStore.getState()
+    if (!user) return
+    try {
+      const newItem = await window.api.dictionary.add({
+        user_id: user.id,
+        word: content.trim(),
+        pronunciation: null,
+      })
+      const newEntry = mapItemToEntry(newItem)
+      set(state => ({ entries: [newEntry, ...state.entries] }))
+    } catch (error) {
+      console.error('Failed to add dictionary entry:', error)
+    }
   },
 
-  updateEntry: (
-    id: string,
-    updates: Partial<Omit<DictionaryEntry, 'id' | 'createdAt'>>,
-  ) => {
-    set(state => {
-      const newEntries = state.entries.map(entry =>
-        entry.id === id
-          ? ({ ...entry, ...updates, updatedAt: new Date() } as DictionaryEntry)
-          : entry,
-      )
-      syncEntriesToStore(newEntries)
-      return { entries: newEntries }
-    })
+  addReplacement: async (from: string, to: string) => {
+    const { user } = useAuthStore.getState()
+    if (!user) return
+    try {
+      const newItem = await window.api.dictionary.add({
+        user_id: user.id,
+        word: from.trim(),
+        pronunciation: to.trim(),
+      })
+      const newEntry = mapItemToEntry(newItem)
+      set(state => ({ entries: [newEntry, ...state.entries] }))
+    } catch (error) {
+      console.error('Failed to add dictionary replacement:', error)
+    }
   },
 
-  deleteEntry: (id: string) => {
-    set(state => {
-      const newEntries = state.entries.filter(entry => entry.id !== id)
-      syncEntriesToStore(newEntries)
-      return { entries: newEntries }
-    })
+  updateEntry: async (id, updates) => {
+    const originalEntry = get().entries.find(e => e.id === id)
+    if (!originalEntry) return
+
+    // Create a new entry object with the updates applied
+    const updatedEntry = { ...originalEntry, ...updates }
+
+    let word: string
+    let pronunciation: string | null
+
+    if (updatedEntry.type === 'normal') {
+      word = updatedEntry.content
+      pronunciation = null
+    } else {
+      word = updatedEntry.from
+      pronunciation = updatedEntry.to
+    }
+
+    try {
+      await window.api.dictionary.update(id, word, pronunciation)
+      get().loadEntries() // Reload all entries to reflect the change
+    } catch (error) {
+      console.error('Failed to update dictionary entry:', error)
+    }
   },
 
-  loadEntries: () => {
-    const entries = getInitialEntries()
-    set({ entries })
-  },
-
-  saveEntries: () => {
-    const { entries } = get()
-    syncEntriesToStore(entries)
+  deleteEntry: async (id: string) => {
+    try {
+      await window.api.dictionary.delete(id)
+      set(state => ({ entries: state.entries.filter(e => e.id !== id) }))
+    } catch (error) {
+      console.error('Failed to delete dictionary entry:', error)
+    }
   },
 }))

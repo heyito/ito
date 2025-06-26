@@ -27,6 +27,22 @@ declare global {
       onKeyEvent: (callback: (event: KeyEvent) => void) => void
       send: (channel: string, data: any) => void
       on: (channel: string, callback: (...args: any[]) => void) => () => void
+      notes: {
+        getAll: () => Promise<Note[]>
+        add: (note: any) => Promise<Note>
+        updateContent: (id: string, content: string) => Promise<void>
+        delete: (id: string) => Promise<void>
+      }
+      dictionary: {
+        getAll: () => Promise<any[]>
+        add: (item: any) => Promise<any>
+        update: (
+          id: string,
+          word: string,
+          pronunciation: string | null,
+        ) => Promise<void>
+        delete: (id: string) => Promise<void>
+      }
     }
   }
 }

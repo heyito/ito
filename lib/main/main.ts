@@ -1,4 +1,4 @@
-import { app, BrowserWindow, protocol, systemPreferences } from 'electron'
+import { app, protocol, systemPreferences } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import {
   createAppWindow,
@@ -9,8 +9,10 @@ import {
 } from './app'
 import { initializeLogging } from './logger'
 import { registerIPC } from '../window/ipcEvents'
+import { registerDevIPC } from '../window/ipcDev'
 import { startKeyListener } from '../media/keyboard'
 import { setupProtocolHandling } from '../protocol'
+import { initializeDatabase } from './sqlite/db'
 
 // Register the custom 'res' protocol and mark it as privileged.
 // This must be done before the app is ready.
@@ -28,9 +30,18 @@ protocol.registerSchemesAsPrivileged([
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Initialize logging as the first step
   initializeLogging()
+
+  // Initialize the database
+  try {
+    await initializeDatabase()
+  } catch (error) {
+    console.error('Failed to initialize database, quitting app.', error)
+    // app.quit()
+    // return
+  }
 
   // Setup protocol handling for deep links
   setupProtocolHandling()
@@ -68,6 +79,10 @@ app.whenReady().then(() => {
   })
 
   registerIPC()
+
+  if (!app.isPackaged) {
+    registerDevIPC()
+  }
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common

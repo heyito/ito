@@ -123,8 +123,8 @@ export function Note({
           </div>
         </div>
         <div className="flex items-center justify-between text-gray-400 text-xs mt-auto">
-          <span>{formatDate(note.createdAt)}</span>
-          <span>{formatTime(note.createdAt)}</span>
+          <span>{formatDate(new Date(note.created_at))}</span>
+          <span>{formatTime(new Date(note.created_at))}</span>
         </div>
       </div>
     </div>

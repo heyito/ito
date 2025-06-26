@@ -160,7 +160,7 @@ export default function NotesContent() {
 
   const handleSaveEdit = () => {
     if (editingNote && editContent.trim() !== '') {
-      updateNote(editingNote.id, { content: editContent.trim() })
+      updateNote(editingNote.id, editContent.trim())
       setEditingNote(null)
       setEditContent('')
     }

@@ -105,7 +105,16 @@ export const useSettingsStore = create<SettingsState>(set => {
         return newState
       }),
     setShowItoBarAlways: createSetter('showItoBarAlways'),
-    setShowAppInDock: createSetter('showAppInDock'),
+    setShowAppInDock: (show: boolean) =>
+      set(_state => {
+        const newState = { showAppInDock: show } as Partial<SettingsState>
+        syncToStore(newState)
+        // Also set the actual Electron dock visibility
+        if (window.api?.dock?.setVisibility) {
+          window.api.dock.setVisibility(show)
+        }
+        return newState
+      }),
     setInteractionSounds: createSetter('interactionSounds'),
     setMuteAudioWhenDictating: createSetter('muteAudioWhenDictating'),
     // Special case: can set both deviceId and optionally name
@@ -145,4 +154,28 @@ if (typeof window !== 'undefined' && window.api?.loginItem?.getSettings) {
         error,
       )
     })
+}
+
+// Sync with actual Electron dock visibility on initialization (macOS only)
+if (typeof window !== 'undefined' && window.api?.dock?.getVisibility) {
+  // Only attempt dock sync on macOS
+  window.api.invoke('init-window').then((windowInfo: any) => {
+    if (windowInfo.platform === 'darwin') {
+      window.api.dock
+        .getVisibility()
+        .then(dockSettings => {
+          const storedSettings = window.electron.store.get('settings')
+          if (dockSettings.isVisible !== storedSettings?.showAppInDock) {
+            // Update the store to match actual Electron dock visibility
+            useSettingsStore.getState().setShowAppInDock(dockSettings.isVisible)
+          }
+        })
+        .catch(error => {
+          console.error(
+            'Failed to sync dock visibility on initialization:',
+            error,
+          )
+        })
+    }
+  })
 }

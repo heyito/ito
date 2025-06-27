@@ -49,6 +49,10 @@ declare global {
         setSettings: (enabled: boolean) => Promise<void>
         getSettings: () => Promise<Electron.LoginItemSettings>
       }
+      dock: {
+        setVisibility: (visible: boolean) => Promise<void>
+        getVisibility: () => Promise<{ isVisible: boolean }>
+      }
       notifySettingsUpdate: (settings: any) => void
     }
   }

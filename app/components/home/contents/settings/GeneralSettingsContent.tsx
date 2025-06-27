@@ -1,5 +1,6 @@
 import { Switch } from '@/app/components/ui/switch'
 import { useSettingsStore } from '@/app/store/useSettingsStore'
+import { useWindowContext } from '@/app/components/window/WindowContext'
 
 export default function GeneralSettingsContent() {
   const {
@@ -12,6 +13,8 @@ export default function GeneralSettingsContent() {
     setShowItoBarAlways,
     setShowAppInDock,
   } = useSettingsStore()
+  
+  const windowContext = useWindowContext()
 
   return (
     <div className="space-y-8">
@@ -58,18 +61,20 @@ export default function GeneralSettingsContent() {
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium">Show app in dock</div>
-              <div className="text-xs text-gray-600 mt-1">
-                Show the Ito app in the dock for quick access.
+          {windowContext?.window?.platform === 'darwin' && (
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium">Show app in dock</div>
+                <div className="text-xs text-gray-600 mt-1">
+                  Show the Ito app in the dock for quick access.
+                </div>
               </div>
+              <Switch
+                checked={showAppInDock}
+                onCheckedChange={setShowAppInDock}
+              />
             </div>
-            <Switch
-              checked={showAppInDock}
-              onCheckedChange={setShowAppInDock}
-            />
-          </div>
+          )}
         </div>
       </div>
     </div>

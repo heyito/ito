@@ -58,6 +58,39 @@ export function registerIPC() {
     }
   })
 
+  // Dock Settings (macOS only)
+  handleIPC('set-dock-visibility', (_e, visible: boolean) => {
+    try {
+      if (process.platform === 'darwin') {
+        if (visible) {
+          app.dock?.show()
+        } else {
+          app.dock?.hide()
+        }
+        log.info(`Successfully set dock visibility to: ${visible}`)
+      } else {
+        log.warn('Dock visibility setting is only available on macOS')
+      }
+    } catch (error: any) {
+      log.error('Failed to set dock visibility:', error)
+    }
+  })
+  handleIPC('get-dock-visibility', () => {
+    try {
+      if (process.platform === 'darwin' && app.dock) {
+        const isVisible = app.dock.isVisible()
+        log.info('Got dock visibility:', isVisible)
+        return { isVisible }
+      } else {
+        log.warn('Dock visibility check is only available on macOS')
+        return { isVisible: true } // Default to visible on non-macOS platforms
+      }
+    } catch (error: any) {
+      log.error('Failed to get dock visibility:', error)
+      return { isVisible: true }
+    }
+  })
+
   // Key Listener
   handleIPC('start-key-listener-service', () => {
     startKeyListener()

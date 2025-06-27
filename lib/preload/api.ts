@@ -107,6 +107,11 @@ const api = {
       ipcRenderer.invoke('set-login-item-settings', enabled),
     getSettings: () => ipcRenderer.invoke('get-login-item-settings'),
   },
+  dock: {
+    setVisibility: (visible: boolean) =>
+      ipcRenderer.invoke('set-dock-visibility', visible),
+    getVisibility: () => ipcRenderer.invoke('get-dock-visibility'),
+  },
   // Send settings updates to pill window
   notifySettingsUpdate: (settings: any) =>
     ipcRenderer.send('settings-update', settings),

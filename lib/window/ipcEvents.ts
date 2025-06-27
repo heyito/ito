@@ -12,7 +12,13 @@ import { getPillWindow } from '../main/app'
 import { exchangeAuthCode, generateNewAuthState } from '../auth/events'
 import { NotesTable, DictionaryTable } from '../main/sqlite/repo'
 // import { getPillWindow } from '../main/app'
-import { requestDeviceListPromise, sendStartRecordingCommand, sendStopRecordingCommand, startAudioRecorder, stopAudioRecorder } from '../media/audio'
+import {
+  requestDeviceListPromise,
+  sendStartRecordingCommand,
+  sendStopRecordingCommand,
+  startAudioRecorder,
+  stopAudioRecorder,
+} from '../media/audio'
 
 const handleIPC = (channel: string, handler: (...args: any[]) => any) => {
   ipcMain.handle(channel, handler)
@@ -27,6 +33,29 @@ export function registerIPC() {
   })
   ipcMain.on('electron-store-set', (_event, key, val) => {
     store.set(key, val)
+  })
+
+  // Login Item Settings
+  handleIPC('set-login-item-settings', (_e, enabled: boolean) => {
+    try {
+      app.setLoginItemSettings({
+        openAtLogin: enabled,
+        openAsHidden: false,
+      })
+      log.info(`Successfully set login item to: ${enabled}`)
+    } catch (error: any) {
+      log.error('Failed to set login item settings:', error)
+    }
+  })
+  handleIPC('get-login-item-settings', () => {
+    try {
+      const settings = app.getLoginItemSettings()
+      log.info('Got login item settings:', settings)
+      return settings
+    } catch (error: any) {
+      log.error('Failed to get login item settings:', error)
+      return { openAtLogin: false, openAsHidden: false }
+    }
   })
 
   // Key Listener
@@ -104,29 +133,45 @@ export function registerIPC() {
   })
 
   // Web Contents & Other
-  const getWebContentsFromEvent = (event: Electron.IpcMainInvokeEvent | Electron.IpcMainEvent) => event.sender
-  handleIPC('web-undo', (e) => getWebContentsFromEvent(e).undo())
-  handleIPC('web-redo', (e) => getWebContentsFromEvent(e).redo())
-  handleIPC('web-cut', (e) => getWebContentsFromEvent(e).cut())
-  handleIPC('web-copy', (e) => getWebContentsFromEvent(e).copy())
-  handleIPC('web-paste', (e) => getWebContentsFromEvent(e).paste())
-  handleIPC('web-delete', (e) => getWebContentsFromEvent(e).delete())
-  handleIPC('web-select-all', (e) => getWebContentsFromEvent(e).selectAll())
-  handleIPC('web-reload', (e) => getWebContentsFromEvent(e).reload())
-  handleIPC('web-force-reload', (e) => getWebContentsFromEvent(e).reloadIgnoringCache())
-  handleIPC('web-toggle-devtools', (e) => getWebContentsFromEvent(e).toggleDevTools())
-  handleIPC('web-actual-size', (e) => getWebContentsFromEvent(e).setZoomLevel(0))
-  handleIPC('web-zoom-in', (e) => getWebContentsFromEvent(e).setZoomLevel(getWebContentsFromEvent(e).getZoomLevel() + 0.5))
-  handleIPC('web-zoom-out', (e) => getWebContentsFromEvent(e).setZoomLevel(getWebContentsFromEvent(e).getZoomLevel() - 0.5))
-  handleIPC('web-toggle-fullscreen', (e) => {
+  const getWebContentsFromEvent = (
+    event: Electron.IpcMainInvokeEvent | Electron.IpcMainEvent,
+  ) => event.sender
+  handleIPC('web-undo', e => getWebContentsFromEvent(e).undo())
+  handleIPC('web-redo', e => getWebContentsFromEvent(e).redo())
+  handleIPC('web-cut', e => getWebContentsFromEvent(e).cut())
+  handleIPC('web-copy', e => getWebContentsFromEvent(e).copy())
+  handleIPC('web-paste', e => getWebContentsFromEvent(e).paste())
+  handleIPC('web-delete', e => getWebContentsFromEvent(e).delete())
+  handleIPC('web-select-all', e => getWebContentsFromEvent(e).selectAll())
+  handleIPC('web-reload', e => getWebContentsFromEvent(e).reload())
+  handleIPC('web-force-reload', e =>
+    getWebContentsFromEvent(e).reloadIgnoringCache(),
+  )
+  handleIPC('web-toggle-devtools', e =>
+    getWebContentsFromEvent(e).toggleDevTools(),
+  )
+  handleIPC('web-actual-size', e => getWebContentsFromEvent(e).setZoomLevel(0))
+  handleIPC('web-zoom-in', e =>
+    getWebContentsFromEvent(e).setZoomLevel(
+      getWebContentsFromEvent(e).getZoomLevel() + 0.5,
+    ),
+  )
+  handleIPC('web-zoom-out', e =>
+    getWebContentsFromEvent(e).setZoomLevel(
+      getWebContentsFromEvent(e).getZoomLevel() - 0.5,
+    ),
+  )
+  handleIPC('web-toggle-fullscreen', e => {
     const window = getWindowFromEvent(e)
     window?.setFullScreen(!window.isFullScreen())
   })
   handleIPC('web-open-url', (_e, url) => shell.openExternal(url))
   handleIPC('get-native-audio-devices', async () => {
-    log.info('[IPC] Received get-native-audio-devices, calling requestDeviceListPromise...');
-    return requestDeviceListPromise();
-  });
+    log.info(
+      '[IPC] Received get-native-audio-devices, calling requestDeviceListPromise...',
+    )
+    return requestDeviceListPromise()
+  })
 
   // App lifecycle
   app.on('before-quit', () => stopKeyListener())
@@ -142,29 +187,33 @@ export function registerIPC() {
   // Dictionary
   handleIPC('dictionary:get-all', () => DictionaryTable.findAll())
   handleIPC('dictionary:add', async (_e, item) => DictionaryTable.insert(item))
-  handleIPC(
-    'dictionary:update',
-    async (_e, { id, word, pronunciation }) =>
-      DictionaryTable.update(id, word, pronunciation),
+  handleIPC('dictionary:update', async (_e, { id, word, pronunciation }) =>
+    DictionaryTable.update(id, word, pronunciation),
   )
   handleIPC('dictionary:delete', async (_e, id) =>
     DictionaryTable.softDelete(id),
   )
   // When the hotkey is pressed, start recording and notify the pill window.
   ipcMain.on('start-native-recording', (_event, deviceId: string) => {
-    log.info(`IPC: Received 'start-native-recording' for device: ${deviceId}`);
-    sendStartRecordingCommand(deviceId);
+    log.info(`IPC: Received 'start-native-recording' for device: ${deviceId}`)
+    sendStartRecordingCommand(deviceId)
     // Notify the pill to expand.
-    getPillWindow()?.webContents.send('recording-state-update', { isRecording: true, deviceId });
-  });
+    getPillWindow()?.webContents.send('recording-state-update', {
+      isRecording: true,
+      deviceId,
+    })
+  })
 
   // When the hotkey is released, stop recording and notify the pill window.
   ipcMain.on('stop-native-recording', () => {
-    log.info('IPC: Received stop-native-recording.');
-    sendStopRecordingCommand();
+    log.info('IPC: Received stop-native-recording.')
+    sendStopRecordingCommand()
     // Notify the pill to collapse.
-    getPillWindow()?.webContents.send('recording-state-update', { isRecording: false, deviceId: '' });
-  });
+    getPillWindow()?.webContents.send('recording-state-update', {
+      isRecording: false,
+      deviceId: '',
+    })
+  })
 }
 
 // Handlers that are specific to a given window instance

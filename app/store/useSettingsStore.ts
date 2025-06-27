@@ -86,7 +86,16 @@ export const useSettingsStore = create<SettingsState>(set => {
     microphoneName: initialState.microphoneName,
     keyboardShortcut: initialState.keyboardShortcut,
     setShareAnalytics: createSetter('shareAnalytics'),
-    setLaunchAtLogin: createSetter('launchAtLogin'),
+    setLaunchAtLogin: (launch: boolean) =>
+      set(_state => {
+        const newState = { launchAtLogin: launch } as Partial<SettingsState>
+        syncToStore(newState)
+        // Also set the actual Electron login item settings
+        if (window.api?.loginItem?.setSettings) {
+          window.api.loginItem.setSettings(launch)
+        }
+        return newState
+      }),
     setShowItoBarAlways: createSetter('showItoBarAlways'),
     setShowAppInDock: createSetter('showAppInDock'),
     setInteractionSounds: createSetter('interactionSounds'),
@@ -110,3 +119,22 @@ export const useSettingsStore = create<SettingsState>(set => {
       }),
   }
 })
+
+// Sync with actual Electron login item settings on initialization
+if (typeof window !== 'undefined' && window.api?.loginItem?.getSettings) {
+  window.api.loginItem
+    .getSettings()
+    .then(settings => {
+      const storedSettings = window.electron.store.get('settings')
+      if (settings.openAtLogin !== storedSettings?.launchAtLogin) {
+        // Update the store to match actual Electron settings
+        useSettingsStore.getState().setLaunchAtLogin(settings.openAtLogin)
+      }
+    })
+    .catch(error => {
+      console.error(
+        'Failed to sync login item settings on initialization:',
+        error,
+      )
+    })
+}

@@ -46,6 +46,7 @@ dependencies = [
  "anyhow",
  "cpal",
  "crossbeam-channel",
+ "dasp_sample",
  "num-traits",
  "rubato",
  "serde",

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useSettingsStore } from '../store/useSettingsStore'
 
 const globalStyles = `
   html, body, #app {
@@ -65,7 +66,15 @@ const AudioBars = ({ volumeHistory }: { volumeHistory: number[] }) => {
 }
 
 const Pill = () => {
+  // Get initial value from store
+  const initialShowItoBarAlways = useSettingsStore(
+    state => state.showItoBarAlways,
+  )
+
   const [isRecording, setIsRecording] = useState(false)
+  const [showItoBarAlways, setShowItoBarAlways] = useState(
+    initialShowItoBarAlways,
+  )
   // Fixed size array of volume values to be used for the audio bars, size is 21
   const [volumeHistory, setVolumeHistory] = useState<number[]>([])
   const [lastVolumeUpdate, setLastVolumeUpdate] = useState(0)
@@ -96,10 +105,17 @@ const Pill = () => {
       setLastVolumeUpdate(now)
     })
 
+    // Listen for settings updates from the main process
+    const unsubSettings = window.api.on('settings-update', (settings: any) => {
+      // Update local state with the new setting
+      setShowItoBarAlways(settings.showItoBarAlways)
+    })
+
     // Cleanup listeners when the component unmounts
     return () => {
       unsubRecording()
       unsubVolume()
+      unsubSettings()
     }
   }, [volumeHistory, lastVolumeUpdate]) // Dependency array is empty as the logic inside doesn't depend on state.
 
@@ -108,6 +124,8 @@ const Pill = () => {
   const idleHeight = 8
   const recordingWidth = 96
   const recordingHeight = 36
+  console.log('showItoBarAlways', showItoBarAlways)
+  console.log('isRecording', isRecording)
 
   // A single, unified style for the pill. Its properties will be
   // smoothly transitioned by CSS.
@@ -123,14 +141,20 @@ const Pill = () => {
     backgroundColor: isRecording ? '#000000' : '#808080',
     border: '1px solid #A9A9A9',
 
+    // Show/hide animation using opacity and scale instead of display none/flex
+    opacity: isRecording || showItoBarAlways ? 1 : 0,
+    transform: isRecording || showItoBarAlways ? 'scale(1)' : 'scale(0.8)',
+    visibility: isRecording || showItoBarAlways ? 'visible' : 'hidden',
+
     // Static styles
     borderRadius: '21px',
     boxSizing: 'border-box',
     overflow: 'hidden',
 
     // The transition property makes the magic happen!
-    // We animate width, height, and color changes over 0.3 seconds.
-    transition: 'width 0.3s ease, height 0.3s ease, background-color 0.3s ease',
+    // We animate width, height, color, opacity, and scale changes over 0.3 seconds.
+    transition:
+      'width 0.3s ease, height 0.3s ease, background-color 0.3s ease, opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease',
   }
 
   return (

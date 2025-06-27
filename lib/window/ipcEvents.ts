@@ -347,3 +347,8 @@ ipcMain.on(
 ipcMain.on('volume-update', (_event, volume: number) => {
   getPillWindow()?.webContents.send('volume-update', volume)
 })
+
+// Forwards settings updates from the main window to the pill window
+ipcMain.on('settings-update', (_event, settings: any) => {
+  getPillWindow()?.webContents.send('settings-update', settings)
+})

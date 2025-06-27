@@ -107,6 +107,9 @@ const api = {
       ipcRenderer.invoke('set-login-item-settings', enabled),
     getSettings: () => ipcRenderer.invoke('get-login-item-settings'),
   },
+  // Send settings updates to pill window
+  notifySettingsUpdate: (settings: any) =>
+    ipcRenderer.send('settings-update', settings),
 }
 
 export default api

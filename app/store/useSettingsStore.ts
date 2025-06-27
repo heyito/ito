@@ -43,7 +43,7 @@ const getInitialState = () => {
 // Sync to electron store
 const syncToStore = (state: Partial<SettingsState>) => {
   const currentSettings = window.electron.store.get('settings') || {}
-  window.electron.store.set('settings', {
+  const updatedSettings = {
     ...currentSettings,
     shareAnalytics: state.shareAnalytics ?? currentSettings.shareAnalytics,
     launchAtLogin: state.launchAtLogin ?? currentSettings.launchAtLogin,
@@ -59,7 +59,13 @@ const syncToStore = (state: Partial<SettingsState>) => {
     microphoneName: state.microphoneName ?? currentSettings.microphoneName,
     keyboardShortcut:
       state.keyboardShortcut ?? currentSettings.keyboardShortcut,
-  })
+  }
+  window.electron.store.set('settings', updatedSettings)
+
+  // Notify pill window of settings changes
+  if (window.api?.notifySettingsUpdate) {
+    window.api.notifySettingsUpdate(updatedSettings)
+  }
 }
 
 export const useSettingsStore = create<SettingsState>(set => {
@@ -69,10 +75,12 @@ export const useSettingsStore = create<SettingsState>(set => {
   const createSetter =
     <K extends keyof SettingsState>(key: K) =>
     (value: SettingsState[K]) =>
-      set(_state => {
+      set(state => {
+        console.log('key', key)
+        console.log('value', value)
         const newState = { [key]: value } as Partial<SettingsState>
         syncToStore(newState)
-        return newState
+        return { ...state, ...newState }
       })
 
   return {

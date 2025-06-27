@@ -49,6 +49,7 @@ declare global {
         setSettings: (enabled: boolean) => Promise<void>
         getSettings: () => Promise<Electron.LoginItemSettings>
       }
+      notifySettingsUpdate: (settings: any) => void
     }
   }
 }

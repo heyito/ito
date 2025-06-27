@@ -105,6 +105,7 @@ export class GitHubOidcStack extends Stack {
           'cloudformation:ExecuteChangeSet',
           'cloudformation:DeleteStack',
           'cloudformation:DescribeStacks',
+          'cloudformation:GetTemplate',
         ],
         resources: [cfnArnPattern],
       }),

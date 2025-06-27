@@ -49,6 +49,6 @@ jobs:
         working-directory: server/infra
         run: npx cdk diff
 
-      - name: Deploy to production
+      - name: Deploy to AWS 
         working-directory: server/infra
         run: npx cdk deploy "Ito-${{ vars.AWS_STAGE }}/*" --require-approval never

@@ -29,18 +29,20 @@ type MicrophoneToRender = {
 
 async function getAvailableMicrophones(): Promise<Microphone[]> {
   try {
-    console.log('Fetching available native microphones...');
+    console.log('Fetching available native microphones...')
     // This now gets the list directly from our Rust binary via the main process
-    const deviceNames: string[] = await window.api.invoke('get-native-audio-devices');
-    console.log('Available native microphones:', deviceNames);
+    const deviceNames: string[] = await window.api.invoke(
+      'get-native-audio-devices',
+    )
+    console.log('Available native microphones:', deviceNames)
     // The deviceId and label are the same in this new system
     return deviceNames.map(name => ({
       deviceId: name,
       label: name,
-    }));
+    }))
   } catch (error) {
-    console.error('Error getting available native microphones:', error);
-    return [];
+    console.error('Error getting available native microphones:', error)
+    return []
   }
 }
 
@@ -49,21 +51,21 @@ async function setupVolumeMonitoring(
   deviceId?: string,
 ) {
   // 1. Start the native audio capture.
-  window.api.send('start-native-recording', deviceId);
+  window.api.send('start-native-recording', deviceId)
 
   // 2. Listen for volume updates from the main process.
-  const cleanupListener = window.api.on('volume-update', callback);
+  const cleanupListener = window.api.on('volume-update', callback)
 
   // 3. Return a cleanup function.
   const cleanup = () => {
     // Stop listening to events to prevent memory leaks.
-    cleanupListener();
+    cleanupListener()
     // Tell the native process to stop capturing audio.
-    window.api.send('stop-native-recording');
-  };
+    window.api.send('stop-native-recording')
+  }
 
   // The stream object is no longer relevant here.
-  return { cleanup, stream: null };
+  return { cleanup, stream: null }
 }
 
 const microphoneToRender = (microphone: Microphone): MicrophoneToRender => {

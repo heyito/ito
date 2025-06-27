@@ -3,14 +3,18 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AudioChunk, TranscribeFileRequest, TranscriptionResponse } from "./ito_pb.js";
-import { MethodKind } from "@bufbuild/protobuf";
+import {
+  AudioChunk,
+  TranscribeFileRequest,
+  TranscriptionResponse,
+} from './ito_pb.js'
+import { MethodKind } from '@bufbuild/protobuf'
 
 /**
  * @generated from service ito.ItoService
  */
 export const ItoService = {
-  typeName: "ito.ItoService",
+  typeName: 'ito.ItoService',
   methods: {
     /**
      * Method 1: Sends a whole audio file and gets a single response.
@@ -19,7 +23,7 @@ export const ItoService = {
      * @generated from rpc ito.ItoService.TranscribeFile
      */
     transcribeFile: {
-      name: "TranscribeFile",
+      name: 'TranscribeFile',
       I: TranscribeFileRequest,
       O: TranscriptionResponse,
       kind: MethodKind.Unary,
@@ -31,11 +35,10 @@ export const ItoService = {
      * @generated from rpc ito.ItoService.TranscribeStream
      */
     transcribeStream: {
-      name: "TranscribeStream",
+      name: 'TranscribeStream',
       I: AudioChunk,
       O: TranscriptionResponse,
       kind: MethodKind.ClientStreaming,
     },
-  }
-} as const;
-
+  },
+} as const

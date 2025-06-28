@@ -133,7 +133,7 @@ create_dmg() {
     print_info "Packaging application with Electron Builder..."
     # First build the Electron app, then run electron-builder
     bun run vite:build:app
-    bun run electron-builder -- --mac --universal
+    bun run electron-builder --config electron-builder.yml --mac --universal
     
     print_status "DMG installer created successfully!"
     

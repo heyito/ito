@@ -76,8 +76,6 @@ export const useSettingsStore = create<SettingsState>(set => {
     <K extends keyof SettingsState>(key: K) =>
     (value: SettingsState[K]) =>
       set(state => {
-        console.log('key', key)
-        console.log('value', value)
         const newState = { [key]: value } as Partial<SettingsState>
         syncToStore(newState)
         return { ...state, ...newState }

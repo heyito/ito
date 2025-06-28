@@ -29,7 +29,7 @@ const getInitialState = () => {
     launchAtLogin: storedSettings?.launchAtLogin ?? true,
     showItoBarAlways: storedSettings?.showItoBarAlways ?? true,
     showAppInDock: storedSettings?.showAppInDock ?? true,
-    interactionSounds: storedSettings?.interactionSounds ?? true,
+    interactionSounds: storedSettings?.interactionSounds ?? false,
     muteAudioWhenDictating: storedSettings?.muteAudioWhenDictating ?? false,
     microphoneDeviceId: storedSettings?.microphoneDeviceId ?? 'default',
     microphoneName: storedSettings?.microphoneName ?? 'Default Microphone',

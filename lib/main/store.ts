@@ -85,7 +85,7 @@ const store = new Store<AppStore>({
       launchAtLogin: true,
       showItoBarAlways: true,
       showAppInDock: true,
-      interactionSounds: true,
+      interactionSounds: false,
       muteAudioWhenDictating: false,
       microphoneDeviceId: 'default',
       microphoneName: 'Auto-detect',

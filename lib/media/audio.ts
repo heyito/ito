@@ -5,6 +5,8 @@ import os from 'os'
 import log from 'electron-log'
 import { getPillWindow } from '../main/app'
 import { transcriptionService } from '../main/transcriptionService'
+import { muteSystemAudio, unmuteSystemAudio } from './systemAudio'
+import store from '../main/store'
 
 // --- (No changes to the top part of the file) ---
 export let audioRecorderProcess: ChildProcessWithoutNullStreams | null = null
@@ -136,16 +138,30 @@ function sendCommand(command: object) {
   }
 }
 
-// --- MODIFIED: These functions now also control the transcription service ---
+// --- MODIFIED: These functions now also control the transcription service and system audio ---
 
 export const sendStartRecordingCommand = (deviceName: string) => {
   sendCommand({ command: 'start', device_name: deviceName })
   transcriptionService.startTranscription() // Start the gRPC stream
+
+  // Check if audio muting is enabled and mute system audio
+  const settings = store.get('settings')
+  if (settings && settings.muteAudioWhenDictating) {
+    log.info('[Audio] Muting system audio for dictation')
+    muteSystemAudio()
+  }
 }
 
 export const sendStopRecordingCommand = () => {
   sendCommand({ command: 'stop' })
   transcriptionService.stopTranscription() // Stop the gRPC stream
+
+  // Check if audio muting is enabled and unmute system audio
+  const settings = store.get('settings')
+  if (settings && settings.muteAudioWhenDictating) {
+    log.info('[Audio] Unmuting system audio after dictation')
+    unmuteSystemAudio()
+  }
 }
 
 export function requestDeviceListPromise(): Promise<string[]> {

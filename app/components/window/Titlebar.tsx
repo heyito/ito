@@ -1,18 +1,53 @@
 import { useWindowContext } from './WindowContext'
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { OnboardingTitlebar } from './OnboardingTitlebar'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
-import { UserCircle, PanelLeft } from '@mynaui/icons-react'
+import { UserCircle, PanelLeft, CogFour, Logout } from '@mynaui/icons-react'
 import { useMainStore } from '@/app/store/useMainStore'
 import { useAuthStore } from '@/app/store/useAuthStore'
+import { useAuth } from '@/app/components/auth/useAuth'
 
 export const Titlebar = () => {
   const { icon } = useWindowContext().titlebar
   const { onboardingCompleted } = useOnboardingStore()
   const { isAuthenticated } = useAuthStore()
   const showOnboarding = !onboardingCompleted || !isAuthenticated
-  const { toggleNavExpanded } = useMainStore()
+  const { toggleNavExpanded, setCurrentPage, setSettingsPage } = useMainStore()
+  const { logoutUser } = useAuth()
   const wcontext = useWindowContext().window
+  const [showUserDropdown, setShowUserDropdown] = useState(false)
+
+  // Handle clicks outside dropdown to close it
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowUserDropdown(false)
+    }
+
+    if (showUserDropdown) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+
+    return () => {}
+  }, [showUserDropdown])
+
+  const toggleUserDropdown = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowUserDropdown(!showUserDropdown)
+  }
+
+  const handleSettingsClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setCurrentPage('settings')
+    setSettingsPage('account')
+    setShowUserDropdown(false)
+  }
+
+  const handleSignOutClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    logoutUser()
+    setShowUserDropdown(false)
+  }
 
   // Inline style override for onboarding completed
   const style: React.CSSProperties = onboardingCompleted
@@ -88,24 +123,47 @@ export const Titlebar = () => {
             zIndex: 10,
           }}
         >
-          <div
-            className="titlebar-action-btn hover:bg-slate-200"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 36,
-              height: 30,
-              border: 'none',
-              cursor: 'pointer',
-              borderRadius: 6,
-              padding: 0,
-              marginRight: 12,
-            }}
-            aria-label="Account"
-            tabIndex={0}
-          >
-            <UserCircle style={{ width: 20, height: 20 }} />
+          <div className="relative">
+            <div
+              className="titlebar-action-btn hover:bg-slate-200"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 36,
+                height: 30,
+                border: 'none',
+                cursor: 'pointer',
+                borderRadius: 6,
+                padding: 0,
+                marginRight: 12,
+              }}
+              aria-label="Account"
+              tabIndex={0}
+              onClick={toggleUserDropdown}
+            >
+              <UserCircle style={{ width: 20, height: 20 }} />
+            </div>
+
+            {/* User Dropdown Menu */}
+            {showUserDropdown && (
+              <div className="absolute top-full right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                <button
+                  onClick={handleSettingsClick}
+                  className="w-full px-2 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 rounded-t-lg cursor-pointer"
+                >
+                  <CogFour className="w-4 h-4" />
+                  Settings
+                </button>
+                <button
+                  onClick={handleSignOutClick}
+                  className="w-full px-2 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 rounded-b-lg cursor-pointer"
+                >
+                  <Logout className="w-4 h-4" />
+                  Sign Out
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

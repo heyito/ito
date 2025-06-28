@@ -13,7 +13,7 @@ export default function GeneralSettingsContent() {
     setShowItoBarAlways,
     setShowAppInDock,
   } = useSettingsStore()
-
+  
   const windowContext = useWindowContext()
 
   return (

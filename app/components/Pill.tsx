@@ -19,68 +19,49 @@ const globalStyles = `
 
 const BAR_UPDATE_INTERVAL = 48
 
-// A new component to very basic audio visualization using canvas
+// A new component to very basic audio visualization
 const AudioBars = ({ volumeHistory }: { volumeHistory: number[] }) => {
-  const canvasRef = React.useRef<HTMLCanvasElement>(null)
+  // Base heights for visual variety
+  const bars = Array(42).fill(1)
   const [activeBarIndex, setActiveBarIndex] = useState(0)
 
-  const barCount = 42
-  const barWidth = 1.5
-  const barSpacing = 0
-
   useEffect(() => {
-    setActiveBarIndex(prevIndex => (prevIndex + 1) % barCount)
-  }, [volumeHistory])
+    const interval = setInterval(() => {
+      setActiveBarIndex(prevIndex => (prevIndex + 1) % bars.length)
+    }, BAR_UPDATE_INTERVAL)
 
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+    return () => clearInterval(interval)
+  }, [bars.length])
 
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+  const barStyle = (baseHeight: number, index: number): React.CSSProperties => {
+    const volume = volumeHistory[volumeHistory.length - index - 1] || 0
+    const scale = Math.max(0.05, Math.min(1, volume * 2.5))
+    const activeBarHeight = index === activeBarIndex ? 2 : 0
+    const height = activeBarHeight + baseHeight * 20 * scale
+    const clampedHeight = Math.min(Math.max(height, 1), 14)
 
-    // Set canvas dimensions with device pixel ratio for crisp rendering
-    const devicePixelRatio = window.devicePixelRatio || 1
-    const rect = canvas.getBoundingClientRect()
-    canvas.width = rect.width * devicePixelRatio
-    canvas.height = rect.height * devicePixelRatio
-    ctx.scale(devicePixelRatio, devicePixelRatio)
-
-    // Clear canvas
-    ctx.clearRect(0, 0, rect.width, rect.height)
-
-    // Calculate total width needed for all bars
-    const totalBarsWidth = barCount * barWidth + (barCount - 1) * barSpacing
-    const startX = (rect.width - totalBarsWidth) / 2
-
-    // Draw bars
-    ctx.fillStyle = 'white'
-
-    for (let i = 0; i < barCount; i++) {
-      const volume = volumeHistory[volumeHistory.length - i - 1] || 0
-      const scale = Math.max(0.05, Math.min(1, volume * 10))
-      const activeBarHeight = i === activeBarIndex ? 2 : 0
-      const height = activeBarHeight + 1 * 20 * scale
-      const clampedHeight = Math.min(Math.max(height, 1), 18)
-
-      const x = startX + i * (barWidth + barSpacing)
-      const y = (rect.height - clampedHeight) / 2
-
-      // Draw rounded rectangle for each bar
-      ctx.beginPath()
-      ctx.roundRect(x, y, barWidth, clampedHeight, 1.25)
-      ctx.fill()
+    return {
+      width: '1px',
+      backgroundColor: 'white',
+      borderRadius: '2.5px',
+      margin: '0 0.25px',
+      height: `${clampedHeight}px`,
     }
-  }, [volumeHistory, activeBarIndex, barCount])
+  }
 
   return (
-    <canvas
-      ref={canvasRef}
+    <div
       style={{
-        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         height: '100%',
       }}
-    />
+    >
+      {bars.map((h, i) => (
+        <div key={i} style={barStyle(h, i)} />
+      ))}
+    </div>
   )
 }
 

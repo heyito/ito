@@ -6,10 +6,10 @@ export default function AudioSettingsContent() {
   const {
     microphoneDeviceId,
     microphoneName,
-    interactionSounds,
+    // interactionSounds,
     muteAudioWhenDictating,
     setMicrophoneDeviceId,
-    setInteractionSounds,
+    // setInteractionSounds,
     setMuteAudioWhenDictating,
   } = useSettingsStore()
 
@@ -17,7 +17,7 @@ export default function AudioSettingsContent() {
     <div className="space-y-8">
       <div>
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          {/* <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-medium">Interaction Sounds</div>
               <div className="text-xs text-gray-600 mt-1">
@@ -28,7 +28,7 @@ export default function AudioSettingsContent() {
               checked={interactionSounds}
               onCheckedChange={setInteractionSounds}
             />
-          </div>
+          </div> */}
 
           <div className="flex items-center justify-between">
             <div>

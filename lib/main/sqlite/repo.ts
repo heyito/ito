@@ -68,7 +68,7 @@ export class InteractionsTable {
     const rows = await all<Interaction>(
       'SELECT * FROM interactions WHERE deleted_at IS NULL ORDER BY created_at DESC',
     )
-    return rows.map((row) => {
+    return rows.map(row => {
       // JSON fields must be parsed
       row.asr_output = row.asr_output
         ? JSON.parse(row.asr_output as string)

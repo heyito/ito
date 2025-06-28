@@ -30,4 +30,4 @@ export const INITIAL_SCHEMA = `
     updated_at TEXT NOT NULL,
     deleted_at TEXT
   );
-`; 
+`

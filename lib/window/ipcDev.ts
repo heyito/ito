@@ -23,4 +23,4 @@ export function registerDevIPC() {
       return { success: false, error: (error as Error).message }
     }
   })
-} 
+}

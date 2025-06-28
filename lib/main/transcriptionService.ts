@@ -1,12 +1,12 @@
-import { grpcClient } from '../clients/grpcClient';
-import log from 'electron-log';
+import { grpcClient } from '../clients/grpcClient'
+import log from 'electron-log'
 
 /**
  * A service layer that sits between the raw audio capture
  * and the gRPC client to provide better separation of concerns.
  */
 class TranscriptionService {
-  private isTranscribing: boolean = false;
+  private isTranscribing: boolean = false
 
   /**
    * Starts a transcription session.
@@ -14,13 +14,15 @@ class TranscriptionService {
    */
   public startTranscription() {
     if (this.isTranscribing) {
-      log.warn('[TranscriptionService] Already transcribing, stopping the previous session first.');
-      grpcClient.stopStream(); // Stop the previous session if it's still active
+      log.warn(
+        '[TranscriptionService] Already transcribing, stopping the previous session first.',
+      )
+      grpcClient.stopStream() // Stop the previous session if it's still active
     }
-    log.info('[TranscriptionService] Starting transcription.');
-    this.isTranscribing = true;
+    log.info('[TranscriptionService] Starting transcription.')
+    this.isTranscribing = true
     // Tell the gRPC client to open a new stream to the server.
-    grpcClient.startStream();
+    grpcClient.startStream()
   }
 
   /**
@@ -31,7 +33,7 @@ class TranscriptionService {
   public handleAudioChunk(audioChunk: Buffer) {
     // Only forward the chunk if we are in a transcribing session.
     if (this.isTranscribing) {
-      grpcClient.sendAudioChunk(audioChunk);
+      grpcClient.sendAudioChunk(audioChunk)
     }
   }
 
@@ -41,14 +43,14 @@ class TranscriptionService {
    */
   public stopTranscription() {
     if (!this.isTranscribing) {
-      return;
+      return
     }
-    log.info('[TranscriptionService] Stopping transcription.');
-    this.isTranscribing = false;
+    log.info('[TranscriptionService] Stopping transcription.')
+    this.isTranscribing = false
     // Tell the gRPC client to close the stream and finalize the transcription.
-    grpcClient.stopStream();
+    grpcClient.stopStream()
   }
 }
 
 // Export a singleton instance of the service.
-export const transcriptionService = new TranscriptionService();
+export const transcriptionService = new TranscriptionService()

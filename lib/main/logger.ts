@@ -23,4 +23,4 @@ export function initializeLogging() {
   if (app.isPackaged) {
     log.info(`Log file is located at: ${log.transports.file.getFile().path}`)
   }
-} 
+}

@@ -21,7 +21,7 @@ const runMigrations = async () => {
   const appliedMigrations = await all<{ id: string }>(
     'SELECT id FROM migrations',
   )
-  const appliedMigrationIds = new Set(appliedMigrations.map((row) => row.id))
+  const appliedMigrationIds = new Set(appliedMigrations.map(row => row.id))
 
   // 3. Define all migrations, including initial schema as the first one
   const allMigrations: Migration[] = [
@@ -39,7 +39,7 @@ const runMigrations = async () => {
 
   // 4. Filter out migrations that have already been applied
   const pendingMigrations = allMigrations.filter(
-    (m) => !appliedMigrationIds.has(m.id),
+    m => !appliedMigrationIds.has(m.id),
   )
 
   if (pendingMigrations.length === 0) {
@@ -48,7 +48,9 @@ const runMigrations = async () => {
   }
 
   // 5. Apply pending migrations
-  console.info(`Found ${pendingMigrations.length} pending migrations. Applying...`)
+  console.info(
+    `Found ${pendingMigrations.length} pending migrations. Applying...`,
+  )
 
   for (const migration of pendingMigrations) {
     console.info(`Applying migration: ${migration.id}`)
@@ -96,9 +98,7 @@ const revertLastMigration = async () => {
     },
     ...MIGRATIONS,
   ]
-  const migrationToRevert = allMigrations.find(
-    (m) => m.id === lastMigration.id,
-  )
+  const migrationToRevert = allMigrations.find(m => m.id === lastMigration.id)
 
   if (!migrationToRevert) {
     throw new Error(
@@ -135,7 +135,7 @@ const revertLastMigration = async () => {
 const wipeDatabase = async () => {
   if (db) {
     await new Promise<void>((resolve, reject) => {
-      db.close((err) => {
+      db.close(err => {
         if (err) return reject(err)
         resolve()
       })
@@ -159,7 +159,7 @@ const wipeDatabase = async () => {
 
 const initializeDatabase = (): Promise<void> => {
   return new Promise((resolve, reject) => {
-    db = new sqlite3.Database(dbPath, (err) => {
+    db = new sqlite3.Database(dbPath, err => {
       if (err) {
         console.error('Failed to connect to SQLite database.', err)
         reject(err)
@@ -167,7 +167,7 @@ const initializeDatabase = (): Promise<void> => {
         console.info('Connected to SQLite database.')
         runMigrations()
           .then(resolve)
-          .catch((e) => {
+          .catch(e => {
             console.error('Failed to run migrations.', e)
             reject(e)
           })
@@ -178,9 +178,11 @@ const initializeDatabase = (): Promise<void> => {
 
 const getDb = () => {
   if (!db) {
-    throw new Error('Database not initialized. Call initializeDatabase() first.')
+    throw new Error(
+      'Database not initialized. Call initializeDatabase() first.',
+    )
   }
   return db
 }
 
-export { initializeDatabase, getDb, revertLastMigration, wipeDatabase } 
+export { initializeDatabase, getDb, revertLastMigration, wipeDatabase }

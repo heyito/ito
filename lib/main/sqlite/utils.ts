@@ -16,7 +16,10 @@ export const exec = (query: string): Promise<void> =>
     })
   })
 
-export const get = <T>(query: string, params: any[] = []): Promise<T | undefined> =>
+export const get = <T>(
+  query: string,
+  params: any[] = [],
+): Promise<T | undefined> =>
   new Promise((resolve, reject) => {
     getDb().get(query, params, (err, row: T) => {
       if (err) return reject(err)
@@ -30,4 +33,4 @@ export const all = <T>(query: string, params: any[] = []): Promise<T[]> =>
       if (err) return reject(err)
       resolve(rows)
     })
-  }) 
+  })

@@ -1,7 +1,7 @@
 export interface Migration {
-  id: string;
-  up: string;
-  down: string;
+  id: string
+  up: string
+  down: string
 }
 
 export const MIGRATIONS: Migration[] = [
@@ -11,4 +11,4 @@ export const MIGRATIONS: Migration[] = [
   //   up: 'ALTER TABLE notes ADD COLUMN tags TEXT;',
   //   down: 'ALTER TABLE notes DROP COLUMN tags;'
   // }
-]; 
+]

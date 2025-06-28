@@ -26,12 +26,8 @@ const AudioBars = ({ volumeHistory }: { volumeHistory: number[] }) => {
   const [activeBarIndex, setActiveBarIndex] = useState(0)
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveBarIndex(prevIndex => (prevIndex + 1) % bars.length)
-    }, BAR_UPDATE_INTERVAL)
-
-    return () => clearInterval(interval)
-  }, [bars.length])
+    setActiveBarIndex(prevIndex => (prevIndex + 1) % bars.length)
+  }, [volumeHistory, bars.length])
 
   const barStyle = (baseHeight: number, index: number): React.CSSProperties => {
     const volume = volumeHistory[volumeHistory.length - index - 1] || 0

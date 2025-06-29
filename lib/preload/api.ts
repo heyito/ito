@@ -53,6 +53,9 @@ const api = {
   },
   // Auth methods
   generateNewAuthState: () => ipcRenderer.invoke('generate-new-auth-state'),
+  // Pill window mouse event control
+  setPillMouseEvents: (ignore: boolean, options?: { forward?: boolean }) =>
+    ipcRenderer.invoke('pill-set-mouse-events', ignore, options),
   // All other IPC calls that the UI makes
   // These now just pass through, as the main process handles the window context
   'init-window': () => ipcRenderer.invoke('init-window'),

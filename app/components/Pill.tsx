@@ -14,6 +14,8 @@ const globalStyles = `
     display: flex;
     align-items: flex-end;
     justify-content: center;
+
+    pointer-events: none;
   }
 `
 
@@ -31,13 +33,13 @@ const AudioBars = ({ volumeHistory }: { volumeHistory: number[] }) => {
 
   const barStyle = (baseHeight: number, index: number): React.CSSProperties => {
     const volume = volumeHistory[volumeHistory.length - index - 1] || 0
-    const scale = Math.max(0.05, Math.min(1, volume * 2.5))
+    const scale = Math.max(0.05, Math.min(1, volume * 20))
     const activeBarHeight = index === activeBarIndex ? 2 : 0
     const height = activeBarHeight + baseHeight * 20 * scale
-    const clampedHeight = Math.min(Math.max(height, 1), 14)
+    const clampedHeight = Math.min(Math.max(height, 1), 16)
 
     return {
-      width: '1px',
+      width: '0.75px',
       backgroundColor: 'white',
       borderRadius: '2.5px',
       margin: '0 0.25px',
@@ -116,12 +118,10 @@ const Pill = () => {
   }, [volumeHistory, lastVolumeUpdate]) // Dependency array is empty as the logic inside doesn't depend on state.
 
   // Define dimensions for both states
-  const idleWidth = 60
+  const idleWidth = 36
   const idleHeight = 8
-  const recordingWidth = 96
-  const recordingHeight = 36
-  console.log('showItoBarAlways', showItoBarAlways)
-  console.log('isRecording', isRecording)
+  const recordingWidth = 84
+  const recordingHeight = 32
 
   // A single, unified style for the pill. Its properties will be
   // smoothly transitioned by CSS.
@@ -147,16 +147,38 @@ const Pill = () => {
     boxSizing: 'border-box',
     overflow: 'hidden',
 
+    // Enable pointer events for this element
+    pointerEvents: 'auto',
+
     // The transition property makes the magic happen!
     // We animate width, height, color, opacity, and scale changes over 0.3 seconds.
     transition:
       'width 0.3s ease, height 0.3s ease, background-color 0.3s ease, opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease',
   }
 
+  // Handle mouse enter - enable mouse events for the pill window
+  const handleMouseEnter = () => {
+    if (window.api?.setPillMouseEvents) {
+      window.api.setPillMouseEvents(false) // Enable mouse events
+    }
+  }
+
+  // Handle mouse leave - disable mouse events (with forwarding) for the pill window
+  const handleMouseLeave = () => {
+    if (window.api?.setPillMouseEvents) {
+      window.api.setPillMouseEvents(true, { forward: true }) // Disable mouse events but keep forwarding
+    }
+  }
+
   return (
     <>
       <style>{globalStyles}</style>
-      <div style={pillStyle}>
+      <div
+        style={pillStyle}
+        onClick={() => { console.log('clicked') }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
         {/* Conditionally render the audio bars. They will fade in as the
             pill expands because they are part of the content. */}
         {isRecording && <AudioBars volumeHistory={volumeHistory} />}

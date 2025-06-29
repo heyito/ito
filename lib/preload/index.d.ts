@@ -29,6 +29,10 @@ declare global {
       onKeyEvent: (callback: (event: KeyEvent) => void) => void
       send: (channel: string, data: any) => void
       on: (channel: string, callback: (...args: any[]) => void) => () => void
+      setPillMouseEvents: (
+        ignore: boolean,
+        options?: { forward?: boolean },
+      ) => Promise<void>
       notes: {
         getAll: () => Promise<Note[]>
         add: (note: any) => Promise<Note>

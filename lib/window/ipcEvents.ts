@@ -49,9 +49,7 @@ export function registerIPC() {
   })
   handleIPC('get-login-item-settings', () => {
     try {
-      const settings = app.getLoginItemSettings()
-      log.info('Got login item settings:', settings)
-      return settings
+      return app.getLoginItemSettings()
     } catch (error: any) {
       log.error('Failed to get login item settings:', error)
       return { openAtLogin: false, openAsHidden: false }
@@ -79,7 +77,6 @@ export function registerIPC() {
     try {
       if (process.platform === 'darwin' && app.dock) {
         const isVisible = app.dock.isVisible()
-        log.info('Got dock visibility:', isVisible)
         return { isVisible }
       } else {
         log.warn('Dock visibility check is only available on macOS')
@@ -226,6 +223,21 @@ export function registerIPC() {
   handleIPC('dictionary:delete', async (_e, id) =>
     DictionaryTable.softDelete(id),
   )
+
+  // Pill window mouse event control
+  handleIPC(
+    'pill-set-mouse-events',
+    (_e, ignore: boolean, options?: { forward?: boolean }) => {
+      const pillWindow = getPillWindow()
+      if (pillWindow) {
+        pillWindow.setIgnoreMouseEvents(ignore, options)
+        log.info(
+          `Pill mouse events: ignore=${ignore}, options=${JSON.stringify(options)}`,
+        )
+      }
+    },
+  )
+
   // When the hotkey is pressed, start recording and notify the pill window.
   ipcMain.on('start-native-recording', (_event, deviceId: string) => {
     log.info(`IPC: Received 'start-native-recording' for device: ${deviceId}`)

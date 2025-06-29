@@ -83,11 +83,14 @@ export function createPillWindow(): void {
     focusable: false, // Prevents window from stealing focus
     hasShadow: false,
     type: 'panel',
+    acceptFirstMouse: true,
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
       sandbox: false,
     },
   })
+
+  pillWindow.setIgnoreMouseEvents(true, { forward: true })
 
   // Set properties for macOS to ensure it stays on top of full-screen apps
   if (process.platform === 'darwin') {
@@ -110,7 +113,7 @@ export function createPillWindow(): void {
 
   // Uncomment the next line to open the DevTools for debugging the pill window.
   // This is useful during development to inspect the pill's UI and behavior.
-  // pillWindow.webContents.openDevTools({ mode: 'detach' });
+  // pillWindow.webContents.openDevTools({ mode: 'detach' })
 
   // Clean up the reference when the window is closed.
   pillWindow.on('closed', () => {

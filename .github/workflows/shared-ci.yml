@@ -20,19 +20,20 @@ jobs:
         id: filter
         uses: dorny/paths-filter@v2
         with:
-          build:
-            - 'lib/**'
-            - 'native/**'
-            - 'resources/**'
-            - 'app/**'
-          server:
-            - 'server/src/**'
-            - 'server/Dockerfile'
-            - 'server/package.json'
-            - 'server/yarn.lock'
-          infra:
-            - 'server/infra/**'
-
+          base: ${{ github.ref_name }}
+          filters: |
+            build:
+              - lib/**
+              - native/**
+              - resources/**
+              - app/**
+            server:
+              - server/src/**
+              - server/Dockerfile
+              - server/package.json
+            infra:
+              - server/infra/**
+          list-files: 'none'
   build:
     needs: paths-check
     if: ${{ needs.paths-check.outputs.ui_changed == 'true' }}
@@ -41,18 +42,18 @@ jobs:
       environment: ${{ inputs.environment }}
     secrets: inherit
 
-  deploy-app:
-    needs: paths-check
-    if: ${{ needs.paths-check.outputs.server_changed == 'true' }}
-    uses: ./.github/workflows/app-deploy.yml
-    with:
-      environment: ${{ inputs.environment }}
-    secrets: inherit
-
   deploy-infra:
     needs: paths-check
     if: ${{ needs.paths-check.outputs.infra_changed == 'true' }}
     uses: ./.github/workflows/infra-deploy.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  deploy-app:
+    needs: paths-check
+    if: ${{ needs.paths-check.outputs.server_changed == 'true' }}
+    uses: ./.github/workflows/app-deploy.yml
     with:
       environment: ${{ inputs.environment }}
     secrets: inherit

@@ -7,7 +7,14 @@ on:
       environment:
         type: string
         required: true
+        description: 'The environment to build for'    
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: string
+        required: true
         description: 'The environment to build for'
+
 
 permissions:
   contents: read
@@ -22,6 +29,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: '1.1.20'   
+
+    - name: Install dependencies
+      working-directory: server
+      run: bun install
+
     - name: Configure AWS credentials (OIDC)
       uses: aws-actions/configure-aws-credentials@v2
       with:
@@ -29,20 +45,24 @@ jobs:
         aws-region: us-west-2
 
     - name: Login to ECR
-      run: aws ecr get-login-password | docker login \
-             --username AWS \
-             --password-stdin 287641434880.dkr.ecr.us-west-2.amazonaws.com
+      run: |
+        aws ecr get-login-password \
+          | docker login \
+              --username AWS \
+              --password-stdin 287641434880.dkr.ecr.us-west-2.amazonaws.com
 
     - name: Build & push multi-arch image
+      working-directory: server
       run: |
         docker buildx create --use
         docker buildx build \
           --platform linux/arm64,linux/amd64 \
-          --tag 287641434880.dkr.ecr.us-west-2.amazonaws.com/${{ inputs.environment }}-ito-server:latest \
+          --tag 287641434880.dkr.ecr.us-west-2.amazonaws.com/${{ vars.AWS_STAGE }}-ito-server:latest \
           --push .
+
     - name: Force new ECS deployment
       run: |
         aws ecs update-service \
-          --cluster ${{ inputs.environment }}-ito-cluster \
-          --service ${{ inputs.environment }}-ito-service \
+          --cluster ${{ vars.AWS_STAGE }}-ito-cluster \
+          --service ${{ vars.AWS_STAGE }}-ito-service \
           --force-new-deployment

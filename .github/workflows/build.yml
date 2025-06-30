@@ -7,6 +7,12 @@ on:
         type: string
         required: true
         description: 'The environment to build for'
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: string
+        required: true
+        description: 'The environment to build for'
 
 jobs:
   build:
@@ -22,6 +28,12 @@ jobs:
 
       - name: Install dependencies
         run: bun install
+
+      - name: Check code formatting
+        run: bun format:app
+
+      - name: Check code linting
+        run: bun lint:app
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -41,6 +53,7 @@ jobs:
           echo "CSC_LINK=\"release.p12\"" >> .env
           echo "CSC_KEY_PASSWORD=\"${{ secrets.MACOS_CERT_PASSWORD }}\"" >> .env
           echo "GH_TOKEN=\"${{ secrets.GITHUB_TOKEN }}\"" >> .env
+          echo "GRPC_BASE_URL=\"${{ vars.GRPC_BASE_URL }}\"" >> .env
           echo "Created .env file:"
           cat .env
 

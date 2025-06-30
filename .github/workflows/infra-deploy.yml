@@ -7,6 +7,13 @@ on:
         type: string
         required: true
         description: 'The environment to build for'
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: string
+        required: true
+        description: 'The environment to build for'
+
 
 permissions:
   contents: read
@@ -24,8 +31,7 @@ jobs:
       - name: Setup Node.js & CDK
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
-          cache: 'npm'
+          node-version: '20'
 
       - name: Install infra dependencies
         working-directory: server/infra
@@ -49,6 +55,6 @@ jobs:
         working-directory: server/infra
         run: npx cdk diff
 
-      - name: Deploy to production
+      - name: Deploy to AWS 
         working-directory: server/infra
-        run: npx cdk deploy "Ito-${{ inputs.environment }}/*" --require-approval never
+        run: npx cdk deploy "Ito-${{ vars.AWS_STAGE }}/*" --require-approval never

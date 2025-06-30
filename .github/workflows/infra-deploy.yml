@@ -1,17 +1,12 @@
 name: Infra CDK
 
-x-inputs: &environment_inputs
-  environment:
-    type: string
-    required: true
-    description: 'The environment to build for'
-
 on:
   workflow_call:
-    inputs: *environment_inputs
-
-  workflow_dispatch:
-    inputs: *environment_inputs
+    inputs:
+      environment:
+        type: string
+        required: true
+        description: 'The environment to build for'
 
 permissions:
   contents: read

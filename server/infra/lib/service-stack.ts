@@ -137,6 +137,9 @@ export class ServiceStack extends Stack {
       unhealthyThresholdCount: 5,
     })
 
+    // Configure target group for gRPC over HTTPS
+    fargateService.targetGroup.setAttribute('protocol_version', 'GRPC')
+
     const alb = fargateService.loadBalancer
     alb.logAccessLogs(logBucket, 'ito-alb-access-logs')
 

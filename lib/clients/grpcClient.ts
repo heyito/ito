@@ -15,6 +15,8 @@ type ChunkQueueItem = {
   promise: Promise<any>
 }
 
+const GRPC_BASE_URL = process.env.GRPC_BASE_URL || 'http://localhost:3000'
+
 /**
  * Service to manage the gRPC client and transcription stream from the main process.
  */
@@ -29,7 +31,7 @@ class GrpcClient {
 
   constructor() {
     const transport = createGrpcTransport({
-      baseUrl: 'http://localhost:3000',
+      baseUrl: GRPC_BASE_URL,
     })
     this.client = createClient(ItoService, transport)
     console.log('[gRPC Service] Client initialized in main process.')

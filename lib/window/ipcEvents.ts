@@ -231,9 +231,6 @@ export function registerIPC() {
       const pillWindow = getPillWindow()
       if (pillWindow) {
         pillWindow.setIgnoreMouseEvents(ignore, options)
-        log.info(
-          `Pill mouse events: ignore=${ignore}, options=${JSON.stringify(options)}`,
-        )
       }
     },
   )

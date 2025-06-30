@@ -14,7 +14,6 @@ import {
   SERVER_NAME,
   SERVICE_NAME,
 } from './constants'
-import { Cluster } from 'aws-cdk-lib/aws-ecs'
 
 export interface GitHubOidcStackProps extends StackProps {
   stages: string[]

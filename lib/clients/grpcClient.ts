@@ -7,6 +7,7 @@ import { createClient, ConnectError } from '@connectrpc/connect'
 import { createGrpcTransport } from '@connectrpc/connect-node'
 import { BrowserWindow } from 'electron'
 import { create, Message } from '@bufbuild/protobuf'
+import { setFocusedText } from '../media/text-writer'
 
 // A helper type for our promise-based queue
 type ChunkQueueItem = {
@@ -75,10 +76,7 @@ class GrpcClient {
           '[gRPC Service] Transcription received:',
           response.transcript,
         )
-        this.mainWindow?.webContents.send(
-          'transcription-result',
-          response.transcript,
-        )
+        setFocusedText(response.transcript)
       })
       .catch(error => {
         console.error('[gRPC Service] An unexpected error occurred:', error)

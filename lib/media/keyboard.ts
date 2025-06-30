@@ -1,47 +1,13 @@
 import { BrowserWindow } from 'electron'
 import { spawn } from 'child_process'
-import { join } from 'path'
 import { app } from 'electron'
 import os from 'os'
+import { getNativeBinaryPath } from './native-interface'
 
 // Global key listener process singleton
 export let KeyListenerProcess: ReturnType<typeof spawn> | null = null
 
-// This function now just returns the configured path. It doesn't start anything.
-function getBinaryPath(): string | null {
-  const isDev = !app.isPackaged
-  const platform = os.platform()
-
-  const binaryName =
-    platform === 'win32' ? 'global-key-listener.exe' : 'global-key-listener'
-
-  const getTargetDir = () => {
-    if (isDev) {
-      const targetBase = join(
-        __dirname,
-        '../../native/global-key-listener/target',
-      )
-      if (platform === 'darwin') {
-        return join(targetBase, 'universal')
-      } else if (platform === 'win32') {
-        return join(targetBase, 'x86_64-pc-windows-gnu/release')
-      }
-      // Fallback for unsupported dev platforms
-      return null
-    }
-    // For production builds
-    return join(process.resourcesPath, 'binaries')
-  }
-
-  const targetDir = getTargetDir()
-  if (!targetDir) {
-    console.error(
-      `Cannot determine key listener binary path for platform ${platform}`,
-    )
-    return null
-  }
-  return join(targetDir, binaryName)
-}
+const nativeModuleName = 'global-key-listener'
 
 // Starts the key listener process
 export const startKeyListener = () => {
@@ -50,7 +16,7 @@ export const startKeyListener = () => {
     return
   }
 
-  const binaryPath = getBinaryPath()
+  const binaryPath = getNativeBinaryPath(nativeModuleName)
   if (!binaryPath) {
     console.error('Could not determine key listener binary path.')
     return

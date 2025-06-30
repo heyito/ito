@@ -21,6 +21,8 @@ asarUnpack:
 extraResources:
   - from: native/global-key-listener/target/${arch}-apple-darwin/release/global-key-listener
     to: binaries/global-key-listener
+  - from: native/text-writer/target/${arch}-apple-darwin/release/text-writer
+    to: binaries/text-writer
 protocols:
   name: ito
   schemes: [ito]

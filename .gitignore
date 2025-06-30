@@ -9,3 +9,4 @@ node_modules
 */dist/*
 dist/*
 .DS_Store
+native/**/target

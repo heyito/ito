@@ -35,6 +35,11 @@ build_native_module() {
     # Change into the module's directory
     cd "native/$module_name"
 
+    # Install dependencies
+    print_info "Installing dependencies for $module_name..."
+    cargo fetch
+    cargo install --path .
+
     # --- macOS Build ---
     if [ "$BUILD_MAC" = true ]; then
         print_info "Building macOS binaries for $module_name..."
@@ -120,6 +125,7 @@ fi
 # --- Build all native modules ---
 build_native_module "global-key-listener"
 build_native_module "audio-recorder"
+build_native_module "text-writer"
 
 
 print_status "All native module builds completed successfully!"

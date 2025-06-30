@@ -28,4 +28,4 @@ export const AudioBarsBase = ({ heights, barColor }: AudioBarsBaseProps) => {
       ))}
     </div>
   )
-} 
+}

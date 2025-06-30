@@ -74,8 +74,6 @@ impl CommandProcessor {
     }
 
     fn run(&mut self) {
-        self.list_devices();
-        
         while let Ok(command) = self.cmd_rx.recv() {
             match command {
                 Command::ListDevices => self.list_devices(),
@@ -180,8 +178,6 @@ fn start_capture(device_name: Option<String>, stdout: Arc<Mutex<io::Stdout>>) ->
         host.default_input_device()
     }.ok_or_else(|| anyhow!("[audio-recorder] Failed to find input device"))?;
     
-    eprintln!("[audio-recorder] Using device: {}", device.name()?);
-
     let config = device.supported_input_configs()?
         .find(|r| r.channels() > 0)
         .ok_or_else(|| anyhow!("[audio-recorder] No supported input config found"))?
@@ -191,8 +187,6 @@ fn start_capture(device_name: Option<String>, stdout: Arc<Mutex<io::Stdout>>) ->
     let input_sample_format = config.sample_format();
     let channels = config.channels();
     
-    eprintln!("[audio-recorder] Found input config: Rate: {}, Channels: {}, Format: {:?}", input_sample_rate, channels, input_sample_format);
-
     let mut resampler = if input_sample_rate != TARGET_SAMPLE_RATE {
         let resampler = FftFixedIn::new(
             input_sample_rate as usize,

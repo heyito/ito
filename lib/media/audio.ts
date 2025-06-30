@@ -68,7 +68,7 @@ function processData() {
 
     if (msgType === MSG_TYPE_JSON) {
       const jsonResponse = JSON.parse(payload.toString('utf-8'))
-      if (jsonResponse.response_type === 'device-list' && deviceListPromise) {
+      if (jsonResponse.type === 'device-list' && deviceListPromise) {
         deviceListPromise.resolve(jsonResponse.devices || [])
         deviceListPromise = null
       }

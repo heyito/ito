@@ -14,6 +14,7 @@ import {
 } from 'aws-cdk-lib/aws-certificatemanager'
 import {
   ApplicationProtocol,
+  ApplicationProtocolVersion,
   Protocol,
   SslPolicy,
 } from 'aws-cdk-lib/aws-elasticloadbalancingv2'
@@ -119,6 +120,7 @@ export class ServiceStack extends Stack {
           logDriver: new AwsLogDriver({ streamPrefix: 'ito-server' }),
         },
         protocol: ApplicationProtocol.HTTPS,
+        protocolVersion: ApplicationProtocolVersion.GRPC,
         domainZone: zone,
         domainName,
         certificate: cert,
@@ -136,9 +138,6 @@ export class ServiceStack extends Stack {
       healthyThresholdCount: 2,
       unhealthyThresholdCount: 5,
     })
-
-    // Configure target group for gRPC over HTTPS
-    fargateService.targetGroup.setAttribute('protocol_version', 'GRPC')
 
     const alb = fargateService.loadBalancer
     alb.logAccessLogs(logBucket, 'ito-alb-access-logs')

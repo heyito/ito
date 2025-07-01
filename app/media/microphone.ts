@@ -1,3 +1,5 @@
+import { useSettingsStore } from "../store/useSettingsStore"
+
 // In your renderer process (main window)
 async function setupMicrophone(deviceId?: string) {
   try {
@@ -43,6 +45,40 @@ async function getAvailableMicrophones(): Promise<Microphone[]> {
   } catch (error) {
     console.error('Error getting available native microphones:', error)
     return []
+  }
+}
+
+/**
+ * Verifies if the currently selected microphone in settings is still connected.
+ * If not, it gracefully falls back to the "default" auto-detect setting.
+ */
+export async function verifyStoredMicrophone() {
+  try {
+    console.log('[verifyStoredMicrophone] Verifying selected microphone...')
+    const { microphoneDeviceId, setMicrophoneDeviceId } = useSettingsStore.getState()
+
+    // If the user already has "default" selected, there's nothing to verify.
+    if (microphoneDeviceId === 'default') {
+      console.log('[verifyStoredMicrophone] "Auto-detect" is selected. Verification not needed.')
+      return
+    }
+
+    // Get the list of currently available microphones from the native backend.
+    const availableDevices: string[] = await window.api.invoke('get-native-audio-devices')
+
+    // Check if the stored deviceId is in the list of available devices.
+    const isDeviceAvailable = availableDevices.includes(microphoneDeviceId)
+
+    if (isDeviceAvailable) {
+      console.log(`[verifyStoredMicrophone] Stored microphone "${microphoneDeviceId}" is still available.`)
+    } else {
+      console.warn(`[verifyStoredMicrophone] Stored microphone "${microphoneDeviceId}" is not available. Falling back to "Auto-detect".`)
+      // The device is disconnected. Update the store to use the default.
+      // We pass the friendly name "Auto-detect" to keep the UI consistent.
+      setMicrophoneDeviceId('default', 'Auto-detect')
+    }
+  } catch (error) {
+    console.error('[verifyStoredMicrophone] Failed to verify microphone:', error)
   }
 }
 

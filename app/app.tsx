@@ -8,10 +8,18 @@ import { useAuth } from '@/app/components/auth/useAuth'
 import GlobalKeyListener from './components/GlobalKeyListener'
 import { WindowContextProvider } from '@/lib/window'
 import { Auth0Provider } from '@/app/components/auth/Auth0Provider'
+import { useDeviceChangeListener } from './hooks/useDeviceChangeListener'
+import { verifyStoredMicrophone } from './media/microphone'
+import { useEffect } from 'react'
 
 const MainApp = () => {
   const { onboardingCompleted } = useOnboardingStore()
   const { isAuthenticated } = useAuth()
+  useDeviceChangeListener()
+
+  useEffect(() => {
+    verifyStoredMicrophone()
+  }, [])
 
   // If authenticated and onboarding completed, show main app
   if (isAuthenticated && onboardingCompleted) {

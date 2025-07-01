@@ -13,6 +13,7 @@ import { exchangeAuthCode, generateNewAuthState } from '../auth/events'
 import { NotesTable, DictionaryTable } from '../main/sqlite/repo'
 // import { getPillWindow } from '../main/app'
 import {
+  handleAudioDeviceChange,
   requestDeviceListPromise,
   sendStartRecordingCommand,
   sendStopRecordingCommand,
@@ -33,6 +34,12 @@ export function registerIPC() {
   })
   ipcMain.on('electron-store-set', (_event, key, val) => {
     store.set(key, val)
+  })
+
+  ipcMain.on('audio-devices-changed', () => {
+    log.info('[IPC] Audio devices changed, notifying windows.')
+    // Notify all windows to refresh their device lists in the UI.
+    handleAudioDeviceChange()
   })
 
   // Login Item Settings

@@ -3,7 +3,7 @@ import { join } from 'path'
 import { app } from 'electron'
 import os from 'os'
 import log from 'electron-log'
-import { getPillWindow } from '../main/app'
+import { getPillWindow, mainWindow } from '../main/app'
 import { transcriptionService } from '../main/transcriptionService'
 import { muteSystemAudio, unmuteSystemAudio } from './systemAudio'
 import store from '../main/store'
@@ -15,6 +15,8 @@ let deviceListPromise: {
   resolve: (value: string[]) => void
   reject: (reason?: any) => void
 } | null = null
+
+let currentDeviceName: string | null = null
 
 function getBinaryPath(): string | null {
   const isDev = !app.isPackaged
@@ -138,8 +140,6 @@ function sendCommand(command: object) {
   }
 }
 
-// --- MODIFIED: These functions now also control the transcription service and system audio ---
-
 export const sendStartRecordingCommand = (deviceName: string) => {
   sendCommand({ command: 'start', device_name: deviceName })
   transcriptionService.startTranscription() // Start the gRPC stream
@@ -150,6 +150,9 @@ export const sendStartRecordingCommand = (deviceName: string) => {
     log.info('[Audio] Muting system audio for dictation')
     muteSystemAudio()
   }
+
+  currentDeviceName = deviceName
+  log.info(`[Audio] Recording started on device: ${currentDeviceName}`)
 }
 
 export const sendStopRecordingCommand = () => {
@@ -162,6 +165,16 @@ export const sendStopRecordingCommand = () => {
     log.info('[Audio] Unmuting system audio after dictation')
     unmuteSystemAudio()
   }
+
+  currentDeviceName = null
+  log.info('[Audio] Recording stopped')
+}
+
+export function handleAudioDeviceChange() {
+  // Notify the renderer windows to refresh their device lists in the UI.
+  // You can use this event in your UI components to re-fetch the microphone list.
+  mainWindow?.webContents.send('force-device-list-reload')
+  getPillWindow()?.webContents.send('force-device-list-reload')
 }
 
 export function requestDeviceListPromise(): Promise<string[]> {

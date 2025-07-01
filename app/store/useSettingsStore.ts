@@ -16,7 +16,7 @@ interface SettingsState {
   setShowAppInDock: (show: boolean) => void
   setInteractionSounds: (enabled: boolean) => void
   setMuteAudioWhenDictating: (enabled: boolean) => void
-  setMicrophoneDeviceId: (deviceId: string, name?: string) => void
+  setMicrophoneDeviceId: (deviceId: string, name: string) => void
   setKeyboardShortcut: (shortcut: string[]) => void
 }
 
@@ -115,12 +115,16 @@ export const useSettingsStore = create<SettingsState>(set => {
       }),
     setInteractionSounds: createSetter('interactionSounds'),
     setMuteAudioWhenDictating: createSetter('muteAudioWhenDictating'),
-    // Special case: can set both deviceId and optionally name
-    setMicrophoneDeviceId: (deviceId: string, name?: string) =>
-      set(_state => {
+    // Special case: can set both deviceId and name
+    setMicrophoneDeviceId: (deviceId: string, name: string) =>
+      set(state => {
+        // Prevent unnecessary updates if the device hasn't changed
+        if (state.microphoneDeviceId === deviceId) {
+          return {}
+        }
         const newState = {
           microphoneDeviceId: deviceId,
-          ...(name && { microphoneName: name }),
+          microphoneName: name
         }
         syncToStore(newState)
         return newState

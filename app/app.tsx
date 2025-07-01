@@ -5,17 +5,18 @@ import WelcomeKit from '@/app/components/welcome/WelcomeKit'
 import Pill from '@/app/components/pill/Pill'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { useAuth } from '@/app/components/auth/useAuth'
-import GlobalKeyListener from './components/GlobalKeyListener'
 import { WindowContextProvider } from '@/lib/window'
 import { Auth0Provider } from '@/app/components/auth/Auth0Provider'
 import { useDeviceChangeListener } from './hooks/useDeviceChangeListener'
 import { verifyStoredMicrophone } from './media/microphone'
 import { useEffect } from 'react'
+import { useGlobalShortcut } from './hooks/useGlobalShortcut'
 
 const MainApp = () => {
   const { onboardingCompleted } = useOnboardingStore()
   const { isAuthenticated } = useAuth()
   useDeviceChangeListener()
+  useGlobalShortcut()
 
   useEffect(() => {
     verifyStoredMicrophone()
@@ -53,7 +54,6 @@ export default function App() {
                 <WindowContextProvider
                   titlebar={{ title: 'Ito', icon: appIcon }}
                 >
-                  <GlobalKeyListener />
                   <MainApp />
                 </WindowContextProvider>
               </>

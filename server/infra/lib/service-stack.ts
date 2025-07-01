@@ -58,6 +58,12 @@ export class ServiceStack extends Stack {
       props.dbSecretArn,
     )
 
+    const groqApiKeySecret = Secret.fromSecretNameV2(
+      this,
+      'GroqApiKey',
+      'groq-api-key',
+    )
+
     const zone = HostedZone.fromLookup(this, 'HostedZone', {
       domainName: 'ito-api.com',
     })
@@ -116,6 +122,7 @@ export class ServiceStack extends Stack {
             REQUIRE_AUTH: isDev(stageName) ? 'false' : 'true',
             AUTH0_DOMAIN: 'dev-8rsdprb2tatdfcps.us.auth0.com',
             AUTH0_AUDIENCE: 'http://localhost:3000',
+            GROQ_TRANSCRIPTION_MODEL: 'distil-whisper-large-v3-en',
           },
           logDriver: new AwsLogDriver({ streamPrefix: 'ito-server' }),
         },
@@ -131,7 +138,7 @@ export class ServiceStack extends Stack {
 
     fargateService.targetGroup.configureHealthCheck({
       protocol: Protocol.HTTP,
-      port: '3000',
+      port: '3001',
       path: '/health',
       interval: Duration.seconds(30),
       timeout: Duration.seconds(5),

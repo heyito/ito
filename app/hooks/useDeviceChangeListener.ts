@@ -10,7 +10,9 @@ export const useDeviceChangeListener = (): void => {
   useEffect(() => {
     // Define the handler function that will be called on the event.
     const handleDeviceChange = () => {
-      log.info('[Renderer] `devicechange` event detected. Notifying main process.')
+      log.info(
+        '[Renderer] `devicechange` event detected. Notifying main process.',
+      )
       window.api.send('audio-devices-changed')
     }
 
@@ -21,7 +23,10 @@ export const useDeviceChangeListener = (): void => {
     // Return a cleanup function to remove the listener when the component unmounts.
     // This is crucial for preventing memory leaks and ensuring good practice.
     return () => {
-      navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange)
+      navigator.mediaDevices.removeEventListener(
+        'devicechange',
+        handleDeviceChange,
+      )
       log.info('[useDeviceChangeListener] Removed devicechange listener.')
     }
   }, []) // The empty dependency array ensures this effect runs only once on mount.

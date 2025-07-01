@@ -8,7 +8,6 @@ All notable changes to the electron-react-app (ERA) are listed here.
 
 - 🎉 Electron version upgraded `v36`
 - 🎨 Integrated Shadcn UI Component System
-
   - Added new component library with Radix UI primitives
   - Implemented accessible and customizable components
   - Added TypeScript support for better developer experience
@@ -16,7 +15,6 @@ All notable changes to the electron-react-app (ERA) are listed here.
   - Added new component showcase in welcome kit
 
 - 🎨 Enhanced Design System
-
   - Implemented new color system with CSS variables
   - Added new design tokens for consistent theming
   - Improved dark/light mode implementation
@@ -25,7 +23,6 @@ All notable changes to the electron-react-app (ERA) are listed here.
   - Added new chart color palette
 
 - 🎨 Welcome Kit Improvements
-
   - Added Shadcn UI showcase section
   - Enhanced dark mode toggle
   - Added new icons and updated welcome component content
@@ -33,7 +30,6 @@ All notable changes to the electron-react-app (ERA) are listed here.
   - Integrated dark mode toggle in WelcomeKit using Badge component
 
 - 🎨 Developer Experience
-
   - Added new component configuration system
   - Improved TypeScript support
   - Enhanced component documentation

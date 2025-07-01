@@ -27,6 +27,7 @@ The key listener can be controlled through stdin commands in JSON format:
 ```
 
 Events are output to stdout in JSON format:
+
 ```json
 {
   "type": "keydown",
@@ -39,17 +40,22 @@ Events are output to stdout in JSON format:
 ## Requirements
 
 ### macOS
+
 You'll need to grant accessibility permissions to your terminal or the compiled binary:
+
 1. Go to System Preferences → Security & Privacy → Privacy → Accessibility
 2. Add your terminal application or the compiled binary to the list
 
 ### Linux
+
 You may need to run with elevated privileges:
+
 ```bash
 sudo cargo run
 ```
 
 ### Windows
+
 Should work without additional permissions.
 
 ## Building
@@ -63,6 +69,7 @@ The binary will be available at `target/release/global-key-listener`
 ## Integration with Electron
 
 When integrating with Electron:
+
 1. Copy the compiled binary to your app's resources directory
 2. Use the binary path from `process.resourcesPath` in production
 3. Use the development path (`target/release/global-key-listener`) during development
@@ -71,6 +78,7 @@ When integrating with Electron:
 ## Key Names
 
 The key listener uses standard key names that match the `rdev` library's Key enum. Common examples:
+
 - `KeyA` through `KeyZ` for letter keys
 - `Digit1` through `Digit9` for number keys
 - `Function` for the fn key (macOS)

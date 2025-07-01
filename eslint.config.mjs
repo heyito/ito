@@ -1,7 +1,7 @@
-import eslint from '@eslint/js';
-import tseslint from 'typescript-eslint';
-import reactPlugin from 'eslint-plugin-react';
-import reactHooksPlugin from 'eslint-plugin-react-hooks';
+import eslint from '@eslint/js'
+import tseslint from 'typescript-eslint'
+import reactPlugin from 'eslint-plugin-react'
+import reactHooksPlugin from 'eslint-plugin-react-hooks'
 
 export default [
   {
@@ -15,8 +15,8 @@ export default [
       '.gitignore',
       '.eslintignore',
       '.eslintrc',
-      '.prettierrc'
-    ]
+      '.prettierrc',
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
@@ -32,7 +32,7 @@ export default [
       parser: tseslint.parser,
       parserOptions: {
         ecmaFeatures: { jsx: true },
-        projectService: true
+        projectService: true,
       },
       globals: {
         // Browser globals that should be readonly
@@ -59,13 +59,13 @@ export default [
         __filename: 'readonly',
 
         // React globals
-        React: 'readonly'
-      }
+        React: 'readonly',
+      },
     },
     settings: {
       react: {
-        version: 'detect'
-      }
+        version: 'detect',
+      },
     },
     rules: {
       // React specific rules
@@ -74,20 +74,26 @@ export default [
       'react-hooks/exhaustive-deps': 'warn',
 
       // TypeScript specific rules
-      '@typescript-eslint/no-unused-vars': ['warn', {
-        'argsIgnorePattern': '^_',
-        'varsIgnorePattern': '^_'
-      }],
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
 
       // General rules
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       '@typescript-eslint/no-explicit-any': 'off',
 
       // Global modification rules
-      'no-global-assign': ['error', {
-        exceptions: ['console', 'localStorage', 'sessionStorage']
-      }]
-    }
+      'no-global-assign': [
+        'error',
+        {
+          exceptions: ['console', 'localStorage', 'sessionStorage'],
+        },
+      ],
+    },
   },
   // Add specific configuration for preload files
   {
@@ -96,8 +102,8 @@ export default [
       globals: {
         process: 'readonly',
         console: 'readonly',
-        window: 'readonly'
-      }
-    }
+        window: 'readonly',
+      },
+    },
   },
-];
+]

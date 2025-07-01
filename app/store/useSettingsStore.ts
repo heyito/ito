@@ -124,7 +124,7 @@ export const useSettingsStore = create<SettingsState>(set => {
         }
         const newState = {
           microphoneDeviceId: deviceId,
-          microphoneName: name
+          microphoneName: name,
         }
         syncToStore(newState)
         return newState

@@ -20,8 +20,10 @@ A modern Electron application template with React, Vite, TypeScript, and Tailwin
 <br />
 
 ## Building the App
+
 1. Make sure you have cargo/rust installed.
 2. Make sure mingw-w64 is installed `brew install mingw-w64`.
+
 ## Features
 
 - 🚀 Electron - Cross-platform desktop application framework
@@ -116,7 +118,7 @@ The app uses a secure IPC (Inter-Process Communication) system to communicate be
 window.api.send('channel-name', ...args)
 
 // Renderer process (receive message from main)
-window.api.receive('channel-name', (data) => {
+window.api.receive('channel-name', data => {
   console.log(data)
 })
 

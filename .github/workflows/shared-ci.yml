@@ -11,9 +11,9 @@ jobs:
   paths-check:
     runs-on: ubuntu-latest
     outputs:
-      ui_changed:     ${{ steps.filter.outputs.build }}
+      ui_changed: ${{ steps.filter.outputs.build }}
       server_changed: ${{ steps.filter.outputs.server }}
-      infra_changed:  ${{ steps.filter.outputs.infra }}
+      infra_changed: ${{ steps.filter.outputs.infra }}
     steps:
       - uses: actions/checkout@v3
       - name: Detect changed areas

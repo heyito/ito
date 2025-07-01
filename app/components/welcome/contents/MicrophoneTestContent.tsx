@@ -35,18 +35,20 @@ function MicrophoneBars({ volume }: { volume: number }) {
 }
 
 export default function MicrophoneTestContent() {
-  const { incrementOnboardingStep, decrementOnboardingStep } = useOnboardingStore()
-  const { microphoneDeviceId, microphoneName, setMicrophoneDeviceId } = useSettingsStore()
-  
+  const { incrementOnboardingStep, decrementOnboardingStep } =
+    useOnboardingStore()
+  const { microphoneDeviceId, microphoneName, setMicrophoneDeviceId } =
+    useSettingsStore()
+
   const [volume, setVolume] = useState(0)
   const [smoothedVolume, setSmoothedVolume] = useState(0)
-  
+
   // This effect listens for volume updates from the main process
   useEffect(() => {
     const unsubscribe = window.api.on('volume-update', (newVolume: number) => {
       setVolume(newVolume)
     })
-    
+
     // Cleanup the listener when the component unmounts
     return () => {
       unsubscribe()

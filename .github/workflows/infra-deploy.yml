@@ -14,10 +14,9 @@ on:
         required: true
         description: 'The environment to build for'
 
-
 permissions:
   contents: read
-  id-token: write   # for OIDC
+  id-token: write # for OIDC
 
 jobs:
   cdk-deploy:
@@ -47,14 +46,14 @@ jobs:
           role-to-assume: arn:aws:iam::287641434880:role/ItoGitHubCiCdRole
           aws-region: us-west-2
 
-      - name: Synthesize CDK template 
+      - name: Synthesize CDK template
         working-directory: server/infra
         run: npx cdk synth
-        
+
       - name: Show CDK diff
         working-directory: server/infra
         run: npx cdk diff
 
-      - name: Deploy to AWS 
+      - name: Deploy to AWS
         working-directory: server/infra
         run: npx cdk deploy "Ito-${{ vars.AWS_STAGE }}/*" --require-approval never

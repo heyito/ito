@@ -2,7 +2,7 @@ name: Dev CI
 
 on:
   push:
-    branches: [ dev ]
+    branches: [dev]
 
 jobs:
   call-reusable:

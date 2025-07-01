@@ -9,45 +9,32 @@ dotenv.config()
  * A TypeScript client for interacting with the Groq API, inspired by your Python implementation.
  */
 class GroqClient {
-  private _client: Groq | undefined
-  private _userCommandModel: string | undefined
-  private _asrModel: string | undefined
-  private _ready: boolean = false
+  private readonly _client: Groq
+  private readonly _userCommandModel: string
+  private readonly _asrModel: string
+  private readonly _isValid: boolean
 
-  constructor() {}
-
-  public async initialize(
-    apiKey: string,
-    userCommandModel: string,
-    asrModel: string,
-  ): Promise<void> {
+  constructor(apiKey: string, userCommandModel: string, asrModel: string) {
     if (!apiKey) {
       throw new Error('Groq API key is required.')
     }
-
     this._client = new Groq({ apiKey })
     this._userCommandModel = userCommandModel
     this._asrModel = asrModel
-    this._ready = true
+    this._isValid = true
   }
 
   /**
    * Checks if the client is configured correctly.
    */
   public get isAvailable(): boolean {
-    return this._ready
+    return this._isValid
   }
 
   /**
    * Gets the configured model name for Automatic Speech Recognition (ASR).
    */
   public get asrModelName(): string {
-    if (!this._asrModel) {
-      throw new Error(
-        'Groq client is not initialized. Call initialize() first.',
-      )
-    }
-
     return this._asrModel
   }
 
@@ -66,12 +53,6 @@ class GroqClient {
     }
     if (!this._asrModel) {
       throw new Error('Groq ASR model is not configured.')
-    }
-
-    if (!this._client) {
-      throw new Error(
-        'Groq client is not initialized. Call initialize() first.',
-      )
     }
 
     try {
@@ -103,4 +84,21 @@ class GroqClient {
 
 // --- Singleton Instance ---
 // Create and export a single, pre-configured instance of the client for use across the server.
-export const groqClient = new GroqClient()
+// log error if groq api key or transcription model is not set
+if (!process.env.GROQ_API_KEY || !process.env.GROQ_TRANSCRIPTION_MODEL) {
+  console.error(
+    'FATAL: GROQ_API_KEY or GROQ_TRANSCRIPTION_MODEL is not set in the .env file. The application cannot start.',
+  )
+  process.exit(1)
+}
+const apiKey = process.env.GROQ_API_KEY
+const asrModel = process.env.GROQ_TRANSCRIPTION_MODEL
+if (!apiKey) {
+  console.error(
+    'FATAL: GROQ_API_KEY is not set in the .env file. The application cannot start.',
+  )
+  process.exit(1)
+}
+
+// Note: userCommandModel is empty for now as we are only using transcription.
+export const groqClient = new GroqClient(apiKey, '', asrModel)

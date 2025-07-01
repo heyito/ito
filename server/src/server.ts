@@ -3,11 +3,6 @@ import { fastifyConnectPlugin } from '@connectrpc/connect-fastify'
 import Auth0 from '@auth0/auth0-fastify-api'
 import itoServiceRoutes from './services/itoService.js'
 import dotenv from 'dotenv'
-import { groqClient } from './clients/groqClient.js'
-import {
-  GetSecretValueCommand,
-  SecretsManagerClient,
-} from '@aws-sdk/client-secrets-manager'
 
 dotenv.config()
 
@@ -63,19 +58,6 @@ export const startServer = async () => {
   const healthPort = 3001
   const host = '0.0.0.0'
 
-  // Initialize groq client
-  const groqApiKey = await getGroqApiKey()
-  const asrModel = process.env.GROQ_TRANSCRIPTION_MODEL
-  if (!groqApiKey || !asrModel) {
-    console.error(
-      'FATAL: Groq api key or Groq transcription model is not set. The application cannot start.',
-    )
-    process.exit(1)
-  }
-
-  // Note: userCommandModel is empty for now as we are only using transcription.
-  await groqClient.initialize(groqApiKey, '', asrModel)
-
   try {
     await Promise.all([
       connectRpcServer.listen({ port: rpcPort, host }),
@@ -86,22 +68,4 @@ export const startServer = async () => {
     connectRpcServer.log.error(err)
     process.exit(1)
   }
-}
-
-async function getGroqApiKey(): Promise<string | undefined> {
-  const apiKey = process.env.GROQ_API_KEY
-  if (apiKey) {
-    return apiKey
-  }
-
-  // If the API key is not set in the environment (local development), try to fetch it from AWS Secrets Manager.
-  const client = new SecretsManagerClient()
-  const response = await client.send(
-    new GetSecretValueCommand({
-      SecretId:
-        'arn:aws:secretsmanager:us-west-2:287641434880:secret:groq-api-key-Hf2m1I',
-    }),
-  )
-
-  return response.SecretString
 }

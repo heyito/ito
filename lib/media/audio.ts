@@ -78,6 +78,7 @@ function processData() {
       // 1. Calculate volume for the UI pill
       const volume = calculateVolume(payload)
       getPillWindow()?.webContents.send('volume-update', volume)
+      mainWindow?.webContents.send('volume-update', volume)
       // 2. Forward the raw audio data to the transcription service
       transcriptionService.handleAudioChunk(payload)
     }

@@ -1,22 +1,16 @@
 import { Button } from '@/app/components/ui/button'
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { useSettingsStore } from '@/app/store/useSettingsStore'
-import {
-  setupVolumeMonitoring,
-  getAvailableMicrophones,
-  microphoneToRender,
-} from '@/app/media/microphone'
 import { MicrophoneSelector } from '@/app/components/ui/microphone-selector'
 
 function MicrophoneBars({ volume }: { volume: number }) {
-  // Each bar is either full height or min height depending on threshold
   const minHeight = 0.2
   const levels = Array(12)
     .fill(0)
     .map((_, i) => {
       const threshold = (i / 12) * 0.5
-      const normalizedVolume = Math.min(volume * 1.5, 1)
+      const normalizedVolume = Math.min(volume * 2.5, 1)
       return normalizedVolume > threshold ? 1 : minHeight
     })
 
@@ -41,78 +35,52 @@ function MicrophoneBars({ volume }: { volume: number }) {
 }
 
 export default function MicrophoneTestContent() {
-  const { incrementOnboardingStep, decrementOnboardingStep } =
-    useOnboardingStore()
-  const { microphoneDeviceId, microphoneName, setMicrophoneDeviceId } =
-    useSettingsStore()
+  const { incrementOnboardingStep, decrementOnboardingStep } = useOnboardingStore()
+  const { microphoneDeviceId, microphoneName, setMicrophoneDeviceId } = useSettingsStore()
+  
   const [volume, setVolume] = useState(0)
   const [smoothedVolume, setSmoothedVolume] = useState(0)
-  const cleanupRef = useRef<(() => void) | null>(null)
-
-  const initializeMicrophone = useCallback(async (deviceId: string) => {
-    try {
-      // Clean up previous microphone if it exists
-      if (cleanupRef.current) {
-        cleanupRef.current()
-      }
-
-      // Setup new microphone
-      const { cleanup: newCleanup } = await setupVolumeMonitoring(
-        volume => setVolume(volume),
-        deviceId,
-      )
-      cleanupRef.current = newCleanup
-    } catch (error) {
-      console.error('Failed to initialize microphone:', error)
-    }
-  }, [])
-
-  // Single effect to handle both initial load and device selection
+  
+  // This effect listens for volume updates from the main process
   useEffect(() => {
-    let mounted = true
-
-    const loadAndInitialize = async () => {
-      try {
-        const mics = await getAvailableMicrophones()
-
-        // Only proceed if component is still mounted
-        if (!mounted) {
-          return
-        }
-
-        if (mics.length > 0) {
-          const initialMic = mics[0]
-          const initialDeviceId = initialMic.deviceId
-          const initialMicName = microphoneToRender(initialMic).title
-          setMicrophoneDeviceId(initialDeviceId, initialMicName)
-          await initializeMicrophone(initialDeviceId)
-        }
-      } catch (error) {
-        console.error('Failed to load microphones:', error)
-      }
-    }
-
-    loadAndInitialize()
-
-    // Cleanup on unmount
+    const unsubscribe = window.api.on('volume-update', (newVolume: number) => {
+      setVolume(newVolume)
+    })
+    
+    // Cleanup the listener when the component unmounts
     return () => {
-      mounted = false
-      if (cleanupRef.current) {
-        cleanupRef.current()
-      }
+      unsubscribe()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Only run on mount
+  }, []) // Runs only once on mount
+
+  // This effect manages the "test" recording lifecycle.
+  // It starts recording when a device is selected and stops when the component unmounts.
+  useEffect(() => {
+    if (microphoneDeviceId) {
+      console.log(`Starting test recording on device: ${microphoneDeviceId}`)
+      // Assumes your preload script exposes 'start-native-recording'
+      window.api.send('start-native-recording', microphoneDeviceId)
+    }
+
+    // Cleanup function: stop recording when the component unmounts or device changes
+    return () => {
+      console.log('Stopping test recording.')
+      // Assumes your preload script exposes 'stop-native-recording'
+      window.api.send('stop-native-recording')
+    }
+  }, [microphoneDeviceId]) // Re-runs whenever the selected microphone changes
 
   // Smooth the volume updates to reduce flicker
   useEffect(() => {
-    const smoothing = 0.2 // Lower = smoother, higher = more responsive
+    const smoothing = 0.4 // Lower = smoother, higher = more responsive
     setSmoothedVolume(prev => prev * (1 - smoothing) + volume * smoothing)
   }, [volume])
 
+  // Handles changing the microphone
   const handleMicrophoneChange = async (deviceId: string, name: string) => {
+    // The useEffect hook above will automatically handle stopping the old
+    // stream and starting the new one when the deviceId changes.
     setMicrophoneDeviceId(deviceId, name)
-    await initializeMicrophone(deviceId)
   }
 
   return (

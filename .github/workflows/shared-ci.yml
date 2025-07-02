@@ -23,6 +23,7 @@ jobs:
           base: ${{ github.ref_name }}
           filters: |
             build:
+              - package.json
               - lib/**
               - native/**
               - resources/**

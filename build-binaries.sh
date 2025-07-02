@@ -66,6 +66,14 @@ build_native_module() {
             
             print_info "Universal binary created at $universal_dir/$module_name"
         fi
+
+        print_status "Renaming Rust target directories for electron-builder..."
+        # This aligns the directory names with electron-builder's {arch} variable.
+
+        rm -rf "target/arm64-apple-darwin"
+        rm -rf "target/x64-apple-darwin"
+        mv "target/aarch64-apple-darwin" "target/arm64-apple-darwin"
+        mv "target/x86_64-apple-darwin" "target/x64-apple-darwin"
     fi
 
     # --- Windows Build ---

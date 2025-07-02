@@ -53,9 +53,12 @@ jobs:
           echo "CSC_LINK=\"release.p12\"" >> .env
           echo "CSC_KEY_PASSWORD=\"${{ secrets.MACOS_CERT_PASSWORD }}\"" >> .env
           echo "GH_TOKEN=\"${{ secrets.GITHUB_TOKEN }}\"" >> .env
-          echo "GRPC_BASE_URL=\"${{ vars.GRPC_BASE_URL }}\"" >> .env
           echo "Created .env file:"
           cat .env
+
+          echo "GRPC_BASE_URL=\"${{ vars.GRPC_BASE_URL }}\"" >> out/.env-electron
+          echo "Created .env-electron file:"
+          cat out/.env-electron
 
       - name: Decode and install certificate
         run: |

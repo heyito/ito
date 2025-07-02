@@ -17,6 +17,8 @@ import { startAudioRecorder, stopAudioRecorder } from '../media/audio'
 // Import the grpcClient singleton
 import { grpcClient } from '../clients/grpcClient'
 import { allowAppNap, preventAppNap } from './appNap'
+import { join } from 'path'
+import * as dotenv from 'dotenv'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -24,6 +26,12 @@ protocol.registerSchemesAsPrivileged([
     privileges: { standard: true, secure: true, supportFetchAPI: true },
   },
 ])
+
+// Load in the environment variables from the .env-electron file
+if (app.isPackaged) {
+  const configPath = join(process.resourcesPath, 'config/.env-electron')
+  dotenv.config({ path: configPath })
+}
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.

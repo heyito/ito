@@ -1,4 +1,5 @@
 import {
+  aws_elasticloadbalancingv2,
   CfnOutput,
   Duration,
   RemovalPolicy,
@@ -27,15 +28,22 @@ import {
   CpuArchitecture,
   Secret as EcsSecret,
   FargateService,
+  FargateTaskDefinition,
   OperatingSystemFamily,
 } from 'aws-cdk-lib/aws-ecs'
 import { ApplicationLoadBalancedFargateService } from 'aws-cdk-lib/aws-ecs-patterns'
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager'
-import { Vpc } from 'aws-cdk-lib/aws-ec2'
+import { Port, Vpc } from 'aws-cdk-lib/aws-ec2'
 import { Repository } from 'aws-cdk-lib/aws-ecr'
 import { HostedZone } from 'aws-cdk-lib/aws-route53'
 import { AppStage } from '../bin/infra'
 import { isDev } from './helpers'
+// FIX: The Role and ServicePrincipal imports were slightly off, corrected to be from aws-iam
+// (Though your original code might have auto-resolved it, this is more explicit)
+import {
+  Role as IamRole,
+  ServicePrincipal as IamServicePrincipal,
+} from 'aws-cdk-lib/aws-iam'
 
 export interface ServiceStackProps extends StackProps {
   dbSecretArn: string
@@ -64,6 +72,51 @@ export class ServiceStack extends Stack {
       'groq-api-key',
     )
 
+    const fargateTaskRole = new IamRole(this, 'ItoFargateTaskRole', {
+      assumedBy: new IamServicePrincipal('ecs-tasks.amazonaws.com'),
+    })
+
+    dbCredentialsSecret.grantRead(fargateTaskRole)
+    groqApiKeySecret.grantRead(fargateTaskRole)
+
+    // --- 2. DEFINE THE TASK DEFINITION AND CONTAINER ---
+
+    const taskDefinition = new FargateTaskDefinition(
+      this,
+      'ItoTaskDefinition',
+      {
+        taskRole: fargateTaskRole,
+        cpu: 256,
+        memoryLimitMiB: 512,
+        runtimePlatform: {
+          operatingSystemFamily: OperatingSystemFamily.LINUX,
+          cpuArchitecture: CpuArchitecture.ARM64,
+        },
+      },
+    )
+
+    taskDefinition.addContainer('ItoServerContainer', {
+      image: ContainerImage.fromEcrRepository(props.serviceRepo, 'latest'),
+      portMappings: [{ containerPort: 3000 }],
+      secrets: {
+        DB_USER: EcsSecret.fromSecretsManager(dbCredentialsSecret, 'username'),
+        DB_PASSWORD: EcsSecret.fromSecretsManager(
+          dbCredentialsSecret,
+          'password',
+        ),
+        GROQ_API_KEY: EcsSecret.fromSecretsManager(groqApiKeySecret),
+      },
+      environment: {
+        DB_HOST: props.dbEndpoint,
+        DB_NAME,
+        REQUIRE_AUTH: isDev(stageName) ? 'false' : 'true',
+        AUTH0_DOMAIN: 'dev-8rsdprb2tatdfcps.us.auth0.com',
+        AUTH0_AUDIENCE: 'http://localhost:3000',
+        GROQ_TRANSCRIPTION_MODEL: 'distil-whisper-large-v3-en',
+      },
+      logging: new AwsLogDriver({ streamPrefix: 'ito-server' }),
+    })
+
     const zone = HostedZone.fromLookup(this, 'HostedZone', {
       domainName: 'ito-api.com',
     })
@@ -89,43 +142,17 @@ export class ServiceStack extends Stack {
       versioned: true,
     })
 
+    // FIX: Create the ApplicationLoadBalancedFargateService using the taskDefinition
+    // you built above. We remove the `taskImageOptions` and other related properties.
     const fargateService = new ApplicationLoadBalancedFargateService(
       this,
       'ItoFargateService',
       {
         cluster,
         serviceName: `${stageName}-${SERVICE_NAME}`,
-        cpu: 256,
-        memoryLimitMiB: 512,
         desiredCount: 1,
         publicLoadBalancer: true,
-        runtimePlatform: {
-          operatingSystemFamily: OperatingSystemFamily.LINUX,
-          cpuArchitecture: CpuArchitecture.ARM64,
-        },
-        taskImageOptions: {
-          image: ContainerImage.fromEcrRepository(props.serviceRepo, 'latest'),
-          containerPort: 3000,
-          secrets: {
-            DB_USER: EcsSecret.fromSecretsManager(
-              dbCredentialsSecret,
-              'username',
-            ),
-            DB_PASSWORD: EcsSecret.fromSecretsManager(
-              dbCredentialsSecret,
-              'password',
-            ),
-          },
-          environment: {
-            DB_HOST: props.dbEndpoint,
-            DB_NAME,
-            REQUIRE_AUTH: isDev(stageName) ? 'false' : 'true',
-            AUTH0_DOMAIN: 'dev-8rsdprb2tatdfcps.us.auth0.com',
-            AUTH0_AUDIENCE: 'http://localhost:3000',
-            GROQ_TRANSCRIPTION_MODEL: 'distil-whisper-large-v3-en',
-          },
-          logDriver: new AwsLogDriver({ streamPrefix: 'ito-server' }),
-        },
+        taskDefinition: taskDefinition,
         protocol: ApplicationProtocol.HTTPS,
         protocolVersion: ApplicationProtocolVersion.GRPC,
         domainZone: zone,
@@ -138,26 +165,16 @@ export class ServiceStack extends Stack {
 
     fargateService.targetGroup.configureHealthCheck({
       protocol: Protocol.HTTP,
-      port: '3001',
-      path: '/health',
+      path: '/',
       interval: Duration.seconds(30),
       timeout: Duration.seconds(5),
       healthyThresholdCount: 2,
       unhealthyThresholdCount: 5,
+      healthyGrpcCodes: '0,12',
     })
 
     const alb = fargateService.loadBalancer
     alb.logAccessLogs(logBucket, 'ito-alb-access-logs')
-
-    // TODO: Consider adding auto-scaling in the future. Keeping off for now
-    // const scaling = fargateService.service.autoScaleTaskCount({
-    //   maxCapacity: 4,
-    // });
-    // scaling.scaleOnCpuUtilization("CpuScaling", {
-    //   targetUtilizationPercent: 50,
-    //   scaleInCooldown: Duration.seconds(60),
-    //   scaleOutCooldown: Duration.seconds(60),
-    // });
 
     this.fargateService = fargateService.service
 

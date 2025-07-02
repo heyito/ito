@@ -46,23 +46,12 @@ export const startServer = async () => {
     })
   })
 
-  const healthServer = fastify({ logger: false }) // A standard, lightweight HTTP/1.1 server
-
-  // This simple route has no plugins or dependencies
-  healthServer.get('/health', async (_request, _reply) => {
-    return { status: 'ok', service: 'ito-server' }
-  })
-
   // Start the server
   const rpcPort = 3000
-  const healthPort = 3001
   const host = '0.0.0.0'
 
   try {
-    await Promise.all([
-      connectRpcServer.listen({ port: rpcPort, host }),
-      healthServer.listen({ port: healthPort, host }),
-    ])
+    await Promise.all([connectRpcServer.listen({ port: rpcPort, host })])
     console.log(`🚀 Connect RPC server listening on ${host}:${rpcPort}`)
   } catch (err) {
     connectRpcServer.log.error(err)

@@ -19,5 +19,8 @@ RUN bun build src/index.ts --outdir dist --target node
 # Expose the gRPC port
 EXPOSE 3000
 
+# Expose the health check port
+EXPOSE 3001
+
 # Run the gRPC server with Bun
 CMD ["bun", "run", "start"]

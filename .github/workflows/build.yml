@@ -56,9 +56,9 @@ jobs:
           echo "Created .env file:"
           cat .env
 
-          echo "GRPC_BASE_URL=\"${{ vars.GRPC_BASE_URL }}\"" >> out/.env-electron
+          echo "GRPC_BASE_URL=\"${{ vars.GRPC_BASE_URL }}\"" >> .env-electron
           echo "Created .env-electron file:"
-          cat out/.env-electron
+          cat .env-electron
 
       - name: Decode and install certificate
         run: |

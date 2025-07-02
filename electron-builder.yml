@@ -25,7 +25,7 @@ extraResources:
     to: binaries/audio-recorder
   - from: native/text-writer/target/${arch}-apple-darwin/release/text-writer
     to: binaries/text-writer
-  - from: out/.env-electron
+  - from: .env-electron
     to: config/.env-electron
 protocols:
   name: ito

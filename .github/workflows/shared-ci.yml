@@ -28,6 +28,9 @@ jobs:
               - native/**
               - resources/**
               - app/**
+              - electron-builder.yml
+              - build-binaries.sh
+              - build-app.sh
             server:
               - server/src/**
               - server/Dockerfile

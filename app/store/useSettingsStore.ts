@@ -33,33 +33,27 @@ const getInitialState = () => {
     muteAudioWhenDictating: storedSettings?.muteAudioWhenDictating ?? false,
     microphoneDeviceId: storedSettings?.microphoneDeviceId ?? 'default',
     microphoneName: storedSettings?.microphoneName ?? 'Default Microphone',
-    keyboardShortcut: storedSettings?.keyboardShortcut ?? ['fn'],
+    keyboardShortcut: storedSettings?.keyboardShortcut ?? ['fn'], // This fallback is key
     firstName: storedSettings?.firstName ?? '',
     lastName: storedSettings?.lastName ?? '',
     email: storedSettings?.email ?? '',
   }
 }
 
+// --- START: CORRECTED CODE ---
+
 // Sync to electron store
 const syncToStore = (state: Partial<SettingsState>) => {
   const currentSettings = window.electron.store.get('settings') || {}
+
+  // A much simpler and more robust way to merge the settings.
+  // This takes all existing settings and overwrites them with only the keys
+  // present in the new partial state, without accidentally unsetting others.
   const updatedSettings = {
     ...currentSettings,
-    shareAnalytics: state.shareAnalytics ?? currentSettings.shareAnalytics,
-    launchAtLogin: state.launchAtLogin ?? currentSettings.launchAtLogin,
-    showItoBarAlways:
-      state.showItoBarAlways ?? currentSettings.showItoBarAlways,
-    showAppInDock: state.showAppInDock ?? currentSettings.showAppInDock,
-    interactionSounds:
-      state.interactionSounds ?? currentSettings.interactionSounds,
-    muteAudioWhenDictating:
-      state.muteAudioWhenDictating ?? currentSettings.muteAudioWhenDictating,
-    microphoneDeviceId:
-      state.microphoneDeviceId ?? currentSettings.microphoneDeviceId,
-    microphoneName: state.microphoneName ?? currentSettings.microphoneName,
-    keyboardShortcut:
-      state.keyboardShortcut ?? currentSettings.keyboardShortcut,
+    ...state,
   }
+
   window.electron.store.set('settings', updatedSettings)
 
   // Notify pill window of settings changes
@@ -71,82 +65,59 @@ const syncToStore = (state: Partial<SettingsState>) => {
 export const useSettingsStore = create<SettingsState>(set => {
   const initialState = getInitialState()
 
-  // Helper function to reduce duplication in setters
+  // Helper for single-property setters
   const createSetter =
     <K extends keyof SettingsState>(key: K) =>
-    (value: SettingsState[K]) =>
-      set(state => {
-        const newState = { [key]: value } as Partial<SettingsState>
-        syncToStore(newState)
-        return { ...state, ...newState }
-      })
+    (value: SettingsState[K]) => {
+      const partialState = { [key]: value } as Partial<SettingsState>
+      set(partialState)
+      syncToStore(partialState)
+    }
 
   return {
-    shareAnalytics: initialState.shareAnalytics,
-    launchAtLogin: initialState.launchAtLogin,
-    showItoBarAlways: initialState.showItoBarAlways,
-    showAppInDock: initialState.showAppInDock,
-    interactionSounds: initialState.interactionSounds,
-    muteAudioWhenDictating: initialState.muteAudioWhenDictating,
-    microphoneDeviceId: initialState.microphoneDeviceId,
-    microphoneName: initialState.microphoneName,
-    keyboardShortcut: initialState.keyboardShortcut,
+    ...initialState,
     setShareAnalytics: createSetter('shareAnalytics'),
-    setLaunchAtLogin: (launch: boolean) =>
-      set(_state => {
-        const newState = { launchAtLogin: launch } as Partial<SettingsState>
-        syncToStore(newState)
-        // Also set the actual Electron login item settings
-        if (window.api?.loginItem?.setSettings) {
-          window.api.loginItem.setSettings(launch)
-        }
-        return newState
-      }),
+    setLaunchAtLogin: (launch: boolean) => {
+      const partialState = { launchAtLogin: launch }
+      set(partialState)
+      syncToStore(partialState)
+      if (window.api?.loginItem?.setSettings) {
+        window.api.loginItem.setSettings(launch)
+      }
+    },
     setShowItoBarAlways: createSetter('showItoBarAlways'),
-    setShowAppInDock: (show: boolean) =>
-      set(_state => {
-        const newState = { showAppInDock: show } as Partial<SettingsState>
-        syncToStore(newState)
-        // Also set the actual Electron dock visibility
-        if (window.api?.dock?.setVisibility) {
-          window.api.dock.setVisibility(show)
-        }
-        return newState
-      }),
+    setShowAppInDock: (show: boolean) => {
+      const partialState = { showAppInDock: show }
+      set(partialState)
+      syncToStore(partialState)
+      if (window.api?.dock?.setVisibility) {
+        window.api.dock.setVisibility(show)
+      }
+    },
     setInteractionSounds: createSetter('interactionSounds'),
     setMuteAudioWhenDictating: createSetter('muteAudioWhenDictating'),
-    // Special case: can set both deviceId and name
-    setMicrophoneDeviceId: (deviceId: string, name: string) =>
-      set(state => {
-        // Prevent unnecessary updates if the device hasn't changed
-        if (state.microphoneDeviceId === deviceId) {
-          return {}
-        }
-        const newState = {
-          microphoneDeviceId: deviceId,
-          microphoneName: name,
-        }
-        syncToStore(newState)
-        return newState
-      }),
-    // Special case: sorts the array
-    setKeyboardShortcut: (shortcut: string[]) =>
-      set(_state => {
-        const newState = { keyboardShortcut: [...shortcut].sort() }
-        syncToStore(newState)
-        return newState
-      }),
+    setMicrophoneDeviceId: (deviceId: string, name: string) => {
+      const partialState = {
+        microphoneDeviceId: deviceId,
+        microphoneName: name,
+      }
+      set(partialState)
+      syncToStore(partialState)
+    },
+    setKeyboardShortcut: (shortcut: string[]) => {
+      const partialState = { keyboardShortcut: [...shortcut].sort() }
+      set(partialState)
+      syncToStore(partialState)
+    },
   }
 })
 
-// Sync with actual Electron login item settings on initialization
 if (typeof window !== 'undefined' && window.api?.loginItem?.getSettings) {
   window.api.loginItem
     .getSettings()
     .then(settings => {
       const storedSettings = window.electron.store.get('settings')
       if (settings.openAtLogin !== storedSettings?.launchAtLogin) {
-        // Update the store to match actual Electron settings
         useSettingsStore.getState().setLaunchAtLogin(settings.openAtLogin)
       }
     })
@@ -158,9 +129,7 @@ if (typeof window !== 'undefined' && window.api?.loginItem?.getSettings) {
     })
 }
 
-// Sync with actual Electron dock visibility on initialization (macOS only)
 if (typeof window !== 'undefined' && window.api?.dock?.getVisibility) {
-  // Only attempt dock sync on macOS
   window.api.invoke('init-window').then((windowInfo: any) => {
     if (windowInfo.platform === 'darwin') {
       window.api.dock
@@ -168,7 +137,6 @@ if (typeof window !== 'undefined' && window.api?.dock?.getVisibility) {
         .then(dockSettings => {
           const storedSettings = window.electron.store.get('settings')
           if (dockSettings.isVisible !== storedSettings?.showAppInDock) {
-            // Update the store to match actual Electron dock visibility
             useSettingsStore.getState().setShowAppInDock(dockSettings.isVisible)
           }
         })

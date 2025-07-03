@@ -10,7 +10,7 @@ interface OnboardingStore {
   onboardingCompleted: boolean
 }
 
-interface SettingsStore {
+export interface SettingsStore {
   shareAnalytics: boolean
   launchAtLogin: boolean
   showItoBarAlways: boolean
@@ -80,47 +80,61 @@ export const createNewAuthState = (): AuthState => {
   return { id, codeVerifier, codeChallenge, state }
 }
 
-const store = new Store<AppStore>({
-  defaults: {
-    onboarding: {
-      onboardingStep: 0,
-      onboardingCompleted: false,
-    },
-    settings: {
-      shareAnalytics: true,
-      launchAtLogin: true,
-      showItoBarAlways: true,
-      showAppInDock: true,
-      interactionSounds: false,
-      muteAudioWhenDictating: false,
-      microphoneDeviceId: 'default',
-      microphoneName: 'Auto-detect',
-      keyboardShortcut: ['fn'],
-      firstName: '',
-      lastName: '',
-      email: '',
-    },
-    main: {
-      navExpanded: true,
-    },
-    auth: {
-      user: null,
-      tokens: null,
-      state: createNewAuthState(),
-    },
-    openMic: false,
-    selectedAudioInput: null,
-    interactionSounds: false,
-    userProfile: null,
-    idToken: null,
-    accessToken: null,
+const defaultValues: AppStore = {
+  onboarding: {
+    onboardingStep: 0,
+    onboardingCompleted: false,
   },
+  settings: {
+    shareAnalytics: true,
+    launchAtLogin: true,
+    showItoBarAlways: true,
+    showAppInDock: true,
+    interactionSounds: false,
+    muteAudioWhenDictating: false,
+    microphoneDeviceId: 'default',
+    microphoneName: 'Auto-detect',
+    keyboardShortcut: ['fn'],
+    firstName: '',
+    lastName: '',
+    email: '',
+  },
+  main: {
+    navExpanded: true,
+  },
+  auth: {
+    user: null,
+    tokens: null,
+    state: createNewAuthState(),
+  },
+  openMic: false,
+  selectedAudioInput: null,
+  interactionSounds: false,
+  userProfile: null,
+  idToken: null,
+  accessToken: null,
+}
+
+const store = new Store<AppStore>({
+  defaults: defaultValues,
 })
 
-// Delete store for testing
-// store.clear()
+// electron quirk -- default values are only used if the entire object is missing.
+// We need to manually merge defaults for nested objects to ensure all keys exist.
+const currentSettings = store.get('settings')
+const completeSettings = { ...defaultValues.settings, ...currentSettings }
+store.set('settings', completeSettings)
 
-// Log the store to the console
-// console.log('store', store.get('auth'))
+const currentMain = store.get('main')
+const completeMain = { ...defaultValues.main, ...currentMain }
+store.set('main', completeMain)
+
+const currentOnboarding = store.get('onboarding')
+const completeOnboarding = { ...defaultValues.onboarding, ...currentOnboarding }
+store.set('onboarding', completeOnboarding)
+
+const currentAuth = store.get('auth')
+const completeAuth = { ...defaultValues.auth, ...currentAuth }
+store.set('auth', completeAuth)
 
 export default store

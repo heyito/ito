@@ -8,7 +8,6 @@ import { transcriptionService } from '../main/transcriptionService'
 import { muteSystemAudio, unmuteSystemAudio } from './systemAudio'
 import store from '../main/store'
 
-// --- (No changes to the top part of the file) ---
 export let audioRecorderProcess: ChildProcessWithoutNullStreams | null = null
 let audioBuffer = Buffer.alloc(0)
 let deviceListPromise: {
@@ -85,8 +84,6 @@ function processData() {
   }
 }
 
-// --- (No changes to startAudioRecorder, stopAudioRecorder, or sendCommand) ---
-
 export function startAudioRecorder() {
   if (audioRecorderProcess) {
     log.warn('Audio recorder already running.')
@@ -141,8 +138,10 @@ function sendCommand(command: object) {
   }
 }
 
-export const sendStartRecordingCommand = (deviceName: string) => {
-  sendCommand({ command: 'start', device_name: deviceName })
+export const sendStartRecordingCommand = () => {
+  const deviceId = store.get('settings').microphoneDeviceId
+
+  sendCommand({ command: 'start', device_name: deviceId })
   transcriptionService.startTranscription() // Start the gRPC stream
 
   // Check if audio muting is enabled and mute system audio
@@ -152,8 +151,12 @@ export const sendStartRecordingCommand = (deviceName: string) => {
     muteSystemAudio()
   }
 
-  currentDeviceName = deviceName
+  currentDeviceName = deviceId
   log.info(`[Audio] Recording started on device: ${currentDeviceName}`)
+  getPillWindow()?.webContents.send('recording-state-update', {
+    isRecording: true,
+    deviceId,
+  })
 }
 
 export const sendStopRecordingCommand = () => {
@@ -169,6 +172,10 @@ export const sendStopRecordingCommand = () => {
 
   currentDeviceName = null
   log.info('[Audio] Recording stopped')
+  getPillWindow()?.webContents.send('recording-state-update', {
+    isRecording: false,
+    deviceId: '',
+  })
 }
 
 export function handleAudioDeviceChange() {

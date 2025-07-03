@@ -249,7 +249,6 @@ export function registerIPC() {
   // When the hotkey is pressed, start recording and notify the pill window.
   ipcMain.on('start-native-recording', (_event, deviceId: string) => {
     log.info(`IPC: Received 'start-native-recording' for device: ${deviceId}`)
-    sendStartRecordingCommand(deviceId)
     // Notify the pill to expand.
     getPillWindow()?.webContents.send('recording-state-update', {
       isRecording: true,
@@ -298,7 +297,6 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
   handleIPC(`window-minimize-${mainWindow.id}`, () => mainWindow.minimize())
   handleIPC(`window-maximize-${mainWindow.id}`, () => mainWindow.maximize())
   handleIPC(`window-close-${mainWindow.id}`, () => {
-    stopKeyListener()
     mainWindow.close()
   })
   handleIPC(`window-maximize-toggle-${mainWindow.id}`, () => {

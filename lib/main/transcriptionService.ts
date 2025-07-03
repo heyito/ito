@@ -1,56 +1,97 @@
 import { grpcClient } from '../clients/grpcClient'
+import mainStore from './store'
 import log from 'electron-log'
+import { AudioChunkSchema } from '@/app/generated/ito_pb'
+import { create } from '@bufbuild/protobuf'
 
-/**
- * A service layer that sits between the raw audio capture
- * and the gRPC client to provide better separation of concerns.
- */
-class TranscriptionService {
-  private isTranscribing: boolean = false
+export class TranscriptionService {
+  private isStreaming = false
+  private audioChunkQueue: Buffer[] = []
+  private resolveNewChunk: ((value: void | PromiseLike<void>) => void) | null =
+    null
 
-  /**
-   * Starts a transcription session.
-   * This should be called when a recording session begins (e.g., hotkey press).
-   */
-  public startTranscription() {
-    if (this.isTranscribing) {
+  private async *streamAudioChunks() {
+    while (this.isStreaming) {
+      if (this.audioChunkQueue.length === 0) {
+        await new Promise<void>((resolve) => {
+          this.resolveNewChunk = resolve
+        })
+      }
+
+      while (this.audioChunkQueue.length > 0) {
+        const chunk = this.audioChunkQueue.shift()
+        if (chunk) {
+          yield create(AudioChunkSchema, { audioData: chunk })
+        }
+      }
+    }
+  }
+
+  public startStreaming() {
+    const accessToken = mainStore.get('accessToken')
+    if (!accessToken) {
       log.warn(
-        '[TranscriptionService] Already transcribing, stopping the previous session first.',
+        '[TranscriptionService] No access token found. Skipping stream start.',
       )
-      grpcClient.stopStream() // Stop the previous session if it's still active
-    }
-    log.info('[TranscriptionService] Starting transcription.')
-    this.isTranscribing = true
-    // Tell the gRPC client to open a new stream to the server.
-    grpcClient.startStream()
-  }
-
-  /**
-   * Forwards a raw audio chunk to the gRPC client.
-   * This is called by the audio recorder every time it has new data.
-   * @param audioChunk A raw buffer of audio data.
-   */
-  public handleAudioChunk(audioChunk: Buffer) {
-    // Only forward the chunk if we are in a transcribing session.
-    if (this.isTranscribing) {
-      grpcClient.sendAudioChunk(audioChunk)
-    }
-  }
-
-  /**
-   * Ends the current transcription session.
-   * This should be called when a recording session ends (e.g., hotkey release).
-   */
-  public stopTranscription() {
-    if (!this.isTranscribing) {
       return
     }
-    log.info('[TranscriptionService] Stopping transcription.')
-    this.isTranscribing = false
-    // Tell the gRPC client to close the stream and finalize the transcription.
-    grpcClient.stopStream()
+
+    if (this.isStreaming) {
+      log.warn('[TranscriptionService] Stream already in progress.')
+      return
+    }
+
+    this.isStreaming = true
+    this.audioChunkQueue = []
+    log.info('[gRPC Service] Starting new transcription stream.')
+
+    grpcClient
+      .transcribeStream(this.streamAudioChunks())
+      .catch((error) => {
+        log.error(
+          '[gRPC Service] An unexpected error occurred during transcription:',
+          error,
+        )
+      })
+      .finally(() => {
+        this.isStreaming = false
+        log.info('[gRPC Service] Stream has fully terminated.')
+      })
+  }
+
+  public stopStreaming() {
+    if (!this.isStreaming) {
+      return
+    }
+    this.isStreaming = false
+    if (this.resolveNewChunk) {
+      this.resolveNewChunk()
+    }
+    log.info('[gRPC Service] Stream has been marked for closing.')
+  }
+
+  public forwardAudioChunk(chunk: Buffer) {
+    if (this.isStreaming) {
+      this.audioChunkQueue.push(chunk)
+      if (this.resolveNewChunk) {
+        this.resolveNewChunk()
+        this.resolveNewChunk = null
+      }
+    }
+  }
+
+  // Backward compatibility aliases for the old method names
+  public startTranscription() {
+    return this.startStreaming()
+  }
+
+  public stopTranscription() {
+    return this.stopStreaming()
+  }
+
+  public handleAudioChunk(chunk: Buffer) {
+    return this.forwardAudioChunk(chunk)
   }
 }
 
-// Export a singleton instance of the service.
 export const transcriptionService = new TranscriptionService()

@@ -32,6 +32,7 @@ const runMigrations = async () => {
         DROP TABLE IF EXISTS notes;
         DROP TABLE IF EXISTS dictionary_items;
         DROP TABLE IF EXISTS interactions;
+        DROP TABLE IF EXISTS key_value_store;
       `,
     },
     ...MIGRATIONS,
@@ -94,6 +95,7 @@ const revertLastMigration = async () => {
         DROP TABLE IF EXISTS notes;
         DROP TABLE IF EXISTS dictionary_items;
         DROP TABLE IF EXISTS interactions;
+        DROP TABLE IF EXISTS key_value_store;
       `,
     },
     ...MIGRATIONS,

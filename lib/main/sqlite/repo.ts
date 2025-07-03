@@ -85,6 +85,37 @@ export class InteractionsTable {
       'UPDATE interactions SET deleted_at = ?, updated_at = ? WHERE id = ?'
     await run(query, [new Date().toISOString(), new Date().toISOString(), id])
   }
+
+  static async findModifiedSince(timestamp: string): Promise<Interaction[]> {
+    return await all<Interaction>(
+      'SELECT * FROM interactions WHERE updated_at > ?',
+      [timestamp],
+    )
+  }
+
+  static async upsert(interaction: Interaction): Promise<void> {
+    const query = `
+      INSERT INTO interactions (id, user_id, title, asr_output, llm_output, created_at, updated_at, deleted_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        title = excluded.title,
+        asr_output = excluded.asr_output,
+        llm_output = excluded.llm_output,
+        updated_at = excluded.updated_at,
+        deleted_at = excluded.deleted_at;
+    `
+    const params = [
+      interaction.id,
+      interaction.user_id,
+      interaction.title,
+      JSON.stringify(interaction.asr_output),
+      JSON.stringify(interaction.llm_output),
+      interaction.created_at,
+      interaction.updated_at,
+      interaction.deleted_at,
+    ]
+    await run(query, params)
+  }
 }
 
 // =================================================================
@@ -154,6 +185,34 @@ export class NotesTable {
     const query = 'UPDATE notes SET deleted_at = ?, updated_at = ? WHERE id = ?'
     await run(query, [new Date().toISOString(), new Date().toISOString(), id])
   }
+
+  static async findModifiedSince(timestamp: string): Promise<Note[]> {
+    return await all<Note>('SELECT * FROM notes WHERE updated_at > ?', [
+      timestamp,
+    ])
+  }
+
+  static async upsert(note: Note): Promise<void> {
+    const query = `
+      INSERT INTO notes (id, user_id, interaction_id, content, created_at, updated_at, deleted_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        interaction_id = excluded.interaction_id,
+        content = excluded.content,
+        updated_at = excluded.updated_at,
+        deleted_at = excluded.deleted_at;
+    `
+    const params = [
+      note.id,
+      note.user_id,
+      note.interaction_id,
+      note.content,
+      note.created_at,
+      note.updated_at,
+      note.deleted_at,
+    ]
+    await run(query, params)
+  }
 }
 
 // =================================================================
@@ -216,5 +275,56 @@ export class DictionaryTable {
     const query =
       'UPDATE dictionary_items SET deleted_at = ?, updated_at = ? WHERE id = ?'
     await run(query, [new Date().toISOString(), new Date().toISOString(), id])
+  }
+
+  static async findModifiedSince(timestamp: string): Promise<DictionaryItem[]> {
+    return await all<DictionaryItem>(
+      'SELECT * FROM dictionary_items WHERE updated_at > ?',
+      [timestamp],
+    )
+  }
+
+  static async upsert(item: DictionaryItem): Promise<void> {
+    const query = `
+      INSERT INTO dictionary_items (id, user_id, word, pronunciation, created_at, updated_at, deleted_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        word = excluded.word,
+        pronunciation = excluded.pronunciation,
+        updated_at = excluded.updated_at,
+        deleted_at = excluded.deleted_at;
+    `
+    const params = [
+      item.id,
+      item.user_id,
+      item.word,
+      item.pronunciation,
+      item.created_at,
+      item.updated_at,
+      item.deleted_at,
+    ]
+    await run(query, params)
+  }
+}
+
+// =================================================================
+// KeyValueStore
+// =================================================================
+
+export class KeyValueStore {
+  static async set(key: string, value: string): Promise<void> {
+    const query = `
+      INSERT INTO key_value_store (key, value)
+      VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+    `
+    await run(query, [key, value])
+  }
+
+  static async get(key: string): Promise<string | undefined> {
+    const row = await get<{ value: string }>('SELECT value FROM key_value_store WHERE key = ?', [
+      key,
+    ])
+    return row?.value
   }
 }

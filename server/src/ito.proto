@@ -10,8 +10,38 @@ service ItoService {
   // Method 2: Streams audio chunks from the client and gets a single response.
   // This is the ideal method for dictation to reduce latency and memory usage.
   rpc TranscribeStream(stream AudioChunk) returns (TranscriptionResponse);
+
+  // Note Service
+  rpc CreateNote(CreateNoteRequest) returns (Note);
+  rpc GetNote(GetNoteRequest) returns (Note);
+  rpc ListNotes(ListNotesRequest) returns (ListNotesResponse);
+  rpc UpdateNote(UpdateNoteRequest) returns (Note);
+  rpc DeleteNote(DeleteNoteRequest) returns (Empty);
+
+  // Interaction Service
+  rpc CreateInteraction(CreateInteractionRequest) returns (Interaction);
+  rpc GetInteraction(GetInteractionRequest) returns (Interaction);
+  rpc ListInteractions(ListInteractionsRequest) returns (ListInteractionsResponse);
+  rpc UpdateInteraction(UpdateInteractionRequest) returns (Interaction);
+  rpc DeleteInteraction(DeleteInteractionRequest) returns (Empty);
+
+  // Dictionary Service
+  rpc CreateDictionaryItem(CreateDictionaryItemRequest) returns (DictionaryItem);
+  rpc ListDictionaryItems(ListDictionaryItemsRequest) returns (ListDictionaryItemsResponse);
+  rpc UpdateDictionaryItem(UpdateDictionaryItemRequest) returns (DictionaryItem);
+  rpc DeleteDictionaryItem(DeleteDictionaryItemRequest) returns (Empty);
 }
 
+// =================================================================
+// Messages
+// =================================================================
+
+// General
+// -----------------------------------------------------------------
+message Empty {}
+
+// Transcription
+// -----------------------------------------------------------------
 // The request message containing the entire audio file data.
 message TranscribeFileRequest {
   // The raw audio data.
@@ -26,4 +56,126 @@ message AudioChunk {
 // The response message containing the final transcript.
 message TranscriptionResponse {
   string transcript = 1;
+}
+
+// Notes
+// -----------------------------------------------------------------
+message Note {
+  string id = 1;
+  string user_id = 2;
+  string interaction_id = 3;
+  string content = 4;
+  string created_at = 5;
+  string updated_at = 6;
+  string deleted_at = 7;
+}
+
+message CreateNoteRequest {
+  string id = 1;
+  string user_id = 2;
+  string interaction_id = 3;
+  string content = 4;
+}
+
+message GetNoteRequest {
+  string id = 1;
+}
+
+message ListNotesRequest {
+  string user_id = 1;
+  string since_timestamp = 2; // Optional. ISO 8601 format. If not provided, fetch all.
+}
+
+message ListNotesResponse {
+  repeated Note notes = 1;
+}
+
+message UpdateNoteRequest {
+  string id = 1;
+  string content = 2;
+}
+
+message DeleteNoteRequest {
+  string id = 1;
+}
+
+// Interactions
+// -----------------------------------------------------------------
+message Interaction {
+  string id = 1;
+  string user_id = 2;
+  string title = 3;
+  string asr_output = 4; // JSON string
+  string llm_output = 5; // JSON string
+  string created_at = 6;
+  string updated_at = 7;
+  string deleted_at = 8;
+}
+
+message CreateInteractionRequest {
+  string id = 1;
+  string user_id = 2;
+  string title = 3;
+  string asr_output = 4;
+  string llm_output = 5;
+}
+
+message GetInteractionRequest {
+  string id = 1;
+}
+
+message ListInteractionsRequest {
+  string user_id = 1;
+  string since_timestamp = 2; // Optional. ISO 8601 format. If not provided, fetch all.
+}
+
+message ListInteractionsResponse {
+  repeated Interaction interactions = 1;
+}
+
+message UpdateInteractionRequest {
+  string id = 1;
+  string title = 2;
+}
+
+message DeleteInteractionRequest {
+  string id = 1;
+}
+
+// Dictionary
+// -----------------------------------------------------------------
+message DictionaryItem {
+  string id = 1;
+  string user_id = 2;
+  string word = 3;
+  string pronunciation = 4;
+  string created_at = 5;
+  string updated_at = 6;
+  string deleted_at = 7;
+}
+
+message CreateDictionaryItemRequest {
+  string id = 1;
+  string user_id = 2;
+  string word = 3;
+  string pronunciation = 4;
+}
+
+message ListDictionaryItemsRequest {
+  string user_id = 1;
+  string since_timestamp = 2; // Optional. ISO 8601 format. If not provided, fetch all.
+}
+
+message ListDictionaryItemsResponse {
+  repeated DictionaryItem items = 1;
+}
+
+message UpdateDictionaryItemRequest {
+  string id = 1;
+  string word = 2;
+  string pronunciation = 3;
+}
+
+message DeleteDictionaryItemRequest {
+  string id = 1;
 }

@@ -60,6 +60,12 @@ interface AppStore {
   onboarding: OnboardingStore
   settings: SettingsStore
   auth: AuthStore
+  openMic: boolean
+  selectedAudioInput: string | null
+  interactionSounds: boolean
+  userProfile: any | null
+  idToken: string | null
+  accessToken: string | null
 }
 
 // Generate new auth state with crypto
@@ -102,6 +108,12 @@ const store = new Store<AppStore>({
       tokens: null,
       state: createNewAuthState(),
     },
+    openMic: false,
+    selectedAudioInput: null,
+    interactionSounds: false,
+    userProfile: null,
+    idToken: null,
+    accessToken: null,
   },
 })
 

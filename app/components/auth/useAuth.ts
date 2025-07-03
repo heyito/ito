@@ -97,6 +97,12 @@ export const useAuth = () => {
               )
 
             useMainStore.getState().setCurrentPage('home')
+
+            window.api.notifyLoginSuccess(
+              result.userInfo,
+              result.tokens.id_token,
+              result.tokens.access_token,
+            )
           } else {
             throw new Error('Missing tokens or user info in response')
           }

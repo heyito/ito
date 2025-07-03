@@ -118,6 +118,13 @@ const api = {
   // Send settings updates to pill window
   notifySettingsUpdate: (settings: any) =>
     ipcRenderer.send('settings-update', settings),
+  notifyLoginSuccess: (profile: any, idToken: string, accessToken: string) => {
+    ipcRenderer.send('notify-login-success', {
+      profile,
+      idToken,
+      accessToken,
+    })
+  },
 }
 
 export default api

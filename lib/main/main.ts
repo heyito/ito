@@ -17,8 +17,10 @@ import { startAudioRecorder, stopAudioRecorder } from '../media/audio'
 // Import the grpcClient singleton
 import { grpcClient } from '../clients/grpcClient'
 import { allowAppNap, preventAppNap } from './appNap'
-import { join } from 'path'
+import path from 'path'
 import * as dotenv from 'dotenv'
+import { syncService } from './syncService'
+import mainStore from './store'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -29,7 +31,7 @@ protocol.registerSchemesAsPrivileged([
 
 // Load in the environment variables from the .env-electron file
 if (app.isPackaged) {
-  const configPath = join(process.resourcesPath, 'config/.env-electron')
+  const configPath = path.join(process.resourcesPath, 'config/.env-electron')
   dotenv.config({ path: configPath })
 }
 
@@ -37,6 +39,9 @@ if (app.isPackaged) {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
+  // Load environment variables from .env-electron
+  dotenv.config({ path: path.join(app.getAppPath(), '..', '.env-electron') })
+
   // Initialize logging as the first step
   initializeLogging()
 
@@ -45,8 +50,14 @@ app.whenReady().then(async () => {
     await initializeDatabase()
   } catch (error) {
     console.error('Failed to initialize database, quitting app.', error)
-    // app.quit()
-    // return
+    return
+  }
+
+  // If we have a token from a previous session, start the sync service
+  const accessToken = mainStore.get('accessToken') as string | undefined
+  if (accessToken) {
+    grpcClient.setAuthToken(accessToken)
+    syncService.start()
   }
 
   // Setup protocol handling for deep links

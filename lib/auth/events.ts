@@ -1,4 +1,7 @@
 import store, { AuthState, createNewAuthState } from '../main/store'
+import mainStore from '../main/store'
+import { grpcClient } from '../clients/grpcClient'
+import { syncService } from '../main/syncService'
 
 export const generateNewAuthState = (): AuthState => {
   const newAuthState = createNewAuthState()
@@ -97,4 +100,25 @@ export const exchangeAuthCode = async (_e, { authCode, state, config }) => {
       error: error instanceof Error ? error.message : 'Unknown error',
     }
   }
+}
+
+export const handleLogin = (
+  profile: any,
+  idToken: string,
+  accessToken: string,
+) => {
+  console.log('handleLogin', profile, idToken, accessToken)
+  mainStore.set('userProfile', profile)
+  mainStore.set('idToken', idToken)
+  mainStore.set('accessToken', accessToken)
+  grpcClient.setAuthToken(accessToken)
+  syncService.start()
+}
+
+export const handleLogout = () => {
+  mainStore.delete('userProfile')
+  mainStore.delete('idToken')
+  mainStore.delete('accessToken')
+  grpcClient.setAuthToken(null)
+  // We can add a syncService.stop() here if needed in the future
 }

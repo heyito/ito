@@ -2,88 +2,631 @@
 // @generated from file ito.proto (package ito, syntax proto3)
 /* eslint-disable */
 
-import type {
-  GenFile,
-  GenMessage,
-  GenService,
-} from '@bufbuild/protobuf/codegenv2'
-import {
-  fileDesc,
-  messageDesc,
-  serviceDesc,
-} from '@bufbuild/protobuf/codegenv2'
-import type { Message } from '@bufbuild/protobuf'
+import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file ito.proto.
  */
-export const file_ito: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    'CglpdG8ucHJvdG8SA2l0byIrChVUcmFuc2NyaWJlRmlsZVJlcXVlc3QSEgoKYXVkaW9fZGF0YRgBIAEoDCIgCgpBdWRpb0NodW5rEhIKCmF1ZGlvX2RhdGEYASABKAwiKwoVVHJhbnNjcmlwdGlvblJlc3BvbnNlEhIKCnRyYW5zY3JpcHQYASABKAkymQEKCkl0b1NlcnZpY2USSAoOVHJhbnNjcmliZUZpbGUSGi5pdG8uVHJhbnNjcmliZUZpbGVSZXF1ZXN0GhouaXRvLlRyYW5zY3JpcHRpb25SZXNwb25zZRJBChBUcmFuc2NyaWJlU3RyZWFtEg8uaXRvLkF1ZGlvQ2h1bmsaGi5pdG8uVHJhbnNjcmlwdGlvblJlc3BvbnNlKAFiBnByb3RvMw',
-  )
+export const file_ito: GenFile = /*@__PURE__*/
+  fileDesc("CglpdG8ucHJvdG8SA2l0byIHCgVFbXB0eSIrChVUcmFuc2NyaWJlRmlsZVJlcXVlc3QSEgoKYXVkaW9fZGF0YRgBIAEoDCIgCgpBdWRpb0NodW5rEhIKCmF1ZGlvX2RhdGEYASABKAwiKwoVVHJhbnNjcmlwdGlvblJlc3BvbnNlEhIKCnRyYW5zY3JpcHQYASABKAkiiAEKBE5vdGUSCgoCaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCRIWCg5pbnRlcmFjdGlvbl9pZBgDIAEoCRIPCgdjb250ZW50GAQgASgJEhIKCmNyZWF0ZWRfYXQYBSABKAkSEgoKdXBkYXRlZF9hdBgGIAEoCRISCgpkZWxldGVkX2F0GAcgASgJIlkKEUNyZWF0ZU5vdGVSZXF1ZXN0EgoKAmlkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkSFgoOaW50ZXJhY3Rpb25faWQYAyABKAkSDwoHY29udGVudBgEIAEoCSIcCg5HZXROb3RlUmVxdWVzdBIKCgJpZBgBIAEoCSI8ChBMaXN0Tm90ZXNSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSFwoPc2luY2VfdGltZXN0YW1wGAIgASgJIi0KEUxpc3ROb3Rlc1Jlc3BvbnNlEhgKBW5vdGVzGAEgAygLMgkuaXRvLk5vdGUiMAoRVXBkYXRlTm90ZVJlcXVlc3QSCgoCaWQYASABKAkSDwoHY29udGVudBgCIAEoCSIfChFEZWxldGVOb3RlUmVxdWVzdBIKCgJpZBgBIAEoCSKdAQoLSW50ZXJhY3Rpb24SCgoCaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCRINCgV0aXRsZRgDIAEoCRISCgphc3Jfb3V0cHV0GAQgASgJEhIKCmxsbV9vdXRwdXQYBSABKAkSEgoKY3JlYXRlZF9hdBgGIAEoCRISCgp1cGRhdGVkX2F0GAcgASgJEhIKCmRlbGV0ZWRfYXQYCCABKAkibgoYQ3JlYXRlSW50ZXJhY3Rpb25SZXF1ZXN0EgoKAmlkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkSDQoFdGl0bGUYAyABKAkSEgoKYXNyX291dHB1dBgEIAEoCRISCgpsbG1fb3V0cHV0GAUgASgJIiMKFUdldEludGVyYWN0aW9uUmVxdWVzdBIKCgJpZBgBIAEoCSJDChdMaXN0SW50ZXJhY3Rpb25zUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEhcKD3NpbmNlX3RpbWVzdGFtcBgCIAEoCSJCChhMaXN0SW50ZXJhY3Rpb25zUmVzcG9uc2USJgoMaW50ZXJhY3Rpb25zGAEgAygLMhAuaXRvLkludGVyYWN0aW9uIjUKGFVwZGF0ZUludGVyYWN0aW9uUmVxdWVzdBIKCgJpZBgBIAEoCRINCgV0aXRsZRgCIAEoCSImChhEZWxldGVJbnRlcmFjdGlvblJlcXVlc3QSCgoCaWQYASABKAkijgEKDkRpY3Rpb25hcnlJdGVtEgoKAmlkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkSDAoEd29yZBgDIAEoCRIVCg1wcm9udW5jaWF0aW9uGAQgASgJEhIKCmNyZWF0ZWRfYXQYBSABKAkSEgoKdXBkYXRlZF9hdBgGIAEoCRISCgpkZWxldGVkX2F0GAcgASgJIl8KG0NyZWF0ZURpY3Rpb25hcnlJdGVtUmVxdWVzdBIKCgJpZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEgwKBHdvcmQYAyABKAkSFQoNcHJvbnVuY2lhdGlvbhgEIAEoCSJGChpMaXN0RGljdGlvbmFyeUl0ZW1zUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEhcKD3NpbmNlX3RpbWVzdGFtcBgCIAEoCSJBChtMaXN0RGljdGlvbmFyeUl0ZW1zUmVzcG9uc2USIgoFaXRlbXMYASADKAsyEy5pdG8uRGljdGlvbmFyeUl0ZW0iTgobVXBkYXRlRGljdGlvbmFyeUl0ZW1SZXF1ZXN0EgoKAmlkGAEgASgJEgwKBHdvcmQYAiABKAkSFQoNcHJvbnVuY2lhdGlvbhgDIAEoCSIpChtEZWxldGVEaWN0aW9uYXJ5SXRlbVJlcXVlc3QSCgoCaWQYASABKAkyrwgKCkl0b1NlcnZpY2USSAoOVHJhbnNjcmliZUZpbGUSGi5pdG8uVHJhbnNjcmliZUZpbGVSZXF1ZXN0GhouaXRvLlRyYW5zY3JpcHRpb25SZXNwb25zZRJBChBUcmFuc2NyaWJlU3RyZWFtEg8uaXRvLkF1ZGlvQ2h1bmsaGi5pdG8uVHJhbnNjcmlwdGlvblJlc3BvbnNlKAESLwoKQ3JlYXRlTm90ZRIWLml0by5DcmVhdGVOb3RlUmVxdWVzdBoJLml0by5Ob3RlEikKB0dldE5vdGUSEy5pdG8uR2V0Tm90ZVJlcXVlc3QaCS5pdG8uTm90ZRI6CglMaXN0Tm90ZXMSFS5pdG8uTGlzdE5vdGVzUmVxdWVzdBoWLml0by5MaXN0Tm90ZXNSZXNwb25zZRIvCgpVcGRhdGVOb3RlEhYuaXRvLlVwZGF0ZU5vdGVSZXF1ZXN0GgkuaXRvLk5vdGUSMAoKRGVsZXRlTm90ZRIWLml0by5EZWxldGVOb3RlUmVxdWVzdBoKLml0by5FbXB0eRJEChFDcmVhdGVJbnRlcmFjdGlvbhIdLml0by5DcmVhdGVJbnRlcmFjdGlvblJlcXVlc3QaEC5pdG8uSW50ZXJhY3Rpb24SPgoOR2V0SW50ZXJhY3Rpb24SGi5pdG8uR2V0SW50ZXJhY3Rpb25SZXF1ZXN0GhAuaXRvLkludGVyYWN0aW9uEk8KEExpc3RJbnRlcmFjdGlvbnMSHC5pdG8uTGlzdEludGVyYWN0aW9uc1JlcXVlc3QaHS5pdG8uTGlzdEludGVyYWN0aW9uc1Jlc3BvbnNlEkQKEVVwZGF0ZUludGVyYWN0aW9uEh0uaXRvLlVwZGF0ZUludGVyYWN0aW9uUmVxdWVzdBoQLml0by5JbnRlcmFjdGlvbhI+ChFEZWxldGVJbnRlcmFjdGlvbhIdLml0by5EZWxldGVJbnRlcmFjdGlvblJlcXVlc3QaCi5pdG8uRW1wdHkSTQoUQ3JlYXRlRGljdGlvbmFyeUl0ZW0SIC5pdG8uQ3JlYXRlRGljdGlvbmFyeUl0ZW1SZXF1ZXN0GhMuaXRvLkRpY3Rpb25hcnlJdGVtElgKE0xpc3REaWN0aW9uYXJ5SXRlbXMSHy5pdG8uTGlzdERpY3Rpb25hcnlJdGVtc1JlcXVlc3QaIC5pdG8uTGlzdERpY3Rpb25hcnlJdGVtc1Jlc3BvbnNlEk0KFFVwZGF0ZURpY3Rpb25hcnlJdGVtEiAuaXRvLlVwZGF0ZURpY3Rpb25hcnlJdGVtUmVxdWVzdBoTLml0by5EaWN0aW9uYXJ5SXRlbRJEChREZWxldGVEaWN0aW9uYXJ5SXRlbRIgLml0by5EZWxldGVEaWN0aW9uYXJ5SXRlbVJlcXVlc3QaCi5pdG8uRW1wdHliBnByb3RvMw");
 
 /**
+ * General
+ * -----------------------------------------------------------------
+ *
+ * @generated from message ito.Empty
+ */
+export type Empty = Message<"ito.Empty"> & {
+};
+
+/**
+ * Describes the message ito.Empty.
+ * Use `create(EmptySchema)` to create a new message.
+ */
+export const EmptySchema: GenMessage<Empty> = /*@__PURE__*/
+  messageDesc(file_ito, 0);
+
+/**
+ * Transcription
+ * -----------------------------------------------------------------
  * The request message containing the entire audio file data.
  *
  * @generated from message ito.TranscribeFileRequest
  */
-export type TranscribeFileRequest = Message<'ito.TranscribeFileRequest'> & {
+export type TranscribeFileRequest = Message<"ito.TranscribeFileRequest"> & {
   /**
    * The raw audio data.
    *
    * @generated from field: bytes audio_data = 1;
    */
-  audioData: Uint8Array
-}
+  audioData: Uint8Array;
+};
 
 /**
  * Describes the message ito.TranscribeFileRequest.
  * Use `create(TranscribeFileRequestSchema)` to create a new message.
  */
-export const TranscribeFileRequestSchema: GenMessage<TranscribeFileRequest> =
-  /*@__PURE__*/
-  messageDesc(file_ito, 0)
+export const TranscribeFileRequestSchema: GenMessage<TranscribeFileRequest> = /*@__PURE__*/
+  messageDesc(file_ito, 1);
 
 /**
  * A chunk of audio data for streaming.
  *
  * @generated from message ito.AudioChunk
  */
-export type AudioChunk = Message<'ito.AudioChunk'> & {
+export type AudioChunk = Message<"ito.AudioChunk"> & {
   /**
    * @generated from field: bytes audio_data = 1;
    */
-  audioData: Uint8Array
-}
+  audioData: Uint8Array;
+};
 
 /**
  * Describes the message ito.AudioChunk.
  * Use `create(AudioChunkSchema)` to create a new message.
  */
-export const AudioChunkSchema: GenMessage<AudioChunk> =
-  /*@__PURE__*/
-  messageDesc(file_ito, 1)
+export const AudioChunkSchema: GenMessage<AudioChunk> = /*@__PURE__*/
+  messageDesc(file_ito, 2);
 
 /**
  * The response message containing the final transcript.
  *
  * @generated from message ito.TranscriptionResponse
  */
-export type TranscriptionResponse = Message<'ito.TranscriptionResponse'> & {
+export type TranscriptionResponse = Message<"ito.TranscriptionResponse"> & {
   /**
    * @generated from field: string transcript = 1;
    */
-  transcript: string
-}
+  transcript: string;
+};
 
 /**
  * Describes the message ito.TranscriptionResponse.
  * Use `create(TranscriptionResponseSchema)` to create a new message.
  */
-export const TranscriptionResponseSchema: GenMessage<TranscriptionResponse> =
-  /*@__PURE__*/
-  messageDesc(file_ito, 2)
+export const TranscriptionResponseSchema: GenMessage<TranscriptionResponse> = /*@__PURE__*/
+  messageDesc(file_ito, 3);
+
+/**
+ * Notes
+ * -----------------------------------------------------------------
+ *
+ * @generated from message ito.Note
+ */
+export type Note = Message<"ito.Note"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: string interaction_id = 3;
+   */
+  interactionId: string;
+
+  /**
+   * @generated from field: string content = 4;
+   */
+  content: string;
+
+  /**
+   * @generated from field: string created_at = 5;
+   */
+  createdAt: string;
+
+  /**
+   * @generated from field: string updated_at = 6;
+   */
+  updatedAt: string;
+
+  /**
+   * @generated from field: string deleted_at = 7;
+   */
+  deletedAt: string;
+};
+
+/**
+ * Describes the message ito.Note.
+ * Use `create(NoteSchema)` to create a new message.
+ */
+export const NoteSchema: GenMessage<Note> = /*@__PURE__*/
+  messageDesc(file_ito, 4);
+
+/**
+ * @generated from message ito.CreateNoteRequest
+ */
+export type CreateNoteRequest = Message<"ito.CreateNoteRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: string interaction_id = 3;
+   */
+  interactionId: string;
+
+  /**
+   * @generated from field: string content = 4;
+   */
+  content: string;
+};
+
+/**
+ * Describes the message ito.CreateNoteRequest.
+ * Use `create(CreateNoteRequestSchema)` to create a new message.
+ */
+export const CreateNoteRequestSchema: GenMessage<CreateNoteRequest> = /*@__PURE__*/
+  messageDesc(file_ito, 5);
+
+/**
+ * @generated from message ito.GetNoteRequest
+ */
+export type GetNoteRequest = Message<"ito.GetNoteRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message ito.GetNoteRequest.
+ * Use `create(GetNoteRequestSchema)` to create a new message.
+ */
+export const GetNoteRequestSchema: GenMessage<GetNoteRequest> = /*@__PURE__*/
+  messageDesc(file_ito, 6);
+
+/**
+ * @generated from message ito.ListNotesRequest
+ */
+export type ListNotesRequest = Message<"ito.ListNotesRequest"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+
+  /**
+   * Optional. ISO 8601 format. If not provided, fetch all.
+   *
+   * @generated from field: string since_timestamp = 2;
+   */
+  sinceTimestamp: string;
+};
+
+/**
+ * Describes the message ito.ListNotesRequest.
+ * Use `create(ListNotesRequestSchema)` to create a new message.
+ */
+export const ListNotesRequestSchema: GenMessage<ListNotesRequest> = /*@__PURE__*/
+  messageDesc(file_ito, 7);
+
+/**
+ * @generated from message ito.ListNotesResponse
+ */
+export type ListNotesResponse = Message<"ito.ListNotesResponse"> & {
+  /**
+   * @generated from field: repeated ito.Note notes = 1;
+   */
+  notes: Note[];
+};
+
+/**
+ * Describes the message ito.ListNotesResponse.
+ * Use `create(ListNotesResponseSchema)` to create a new message.
+ */
+export const ListNotesResponseSchema: GenMessage<ListNotesResponse> = /*@__PURE__*/
+  messageDesc(file_ito, 8);
+
+/**
+ * @generated from message ito.UpdateNoteRequest
+ */
+export type UpdateNoteRequest = Message<"ito.UpdateNoteRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string content = 2;
+   */
+  content: string;
+};
+
+/**
+ * Describes the message ito.UpdateNoteRequest.
+ * Use `create(UpdateNoteRequestSchema)` to create a new message.
+ */
+export const UpdateNoteRequestSchema: GenMessage<UpdateNoteRequest> = /*@__PURE__*/
+  messageDesc(file_ito, 9);
+
+/**
+ * @generated from message ito.DeleteNoteRequest
+ */
+export type DeleteNoteRequest = Message<"ito.DeleteNoteRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message ito.DeleteNoteRequest.
+ * Use `create(DeleteNoteRequestSchema)` to create a new message.
+ */
+export const DeleteNoteRequestSchema: GenMessage<DeleteNoteRequest> = /*@__PURE__*/
+  messageDesc(file_ito, 10);
+
+/**
+ * Interactions
+ * -----------------------------------------------------------------
+ *
+ * @generated from message ito.Interaction
+ */
+export type Interaction = Message<"ito.Interaction"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: string title = 3;
+   */
+  title: string;
+
+  /**
+   * JSON string
+   *
+   * @generated from field: string asr_output = 4;
+   */
+  asrOutput: string;
+
+  /**
+   * JSON string
+   *
+   * @generated from field: string llm_output = 5;
+   */
+  llmOutput: string;
+
+  /**
+   * @generated from field: string created_at = 6;
+   */
+  createdAt: string;
+
+  /**
+   * @generated from field: string updated_at = 7;
+   */
+  updatedAt: string;
+
+  /**
+   * @generated from field: string deleted_at = 8;
+   */
+  deletedAt: string;
+};
+
+/**
+ * Describes the message ito.Interaction.
+ * Use `create(InteractionSchema)` to create a new message.
+ */
+export const InteractionSchema: GenMessage<Interaction> = /*@__PURE__*/
+  messageDesc(file_ito, 11);
+
+/**
+ * @generated from message ito.CreateInteractionRequest
+ */
+export type CreateInteractionRequest = Message<"ito.CreateInteractionRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: string title = 3;
+   */
+  title: string;
+
+  /**
+   * @generated from field: string asr_output = 4;
+   */
+  asrOutput: string;
+
+  /**
+   * @generated from field: string llm_output = 5;
+   */
+  llmOutput: string;
+};
+
+/**
+ * Describes the message ito.CreateInteractionRequest.
+ * Use `create(CreateInteractionRequestSchema)` to create a new message.
+ */
+export const CreateInteractionRequestSchema: GenMessage<CreateInteractionRequest> = /*@__PURE__*/
+  messageDesc(file_ito, 12);
+
+/**
+ * @generated from message ito.GetInteractionRequest
+ */
+export type GetInteractionRequest = Message<"ito.GetInteractionRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message ito.GetInteractionRequest.
+ * Use `create(GetInteractionRequestSchema)` to create a new message.
+ */
+export const GetInteractionRequestSchema: GenMessage<GetInteractionRequest> = /*@__PURE__*/
+  messageDesc(file_ito, 13);
+
+/**
+ * @generated from message ito.ListInteractionsRequest
+ */
+export type ListInteractionsRequest = Message<"ito.ListInteractionsRequest"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+
+  /**
+   * Optional. ISO 8601 format. If not provided, fetch all.
+   *
+   * @generated from field: string since_timestamp = 2;
+   */
+  sinceTimestamp: string;
+};
+
+/**
+ * Describes the message ito.ListInteractionsRequest.
+ * Use `create(ListInteractionsRequestSchema)` to create a new message.
+ */
+export const ListInteractionsRequestSchema: GenMessage<ListInteractionsRequest> = /*@__PURE__*/
+  messageDesc(file_ito, 14);
+
+/**
+ * @generated from message ito.ListInteractionsResponse
+ */
+export type ListInteractionsResponse = Message<"ito.ListInteractionsResponse"> & {
+  /**
+   * @generated from field: repeated ito.Interaction interactions = 1;
+   */
+  interactions: Interaction[];
+};
+
+/**
+ * Describes the message ito.ListInteractionsResponse.
+ * Use `create(ListInteractionsResponseSchema)` to create a new message.
+ */
+export const ListInteractionsResponseSchema: GenMessage<ListInteractionsResponse> = /*@__PURE__*/
+  messageDesc(file_ito, 15);
+
+/**
+ * @generated from message ito.UpdateInteractionRequest
+ */
+export type UpdateInteractionRequest = Message<"ito.UpdateInteractionRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string title = 2;
+   */
+  title: string;
+};
+
+/**
+ * Describes the message ito.UpdateInteractionRequest.
+ * Use `create(UpdateInteractionRequestSchema)` to create a new message.
+ */
+export const UpdateInteractionRequestSchema: GenMessage<UpdateInteractionRequest> = /*@__PURE__*/
+  messageDesc(file_ito, 16);
+
+/**
+ * @generated from message ito.DeleteInteractionRequest
+ */
+export type DeleteInteractionRequest = Message<"ito.DeleteInteractionRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message ito.DeleteInteractionRequest.
+ * Use `create(DeleteInteractionRequestSchema)` to create a new message.
+ */
+export const DeleteInteractionRequestSchema: GenMessage<DeleteInteractionRequest> = /*@__PURE__*/
+  messageDesc(file_ito, 17);
+
+/**
+ * Dictionary
+ * -----------------------------------------------------------------
+ *
+ * @generated from message ito.DictionaryItem
+ */
+export type DictionaryItem = Message<"ito.DictionaryItem"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: string word = 3;
+   */
+  word: string;
+
+  /**
+   * @generated from field: string pronunciation = 4;
+   */
+  pronunciation: string;
+
+  /**
+   * @generated from field: string created_at = 5;
+   */
+  createdAt: string;
+
+  /**
+   * @generated from field: string updated_at = 6;
+   */
+  updatedAt: string;
+
+  /**
+   * @generated from field: string deleted_at = 7;
+   */
+  deletedAt: string;
+};
+
+/**
+ * Describes the message ito.DictionaryItem.
+ * Use `create(DictionaryItemSchema)` to create a new message.
+ */
+export const DictionaryItemSchema: GenMessage<DictionaryItem> = /*@__PURE__*/
+  messageDesc(file_ito, 18);
+
+/**
+ * @generated from message ito.CreateDictionaryItemRequest
+ */
+export type CreateDictionaryItemRequest = Message<"ito.CreateDictionaryItemRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: string word = 3;
+   */
+  word: string;
+
+  /**
+   * @generated from field: string pronunciation = 4;
+   */
+  pronunciation: string;
+};
+
+/**
+ * Describes the message ito.CreateDictionaryItemRequest.
+ * Use `create(CreateDictionaryItemRequestSchema)` to create a new message.
+ */
+export const CreateDictionaryItemRequestSchema: GenMessage<CreateDictionaryItemRequest> = /*@__PURE__*/
+  messageDesc(file_ito, 19);
+
+/**
+ * @generated from message ito.ListDictionaryItemsRequest
+ */
+export type ListDictionaryItemsRequest = Message<"ito.ListDictionaryItemsRequest"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+
+  /**
+   * Optional. ISO 8601 format. If not provided, fetch all.
+   *
+   * @generated from field: string since_timestamp = 2;
+   */
+  sinceTimestamp: string;
+};
+
+/**
+ * Describes the message ito.ListDictionaryItemsRequest.
+ * Use `create(ListDictionaryItemsRequestSchema)` to create a new message.
+ */
+export const ListDictionaryItemsRequestSchema: GenMessage<ListDictionaryItemsRequest> = /*@__PURE__*/
+  messageDesc(file_ito, 20);
+
+/**
+ * @generated from message ito.ListDictionaryItemsResponse
+ */
+export type ListDictionaryItemsResponse = Message<"ito.ListDictionaryItemsResponse"> & {
+  /**
+   * @generated from field: repeated ito.DictionaryItem items = 1;
+   */
+  items: DictionaryItem[];
+};
+
+/**
+ * Describes the message ito.ListDictionaryItemsResponse.
+ * Use `create(ListDictionaryItemsResponseSchema)` to create a new message.
+ */
+export const ListDictionaryItemsResponseSchema: GenMessage<ListDictionaryItemsResponse> = /*@__PURE__*/
+  messageDesc(file_ito, 21);
+
+/**
+ * @generated from message ito.UpdateDictionaryItemRequest
+ */
+export type UpdateDictionaryItemRequest = Message<"ito.UpdateDictionaryItemRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string word = 2;
+   */
+  word: string;
+
+  /**
+   * @generated from field: string pronunciation = 3;
+   */
+  pronunciation: string;
+};
+
+/**
+ * Describes the message ito.UpdateDictionaryItemRequest.
+ * Use `create(UpdateDictionaryItemRequestSchema)` to create a new message.
+ */
+export const UpdateDictionaryItemRequestSchema: GenMessage<UpdateDictionaryItemRequest> = /*@__PURE__*/
+  messageDesc(file_ito, 22);
+
+/**
+ * @generated from message ito.DeleteDictionaryItemRequest
+ */
+export type DeleteDictionaryItemRequest = Message<"ito.DeleteDictionaryItemRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message ito.DeleteDictionaryItemRequest.
+ * Use `create(DeleteDictionaryItemRequestSchema)` to create a new message.
+ */
+export const DeleteDictionaryItemRequestSchema: GenMessage<DeleteDictionaryItemRequest> = /*@__PURE__*/
+  messageDesc(file_ito, 23);
 
 /**
  * @generated from service ito.ItoService
@@ -96,10 +639,10 @@ export const ItoService: GenService<{
    * @generated from rpc ito.ItoService.TranscribeFile
    */
   transcribeFile: {
-    methodKind: 'unary'
-    input: typeof TranscribeFileRequestSchema
-    output: typeof TranscriptionResponseSchema
-  }
+    methodKind: "unary";
+    input: typeof TranscribeFileRequestSchema;
+    output: typeof TranscriptionResponseSchema;
+  },
   /**
    * Method 2: Streams audio chunks from the client and gets a single response.
    * This is the ideal method for dictation to reduce latency and memory usage.
@@ -107,8 +650,128 @@ export const ItoService: GenService<{
    * @generated from rpc ito.ItoService.TranscribeStream
    */
   transcribeStream: {
-    methodKind: 'client_streaming'
-    input: typeof AudioChunkSchema
-    output: typeof TranscriptionResponseSchema
-  }
-}> = /*@__PURE__*/ serviceDesc(file_ito, 0)
+    methodKind: "client_streaming";
+    input: typeof AudioChunkSchema;
+    output: typeof TranscriptionResponseSchema;
+  },
+  /**
+   * Note Service
+   *
+   * @generated from rpc ito.ItoService.CreateNote
+   */
+  createNote: {
+    methodKind: "unary";
+    input: typeof CreateNoteRequestSchema;
+    output: typeof NoteSchema;
+  },
+  /**
+   * @generated from rpc ito.ItoService.GetNote
+   */
+  getNote: {
+    methodKind: "unary";
+    input: typeof GetNoteRequestSchema;
+    output: typeof NoteSchema;
+  },
+  /**
+   * @generated from rpc ito.ItoService.ListNotes
+   */
+  listNotes: {
+    methodKind: "unary";
+    input: typeof ListNotesRequestSchema;
+    output: typeof ListNotesResponseSchema;
+  },
+  /**
+   * @generated from rpc ito.ItoService.UpdateNote
+   */
+  updateNote: {
+    methodKind: "unary";
+    input: typeof UpdateNoteRequestSchema;
+    output: typeof NoteSchema;
+  },
+  /**
+   * @generated from rpc ito.ItoService.DeleteNote
+   */
+  deleteNote: {
+    methodKind: "unary";
+    input: typeof DeleteNoteRequestSchema;
+    output: typeof EmptySchema;
+  },
+  /**
+   * Interaction Service
+   *
+   * @generated from rpc ito.ItoService.CreateInteraction
+   */
+  createInteraction: {
+    methodKind: "unary";
+    input: typeof CreateInteractionRequestSchema;
+    output: typeof InteractionSchema;
+  },
+  /**
+   * @generated from rpc ito.ItoService.GetInteraction
+   */
+  getInteraction: {
+    methodKind: "unary";
+    input: typeof GetInteractionRequestSchema;
+    output: typeof InteractionSchema;
+  },
+  /**
+   * @generated from rpc ito.ItoService.ListInteractions
+   */
+  listInteractions: {
+    methodKind: "unary";
+    input: typeof ListInteractionsRequestSchema;
+    output: typeof ListInteractionsResponseSchema;
+  },
+  /**
+   * @generated from rpc ito.ItoService.UpdateInteraction
+   */
+  updateInteraction: {
+    methodKind: "unary";
+    input: typeof UpdateInteractionRequestSchema;
+    output: typeof InteractionSchema;
+  },
+  /**
+   * @generated from rpc ito.ItoService.DeleteInteraction
+   */
+  deleteInteraction: {
+    methodKind: "unary";
+    input: typeof DeleteInteractionRequestSchema;
+    output: typeof EmptySchema;
+  },
+  /**
+   * Dictionary Service
+   *
+   * @generated from rpc ito.ItoService.CreateDictionaryItem
+   */
+  createDictionaryItem: {
+    methodKind: "unary";
+    input: typeof CreateDictionaryItemRequestSchema;
+    output: typeof DictionaryItemSchema;
+  },
+  /**
+   * @generated from rpc ito.ItoService.ListDictionaryItems
+   */
+  listDictionaryItems: {
+    methodKind: "unary";
+    input: typeof ListDictionaryItemsRequestSchema;
+    output: typeof ListDictionaryItemsResponseSchema;
+  },
+  /**
+   * @generated from rpc ito.ItoService.UpdateDictionaryItem
+   */
+  updateDictionaryItem: {
+    methodKind: "unary";
+    input: typeof UpdateDictionaryItemRequestSchema;
+    output: typeof DictionaryItemSchema;
+  },
+  /**
+   * @generated from rpc ito.ItoService.DeleteDictionaryItem
+   */
+  deleteDictionaryItem: {
+    methodKind: "unary";
+    input: typeof DeleteDictionaryItemRequestSchema;
+    output: typeof EmptySchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_ito, 0);
+

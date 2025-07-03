@@ -9,7 +9,11 @@ import {
   stopKeyListener,
 } from '../media/keyboard'
 import { getPillWindow } from '../main/app'
-import { exchangeAuthCode, generateNewAuthState } from '../auth/events'
+import {
+  generateNewAuthState,
+  exchangeAuthCode,
+  handleLogin,
+} from '../auth/events'
 import { NotesTable, DictionaryTable } from '../main/sqlite/repo'
 // import { getPillWindow } from '../main/app'
 import {
@@ -263,6 +267,13 @@ export function registerIPC() {
       deviceId: '',
     })
   })
+
+  ipcMain.on(
+    'notify-login-success',
+    (event, { profile, idToken, accessToken }) => {
+      handleLogin(profile, idToken, accessToken)
+    },
+  )
 }
 
 // Handlers that are specific to a given window instance

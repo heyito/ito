@@ -1,0 +1,26 @@
+---
+description: 
+globs: **/*.ts,**/*.tsx
+alwaysApply: false
+---
+## Technologies used
+
+- **React** - Build interactive UIs with React components
+- **Tailwind CSS** - Utility-first CSS framework for rapid UI development
+- **TypeScript** - Full type safety across all packages
+- **PNPM Workspaces** - Fast, disk-efficient package management
+- **ESLint & Prettier** - Code quality tools configured and ready to use
+- **Auth** - We use Auth0
+- **DB** - We use postgres in the server and SQLite in the app
+- **Package manager** We use Bun as our preferred package manager. Please use bun whenever applicable.
+
+# Code Conventions
+
+When writing or modifying code in this project, please adhere to the following conventions:
+
+1.  **TypeScript Best Practices**: Follow standard, idiomatic TypeScript coding practices for structure, naming, and types, unless otherwise overridden.
+2.  **Minimal Comments**: Avoid adding comments unless they explain complex logic or non-obvious decisions. Well-written, self-explanatory code is preferred. Do not add comments that merely restate what the code does.
+3.  **Tests as Documentation**: Rely on comprehensive tests (which will be added later if not present) to document the behavior and usage of the code, rather than extensive comments within the code itself.
+4. **File naming conventions**: Use kebab-case when naming directories, TypeScript, and other files.
+
+Only make the exact changes I request—do not modify, remove, or alter any other code, styling, or page elements unless explicitly instructed. If my request conflicts with existing code, styling, or functionality, or if you anticipate any issues, pause execution and notify me for confirmation before proceeding. Always follow this rule for every modification. If in doubt, ask before making any change.

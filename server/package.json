@@ -16,15 +16,22 @@
     "dotenv": "^16.5.0",
     "fastify": "^5.4.0",
     "groq-sdk": "^0.26.0",
-    "pg": "^8.16.0"
+    "node-pg-migrate": "^8.0.3",
+    "pg": "^8.16.3",
+    "uuid": "^11.1.0"
   },
   "scripts": {
     "build": "bunx tsc",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf node_modules dist",
     "start": "node dist/index.js",
     "proto:gen:server": "bunx buf generate --output=./src src/ito.proto",
     "proto:gen:client": "bunx buf generate --output=../app src/ito.proto",
     "proto:gen": "bun run proto:gen:server && bun run proto:gen:client",
+    "db:migrate:create": "dotenv -- node-pg-migrate --migrations-dir src/migrations --migration-file-language ts create",
+    "db:migrate": "dotenv -- tsx ./node_modules/node-pg-migrate/bin/node-pg-migrate.js --migrations-dir src/migrations up",
+    "db:migrate:down": "dotenv -- tsx ./node_modules/node-pg-migrate/bin/node-pg-migrate.js --migrations-dir src/migrations down",
+    "local-db-up": "docker-compose up -d db",
+    "local-db-down": "docker-compose down",
     "dev": "tsx watch src/index.ts",
     "test-client": "tsx ./test-client.ts"
   },
@@ -32,6 +39,8 @@
     "@types/express": "^5.0.3",
     "@types/node": "^24.0.1",
     "@types/pg": "^8.15.4",
+    "@types/uuid": "^10.0.0",
+    "dotenv-cli": "^8.0.0",
     "prettier": "^3.5.3",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.2",

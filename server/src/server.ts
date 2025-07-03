@@ -10,7 +10,7 @@ dotenv.config()
 export const startServer = async () => {
   const connectRpcServer = fastify({
     logger: true,
-    http2: true, // Enable HTTP/2 support
+    // http2: true, // Disable HTTP/2 for simpler local testing
   })
 
   // Register the Auth0 plugin
@@ -37,7 +37,10 @@ export const startServer = async () => {
   await connectRpcServer.register(async function (fastify) {
     // Apply Auth0 authentication to all routes in this context only if REQUIRE_AUTH is true
     if (REQUIRE_AUTH) {
+      console.log('Authentication is ENABLED.')
       fastify.addHook('preHandler', fastify.requireAuth())
+    } else {
+      console.log('Authentication is DISABLED.')
     }
 
     // Register the Connect RPC plugin with our service routes

@@ -30,4 +30,9 @@ export const INITIAL_SCHEMA = `
     updated_at TEXT NOT NULL,
     deleted_at TEXT
   );
+
+  CREATE TABLE key_value_store (
+    key TEXT PRIMARY KEY,
+    value TEXT
+  );
 `

@@ -10,7 +10,6 @@ dotenv.config()
 export const startServer = async () => {
   const connectRpcServer = fastify({
     logger: true,
-    // http2: true, // Disable HTTP/2 for simpler local testing
   })
 
   // Register the Auth0 plugin
@@ -47,6 +46,11 @@ export const startServer = async () => {
     await fastify.register(fastifyConnectPlugin, {
       routes: itoServiceRoutes,
     })
+  })
+
+  connectRpcServer.get('/', async (_, reply) => {
+    reply.type('text/plain')
+    reply.send('Welcome to the Ito Connect RPC server!')
   })
 
   // Start the server

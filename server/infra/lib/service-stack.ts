@@ -154,7 +154,6 @@ export class ServiceStack extends Stack {
         publicLoadBalancer: true,
         taskDefinition: taskDefinition,
         protocol: ApplicationProtocol.HTTPS,
-        protocolVersion: ApplicationProtocolVersion.GRPC,
         domainZone: zone,
         domainName,
         certificate: cert,
@@ -170,7 +169,6 @@ export class ServiceStack extends Stack {
       timeout: Duration.seconds(5),
       healthyThresholdCount: 2,
       unhealthyThresholdCount: 5,
-      healthyGrpcCodes: '0,12',
     })
 
     const alb = fargateService.loadBalancer

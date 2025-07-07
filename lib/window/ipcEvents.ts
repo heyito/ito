@@ -13,6 +13,7 @@ import {
   generateNewAuthState,
   exchangeAuthCode,
   handleLogin,
+  handleLogout,
 } from '../auth/events'
 import { NotesTable, DictionaryTable } from '../main/sqlite/repo'
 // import { getPillWindow } from '../main/app'
@@ -27,6 +28,12 @@ import {
 
 const handleIPC = (channel: string, handler: (...args: any[]) => any) => {
   ipcMain.handle(channel, handler)
+}
+
+// Helper function to get current user ID
+const getCurrentUserId = (): string | undefined => {
+  const user = store.get('userProfile') as any
+  return user?.id
 }
 
 // This single function registers all IPC handlers for the application.
@@ -142,6 +149,10 @@ export function registerIPC() {
   handleIPC('exchange-auth-code', async (_e, { authCode, state, config }) =>
     exchangeAuthCode(_e, { authCode, state, config }),
   )
+  handleIPC('logout', () => handleLogout())
+  handleIPC('notify-login-success', (_e, { profile, idToken, accessToken }) => {
+    handleLogin(profile, idToken, accessToken)
+  })
 
   // Window Init & Controls
   const getWindowFromEvent = (event: Electron.IpcMainInvokeEvent) =>
@@ -218,7 +229,10 @@ export function registerIPC() {
   app.on('before-quit', () => stopKeyListener())
 
   // Notes
-  handleIPC('notes:get-all', () => NotesTable.findAll())
+  handleIPC('notes:get-all', () => {
+    const user_id = getCurrentUserId()
+    return NotesTable.findAll(user_id)
+  })
   handleIPC('notes:add', async (_e, note) => NotesTable.insert(note))
   handleIPC('notes:update-content', async (_e, { id, content }) =>
     NotesTable.updateContent(id, content),
@@ -226,7 +240,10 @@ export function registerIPC() {
   handleIPC('notes:delete', async (_e, id) => NotesTable.softDelete(id))
 
   // Dictionary
-  handleIPC('dictionary:get-all', () => DictionaryTable.findAll())
+  handleIPC('dictionary:get-all', () => {
+    const user_id = getCurrentUserId()
+    return DictionaryTable.findAll(user_id)
+  })
   handleIPC('dictionary:add', async (_e, item) => DictionaryTable.insert(item))
   handleIPC('dictionary:update', async (_e, { id, word, pronunciation }) =>
     DictionaryTable.update(id, word, pronunciation),
@@ -266,13 +283,6 @@ export function registerIPC() {
       deviceId: '',
     })
   })
-
-  ipcMain.on(
-    'notify-login-success',
-    (event, { profile, idToken, accessToken }) => {
-      handleLogin(profile, idToken, accessToken)
-    },
-  )
 }
 
 // Handlers that are specific to a given window instance

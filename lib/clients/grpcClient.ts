@@ -1,17 +1,19 @@
 import {
   ItoService,
   AudioChunk,
-  AudioChunkSchema,
   Note as NotePb,
   Interaction as InteractionPb,
   DictionaryItem as DictionaryItemPb,
   CreateNoteRequestSchema,
   UpdateNoteRequestSchema,
+  DeleteNoteRequestSchema,
   ListNotesRequestSchema,
   CreateInteractionRequestSchema,
   UpdateInteractionRequestSchema,
+  DeleteInteractionRequestSchema,
   ListInteractionsRequestSchema,
   CreateDictionaryItemRequestSchema,
+  DeleteDictionaryItemRequestSchema,
   UpdateDictionaryItemRequestSchema,
   ListDictionaryItemsRequestSchema,
 } from '@/app/generated/ito_pb'
@@ -97,6 +99,13 @@ class GrpcClient {
     return this.client.updateNote(request, { headers: this.getHeaders() })
   }
 
+  async deleteNote(note: Note) {
+    const request = create(DeleteNoteRequestSchema, {
+      id: note.id,
+    })
+    return this.client.deleteNote(request, { headers: this.getHeaders() })
+  }
+
   async listNotesSince(userId: string, since?: string): Promise<NotePb[]> {
     const request = create(ListNotesRequestSchema, {
       userId,
@@ -129,6 +138,13 @@ class GrpcClient {
     return this.client.updateInteraction(request, {
       headers: this.getHeaders(),
     })
+  }
+
+  async deleteInteraction(interaction: Interaction) {
+    const request = create(DeleteInteractionRequestSchema, {
+      id: interaction.id,
+    })
+    return this.client.deleteInteraction(request, { headers: this.getHeaders() })
   }
 
   async listInteractionsSince(
@@ -166,6 +182,13 @@ class GrpcClient {
     return this.client.updateDictionaryItem(request, {
       headers: this.getHeaders(),
     })
+  }
+
+  async deleteDictionaryItem(item: DictionaryItem) {
+    const request = create(DeleteDictionaryItemRequestSchema, {
+      id: item.id,
+    })
+    return this.client.deleteDictionaryItem(request, { headers: this.getHeaders() })
   }
 
   async listDictionaryItemsSince(

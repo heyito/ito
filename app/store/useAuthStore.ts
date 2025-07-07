@@ -178,7 +178,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
 
     setSelfHostedMode: () => {
       const selfHostedUser: AuthUser = {
-        id: uuidv4(),
+        id: 'self-hosted',
         provider: 'self-hosted',
         lastSignInAt: new Date().toISOString(),
       }

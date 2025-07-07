@@ -39,7 +39,7 @@ export class NotesRepository {
     const params: any[] = [userId]
 
     if (since) {
-      query += ' AND updated_at > $2'
+      query += ' AND (updated_at > $2 OR deleted_at > $2)'
       params.push(since)
     }
 
@@ -107,7 +107,7 @@ export class InteractionsRepository {
     const params: any[] = [userId]
 
     if (since) {
-      query += ' AND updated_at > $2'
+      query += ' AND (updated_at > $2 OR deleted_at > $2)'
       params.push(since)
     }
 
@@ -163,7 +163,7 @@ export class DictionaryRepository {
     const params: any[] = [userId]
 
     if (since) {
-      query += ' AND updated_at > $2'
+      query += ' AND (updated_at > $2 OR deleted_at > $2)'
       params.push(since)
     }
     

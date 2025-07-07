@@ -33,6 +33,9 @@ declare global {
         ignore: boolean,
         options?: { forward?: boolean },
       ) => Promise<void>
+      generateNewAuthState: () => Promise<any>
+      exchangeAuthCode: (data: any) => Promise<any>
+      logout: () => Promise<void>
       notes: {
         getAll: () => Promise<Note[]>
         add: (note: any) => Promise<Note>
@@ -58,6 +61,7 @@ declare global {
         getVisibility: () => Promise<{ isVisible: boolean }>
       }
       notifySettingsUpdate: (settings: any) => void
+      notifyLoginSuccess: (profile: any, idToken: string | null, accessToken: string | null) => Promise<void>
     }
   }
 }

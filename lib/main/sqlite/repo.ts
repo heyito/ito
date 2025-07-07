@@ -159,10 +159,12 @@ export class NotesTable {
     return await get<Note>('SELECT * FROM notes WHERE id = ?', [id])
   }
 
-  static async findAll(): Promise<Note[]> {
-    return await all<Note>(
-      'SELECT * FROM notes WHERE deleted_at IS NULL ORDER BY created_at DESC',
-    )
+  static async findAll(user_id?: string): Promise<Note[]> {
+    const query = user_id 
+      ? 'SELECT * FROM notes WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC'
+      : 'SELECT * FROM notes WHERE user_id IS NULL AND deleted_at IS NULL ORDER BY created_at DESC'
+    const params = user_id ? [user_id] : []
+    return await all<Note>(query, params)
   }
 
   static async findByInteractionId(interactionId: string): Promise<Note[]> {
@@ -182,6 +184,7 @@ export class NotesTable {
   }
 
   static async softDelete(id: string): Promise<void> {
+    console.log('softDelete', id)
     const query = 'UPDATE notes SET deleted_at = ?, updated_at = ? WHERE id = ?'
     await run(query, [new Date().toISOString(), new Date().toISOString(), id])
   }
@@ -255,10 +258,12 @@ export class DictionaryTable {
     return newItem
   }
 
-  static async findAll(): Promise<DictionaryItem[]> {
-    return await all<DictionaryItem>(
-      'SELECT * FROM dictionary_items WHERE deleted_at IS NULL ORDER BY word ASC',
-    )
+  static async findAll(user_id?: string): Promise<DictionaryItem[]> {
+    const query = user_id
+      ? 'SELECT * FROM dictionary_items WHERE user_id = ? AND deleted_at IS NULL ORDER BY word ASC'
+      : 'SELECT * FROM dictionary_items WHERE user_id IS NULL AND deleted_at IS NULL ORDER BY word ASC'
+    const params = user_id ? [user_id] : []
+    return await all<DictionaryItem>(query, params)
   }
 
   static async update(

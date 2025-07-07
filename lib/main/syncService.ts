@@ -59,9 +59,9 @@ export class SyncService {
       // =================================================================
       if (lastSyncedAt) {
         console.log('Pushing local changes...')
-        await this.pushNotes(userId, lastSyncedAt)
-        await this.pushInteractions(userId, lastSyncedAt)
-        await this.pushDictionaryItems(userId, lastSyncedAt)
+        await this.pushNotes(lastSyncedAt)
+        await this.pushInteractions(lastSyncedAt)
+        await this.pushDictionaryItems(lastSyncedAt)
       }
 
       // =================================================================
@@ -83,7 +83,7 @@ export class SyncService {
     }
   }
 
-  private async pushNotes(userId: string, lastSyncedAt: string) {
+  private async pushNotes(lastSyncedAt: string) {
     const modifiedNotes = await NotesTable.findModifiedSince(lastSyncedAt)
     if (modifiedNotes.length > 0) {
       console.log(`Pushing ${modifiedNotes.length} modified notes...`)
@@ -92,7 +92,11 @@ export class SyncService {
           // If created_at is after lastSyncedAt, it's a new note
           if (new Date(note.created_at) > new Date(lastSyncedAt)) {
             await grpcClient.createNote(note)
+          } else if (note.deleted_at) {
+            console.log('Deleting note', note)
+            await grpcClient.deleteNote(note)
           } else {
+            console.log('Updating note', note)
             await grpcClient.updateNote(note)
           }
         } catch (e) {
@@ -102,7 +106,7 @@ export class SyncService {
     }
   }
 
-  private async pushInteractions(userId: string, lastSyncedAt: string) {
+  private async pushInteractions(lastSyncedAt: string) {
     const modifiedInteractions =
       await InteractionsTable.findModifiedSince(lastSyncedAt)
     if (modifiedInteractions.length > 0) {
@@ -113,7 +117,11 @@ export class SyncService {
         try {
           if (new Date(interaction.created_at) > new Date(lastSyncedAt)) {
             await grpcClient.createInteraction(interaction)
+          } else if (interaction.deleted_at) {
+            console.log('Deleting interaction', interaction)
+            await grpcClient.deleteInteraction(interaction)
           } else {
+            console.log('Updating interaction', interaction)
             await grpcClient.updateInteraction(interaction)
           }
         } catch (e) {
@@ -123,7 +131,7 @@ export class SyncService {
     }
   }
 
-  private async pushDictionaryItems(userId: string, lastSyncedAt: string) {
+  private async pushDictionaryItems(lastSyncedAt: string) {
     const modifiedItems = await DictionaryTable.findModifiedSince(lastSyncedAt)
     if (modifiedItems.length > 0) {
       console.log(
@@ -133,7 +141,11 @@ export class SyncService {
         try {
           if (new Date(item.created_at) > new Date(lastSyncedAt)) {
             await grpcClient.createDictionaryItem(item)
+          } else if (item.deleted_at) {
+            console.log('Deleting dictionary item', item)
+            await grpcClient.deleteDictionaryItem(item)
           } else {
+            console.log('Updating dictionary item', item)
             await grpcClient.updateDictionaryItem(item)
           }
         } catch (e) {
@@ -148,6 +160,7 @@ export class SyncService {
     if (remoteNotes.length > 0) {
       console.log(`Pulled ${remoteNotes.length} notes from server.`)
       for (const remoteNote of remoteNotes) {
+        console.log('Pulling note', remoteNote)
         if (remoteNote.deletedAt) {
           await NotesTable.softDelete(remoteNote.id)
           continue

@@ -98,7 +98,7 @@ export const useAuth = () => {
 
             useMainStore.getState().setCurrentPage('home')
 
-            window.api.notifyLoginSuccess(
+            await window.api.notifyLoginSuccess(
               result.userInfo,
               result.tokens.id_token,
               result.tokens.access_token,
@@ -222,9 +222,22 @@ export const useAuth = () => {
   )
 
   // Self-hosted authentication - bypasses all external auth
-  const loginWithSelfHosted = useCallback(() => {
+  const loginWithSelfHosted = useCallback(async () => {
     try {
       setSelfHostedMode()
+      
+      // Notify main process about self-hosted login and wait for it to complete
+      const selfHostedProfile = {
+        id: 'self-hosted',
+        provider: 'self-hosted',
+        lastSignInAt: new Date().toISOString(),
+      }
+      
+      await window.api.notifyLoginSuccess(
+        selfHostedProfile,
+        null, // No idToken for self-hosted
+        null  // No accessToken for self-hosted
+      )
     } catch (error) {
       console.error('Self-hosted mode activation error:', error)
       throw error
@@ -249,17 +262,26 @@ export const useAuth = () => {
 
   // Logout
   const logoutUser = useCallback(
-    (completelySignOut: boolean = false) => {
-      // Clear our auth store, preserving user data by default
-      clearAuth(!completelySignOut)
+    async (completelySignOut: boolean = false) => {
+      try {
+        // Clear main process store first
+        await window.api.logout()
+        
+        // Clear our auth store, preserving user data by default
+        clearAuth(!completelySignOut)
 
-      // Also logout from Auth0 if using Auth0 session
-      if (auth0IsAuthenticated) {
-        logout({
-          logoutParams: {
-            returnTo: window.location.origin,
-          },
-        })
+        // Also logout from Auth0 if using Auth0 session
+        if (auth0IsAuthenticated) {
+          logout({
+            logoutParams: {
+              returnTo: window.location.origin,
+            },
+          })
+        }
+      } catch (error) {
+        console.error('Error during logout:', error)
+        // Still try to clear local auth even if main process logout fails
+        clearAuth(!completelySignOut)
       }
     },
     [logout, clearAuth, auth0IsAuthenticated],

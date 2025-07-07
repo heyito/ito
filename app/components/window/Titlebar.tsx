@@ -43,9 +43,13 @@ export const Titlebar = () => {
     setShowUserDropdown(false)
   }
 
-  const handleSignOutClick = (e: React.MouseEvent) => {
+  const handleSignOutClick = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    logoutUser()
+    try {
+      await logoutUser()
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
     setShowUserDropdown(false)
   }
 

@@ -23,8 +23,12 @@ export default function AccountSettingsContent() {
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
-  const handleSignOut = () => {
-    logoutUser()
+  const handleSignOut = async () => {
+    try {
+      await logoutUser()
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
   }
 
   const handleDeleteAccount = () => {

@@ -104,15 +104,23 @@ export const exchangeAuthCode = async (_e, { authCode, state, config }) => {
 
 export const handleLogin = (
   profile: any,
-  idToken: string,
-  accessToken: string,
+  idToken: string | null,
+  accessToken: string | null,
 ) => {
   console.log('handleLogin', profile, idToken, accessToken)
   mainStore.set('userProfile', profile)
-  mainStore.set('idToken', idToken)
-  mainStore.set('accessToken', accessToken)
-  grpcClient.setAuthToken(accessToken)
-  syncService.start()
+  
+  if (idToken) {
+    mainStore.set('idToken', idToken)
+  }
+  
+  if (accessToken) {
+    mainStore.set('accessToken', accessToken)
+    grpcClient.setAuthToken(accessToken)
+    syncService.start()
+  }
+  
+  // For self-hosted users, we don't start sync service since they don't have tokens
 }
 
 export const handleLogout = () => {

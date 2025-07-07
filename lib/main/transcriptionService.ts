@@ -13,7 +13,7 @@ export class TranscriptionService {
   private async *streamAudioChunks() {
     while (this.isStreaming) {
       if (this.audioChunkQueue.length === 0) {
-        await new Promise<void>((resolve) => {
+        await new Promise<void>(resolve => {
           this.resolveNewChunk = resolve
         })
       }
@@ -47,7 +47,7 @@ export class TranscriptionService {
 
     grpcClient
       .transcribeStream(this.streamAudioChunks())
-      .catch((error) => {
+      .catch(error => {
         log.error(
           '[gRPC Service] An unexpected error occurred during transcription:',
           error,

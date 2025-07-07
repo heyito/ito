@@ -44,7 +44,9 @@ export class SyncService {
     try {
       const user = mainStore.get('userProfile') as any
       if (!user?.id) {
-        console.log('No user logged in or user profile is missing ID. Skipping sync.')
+        console.log(
+          'No user logged in or user profile is missing ID. Skipping sync.',
+        )
         this.isSyncing = false
         return
       }
@@ -122,10 +124,11 @@ export class SyncService {
   }
 
   private async pushDictionaryItems(userId: string, lastSyncedAt: string) {
-    const modifiedItems =
-      await DictionaryTable.findModifiedSince(lastSyncedAt)
+    const modifiedItems = await DictionaryTable.findModifiedSince(lastSyncedAt)
     if (modifiedItems.length > 0) {
-      console.log(`Pushing ${modifiedItems.length} modified dictionary items...`)
+      console.log(
+        `Pushing ${modifiedItems.length} modified dictionary items...`,
+      )
       for (const item of modifiedItems) {
         try {
           if (new Date(item.created_at) > new Date(lastSyncedAt)) {
@@ -169,7 +172,9 @@ export class SyncService {
       lastSyncedAt,
     )
     if (remoteInteractions.length > 0) {
-      console.log(`Pulled ${remoteInteractions.length} interactions from server.`)
+      console.log(
+        `Pulled ${remoteInteractions.length} interactions from server.`,
+      )
       for (const remoteInteraction of remoteInteractions) {
         if (remoteInteraction.deletedAt) {
           await InteractionsTable.softDelete(remoteInteraction.id)
@@ -221,4 +226,4 @@ export class SyncService {
   }
 }
 
-export const syncService = SyncService.getInstance() 
+export const syncService = SyncService.getInstance()

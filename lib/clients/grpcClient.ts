@@ -57,12 +57,12 @@ class GrpcClient {
       const response = await this.client.transcribeStream(stream, {
         headers: this.getHeaders(),
       })
-      
+
       // Type the transcribed text into the focused application
       if (response.transcript) {
         setFocusedText(response.transcript)
       }
-      
+
       if (this.mainWindow) {
         this.mainWindow.webContents.send('transcription-result', response)
       }
@@ -116,7 +116,9 @@ class GrpcClient {
       asrOutput: JSON.stringify(interaction.asr_output),
       llmOutput: JSON.stringify(interaction.llm_output),
     })
-    return this.client.createInteraction(request, { headers: this.getHeaders() })
+    return this.client.createInteraction(request, {
+      headers: this.getHeaders(),
+    })
   }
 
   async updateInteraction(interaction: Interaction) {
@@ -124,7 +126,9 @@ class GrpcClient {
       id: interaction.id,
       title: interaction.title ?? '',
     })
-    return this.client.updateInteraction(request, { headers: this.getHeaders() })
+    return this.client.updateInteraction(request, {
+      headers: this.getHeaders(),
+    })
   }
 
   async listInteractionsSince(

@@ -322,9 +322,10 @@ export class KeyValueStore {
   }
 
   static async get(key: string): Promise<string | undefined> {
-    const row = await get<{ value: string }>('SELECT value FROM key_value_store WHERE key = ?', [
-      key,
-    ])
+    const row = await get<{ value: string }>(
+      'SELECT value FROM key_value_store WHERE key = ?',
+      [key],
+    )
     return row?.value
   }
 }

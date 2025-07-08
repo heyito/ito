@@ -152,6 +152,7 @@ export type AnalyticsEvent =
 class AnalyticsService {
   private isInitialized: boolean = isAnalyticsInitialized
   private currentUserId: string | null = null
+  private currentProvider: string | null = null
   private sessionStartTime: number = Date.now()
   private hotkeySessionStartTime: number | null = null
 
@@ -188,6 +189,7 @@ class AnalyticsService {
   disableAnalytics() {
     this.isInitialized = false
     this.currentUserId = null
+    this.currentProvider = null
     this.hotkeySessionStartTime = null
     log.info('[Analytics] Analytics disabled')
   }
@@ -202,11 +204,22 @@ class AnalyticsService {
   /**
    * Set user identification and properties
    */
-  identifyUser(userId: string, properties: Partial<UserProperties> = {}) {
-    console.log('identifyUser', userId, properties)
+  identifyUser(
+    userId: string,
+    properties: Partial<UserProperties> = {},
+    provider?: string,
+  ) {
+    console.log('identifyUser', userId, properties, provider)
 
-    if (!this.isInitialized) {
-      log.info('[Analytics] User identification skipped - analytics disabled')
+    // Store provider information
+    if (provider) {
+      this.currentProvider = provider
+    }
+
+    if (!this.shouldTrack()) {
+      log.info(
+        '[Analytics] User identification skipped - analytics disabled or self-hosted user',
+      )
       return
     }
 
@@ -240,9 +253,9 @@ class AnalyticsService {
    * Update user properties
    */
   updateUserProperties(properties: Partial<UserProperties>) {
-    if (!this.isInitialized || !this.currentUserId) {
+    if (!this.shouldTrack() || !this.currentUserId) {
       log.info(
-        '[Analytics] User properties update skipped - analytics disabled or user not identified',
+        '[Analytics] User properties update skipped - analytics disabled, self-hosted user, or user not identified',
       )
       return
     }
@@ -267,8 +280,10 @@ class AnalyticsService {
    * Track a generic event
    */
   track(eventName: AnalyticsEvent, properties: BaseEventProperties = {}) {
-    if (!this.isInitialized) {
-      log.info(`[Analytics] Event '${eventName}' skipped - analytics disabled`)
+    if (!this.shouldTrack()) {
+      log.info(
+        `[Analytics] Event '${eventName}' skipped - analytics disabled or self-hosted user`,
+      )
       return
     }
 
@@ -399,6 +414,7 @@ class AnalyticsService {
     try {
       // Note: Node.js SDK doesn't have a reset function, so we just clear local state
       this.currentUserId = null
+      this.currentProvider = null
       this.hotkeySessionStartTime = null
       log.info('[Analytics] User session reset')
     } catch (error) {
@@ -418,6 +434,23 @@ class AnalyticsService {
    */
   isUserIdentified(): boolean {
     return this.currentUserId !== null
+  }
+
+  /**
+   * Check if analytics should be tracked based on provider
+   */
+  private shouldTrack(): boolean {
+    if (!this.isInitialized) {
+      return false
+    }
+
+    // Skip tracking for self-hosted users
+    if (this.currentProvider === 'self-hosted') {
+      log.info('[Analytics] Tracking skipped - self-hosted user')
+      return false
+    }
+
+    return true
   }
 }
 

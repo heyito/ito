@@ -53,13 +53,17 @@ export const useAuth = () => {
 
   useEffect(() => {
     if (authUser) {
-      analytics.identifyUser(authUser.id, {
-        user_id: authUser.id,
-        email: authUser.email,
-        name: authUser.name,
-        provider: authUser.provider,
-        created_at: authUser.lastSignInAt,
-      })
+      analytics.identifyUser(
+        authUser.id,
+        {
+          user_id: authUser.id,
+          email: authUser.email,
+          name: authUser.name,
+          provider: authUser.provider,
+          created_at: authUser.lastSignInAt,
+        },
+        authUser.provider,
+      )
     }
   }, [authUser])
 

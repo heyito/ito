@@ -1,13 +1,127 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { InfoCircle } from '@mynaui/icons-react'
 import { useSettingsStore } from '../../../store/useSettingsStore'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip'
 import { useAuthStore } from '@/app/store/useAuthStore'
 
+interface Interaction {
+  id: string
+  user_id: string | null
+  title: string | null
+  asr_output: {
+    transcript: string
+    audioChunkCount: number
+    totalAudioBytes: number
+    error: string | null
+    timestamp: string
+  } | null
+  llm_output: any
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
+}
+
 export default function HomeContent() {
   const { keyboardShortcut } = useSettingsStore()
   const { user } = useAuthStore()
   const firstName = user?.name?.split(' ')[0]
+  const [interactions, setInteractions] = useState<Interaction[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadInteractions()
+  }, [])
+
+  const loadInteractions = async () => {
+    try {
+      const allInteractions = await window.api.interactions.getAll()
+      
+      // Sort by creation date (newest first) and take the most recent 10
+      const sortedInteractions = allInteractions
+        .sort((a: Interaction, b: Interaction) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+        .slice(0, 10)
+      setInteractions(sortedInteractions)
+    } catch (error) {
+      console.error('Failed to load interactions:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
+  }
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const today = new Date()
+    const yesterday = new Date()
+    yesterday.setDate(today.getDate() - 1)
+
+    const isToday = date.toDateString() === today.toDateString()
+    const isYesterday = date.toDateString() === yesterday.toDateString()
+
+    if (isToday) return 'TODAY'
+    if (isYesterday) return 'YESTERDAY'
+    
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'long',
+      month: 'short', 
+      day: 'numeric' 
+    }).toUpperCase()
+  }
+
+  const groupInteractionsByDate = (interactions: Interaction[]) => {
+    const groups: { [key: string]: Interaction[] } = {}
+    
+    interactions.forEach(interaction => {
+      const dateKey = formatDate(interaction.created_at)
+      if (!groups[dateKey]) {
+        groups[dateKey] = []
+      }
+      groups[dateKey].push(interaction)
+    })
+    
+    return groups
+  }
+
+  const getDisplayText = (interaction: Interaction) => {
+    // Check for errors first
+    if (interaction.asr_output?.error) {
+      return {
+        text: 'Transcription failed',
+        isError: true,
+        tooltip: interaction.asr_output.error
+      }
+    }
+
+    // Check for empty transcript
+    const transcript = interaction.asr_output?.transcript?.trim()
+    
+    if (!transcript) {
+      return {
+        text: 'Audio is silent.',
+        isError: true,
+        tooltip: "Ito didn't detect any words so the transcript is empty"
+      }
+    }
+
+    // Return the actual transcript
+    return {
+      text: transcript,
+      isError: false,
+      tooltip: null
+    }
+  }
+
+  const groupedInteractions = groupInteractionsByDate(interactions)
 
   return (
     <div className="w-full px-36">
@@ -58,55 +172,51 @@ export default function HomeContent() {
         <div className="text-sm text-muted-foreground mb-6">
           Recent activity
         </div>
-        <div className="text-xs text-gray-500 mb-4">YESTERDAY</div>
-        <div className="bg-white rounded-lg border border-slate-200 divide-y divide-slate-200">
-          <div className="flex items-center justify-start px-4 py-4 gap-10">
-            <div className="text-gray-600">04:17 PM</div>
-            <div className="text-gray-900">Create a React component</div>
+        
+        {loading ? (
+          <div className="bg-white rounded-lg border border-slate-200 p-8 text-center text-gray-500">
+            Loading recent activity...
           </div>
-          <div className="flex items-center justify-start px-4 py-4 gap-10">
-            <div className="text-gray-600">03:45 PM</div>
-            <div className="text-gray-600 flex items-center gap-1">
-              Audio is silent.{' '}
-              <Tooltip>
-                <TooltipTrigger>
-                  <InfoCircle className="w-4 h-4 text-gray-400" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  Ito didn't detect any words so the transcript is empty
-                </TooltipContent>
-              </Tooltip>
+        ) : interactions.length === 0 ? (
+          <div className="bg-white rounded-lg border border-slate-200 p-8 text-center text-gray-500">
+            <p className="text-sm">No interactions yet</p>
+            <p className="text-xs mt-1">
+              Try using voice dictation by pressing {keyboardShortcut.join(' + ')}
+            </p>
+          </div>
+        ) : (
+          Object.entries(groupedInteractions).map(([dateLabel, dateInteractions]) => (
+            <div key={dateLabel} className="mb-6">
+              <div className="text-xs text-gray-500 mb-4">{dateLabel}</div>
+              <div className="bg-white rounded-lg border border-slate-200 divide-y divide-slate-200">
+                {dateInteractions.map((interaction) => {
+                  const displayInfo = getDisplayText(interaction)
+                  
+                  return (
+                    <div key={interaction.id} className="flex items-center justify-start px-4 py-4 gap-10">
+                      <div className="text-gray-600 min-w-[60px]">
+                        {formatTime(interaction.created_at)}
+                      </div>
+                      <div className={`${displayInfo.isError ? 'text-gray-600' : 'text-gray-900'} flex items-center gap-1`}>
+                        {displayInfo.text}
+                        {displayInfo.tooltip && (
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <InfoCircle className="w-4 h-4 text-gray-400" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {displayInfo.tooltip}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-          <div className="flex items-center justify-start px-4 py-4 gap-10">
-            <div className="text-gray-600">03:45 PM</div>
-            <div className="text-gray-600 flex items-center gap-1">
-              Audio is silent.{' '}
-              <Tooltip>
-                <TooltipTrigger>
-                  <InfoCircle className="w-4 h-4 text-gray-400" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  Ito didn't detect any words so the transcript is empty
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
-          <div className="flex items-center justify-start px-4 py-4 gap-10">
-            <div className="text-gray-600">03:45 PM</div>
-            <div className="text-gray-600 flex items-center gap-1">
-              Audio is silent.{' '}
-              <Tooltip>
-                <TooltipTrigger>
-                  <InfoCircle className="w-4 h-4 text-gray-400" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  Ito didn't detect any words so the transcript is empty
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
-        </div>
+          ))
+        )}
       </div>
     </div>
   )

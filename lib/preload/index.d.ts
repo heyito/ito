@@ -52,6 +52,11 @@ declare global {
         ) => Promise<void>
         delete: (id: string) => Promise<void>
       }
+      interactions: {
+        getAll: () => Promise<any[]>
+        getById: (id: string) => Promise<any>
+        delete: (id: string) => Promise<void>
+      }
       loginItem: {
         setSettings: (enabled: boolean) => Promise<void>
         getSettings: () => Promise<Electron.LoginItemSettings>

@@ -107,6 +107,11 @@ const api = {
       ipcRenderer.invoke('dictionary:update', { id, word, pronunciation }),
     delete: (id: string) => ipcRenderer.invoke('dictionary:delete', id),
   },
+  interactions: {
+    getAll: () => ipcRenderer.invoke('interactions:get-all'),
+    getById: (id: string) => ipcRenderer.invoke('interactions:get-by-id', id),
+    delete: (id: string) => ipcRenderer.invoke('interactions:delete', id),
+  },
   loginItem: {
     setSettings: (enabled: boolean) =>
       ipcRenderer.invoke('set-login-item-settings', enabled),

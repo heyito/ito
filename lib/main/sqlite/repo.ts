@@ -2,6 +2,32 @@ import { run, get, all } from './utils'
 import type { Interaction, Note, DictionaryItem } from './models'
 import { v4 as uuidv4 } from 'uuid'
 
+// Helper function to parse JSON fields and handle double encoding
+function parseJsonField(value: any): any {
+  if (!value || typeof value !== 'string') {
+    return value
+  }
+  
+  try {
+    let parsed = JSON.parse(value)
+    // Check if it's double-encoded (parsed result is still a string)
+    if (typeof parsed === 'string') {
+      parsed = JSON.parse(parsed)
+    }
+    return parsed
+  } catch (error) {
+    console.error('[InteractionsTable] Failed to parse JSON field:', error)
+    return null
+  }
+}
+
+// Helper function to parse interaction JSON fields
+function parseInteractionJsonFields(interaction: Interaction): Interaction {
+  interaction.asr_output = parseJsonField(interaction.asr_output)
+  interaction.llm_output = parseJsonField(interaction.llm_output)
+  return interaction
+}
+
 // =================================================================
 // Interactions
 // =================================================================
@@ -52,32 +78,15 @@ export class InteractionsTable {
       'SELECT * FROM interactions WHERE id = ?',
       [id],
     )
-    if (row) {
-      // JSON fields must be parsed
-      row.asr_output = row.asr_output
-        ? JSON.parse(row.asr_output as string)
-        : null
-      row.llm_output = row.llm_output
-        ? JSON.parse(row.llm_output as string)
-        : null
-    }
-    return row
+    return row ? parseInteractionJsonFields(row) : undefined
   }
 
   static async findAll(): Promise<Interaction[]> {
     const rows = await all<Interaction>(
       'SELECT * FROM interactions WHERE deleted_at IS NULL ORDER BY created_at DESC',
     )
-    return rows.map(row => {
-      // JSON fields must be parsed
-      row.asr_output = row.asr_output
-        ? JSON.parse(row.asr_output as string)
-        : null
-      row.llm_output = row.llm_output
-        ? JSON.parse(row.llm_output as string)
-        : null
-      return row
-    })
+    
+    return rows.map(parseInteractionJsonFields)
   }
 
   static async softDelete(id: string): Promise<void> {
@@ -87,10 +96,12 @@ export class InteractionsTable {
   }
 
   static async findModifiedSince(timestamp: string): Promise<Interaction[]> {
-    return await all<Interaction>(
+    const rows = await all<Interaction>(
       'SELECT * FROM interactions WHERE updated_at > ?',
       [timestamp],
     )
+    
+    return rows.map(parseInteractionJsonFields)
   }
 
   static async upsert(interaction: Interaction): Promise<void> {

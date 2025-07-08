@@ -127,6 +127,11 @@ const api = {
   // Send settings updates to pill window
   notifySettingsUpdate: (settings: any) =>
     ipcRenderer.send('settings-update', settings),
+
+  // Send onboarding updates to pill window
+  notifyOnboardingUpdate: (onboarding: any) =>
+    ipcRenderer.send('onboarding-update', onboarding),
+
   notifyLoginSuccess: (
     profile: any,
     idToken: string | null,

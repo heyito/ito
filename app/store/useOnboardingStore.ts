@@ -67,6 +67,8 @@ const syncToStore = (state: Partial<OnboardingState>) => {
       onboardingCompleted:
         state.onboardingCompleted ?? currentStore.onboardingCompleted,
     })
+
+    window.api.notifyOnboardingUpdate(state)
   }
 }
 

@@ -464,3 +464,8 @@ ipcMain.on('volume-update', (_event, volume: number) => {
 ipcMain.on('settings-update', (_event, settings: any) => {
   getPillWindow()?.webContents.send('settings-update', settings)
 })
+
+// Forwards onboarding updates from the main window to the pill window
+ipcMain.on('onboarding-update', (_event, onboarding: any) => {
+  getPillWindow()?.webContents.send('onboarding-update', onboarding)
+})

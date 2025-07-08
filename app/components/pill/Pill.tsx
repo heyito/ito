@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useSettingsStore } from '../../store/useSettingsStore'
+import { useOnboardingStore } from '../../store/useOnboardingStore'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
 import { X, StopSquare } from '@mynaui/icons-react'
 import { AudioBars } from './contents/AudioBars'
@@ -32,6 +33,12 @@ const Pill = () => {
   const initialShowItoBarAlways = useSettingsStore(
     state => state.showItoBarAlways,
   )
+  const initialOnboardingCategory = useOnboardingStore(
+    state => state.onboardingCategory,
+  )
+  const initialOnboardingCompleted = useOnboardingStore(
+    state => state.onboardingCompleted,
+  )
   const { startRecording, stopRecording } = useAudioStore()
 
   const [isRecording, setIsRecording] = useState(false)
@@ -39,6 +46,12 @@ const Pill = () => {
   const [isHovered, setIsHovered] = useState(false)
   const [showItoBarAlways, setShowItoBarAlways] = useState(
     initialShowItoBarAlways,
+  )
+  const [onboardingCategory, setOnboardingCategory] = useState(
+    initialOnboardingCategory,
+  )
+  const [onboardingCompleted, setOnboardingCompleted] = useState(
+    initialOnboardingCompleted,
   )
   // Fixed size array of volume values to be used for the audio bars, size is 21
   const [volumeHistory, setVolumeHistory] = useState<number[]>([])
@@ -80,11 +93,21 @@ const Pill = () => {
       setShowItoBarAlways(settings.showItoBarAlways)
     })
 
+    // Listen for onboarding updates from the main process
+    const unsubOnboarding = window.api.on(
+      'onboarding-update',
+      (onboarding: any) => {
+        setOnboardingCategory(onboarding.onboardingCategory)
+        setOnboardingCompleted(onboarding.onboardingCompleted)
+      },
+    )
+
     // Cleanup listeners when the component unmounts
     return () => {
       unsubRecording()
       unsubVolume()
       unsubSettings()
+      unsubOnboarding()
     }
   }, [volumeHistory, lastVolumeUpdate]) // Dependency array is empty as the logic inside doesn't depend on state.
 
@@ -100,7 +123,9 @@ const Pill = () => {
 
   // Determine current state
   const anyRecording = isRecording || isManualRecording
-  const shouldShow = anyRecording || showItoBarAlways || isHovered
+  const shouldShow =
+    (onboardingCategory === 'try-it' || onboardingCompleted) &&
+    (anyRecording || showItoBarAlways || isHovered)
 
   // Calculate dimensions based on state
   let currentWidth = idleWidth

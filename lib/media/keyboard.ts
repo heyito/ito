@@ -119,7 +119,8 @@ function handleKeyEventInMain(event: KeyEvent) {
   }
 
   // Check if every key required by the shortcut is in our set of pressed keys.
-  const isShortcutHeld = keyboardShortcut.every(key => pressedKeys.has(key))
+  const isShortcutHeld =
+    keyboardShortcut && keyboardShortcut.every(key => pressedKeys.has(key))
   // Shortcut pressed
   if (isShortcutHeld && !isShortcutActive) {
     isShortcutActive = true

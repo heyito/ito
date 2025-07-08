@@ -15,12 +15,15 @@ import {
   handleLogin,
   handleLogout,
 } from '../auth/events'
-import { NotesTable, DictionaryTable, InteractionsTable } from '../main/sqlite/repo'
+import {
+  NotesTable,
+  DictionaryTable,
+  InteractionsTable,
+} from '../main/sqlite/repo'
 // import { getPillWindow } from '../main/app'
 import {
   handleAudioDeviceChange,
   requestDeviceListPromise,
-  sendStartRecordingCommand,
   sendStopRecordingCommand,
   startAudioRecorder,
   stopAudioRecorder,
@@ -256,13 +259,12 @@ export function registerIPC() {
   handleIPC('interactions:get-all', () => {
     return InteractionsTable.findAll()
   })
-  handleIPC('interactions:get-by-id', async (_e, id) => 
-    InteractionsTable.findById(id)
+  handleIPC('interactions:get-by-id', async (_e, id) =>
+    InteractionsTable.findById(id),
   )
   handleIPC('interactions:delete', async (_e, id) =>
     InteractionsTable.softDelete(id),
   )
-
 
   // Pill window mouse event control
   handleIPC(

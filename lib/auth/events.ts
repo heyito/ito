@@ -109,17 +109,17 @@ export const handleLogin = (
 ) => {
   console.log('handleLogin', profile, idToken, accessToken)
   mainStore.set('userProfile', profile)
-  
+
   if (idToken) {
     mainStore.set('idToken', idToken)
   }
-  
+
   if (accessToken) {
     mainStore.set('accessToken', accessToken)
     grpcClient.setAuthToken(accessToken)
     syncService.start()
   }
-  
+
   // For self-hosted users, we don't start sync service since they don't have tokens
 }
 

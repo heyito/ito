@@ -3,14 +3,39 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AudioChunk, CreateDictionaryItemRequest, CreateInteractionRequest, CreateNoteRequest, DeleteDictionaryItemRequest, DeleteInteractionRequest, DeleteNoteRequest, DictionaryItem, Empty, GetInteractionRequest, GetNoteRequest, Interaction, ListDictionaryItemsRequest, ListDictionaryItemsResponse, ListInteractionsRequest, ListInteractionsResponse, ListNotesRequest, ListNotesResponse, Note, TranscribeFileRequest, TranscriptionResponse, UpdateDictionaryItemRequest, UpdateInteractionRequest, UpdateNoteRequest } from "./ito_pb.js";
-import { MethodKind } from "@bufbuild/protobuf";
+import {
+  AudioChunk,
+  CreateDictionaryItemRequest,
+  CreateInteractionRequest,
+  CreateNoteRequest,
+  DeleteDictionaryItemRequest,
+  DeleteInteractionRequest,
+  DeleteNoteRequest,
+  DictionaryItem,
+  Empty,
+  GetInteractionRequest,
+  GetNoteRequest,
+  Interaction,
+  ListDictionaryItemsRequest,
+  ListDictionaryItemsResponse,
+  ListInteractionsRequest,
+  ListInteractionsResponse,
+  ListNotesRequest,
+  ListNotesResponse,
+  Note,
+  TranscribeFileRequest,
+  TranscriptionResponse,
+  UpdateDictionaryItemRequest,
+  UpdateInteractionRequest,
+  UpdateNoteRequest,
+} from './ito_pb.js'
+import { MethodKind } from '@bufbuild/protobuf'
 
 /**
  * @generated from service ito.ItoService
  */
 export const ItoService = {
-  typeName: "ito.ItoService",
+  typeName: 'ito.ItoService',
   methods: {
     /**
      * Method 1: Sends a whole audio file and gets a single response.
@@ -19,7 +44,7 @@ export const ItoService = {
      * @generated from rpc ito.ItoService.TranscribeFile
      */
     transcribeFile: {
-      name: "TranscribeFile",
+      name: 'TranscribeFile',
       I: TranscribeFileRequest,
       O: TranscriptionResponse,
       kind: MethodKind.Unary,
@@ -31,7 +56,7 @@ export const ItoService = {
      * @generated from rpc ito.ItoService.TranscribeStream
      */
     transcribeStream: {
-      name: "TranscribeStream",
+      name: 'TranscribeStream',
       I: AudioChunk,
       O: TranscriptionResponse,
       kind: MethodKind.ClientStreaming,
@@ -42,7 +67,7 @@ export const ItoService = {
      * @generated from rpc ito.ItoService.CreateNote
      */
     createNote: {
-      name: "CreateNote",
+      name: 'CreateNote',
       I: CreateNoteRequest,
       O: Note,
       kind: MethodKind.Unary,
@@ -51,7 +76,7 @@ export const ItoService = {
      * @generated from rpc ito.ItoService.GetNote
      */
     getNote: {
-      name: "GetNote",
+      name: 'GetNote',
       I: GetNoteRequest,
       O: Note,
       kind: MethodKind.Unary,
@@ -60,7 +85,7 @@ export const ItoService = {
      * @generated from rpc ito.ItoService.ListNotes
      */
     listNotes: {
-      name: "ListNotes",
+      name: 'ListNotes',
       I: ListNotesRequest,
       O: ListNotesResponse,
       kind: MethodKind.Unary,
@@ -69,7 +94,7 @@ export const ItoService = {
      * @generated from rpc ito.ItoService.UpdateNote
      */
     updateNote: {
-      name: "UpdateNote",
+      name: 'UpdateNote',
       I: UpdateNoteRequest,
       O: Note,
       kind: MethodKind.Unary,
@@ -78,7 +103,7 @@ export const ItoService = {
      * @generated from rpc ito.ItoService.DeleteNote
      */
     deleteNote: {
-      name: "DeleteNote",
+      name: 'DeleteNote',
       I: DeleteNoteRequest,
       O: Empty,
       kind: MethodKind.Unary,
@@ -89,7 +114,7 @@ export const ItoService = {
      * @generated from rpc ito.ItoService.CreateInteraction
      */
     createInteraction: {
-      name: "CreateInteraction",
+      name: 'CreateInteraction',
       I: CreateInteractionRequest,
       O: Interaction,
       kind: MethodKind.Unary,
@@ -98,7 +123,7 @@ export const ItoService = {
      * @generated from rpc ito.ItoService.GetInteraction
      */
     getInteraction: {
-      name: "GetInteraction",
+      name: 'GetInteraction',
       I: GetInteractionRequest,
       O: Interaction,
       kind: MethodKind.Unary,
@@ -107,7 +132,7 @@ export const ItoService = {
      * @generated from rpc ito.ItoService.ListInteractions
      */
     listInteractions: {
-      name: "ListInteractions",
+      name: 'ListInteractions',
       I: ListInteractionsRequest,
       O: ListInteractionsResponse,
       kind: MethodKind.Unary,
@@ -116,7 +141,7 @@ export const ItoService = {
      * @generated from rpc ito.ItoService.UpdateInteraction
      */
     updateInteraction: {
-      name: "UpdateInteraction",
+      name: 'UpdateInteraction',
       I: UpdateInteractionRequest,
       O: Interaction,
       kind: MethodKind.Unary,
@@ -125,7 +150,7 @@ export const ItoService = {
      * @generated from rpc ito.ItoService.DeleteInteraction
      */
     deleteInteraction: {
-      name: "DeleteInteraction",
+      name: 'DeleteInteraction',
       I: DeleteInteractionRequest,
       O: Empty,
       kind: MethodKind.Unary,
@@ -136,7 +161,7 @@ export const ItoService = {
      * @generated from rpc ito.ItoService.CreateDictionaryItem
      */
     createDictionaryItem: {
-      name: "CreateDictionaryItem",
+      name: 'CreateDictionaryItem',
       I: CreateDictionaryItemRequest,
       O: DictionaryItem,
       kind: MethodKind.Unary,
@@ -145,7 +170,7 @@ export const ItoService = {
      * @generated from rpc ito.ItoService.ListDictionaryItems
      */
     listDictionaryItems: {
-      name: "ListDictionaryItems",
+      name: 'ListDictionaryItems',
       I: ListDictionaryItemsRequest,
       O: ListDictionaryItemsResponse,
       kind: MethodKind.Unary,
@@ -154,7 +179,7 @@ export const ItoService = {
      * @generated from rpc ito.ItoService.UpdateDictionaryItem
      */
     updateDictionaryItem: {
-      name: "UpdateDictionaryItem",
+      name: 'UpdateDictionaryItem',
       I: UpdateDictionaryItemRequest,
       O: DictionaryItem,
       kind: MethodKind.Unary,
@@ -163,11 +188,10 @@ export const ItoService = {
      * @generated from rpc ito.ItoService.DeleteDictionaryItem
      */
     deleteDictionaryItem: {
-      name: "DeleteDictionaryItem",
+      name: 'DeleteDictionaryItem',
       I: DeleteDictionaryItemRequest,
       O: Empty,
       kind: MethodKind.Unary,
     },
-  }
-} as const;
-
+  },
+} as const

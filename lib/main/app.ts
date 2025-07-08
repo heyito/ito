@@ -1,12 +1,4 @@
-import {
-  BrowserWindow,
-  shell,
-  screen,
-  app,
-  protocol,
-  net,
-  systemPreferences,
-} from 'electron'
+import { BrowserWindow, shell, screen, app, protocol, net } from 'electron'
 import { join } from 'path'
 import appIcon from '@/resources/build/icon.png?asset'
 import { pathToFileURL } from 'url'

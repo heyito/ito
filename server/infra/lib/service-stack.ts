@@ -1,5 +1,4 @@
 import {
-  aws_elasticloadbalancingv2,
   CfnOutput,
   Duration,
   RemovalPolicy,
@@ -15,7 +14,6 @@ import {
 } from 'aws-cdk-lib/aws-certificatemanager'
 import {
   ApplicationProtocol,
-  ApplicationProtocolVersion,
   Protocol,
   SslPolicy,
 } from 'aws-cdk-lib/aws-elasticloadbalancingv2'
@@ -33,7 +31,7 @@ import {
 } from 'aws-cdk-lib/aws-ecs'
 import { ApplicationLoadBalancedFargateService } from 'aws-cdk-lib/aws-ecs-patterns'
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager'
-import { Port, Vpc } from 'aws-cdk-lib/aws-ec2'
+import { Vpc } from 'aws-cdk-lib/aws-ec2'
 import { Repository } from 'aws-cdk-lib/aws-ecr'
 import { HostedZone } from 'aws-cdk-lib/aws-route53'
 import { AppStage } from '../bin/infra'

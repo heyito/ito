@@ -9,7 +9,6 @@ import { SecurityStack } from '../lib/security-stack'
 import { ObservabilityStack } from '../lib/observability-stack'
 import { ITO_PREFIX } from '../lib/constants'
 import { GitHubOidcStack } from '../lib/cicd-stack'
-import { Repository } from 'aws-cdk-lib/aws-ecr'
 
 export interface AppStageProps extends StageProps {
   stageName: string

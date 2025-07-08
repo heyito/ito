@@ -144,7 +144,9 @@ class GrpcClient {
     const request = create(DeleteInteractionRequestSchema, {
       id: interaction.id,
     })
-    return this.client.deleteInteraction(request, { headers: this.getHeaders() })
+    return this.client.deleteInteraction(request, {
+      headers: this.getHeaders(),
+    })
   }
 
   async listInteractionsSince(
@@ -188,7 +190,9 @@ class GrpcClient {
     const request = create(DeleteDictionaryItemRequestSchema, {
       id: item.id,
     })
-    return this.client.deleteDictionaryItem(request, { headers: this.getHeaders() })
+    return this.client.deleteDictionaryItem(request, {
+      headers: this.getHeaders(),
+    })
   }
 
   async listDictionaryItemsSince(

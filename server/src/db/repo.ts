@@ -26,16 +26,14 @@ export class NotesRepository {
   }
 
   static async findById(id: string): Promise<Note | undefined> {
-    const res = await pool.query<Note>('SELECT * FROM notes WHERE id = $1', [id])
+    const res = await pool.query<Note>('SELECT * FROM notes WHERE id = $1', [
+      id,
+    ])
     return res.rows[0]
   }
 
-  static async findByUserId(
-    userId: string,
-    since?: Date,
-  ): Promise<Note[]> {
-    let query =
-      'SELECT * FROM notes WHERE user_id = $1'
+  static async findByUserId(userId: string, since?: Date): Promise<Note[]> {
+    let query = 'SELECT * FROM notes WHERE user_id = $1'
     const params: any[] = [userId]
 
     if (since) {
@@ -102,8 +100,7 @@ export class InteractionsRepository {
     userId: string,
     since?: Date,
   ): Promise<Interaction[]> {
-    let query =
-      'SELECT * FROM interactions WHERE user_id = $1'
+    let query = 'SELECT * FROM interactions WHERE user_id = $1'
     const params: any[] = [userId]
 
     if (since) {
@@ -158,17 +155,16 @@ export class DictionaryRepository {
     userId: string,
     since?: Date,
   ): Promise<DictionaryItem[]> {
-    let query =
-      'SELECT * FROM dictionary_items WHERE user_id = $1'
+    let query = 'SELECT * FROM dictionary_items WHERE user_id = $1'
     const params: any[] = [userId]
 
     if (since) {
       query += ' AND (updated_at > $2 OR deleted_at > $2)'
       params.push(since)
     }
-    
+
     query += ' ORDER BY updated_at ASC'
-    
+
     const res = await pool.query<DictionaryItem>(query, params)
     return res.rows
   }
@@ -195,4 +191,4 @@ export class DictionaryRepository {
     )
     return (res.rowCount ?? 0) > 0
   }
-} 
+}

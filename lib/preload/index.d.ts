@@ -66,7 +66,11 @@ declare global {
         getVisibility: () => Promise<{ isVisible: boolean }>
       }
       notifySettingsUpdate: (settings: any) => void
-      notifyLoginSuccess: (profile: any, idToken: string | null, accessToken: string | null) => Promise<void>
+      notifyLoginSuccess: (
+        profile: any,
+        idToken: string | null,
+        accessToken: string | null,
+      ) => Promise<void>
     }
   }
 }

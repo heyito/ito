@@ -252,7 +252,10 @@ export default (router: ConnectRouter) => {
     async updateInteraction(request) {
       const updatedInteraction = await InteractionsRepository.update(request)
       if (!updatedInteraction) {
-        throw new ConnectError('Interaction not found or was deleted', Code.NotFound)
+        throw new ConnectError(
+          'Interaction not found or was deleted',
+          Code.NotFound,
+        )
       }
       return dbToInteractionPb(updatedInteraction)
     },

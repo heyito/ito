@@ -1,4 +1,3 @@
-
 export const INITIAL_SCHEMA_UP = `
   CREATE TABLE interactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -36,4 +35,4 @@ export const INITIAL_SCHEMA_DOWN = `
   DROP TABLE notes;
   DROP TABLE dictionary_items;
   DROP TABLE interactions;
-` 
+`

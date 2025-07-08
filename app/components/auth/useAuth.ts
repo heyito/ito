@@ -225,18 +225,18 @@ export const useAuth = () => {
   const loginWithSelfHosted = useCallback(async () => {
     try {
       setSelfHostedMode()
-      
+
       // Notify main process about self-hosted login and wait for it to complete
       const selfHostedProfile = {
         id: 'self-hosted',
         provider: 'self-hosted',
         lastSignInAt: new Date().toISOString(),
       }
-      
+
       await window.api.notifyLoginSuccess(
         selfHostedProfile,
         null, // No idToken for self-hosted
-        null  // No accessToken for self-hosted
+        null, // No accessToken for self-hosted
       )
     } catch (error) {
       console.error('Self-hosted mode activation error:', error)
@@ -266,7 +266,7 @@ export const useAuth = () => {
       try {
         // Clear main process store first
         await window.api.logout()
-        
+
         // Clear our auth store, preserving user data by default
         clearAuth(!completelySignOut)
 

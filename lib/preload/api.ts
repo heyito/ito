@@ -53,7 +53,8 @@ const api = {
   },
   // Auth methods
   generateNewAuthState: () => ipcRenderer.invoke('generate-new-auth-state'),
-  exchangeAuthCode: (data: any) => ipcRenderer.invoke('exchange-auth-code', data),
+  exchangeAuthCode: (data: any) =>
+    ipcRenderer.invoke('exchange-auth-code', data),
   logout: () => ipcRenderer.invoke('logout'),
   // Pill window mouse event control
   setPillMouseEvents: (ignore: boolean, options?: { forward?: boolean }) =>
@@ -125,7 +126,11 @@ const api = {
   // Send settings updates to pill window
   notifySettingsUpdate: (settings: any) =>
     ipcRenderer.send('settings-update', settings),
-  notifyLoginSuccess: (profile: any, idToken: string | null, accessToken: string | null) => {
+  notifyLoginSuccess: (
+    profile: any,
+    idToken: string | null,
+    accessToken: string | null,
+  ) => {
     return ipcRenderer.invoke('notify-login-success', {
       profile,
       idToken,

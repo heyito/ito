@@ -1,12 +1,7 @@
 import { spawn } from 'child_process'
 import store from '../main/store' // Import the main process store
 import { getNativeBinaryPath } from './native-interface'
-import {
-  sendStartRecordingCommand,
-  sendStopRecordingCommand,
-  startAudioRecorder,
-  stopAudioRecorder,
-} from './audio'
+import { sendStartRecordingCommand, sendStopRecordingCommand } from './audio'
 
 interface KeyEvent {
   type: 'keydown' | 'keyup'

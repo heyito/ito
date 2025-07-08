@@ -1,4 +1,4 @@
-import { createClient, Code } from '@connectrpc/connect'
+import { createClient } from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-node'
 import {
   ItoService,
@@ -124,7 +124,9 @@ async function testNotesApi() {
   if (!deletedNote.deletedAt) {
     throw new Error('Note was found but not marked as deleted!')
   }
-  console.log(`  ✓ Note is correctly marked as deleted at ${deletedNote.deletedAt}.`)
+  console.log(
+    `  ✓ Note is correctly marked as deleted at ${deletedNote.deletedAt}.`,
+  )
 
   console.log('✓ Notes API tests passed!')
 }

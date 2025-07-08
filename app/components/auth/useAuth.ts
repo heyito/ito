@@ -7,7 +7,7 @@ import {
   type AuthTokens,
 } from '../../store/useAuthStore'
 import { useMainStore } from '@/app/store/useMainStore'
-import { analytics, ANALYTICS_EVENTS, identifyUser } from '../analytics'
+import { analytics, ANALYTICS_EVENTS } from '../analytics'
 
 export const useAuth = () => {
   const {
@@ -389,7 +389,7 @@ export const useAuth = () => {
         clearAuth(!completelySignOut)
       }
     },
-    [logout, clearAuth, auth0IsAuthenticated, authUser, analytics],
+    [logout, clearAuth, auth0IsAuthenticated, authUser],
   )
 
   return {

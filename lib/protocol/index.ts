@@ -69,7 +69,7 @@ export function setupProtocolHandling(): void {
     return
   }
 
-  app.on('second-instance', (event, commandLine, workingDirectory) => {
+  app.on('second-instance', (_event, commandLine, _workingDirectory) => {
     // Someone tried to run a second instance, we should focus our window instead
     const mainWindow = BrowserWindow.getAllWindows().find(
       win => !win.isDestroyed(),

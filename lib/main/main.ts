@@ -29,28 +29,10 @@ protocol.registerSchemesAsPrivileged([
   },
 ])
 
-// Load in the environment variables from the .env-electron file
-if (app.isPackaged) {
-  const configPath = path.join(process.resourcesPath, 'config/.env-electron')
-  console.log(`Loading environment variables from: ${configPath}`)
-  try {
-    dotenv.config({ path: configPath })
-    console.log('GRPC_BASE_URL in main process:', process.env.GRPC_BASE_URL)
-  } catch (error) {
-    console.error(
-      `Failed to load environment variables from ${configPath}`,
-      error,
-    )
-  }
-}
-
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
-  // Load environment variables from .env-electron
-  dotenv.config({ path: path.join(app.getAppPath(), '..', '.env-electron') })
-
   // Initialize logging as the first step
   initializeLogging()
 

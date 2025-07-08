@@ -81,10 +81,12 @@ export class InteractionsTable {
     return row ? parseInteractionJsonFields(row) : undefined
   }
 
-  static async findAll(): Promise<Interaction[]> {
-    const rows = await all<Interaction>(
-      'SELECT * FROM interactions WHERE deleted_at IS NULL ORDER BY created_at DESC',
-    )
+  static async findAll(user_id?: string): Promise<Interaction[]> {
+    const query = user_id
+      ? 'SELECT * FROM interactions WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC'
+      : 'SELECT * FROM interactions WHERE user_id IS NULL AND deleted_at IS NULL ORDER BY created_at DESC'
+    const params = user_id ? [user_id] : []
+    const rows = await all<Interaction>(query, params)
 
     return rows.map(parseInteractionJsonFields)
   }

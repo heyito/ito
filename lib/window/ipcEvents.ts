@@ -257,7 +257,8 @@ export function registerIPC() {
 
   // Interactions
   handleIPC('interactions:get-all', () => {
-    return InteractionsTable.findAll()
+    const user_id = getCurrentUserId()
+    return InteractionsTable.findAll(user_id)
   })
   handleIPC('interactions:get-by-id', async (_e, id) =>
     InteractionsTable.findById(id),

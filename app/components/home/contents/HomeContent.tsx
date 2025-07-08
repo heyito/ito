@@ -30,6 +30,20 @@ export default function HomeContent() {
 
   useEffect(() => {
     loadInteractions()
+
+    // Listen for new interactions
+    const handleInteractionCreated = () => {
+      console.log('[HomeContent] New interaction created, refreshing list...')
+      loadInteractions()
+    }
+
+    const unsubscribe = window.api.on(
+      'interaction-created',
+      handleInteractionCreated,
+    )
+
+    // Cleanup listener on unmount
+    return unsubscribe
   }, [])
 
   const loadInteractions = async () => {

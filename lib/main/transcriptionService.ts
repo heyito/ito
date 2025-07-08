@@ -5,6 +5,7 @@ import { AudioChunkSchema } from '@/app/generated/ito_pb'
 import { create } from '@bufbuild/protobuf'
 import { InteractionsTable } from './sqlite/repo'
 import { v4 as uuidv4 } from 'uuid'
+import { BrowserWindow } from 'electron'
 
 export class TranscriptionService {
   private isStreaming = false
@@ -181,6 +182,15 @@ export class TranscriptionService {
       console.log(
         '[TranscriptionService] Successfully saved interaction to database',
       )
+
+      // Notify all windows about the new interaction
+      BrowserWindow.getAllWindows().forEach(window => {
+        window.webContents.send('interaction-created', {
+          id: this.currentInteractionId,
+          transcript,
+          timestamp: new Date().toISOString(),
+        })
+      })
     } catch (error) {
       log.error('[TranscriptionService] Failed to create interaction:', error)
       console.error('[TranscriptionService] Database save error:', error)

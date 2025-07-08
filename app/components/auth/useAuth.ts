@@ -7,6 +7,7 @@ import {
   type AuthTokens,
 } from '../../store/useAuthStore'
 import { useMainStore } from '@/app/store/useMainStore'
+import { analytics, ANALYTICS_EVENTS, identifyUser } from '../analytics'
 
 export const useAuth = () => {
   const {
@@ -50,6 +51,18 @@ export const useAuth = () => {
   // Prioritize store user over Auth0 user
   const authUser = storeUser || auth0User
 
+  useEffect(() => {
+    if (authUser) {
+      analytics.identifyUser(authUser.id, {
+        user_id: authUser.id,
+        email: authUser.email,
+        name: authUser.name,
+        provider: authUser.provider,
+        created_at: authUser.lastSignInAt,
+      })
+    }
+  }, [authUser])
+
   // Handle auth code from protocol URL - only set up listener once globally
   useEffect(() => {
     if (!window.api?.on) {
@@ -88,6 +101,11 @@ export const useAuth = () => {
               ? providerId.split('|')[0]
               : 'unknown'
 
+            // Check if this is a returning user
+            const existingUser = useAuthStore.getState().user
+            const isReturningUser =
+              !!existingUser && existingUser.id === result.userInfo.id
+
             useAuthStore
               .getState()
               .setAuthData(
@@ -95,6 +113,13 @@ export const useAuth = () => {
                 result.userInfo as AuthUser,
                 provider,
               )
+
+            // Track successful signin
+            analytics.trackAuth(ANALYTICS_EVENTS.AUTH_SIGNIN_COMPLETED, {
+              provider,
+              is_returning_user: isReturningUser,
+              user_id: result.userInfo.id,
+            })
 
             useMainStore.getState().setCurrentPage('home')
 
@@ -108,6 +133,14 @@ export const useAuth = () => {
           }
         } catch (error) {
           console.error('Error handling auth code from protocol URL:', error)
+
+          // Track signin failure
+          analytics.track(ANALYTICS_EVENTS.AUTH_SIGNIN_FAILED, {
+            error_message:
+              error instanceof Error ? error.message : 'Unknown error',
+            auth_method: 'external_browser',
+          })
+
           alert(
             `Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
           )
@@ -127,6 +160,19 @@ export const useAuth = () => {
       connection?: string,
       options?: { email?: string; mode?: 'login' | 'signup' },
     ) => {
+      // Track signin attempt started
+      const provider = connection || 'unknown'
+      const eventType =
+        options?.mode === 'signup'
+          ? ANALYTICS_EVENTS.AUTH_SIGNUP_STARTED
+          : ANALYTICS_EVENTS.AUTH_SIGNIN_STARTED
+
+      analytics.trackAuth(eventType, {
+        provider,
+        is_returning_user: false, // We don't know yet
+        auth_method: 'external_browser',
+      })
+
       let authState = useAuthStore.getState().state
 
       // Generate new auth state if not available
@@ -143,6 +189,14 @@ export const useAuth = () => {
           useAuthStore.getState().updateState(authState)
         } catch (error) {
           console.error('Failed to generate new auth state:', error)
+
+          // Track auth state generation failure
+          analytics.track(ANALYTICS_EVENTS.AUTH_STATE_GENERATION_FAILED, {
+            provider,
+            error_message:
+              error instanceof Error ? error.message : 'Unknown error',
+          })
+
           throw new Error(
             'Failed to generate auth state. Please restart the app.',
           )
@@ -197,6 +251,15 @@ export const useAuth = () => {
           await openExternalAuth(connection, email ? { email } : undefined)
         } catch (error) {
           console.error(`${providerName} external auth failed:`, error)
+
+          // Track auth method failure
+          analytics.track(ANALYTICS_EVENTS.AUTH_METHOD_FAILED, {
+            provider: providerName.toLowerCase(),
+            error_message:
+              error instanceof Error ? error.message : 'Unknown error',
+            auth_method: 'external_browser',
+          })
+
           throw error
         }
       }
@@ -224,6 +287,13 @@ export const useAuth = () => {
   // Self-hosted authentication - bypasses all external auth
   const loginWithSelfHosted = useCallback(async () => {
     try {
+      // Track self-hosted signin attempt
+      analytics.trackAuth(ANALYTICS_EVENTS.AUTH_SIGNIN_STARTED, {
+        provider: 'self-hosted',
+        is_returning_user: false,
+        auth_method: 'self_hosted',
+      })
+
       setSelfHostedMode()
 
       // Notify main process about self-hosted login and wait for it to complete
@@ -238,8 +308,24 @@ export const useAuth = () => {
         null, // No idToken for self-hosted
         null, // No accessToken for self-hosted
       )
+
+      // Track successful self-hosted signin
+      analytics.trackAuth(ANALYTICS_EVENTS.AUTH_SIGNIN_COMPLETED, {
+        provider: 'self-hosted',
+        is_returning_user: false,
+        user_id: 'self-hosted',
+        auth_method: 'self_hosted',
+      })
     } catch (error) {
       console.error('Self-hosted mode activation error:', error)
+
+      // Track self-hosted signin failure
+      analytics.track(ANALYTICS_EVENTS.AUTH_SIGNIN_FAILED, {
+        provider: 'self-hosted',
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+        auth_method: 'self_hosted',
+      })
+
       throw error
     }
   }, [setSelfHostedMode])
@@ -264,6 +350,16 @@ export const useAuth = () => {
   const logoutUser = useCallback(
     async (completelySignOut: boolean = false) => {
       try {
+        // Track logout attempt
+        const currentUser = authUser
+        analytics.trackAuth(ANALYTICS_EVENTS.AUTH_LOGOUT, {
+          provider: currentUser?.provider || 'unknown',
+          is_returning_user: true, // If they're logging out, they were logged in
+          user_id: currentUser?.id,
+          complete_signout: completelySignOut,
+          session_duration_ms: analytics.getSessionDuration(),
+        })
+
         // Clear main process store first
         await window.api.logout()
 
@@ -280,11 +376,20 @@ export const useAuth = () => {
         }
       } catch (error) {
         console.error('Error during logout:', error)
+
+        // Track logout failure
+        analytics.track(ANALYTICS_EVENTS.AUTH_LOGOUT_FAILED, {
+          provider: authUser?.provider || 'unknown',
+          error_message:
+            error instanceof Error ? error.message : 'Unknown error',
+          complete_signout: completelySignOut,
+        })
+
         // Still try to clear local auth even if main process logout fails
         clearAuth(!completelySignOut)
       }
     },
-    [logout, clearAuth, auth0IsAuthenticated],
+    [logout, clearAuth, auth0IsAuthenticated, authUser, analytics],
   )
 
   return {

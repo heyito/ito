@@ -30,6 +30,7 @@ export function createAppWindow(): BrowserWindow {
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
       sandbox: false,
+      webSecurity: true,
     },
   })
 
@@ -41,6 +42,21 @@ export function createAppWindow(): BrowserWindow {
     shell.openExternal(details.url)
     return { action: 'deny' }
   })
+
+  mainWindow.webContents.session.webRequest.onHeadersReceived(
+    (details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [
+            "default-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+              "connect-src 'self' https://api2.amplitude.com https://api.amplitude.com https://*.amplitude.com; " +
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval';",
+          ],
+        },
+      })
+    },
+  )
 
   // Clean up the reference when the window is closed.
   mainWindow.on('closed', () => {

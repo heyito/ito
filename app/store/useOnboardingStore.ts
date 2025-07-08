@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { analytics, ANALYTICS_EVENTS } from '../components/analytics'
 
 type OnboardingCategory = 'sign-up' | 'permissions' | 'set-up' | 'try-it'
 
@@ -29,6 +30,21 @@ export const getOnboardingCategoryIndex = (
   if (onboardingCategory === 'permissions') return 1
   if (onboardingCategory === 'set-up') return 2
   return 3
+}
+
+const getStepName = (step: number): string => {
+  const stepNames = [
+    'create_account',
+    'referral_source',
+    'data_control',
+    'permissions',
+    'microphone_test',
+    'keyboard_test',
+    'good_to_go',
+    'any_app',
+    'try_it_out',
+  ]
+  return stepNames[step] || 'unknown'
 }
 
 // Initialize from electron store
@@ -74,6 +90,26 @@ export const useOnboardingStore = create<OnboardingState>(set => {
           onboardingStep,
           onboardingCategory,
         }
+        // Track onboarding step completion
+        analytics.trackOnboarding(ANALYTICS_EVENTS.ONBOARDING_STEP_COMPLETED, {
+          step: state.onboardingStep, // The step that was just completed
+          step_name: getStepName(state.onboardingStep),
+          category: state.onboardingCategory,
+          total_steps: state.totalOnboardingSteps,
+          referral_source: state.referralSource || undefined,
+        })
+
+        // Track viewing of new step
+        if (onboardingStep < state.totalOnboardingSteps) {
+          analytics.trackOnboarding(ANALYTICS_EVENTS.ONBOARDING_STEP_VIEWED, {
+            step: onboardingStep,
+            step_name: getStepName(onboardingStep),
+            category: onboardingCategory,
+            total_steps: state.totalOnboardingSteps,
+            referral_source: state.referralSource || undefined,
+          })
+        }
+
         syncToStore(newState)
         return newState
       }),
@@ -85,11 +121,33 @@ export const useOnboardingStore = create<OnboardingState>(set => {
           onboardingStep,
           onboardingCategory,
         }
+        // Track viewing of previous step
+        analytics.trackOnboarding(ANALYTICS_EVENTS.ONBOARDING_STEP_VIEWED, {
+          step: onboardingStep,
+          step_name: getStepName(onboardingStep),
+          category: onboardingCategory,
+          total_steps: state.totalOnboardingSteps,
+          referral_source: state.referralSource || undefined,
+        })
+
         syncToStore(newState)
         return newState
       }),
     setOnboardingCompleted: () =>
-      set(_state => {
+      set(state => {
+        analytics.trackOnboarding(ANALYTICS_EVENTS.ONBOARDING_COMPLETED, {
+          step: state.totalOnboardingSteps,
+          step_name: 'completed',
+          category: 'try-it',
+          total_steps: state.totalOnboardingSteps,
+        })
+
+        // Update user properties to mark onboarding as completed
+        analytics.updateUserProperties({
+          onboarding_completed: true,
+          referral_source: state.referralSource || undefined,
+        })
+
         const newState = { onboardingCompleted: true }
         syncToStore(newState)
         return newState
@@ -97,10 +155,20 @@ export const useOnboardingStore = create<OnboardingState>(set => {
     resetOnboarding: () =>
       set(_state => {
         const newState = { onboardingStep: 0, onboardingCompleted: false }
+        analytics.updateUserProperties({
+          onboarding_completed: false,
+        })
         syncToStore(newState)
         return newState
       }),
     setReferralSource: (source: string) =>
-      set(_state => ({ referralSource: source })),
+      set(_state => {
+        const newState = { referralSource: source }
+        analytics.updateUserProperties({
+          referral_source: source,
+        })
+        syncToStore(newState)
+        return newState
+      }),
   }
 })

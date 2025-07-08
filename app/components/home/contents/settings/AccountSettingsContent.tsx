@@ -43,6 +43,7 @@ export default function AccountSettingsContent() {
       window.electron.store.set('notes', [])
       window.electron.store.set('dictionary', [])
       window.electron.store.set('onboarding', {})
+      window.electron.store.set('interactions', [])
       window.electron.store.set('auth', {})
 
       // Clear auth state

@@ -47,6 +47,7 @@ jobs:
           echo "VITE_AUTH0_CLIENT_ID=\"${{ secrets.VITE_AUTH0_CLIENT_ID }}\"" >> .env
           echo "VITE_AUTH0_AUDIENCE=\"${{ secrets.VITE_AUTH0_AUDIENCE }}\"" >> .env
           echo "VITE_AUTH0_REDIRECT_URI=\"${{ secrets.VITE_AUTH0_REDIRECT_URI }}\"" >> .env
+          echo "VITE_AMPLITUDE_API_KEY=\"${{ secrets.VITE_AMPLITUDE_API_KEY }}\"" >> .env
           echo "VITE_GRPC_BASE_URL=\"${{ vars.GRPC_BASE_URL }}\"" >> .env
           echo "APPLE_ID=\"${{ secrets.APPLE_ID }}\"" >> .env
           echo "APPLE_TEAM_ID=\"${{ secrets.APPLE_TEAM_ID }}\"" >> .env

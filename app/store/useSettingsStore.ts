@@ -1,4 +1,9 @@
 import { create } from 'zustand'
+import {
+  analytics,
+  ANALYTICS_EVENTS,
+  updateAnalyticsFromSettings,
+} from '@/app/components/analytics'
 
 interface SettingsState {
   shareAnalytics: boolean
@@ -19,6 +24,8 @@ interface SettingsState {
   setMicrophoneDeviceId: (deviceId: string, name: string) => void
   setKeyboardShortcut: (shortcut: string[]) => void
 }
+
+type SettingCategory = 'general' | 'audio&mic' | 'keyboard' | 'account'
 
 // Initialize from electron store
 const getInitialState = () => {
@@ -67,36 +74,78 @@ export const useSettingsStore = create<SettingsState>(set => {
 
   // Helper for single-property setters
   const createSetter =
-    <K extends keyof SettingsState>(key: K) =>
+    <K extends keyof SettingsState>(
+      key: K,
+      settingCategory: SettingCategory = 'general',
+    ) =>
     (value: SettingsState[K]) => {
+      const currentValue = useSettingsStore.getState()[key]
       const partialState = { [key]: value } as Partial<SettingsState>
+      analytics.trackSettings(ANALYTICS_EVENTS.SETTING_CHANGED, {
+        setting_name: key as string,
+        old_value: currentValue,
+        new_value: value,
+        setting_category: settingCategory,
+      })
       set(partialState)
       syncToStore(partialState)
     }
 
   return {
     ...initialState,
-    setShareAnalytics: createSetter('shareAnalytics'),
+    setShareAnalytics: (share: boolean) => {
+      const partialState = { shareAnalytics: share }
+      set(partialState)
+      syncToStore(partialState)
+      // Update analytics when setting changes
+      updateAnalyticsFromSettings(share)
+    },
     setLaunchAtLogin: (launch: boolean) => {
+      const currentValue = useSettingsStore.getState().launchAtLogin
       const partialState = { launchAtLogin: launch }
+      analytics.trackSettings(ANALYTICS_EVENTS.SETTING_CHANGED, {
+        setting_name: 'launchAtLogin',
+        old_value: currentValue,
+        new_value: launch,
+        setting_category: 'general',
+      })
       set(partialState)
       syncToStore(partialState)
       if (window.api?.loginItem?.setSettings) {
         window.api.loginItem.setSettings(launch)
       }
     },
-    setShowItoBarAlways: createSetter('showItoBarAlways'),
+    setShowItoBarAlways: createSetter('showItoBarAlways', 'general'),
     setShowAppInDock: (show: boolean) => {
+      const currentValue = useSettingsStore.getState().showAppInDock
       const partialState = { showAppInDock: show }
+      // Track setting change
+      analytics.trackSettings(ANALYTICS_EVENTS.SETTING_CHANGED, {
+        setting_name: 'showAppInDock',
+        old_value: currentValue,
+        new_value: show,
+        setting_category: 'ui',
+      })
+
       set(partialState)
       syncToStore(partialState)
       if (window.api?.dock?.setVisibility) {
         window.api.dock.setVisibility(show)
       }
     },
-    setInteractionSounds: createSetter('interactionSounds'),
-    setMuteAudioWhenDictating: createSetter('muteAudioWhenDictating'),
+    setInteractionSounds: createSetter('interactionSounds', 'audio&mic'),
+    setMuteAudioWhenDictating: createSetter(
+      'muteAudioWhenDictating',
+      'audio&mic',
+    ),
     setMicrophoneDeviceId: (deviceId: string, name: string) => {
+      const currentName = useSettingsStore.getState().microphoneName
+      analytics.trackSettings(ANALYTICS_EVENTS.SETTING_CHANGED, {
+        setting_name: 'microphoneName',
+        old_value: currentName,
+        new_value: name,
+        setting_category: 'audio&mic',
+      })
       const partialState = {
         microphoneDeviceId: deviceId,
         microphoneName: name,
@@ -105,8 +154,20 @@ export const useSettingsStore = create<SettingsState>(set => {
       syncToStore(partialState)
     },
     setKeyboardShortcut: (shortcut: string[]) => {
-      console.log('Setting keyboard shortcut to:', shortcut)
+      const currentShortcut = useSettingsStore.getState().keyboardShortcut
       const partialState = { keyboardShortcut: [...shortcut].sort() }
+      // Track keyboard shortcut change
+      analytics.trackSettings(ANALYTICS_EVENTS.KEYBOARD_SHORTCUT_CHANGED, {
+        setting_name: 'keyboardShortcut',
+        old_value: currentShortcut,
+        new_value: shortcut,
+        setting_category: 'input',
+      })
+
+      // Update user properties
+      analytics.updateUserProperties({
+        keyboard_shortcut: shortcut,
+      })
       set(partialState)
       syncToStore(partialState)
     },

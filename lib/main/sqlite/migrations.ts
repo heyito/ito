@@ -5,10 +5,9 @@ export interface Migration {
 }
 
 export const MIGRATIONS: Migration[] = [
-  // Example of a future migration:
-  // {
-  //   id: '20240726120000_add_tags_to_notes',
-  //   up: 'ALTER TABLE notes ADD COLUMN tags TEXT;',
-  //   down: 'ALTER TABLE notes DROP COLUMN tags;'
-  // }
+  {
+    id: '20250108120000_add_raw_audio_to_interactions',
+    up: 'ALTER TABLE interactions ADD COLUMN raw_audio BLOB;',
+    down: 'ALTER TABLE interactions DROP COLUMN raw_audio;',
+  },
 ]

@@ -118,13 +118,28 @@ class GrpcClient {
   }
 
   async createInteraction(interaction: Interaction) {
+    // Convert Buffer to Uint8Array for protobuf
+    let uint8AudioData: Uint8Array
+    if (interaction.raw_audio) {
+      uint8AudioData = new Uint8Array(interaction.raw_audio)
+    } else {
+      uint8AudioData = new Uint8Array()
+    }
+
     const request = create(CreateInteractionRequestSchema, {
       id: interaction.id,
       userId: interaction.user_id ?? '',
       title: interaction.title ?? '',
       asrOutput: JSON.stringify(interaction.asr_output),
       llmOutput: JSON.stringify(interaction.llm_output),
+      rawAudio: uint8AudioData,
     })
+
+    console.log(
+      '[gRPC Client] Sending request with audio size:',
+      request.rawAudio.length,
+    )
+
     return this.client.createInteraction(request, {
       headers: this.getHeaders(),
     })

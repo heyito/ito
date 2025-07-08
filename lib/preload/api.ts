@@ -93,6 +93,7 @@ const api = {
   dev: {
     revertLastMigration: () => ipcRenderer.invoke('dev:revert-last-migration'),
     wipeDatabase: () => ipcRenderer.invoke('dev:wipe-database'),
+    checkSchema: () => ipcRenderer.invoke('debug:check-schema'),
   },
   notes: {
     getAll: () => ipcRenderer.invoke('notes:get-all'),
@@ -111,6 +112,7 @@ const api = {
   interactions: {
     getAll: () => ipcRenderer.invoke('interactions:get-all'),
     getById: (id: string) => ipcRenderer.invoke('interactions:get-by-id', id),
+
     delete: (id: string) => ipcRenderer.invoke('interactions:delete', id),
   },
   loginItem: {

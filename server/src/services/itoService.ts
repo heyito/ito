@@ -92,6 +92,9 @@ function dbToInteractionPb(dbInteraction: DbInteraction): Interaction {
     llmOutput: dbInteraction.llm_output
       ? JSON.stringify(dbInteraction.llm_output)
       : '',
+    rawAudio: dbInteraction.raw_audio
+      ? new Uint8Array(dbInteraction.raw_audio)
+      : new Uint8Array(0),
     createdAt: dbInteraction.created_at.toISOString(),
     updatedAt: dbInteraction.updated_at.toISOString(),
     deletedAt: dbInteraction.deleted_at?.toISOString() ?? '',

@@ -263,9 +263,22 @@ export function registerIPC() {
   handleIPC('interactions:get-by-id', async (_e, id) =>
     InteractionsTable.findById(id),
   )
+
   handleIPC('interactions:delete', async (_e, id) =>
     InteractionsTable.softDelete(id),
   )
+
+  // Debug methods
+  handleIPC('debug:check-schema', async () => {
+    const { getDb } = await import('../main/sqlite/db.js')
+    const db = getDb()
+    return new Promise((resolve, reject) => {
+      db.all('PRAGMA table_info(interactions)', (err, rows) => {
+        if (err) reject(err)
+        else resolve(rows)
+      })
+    })
+  })
 
   // Pill window mouse event control
   handleIPC(

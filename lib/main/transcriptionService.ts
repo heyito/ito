@@ -33,14 +33,6 @@ export class TranscriptionService {
   }
 
   public startStreaming() {
-    const accessToken = mainStore.get('accessToken')
-    if (!accessToken) {
-      log.warn(
-        '[TranscriptionService] No access token found. Skipping stream start.',
-      )
-      return
-    }
-
     if (this.isStreaming) {
       log.warn('[TranscriptionService] Stream already in progress.')
       return
@@ -104,23 +96,20 @@ export class TranscriptionService {
       this.audioChunkQueue.push(chunk)
       // Also store for interaction saving
       this.audioChunksForInteraction.push(chunk)
+
       if (this.resolveNewChunk) {
         this.resolveNewChunk()
         this.resolveNewChunk = null
       }
+    } else {
+      console.warn(
+        '[TranscriptionService] Received audio chunk but not streaming!',
+      )
     }
   }
 
   private async createInteraction(transcript: string, errorMessage?: string) {
     try {
-      console.log('[TranscriptionService] Creating interaction with:', {
-        transcript,
-        transcriptLength: transcript?.length || 0,
-        errorMessage,
-        interactionId: this.currentInteractionId,
-        audioChunkCount: this.audioChunksForInteraction.length,
-      })
-
       const userProfile = mainStore.get('userProfile') as any
       const userId = userProfile?.id
 
@@ -150,18 +139,17 @@ export class TranscriptionService {
         timestamp: new Date().toISOString(),
       }
 
+      // Concatenate all audio chunks into a single buffer
+      const rawAudio =
+        this.audioChunksForInteraction.length > 0
+          ? Buffer.concat(this.audioChunksForInteraction)
+          : null
+
       // Generate a meaningful title from the transcript
       const title =
         transcript.length > 50
           ? transcript.substring(0, 50) + '...'
           : transcript || 'Voice interaction'
-
-      console.log('[TranscriptionService] Saving interaction to database:', {
-        id: this.currentInteractionId,
-        title,
-        asrOutput,
-        transcript: asrOutput.transcript,
-      })
 
       // Create interaction locally using upsert to specify our own ID
       const now = new Date().toISOString()
@@ -171,6 +159,7 @@ export class TranscriptionService {
         title,
         asr_output: asrOutput,
         llm_output: null, // No LLM processing yet
+        raw_audio: rawAudio,
         created_at: now,
         updated_at: now,
         deleted_at: null,

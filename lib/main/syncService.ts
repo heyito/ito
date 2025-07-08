@@ -26,7 +26,6 @@ export class SyncService {
   }
 
   public async start() {
-    console.log('Sync service started.')
     // Initial sync on startup, then schedule periodic syncs
     this.runSync()
     setInterval(() => this.runSync(), 1000 * 5) // Sync every 5 seconds
@@ -34,12 +33,10 @@ export class SyncService {
 
   private async runSync() {
     if (this.isSyncing) {
-      console.log('Sync already in progress. Skipping.')
       return
     }
 
     this.isSyncing = true
-    console.log('Starting sync cycle...')
 
     try {
       const user = mainStore.get('userProfile') as any
@@ -58,7 +55,6 @@ export class SyncService {
       // PUSH LOCAL CHANGES
       // =================================================================
       if (lastSyncedAt) {
-        console.log('Pushing local changes...')
         await this.pushNotes(lastSyncedAt)
         await this.pushInteractions(lastSyncedAt)
         await this.pushDictionaryItems(lastSyncedAt)
@@ -67,15 +63,13 @@ export class SyncService {
       // =================================================================
       // PULL REMOTE CHANGES
       // =================================================================
-      console.log('Pulling remote changes...')
       await this.pullNotes(userId, lastSyncedAt)
       await this.pullInteractions(userId, lastSyncedAt)
       await this.pullDictionaryItems(userId, lastSyncedAt)
 
       const newSyncTimestamp = new Date().toISOString()
-      console.log('Setting last synced at to:', newSyncTimestamp)
+      // console.log('Setting last synced at to:', newSyncTimestamp)
       await KeyValueStore.set(LAST_SYNCED_AT_KEY, newSyncTimestamp)
-      console.log('Sync cycle completed.')
     } catch (error) {
       console.error('Sync cycle failed:', error)
     } finally {
@@ -86,17 +80,14 @@ export class SyncService {
   private async pushNotes(lastSyncedAt: string) {
     const modifiedNotes = await NotesTable.findModifiedSince(lastSyncedAt)
     if (modifiedNotes.length > 0) {
-      console.log(`Pushing ${modifiedNotes.length} modified notes...`)
       for (const note of modifiedNotes) {
         try {
           // If created_at is after lastSyncedAt, it's a new note
           if (new Date(note.created_at) > new Date(lastSyncedAt)) {
             await grpcClient.createNote(note)
           } else if (note.deleted_at) {
-            console.log('Deleting note', note)
             await grpcClient.deleteNote(note)
           } else {
-            console.log('Updating note', note)
             await grpcClient.updateNote(note)
           }
         } catch (e) {
@@ -110,18 +101,13 @@ export class SyncService {
     const modifiedInteractions =
       await InteractionsTable.findModifiedSince(lastSyncedAt)
     if (modifiedInteractions.length > 0) {
-      console.log(
-        `Pushing ${modifiedInteractions.length} modified interactions...`,
-      )
       for (const interaction of modifiedInteractions) {
         try {
           if (new Date(interaction.created_at) > new Date(lastSyncedAt)) {
             await grpcClient.createInteraction(interaction)
           } else if (interaction.deleted_at) {
-            console.log('Deleting interaction', interaction)
             await grpcClient.deleteInteraction(interaction)
           } else {
-            console.log('Updating interaction', interaction)
             await grpcClient.updateInteraction(interaction)
           }
         } catch (e) {
@@ -134,18 +120,13 @@ export class SyncService {
   private async pushDictionaryItems(lastSyncedAt: string) {
     const modifiedItems = await DictionaryTable.findModifiedSince(lastSyncedAt)
     if (modifiedItems.length > 0) {
-      console.log(
-        `Pushing ${modifiedItems.length} modified dictionary items...`,
-      )
       for (const item of modifiedItems) {
         try {
           if (new Date(item.created_at) > new Date(lastSyncedAt)) {
             await grpcClient.createDictionaryItem(item)
           } else if (item.deleted_at) {
-            console.log('Deleting dictionary item', item)
             await grpcClient.deleteDictionaryItem(item)
           } else {
-            console.log('Updating dictionary item', item)
             await grpcClient.updateDictionaryItem(item)
           }
         } catch (e) {
@@ -158,9 +139,7 @@ export class SyncService {
   private async pullNotes(userId: string, lastSyncedAt?: string) {
     const remoteNotes = await grpcClient.listNotesSince(userId, lastSyncedAt)
     if (remoteNotes.length > 0) {
-      console.log(`Pulled ${remoteNotes.length} notes from server.`)
       for (const remoteNote of remoteNotes) {
-        console.log('Pulling note', remoteNote)
         if (remoteNote.deletedAt) {
           await NotesTable.softDelete(remoteNote.id)
           continue
@@ -185,14 +164,25 @@ export class SyncService {
       lastSyncedAt,
     )
     if (remoteInteractions.length > 0) {
-      console.log(
-        `Pulled ${remoteInteractions.length} interactions from server.`,
-      )
       for (const remoteInteraction of remoteInteractions) {
         if (remoteInteraction.deletedAt) {
           await InteractionsTable.softDelete(remoteInteraction.id)
           continue
         }
+
+        // Convert Uint8Array back to Buffer
+        let audioBuffer: Buffer | null = null
+        if (
+          remoteInteraction.rawAudio &&
+          remoteInteraction.rawAudio.length > 0
+        ) {
+          audioBuffer = Buffer.from(
+            remoteInteraction.rawAudio.buffer,
+            remoteInteraction.rawAudio.byteOffset,
+            remoteInteraction.rawAudio.byteLength,
+          )
+        }
+
         const localInteraction: Interaction = {
           id: remoteInteraction.id,
           user_id: remoteInteraction.userId || null,
@@ -203,6 +193,7 @@ export class SyncService {
           llm_output: remoteInteraction.llmOutput
             ? JSON.parse(remoteInteraction.llmOutput)
             : null,
+          raw_audio: audioBuffer,
           created_at: remoteInteraction.createdAt,
           updated_at: remoteInteraction.updatedAt,
           deleted_at: remoteInteraction.deletedAt || null,
@@ -218,7 +209,6 @@ export class SyncService {
       lastSyncedAt,
     )
     if (remoteItems.length > 0) {
-      console.log(`Pulled ${remoteItems.length} dictionary items from server.`)
       for (const remoteItem of remoteItems) {
         if (remoteItem.deletedAt) {
           await DictionaryTable.softDelete(remoteItem.id)

@@ -14,6 +14,7 @@ export interface Interaction {
   title: string | null
   asr_output: any
   llm_output: any
+  raw_audio: Buffer | null
   created_at: Date
   updated_at: Date
   deleted_at: Date | null

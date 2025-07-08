@@ -74,8 +74,8 @@ export class InteractionsRepository {
     interactionData: CreateInteractionRequest,
   ): Promise<Interaction> {
     const res = await pool.query<Interaction>(
-      `INSERT INTO interactions (id, user_id, title, asr_output, llm_output)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO interactions (id, user_id, title, asr_output, llm_output, raw_audio)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
       [
         interactionData.id,
@@ -83,6 +83,7 @@ export class InteractionsRepository {
         interactionData.title,
         interactionData.asrOutput,
         interactionData.llmOutput,
+        interactionData.rawAudio,
       ],
     )
     return res.rows[0]

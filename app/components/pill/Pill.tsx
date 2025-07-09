@@ -144,7 +144,7 @@ const Pill = () => {
   // Calculate dimensions based on state
   let currentWidth = idleWidth
   let currentHeight = idleHeight
-  let backgroundColor = '#808080'
+  let backgroundColor = 'rgba(128, 128, 128, 0.65)'
 
   if (isManualRecording) {
     currentWidth = manualRecordingWidth

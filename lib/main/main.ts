@@ -17,8 +17,6 @@ import { startAudioRecorder, stopAudioRecorder } from '../media/audio'
 // Import the grpcClient singleton
 import { grpcClient } from '../clients/grpcClient'
 import { allowAppNap, preventAppNap } from './appNap'
-import path from 'path'
-import * as dotenv from 'dotenv'
 import { syncService } from './syncService'
 import mainStore from './store'
 

@@ -20,7 +20,7 @@ import type { Message } from '@bufbuild/protobuf'
 export const file_ito: GenFile =
   /*@__PURE__*/
   fileDesc(
-    'CglpdG8ucHJvdG8SA2l0byIHCgVFbXB0eSIrChVUcmFuc2NyaWJlRmlsZVJlcXVlc3QSEgoKYXVkaW9fZGF0YRgBIAEoDCIgCgpBdWRpb0NodW5rEhIKCmF1ZGlvX2RhdGEYASABKAwiKwoVVHJhbnNjcmlwdGlvblJlc3BvbnNlEhIKCnRyYW5zY3JpcHQYASABKAkiiAEKBE5vdGUSCgoCaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCRIWCg5pbnRlcmFjdGlvbl9pZBgDIAEoCRIPCgdjb250ZW50GAQgASgJEhIKCmNyZWF0ZWRfYXQYBSABKAkSEgoKdXBkYXRlZF9hdBgGIAEoCRISCgpkZWxldGVkX2F0GAcgASgJIlkKEUNyZWF0ZU5vdGVSZXF1ZXN0EgoKAmlkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkSFgoOaW50ZXJhY3Rpb25faWQYAyABKAkSDwoHY29udGVudBgEIAEoCSIcCg5HZXROb3RlUmVxdWVzdBIKCgJpZBgBIAEoCSI8ChBMaXN0Tm90ZXNSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSFwoPc2luY2VfdGltZXN0YW1wGAIgASgJIi0KEUxpc3ROb3Rlc1Jlc3BvbnNlEhgKBW5vdGVzGAEgAygLMgkuaXRvLk5vdGUiMAoRVXBkYXRlTm90ZVJlcXVlc3QSCgoCaWQYASABKAkSDwoHY29udGVudBgCIAEoCSIfChFEZWxldGVOb3RlUmVxdWVzdBIKCgJpZBgBIAEoCSKwAQoLSW50ZXJhY3Rpb24SCgoCaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCRINCgV0aXRsZRgDIAEoCRISCgphc3Jfb3V0cHV0GAQgASgJEhIKCmxsbV9vdXRwdXQYBSABKAkSEQoJcmF3X2F1ZGlvGAYgASgMEhIKCmNyZWF0ZWRfYXQYByABKAkSEgoKdXBkYXRlZF9hdBgIIAEoCRISCgpkZWxldGVkX2F0GAkgASgJIoEBChhDcmVhdGVJbnRlcmFjdGlvblJlcXVlc3QSCgoCaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCRINCgV0aXRsZRgDIAEoCRISCgphc3Jfb3V0cHV0GAQgASgJEhIKCmxsbV9vdXRwdXQYBSABKAkSEQoJcmF3X2F1ZGlvGAYgASgMIiMKFUdldEludGVyYWN0aW9uUmVxdWVzdBIKCgJpZBgBIAEoCSJDChdMaXN0SW50ZXJhY3Rpb25zUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEhcKD3NpbmNlX3RpbWVzdGFtcBgCIAEoCSJCChhMaXN0SW50ZXJhY3Rpb25zUmVzcG9uc2USJgoMaW50ZXJhY3Rpb25zGAEgAygLMhAuaXRvLkludGVyYWN0aW9uIjUKGFVwZGF0ZUludGVyYWN0aW9uUmVxdWVzdBIKCgJpZBgBIAEoCRINCgV0aXRsZRgCIAEoCSImChhEZWxldGVJbnRlcmFjdGlvblJlcXVlc3QSCgoCaWQYASABKAkijgEKDkRpY3Rpb25hcnlJdGVtEgoKAmlkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkSDAoEd29yZBgDIAEoCRIVCg1wcm9udW5jaWF0aW9uGAQgASgJEhIKCmNyZWF0ZWRfYXQYBSABKAkSEgoKdXBkYXRlZF9hdBgGIAEoCRISCgpkZWxldGVkX2F0GAcgASgJIl8KG0NyZWF0ZURpY3Rpb25hcnlJdGVtUmVxdWVzdBIKCgJpZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEgwKBHdvcmQYAyABKAkSFQoNcHJvbnVuY2lhdGlvbhgEIAEoCSJGChpMaXN0RGljdGlvbmFyeUl0ZW1zUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEhcKD3NpbmNlX3RpbWVzdGFtcBgCIAEoCSJBChtMaXN0RGljdGlvbmFyeUl0ZW1zUmVzcG9uc2USIgoFaXRlbXMYASADKAsyEy5pdG8uRGljdGlvbmFyeUl0ZW0iTgobVXBkYXRlRGljdGlvbmFyeUl0ZW1SZXF1ZXN0EgoKAmlkGAEgASgJEgwKBHdvcmQYAiABKAkSFQoNcHJvbnVuY2lhdGlvbhgDIAEoCSIpChtEZWxldGVEaWN0aW9uYXJ5SXRlbVJlcXVlc3QSCgoCaWQYASABKAkiFwoVRGVsZXRlVXNlckRhdGFSZXF1ZXN0MukICgpJdG9TZXJ2aWNlEkgKDlRyYW5zY3JpYmVGaWxlEhouaXRvLlRyYW5zY3JpYmVGaWxlUmVxdWVzdBoaLml0by5UcmFuc2NyaXB0aW9uUmVzcG9uc2USQQoQVHJhbnNjcmliZVN0cmVhbRIPLml0by5BdWRpb0NodW5rGhouaXRvLlRyYW5zY3JpcHRpb25SZXNwb25zZSgBEi8KCkNyZWF0ZU5vdGUSFi5pdG8uQ3JlYXRlTm90ZVJlcXVlc3QaCS5pdG8uTm90ZRIpCgdHZXROb3RlEhMuaXRvLkdldE5vdGVSZXF1ZXN0GgkuaXRvLk5vdGUSOgoJTGlzdE5vdGVzEhUuaXRvLkxpc3ROb3Rlc1JlcXVlc3QaFi5pdG8uTGlzdE5vdGVzUmVzcG9uc2USLwoKVXBkYXRlTm90ZRIWLml0by5VcGRhdGVOb3RlUmVxdWVzdBoJLml0by5Ob3RlEjAKCkRlbGV0ZU5vdGUSFi5pdG8uRGVsZXRlTm90ZVJlcXVlc3QaCi5pdG8uRW1wdHkSRAoRQ3JlYXRlSW50ZXJhY3Rpb24SHS5pdG8uQ3JlYXRlSW50ZXJhY3Rpb25SZXF1ZXN0GhAuaXRvLkludGVyYWN0aW9uEj4KDkdldEludGVyYWN0aW9uEhouaXRvLkdldEludGVyYWN0aW9uUmVxdWVzdBoQLml0by5JbnRlcmFjdGlvbhJPChBMaXN0SW50ZXJhY3Rpb25zEhwuaXRvLkxpc3RJbnRlcmFjdGlvbnNSZXF1ZXN0Gh0uaXRvLkxpc3RJbnRlcmFjdGlvbnNSZXNwb25zZRJEChFVcGRhdGVJbnRlcmFjdGlvbhIdLml0by5VcGRhdGVJbnRlcmFjdGlvblJlcXVlc3QaEC5pdG8uSW50ZXJhY3Rpb24SPgoRRGVsZXRlSW50ZXJhY3Rpb24SHS5pdG8uRGVsZXRlSW50ZXJhY3Rpb25SZXF1ZXN0GgouaXRvLkVtcHR5Ek0KFENyZWF0ZURpY3Rpb25hcnlJdGVtEiAuaXRvLkNyZWF0ZURpY3Rpb25hcnlJdGVtUmVxdWVzdBoTLml0by5EaWN0aW9uYXJ5SXRlbRJYChNMaXN0RGljdGlvbmFyeUl0ZW1zEh8uaXRvLkxpc3REaWN0aW9uYXJ5SXRlbXNSZXF1ZXN0GiAuaXRvLkxpc3REaWN0aW9uYXJ5SXRlbXNSZXNwb25zZRJNChRVcGRhdGVEaWN0aW9uYXJ5SXRlbRIgLml0by5VcGRhdGVEaWN0aW9uYXJ5SXRlbVJlcXVlc3QaEy5pdG8uRGljdGlvbmFyeUl0ZW0SRAoURGVsZXRlRGljdGlvbmFyeUl0ZW0SIC5pdG8uRGVsZXRlRGljdGlvbmFyeUl0ZW1SZXF1ZXN0GgouaXRvLkVtcHR5EjgKDkRlbGV0ZVVzZXJEYXRhEhouaXRvLkRlbGV0ZVVzZXJEYXRhUmVxdWVzdBoKLml0by5FbXB0eWIGcHJvdG8z',
+    'CglpdG8ucHJvdG8SA2l0byIHCgVFbXB0eSIrChVUcmFuc2NyaWJlRmlsZVJlcXVlc3QSEgoKYXVkaW9fZGF0YRgBIAEoDCIgCgpBdWRpb0NodW5rEhIKCmF1ZGlvX2RhdGEYASABKAwiKwoVVHJhbnNjcmlwdGlvblJlc3BvbnNlEhIKCnRyYW5zY3JpcHQYASABKAkiiAEKBE5vdGUSCgoCaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCRIWCg5pbnRlcmFjdGlvbl9pZBgDIAEoCRIPCgdjb250ZW50GAQgASgJEhIKCmNyZWF0ZWRfYXQYBSABKAkSEgoKdXBkYXRlZF9hdBgGIAEoCRISCgpkZWxldGVkX2F0GAcgASgJIkgKEUNyZWF0ZU5vdGVSZXF1ZXN0EgoKAmlkGAEgASgJEhYKDmludGVyYWN0aW9uX2lkGAIgASgJEg8KB2NvbnRlbnQYAyABKAkiHAoOR2V0Tm90ZVJlcXVlc3QSCgoCaWQYASABKAkiKwoQTGlzdE5vdGVzUmVxdWVzdBIXCg9zaW5jZV90aW1lc3RhbXAYASABKAkiLQoRTGlzdE5vdGVzUmVzcG9uc2USGAoFbm90ZXMYASADKAsyCS5pdG8uTm90ZSIwChFVcGRhdGVOb3RlUmVxdWVzdBIKCgJpZBgBIAEoCRIPCgdjb250ZW50GAIgASgJIh8KEURlbGV0ZU5vdGVSZXF1ZXN0EgoKAmlkGAEgASgJIrABCgtJbnRlcmFjdGlvbhIKCgJpZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEg0KBXRpdGxlGAMgASgJEhIKCmFzcl9vdXRwdXQYBCABKAkSEgoKbGxtX291dHB1dBgFIAEoCRIRCglyYXdfYXVkaW8YBiABKAwSEgoKY3JlYXRlZF9hdBgHIAEoCRISCgp1cGRhdGVkX2F0GAggASgJEhIKCmRlbGV0ZWRfYXQYCSABKAkicAoYQ3JlYXRlSW50ZXJhY3Rpb25SZXF1ZXN0EgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEhIKCmFzcl9vdXRwdXQYAyABKAkSEgoKbGxtX291dHB1dBgEIAEoCRIRCglyYXdfYXVkaW8YBSABKAwiIwoVR2V0SW50ZXJhY3Rpb25SZXF1ZXN0EgoKAmlkGAEgASgJIjIKF0xpc3RJbnRlcmFjdGlvbnNSZXF1ZXN0EhcKD3NpbmNlX3RpbWVzdGFtcBgBIAEoCSJCChhMaXN0SW50ZXJhY3Rpb25zUmVzcG9uc2USJgoMaW50ZXJhY3Rpb25zGAEgAygLMhAuaXRvLkludGVyYWN0aW9uIjUKGFVwZGF0ZUludGVyYWN0aW9uUmVxdWVzdBIKCgJpZBgBIAEoCRINCgV0aXRsZRgCIAEoCSImChhEZWxldGVJbnRlcmFjdGlvblJlcXVlc3QSCgoCaWQYASABKAkijgEKDkRpY3Rpb25hcnlJdGVtEgoKAmlkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkSDAoEd29yZBgDIAEoCRIVCg1wcm9udW5jaWF0aW9uGAQgASgJEhIKCmNyZWF0ZWRfYXQYBSABKAkSEgoKdXBkYXRlZF9hdBgGIAEoCRISCgpkZWxldGVkX2F0GAcgASgJIk4KG0NyZWF0ZURpY3Rpb25hcnlJdGVtUmVxdWVzdBIKCgJpZBgBIAEoCRIMCgR3b3JkGAIgASgJEhUKDXByb251bmNpYXRpb24YAyABKAkiNQoaTGlzdERpY3Rpb25hcnlJdGVtc1JlcXVlc3QSFwoPc2luY2VfdGltZXN0YW1wGAEgASgJIkEKG0xpc3REaWN0aW9uYXJ5SXRlbXNSZXNwb25zZRIiCgVpdGVtcxgBIAMoCzITLml0by5EaWN0aW9uYXJ5SXRlbSJOChtVcGRhdGVEaWN0aW9uYXJ5SXRlbVJlcXVlc3QSCgoCaWQYASABKAkSDAoEd29yZBgCIAEoCRIVCg1wcm9udW5jaWF0aW9uGAMgASgJIikKG0RlbGV0ZURpY3Rpb25hcnlJdGVtUmVxdWVzdBIKCgJpZBgBIAEoCSIXChVEZWxldGVVc2VyRGF0YVJlcXVlc3Qy6QgKCkl0b1NlcnZpY2USSAoOVHJhbnNjcmliZUZpbGUSGi5pdG8uVHJhbnNjcmliZUZpbGVSZXF1ZXN0GhouaXRvLlRyYW5zY3JpcHRpb25SZXNwb25zZRJBChBUcmFuc2NyaWJlU3RyZWFtEg8uaXRvLkF1ZGlvQ2h1bmsaGi5pdG8uVHJhbnNjcmlwdGlvblJlc3BvbnNlKAESLwoKQ3JlYXRlTm90ZRIWLml0by5DcmVhdGVOb3RlUmVxdWVzdBoJLml0by5Ob3RlEikKB0dldE5vdGUSEy5pdG8uR2V0Tm90ZVJlcXVlc3QaCS5pdG8uTm90ZRI6CglMaXN0Tm90ZXMSFS5pdG8uTGlzdE5vdGVzUmVxdWVzdBoWLml0by5MaXN0Tm90ZXNSZXNwb25zZRIvCgpVcGRhdGVOb3RlEhYuaXRvLlVwZGF0ZU5vdGVSZXF1ZXN0GgkuaXRvLk5vdGUSMAoKRGVsZXRlTm90ZRIWLml0by5EZWxldGVOb3RlUmVxdWVzdBoKLml0by5FbXB0eRJEChFDcmVhdGVJbnRlcmFjdGlvbhIdLml0by5DcmVhdGVJbnRlcmFjdGlvblJlcXVlc3QaEC5pdG8uSW50ZXJhY3Rpb24SPgoOR2V0SW50ZXJhY3Rpb24SGi5pdG8uR2V0SW50ZXJhY3Rpb25SZXF1ZXN0GhAuaXRvLkludGVyYWN0aW9uEk8KEExpc3RJbnRlcmFjdGlvbnMSHC5pdG8uTGlzdEludGVyYWN0aW9uc1JlcXVlc3QaHS5pdG8uTGlzdEludGVyYWN0aW9uc1Jlc3BvbnNlEkQKEVVwZGF0ZUludGVyYWN0aW9uEh0uaXRvLlVwZGF0ZUludGVyYWN0aW9uUmVxdWVzdBoQLml0by5JbnRlcmFjdGlvbhI+ChFEZWxldGVJbnRlcmFjdGlvbhIdLml0by5EZWxldGVJbnRlcmFjdGlvblJlcXVlc3QaCi5pdG8uRW1wdHkSTQoUQ3JlYXRlRGljdGlvbmFyeUl0ZW0SIC5pdG8uQ3JlYXRlRGljdGlvbmFyeUl0ZW1SZXF1ZXN0GhMuaXRvLkRpY3Rpb25hcnlJdGVtElgKE0xpc3REaWN0aW9uYXJ5SXRlbXMSHy5pdG8uTGlzdERpY3Rpb25hcnlJdGVtc1JlcXVlc3QaIC5pdG8uTGlzdERpY3Rpb25hcnlJdGVtc1Jlc3BvbnNlEk0KFFVwZGF0ZURpY3Rpb25hcnlJdGVtEiAuaXRvLlVwZGF0ZURpY3Rpb25hcnlJdGVtUmVxdWVzdBoTLml0by5EaWN0aW9uYXJ5SXRlbRJEChREZWxldGVEaWN0aW9uYXJ5SXRlbRIgLml0by5EZWxldGVEaWN0aW9uYXJ5SXRlbVJlcXVlc3QaCi5pdG8uRW1wdHkSOAoORGVsZXRlVXNlckRhdGESGi5pdG8uRGVsZXRlVXNlckRhdGFSZXF1ZXN0GgouaXRvLkVtcHR5YgZwcm90bzM',
   )
 
 /**
@@ -164,17 +164,12 @@ export type CreateNoteRequest = Message<'ito.CreateNoteRequest'> & {
   id: string
 
   /**
-   * @generated from field: string user_id = 2;
-   */
-  userId: string
-
-  /**
-   * @generated from field: string interaction_id = 3;
+   * @generated from field: string interaction_id = 2;
    */
   interactionId: string
 
   /**
-   * @generated from field: string content = 4;
+   * @generated from field: string content = 3;
    */
   content: string
 }
@@ -210,14 +205,9 @@ export const GetNoteRequestSchema: GenMessage<GetNoteRequest> =
  */
 export type ListNotesRequest = Message<'ito.ListNotesRequest'> & {
   /**
-   * @generated from field: string user_id = 1;
-   */
-  userId: string
-
-  /**
    * Optional. ISO 8601 format. If not provided, fetch all.
    *
-   * @generated from field: string since_timestamp = 2;
+   * @generated from field: string since_timestamp = 1;
    */
   sinceTimestamp: string
 }
@@ -367,27 +357,22 @@ export type CreateInteractionRequest =
     id: string
 
     /**
-     * @generated from field: string user_id = 2;
-     */
-    userId: string
-
-    /**
-     * @generated from field: string title = 3;
+     * @generated from field: string title = 2;
      */
     title: string
 
     /**
-     * @generated from field: string asr_output = 4;
+     * @generated from field: string asr_output = 3;
      */
     asrOutput: string
 
     /**
-     * @generated from field: string llm_output = 5;
+     * @generated from field: string llm_output = 4;
      */
     llmOutput: string
 
     /**
-     * @generated from field: bytes raw_audio = 6;
+     * @generated from field: bytes raw_audio = 5;
      */
     rawAudio: Uint8Array
   }
@@ -423,14 +408,9 @@ export const GetInteractionRequestSchema: GenMessage<GetInteractionRequest> =
  */
 export type ListInteractionsRequest = Message<'ito.ListInteractionsRequest'> & {
   /**
-   * @generated from field: string user_id = 1;
-   */
-  userId: string
-
-  /**
    * Optional. ISO 8601 format. If not provided, fetch all.
    *
-   * @generated from field: string since_timestamp = 2;
+   * @generated from field: string since_timestamp = 1;
    */
   sinceTimestamp: string
 }
@@ -567,17 +547,12 @@ export type CreateDictionaryItemRequest =
     id: string
 
     /**
-     * @generated from field: string user_id = 2;
-     */
-    userId: string
-
-    /**
-     * @generated from field: string word = 3;
+     * @generated from field: string word = 2;
      */
     word: string
 
     /**
-     * @generated from field: string pronunciation = 4;
+     * @generated from field: string pronunciation = 3;
      */
     pronunciation: string
   }
@@ -596,14 +571,9 @@ export const CreateDictionaryItemRequestSchema: GenMessage<CreateDictionaryItemR
 export type ListDictionaryItemsRequest =
   Message<'ito.ListDictionaryItemsRequest'> & {
     /**
-     * @generated from field: string user_id = 1;
-     */
-    userId: string
-
-    /**
      * Optional. ISO 8601 format. If not provided, fetch all.
      *
-     * @generated from field: string since_timestamp = 2;
+     * @generated from field: string since_timestamp = 1;
      */
     sinceTimestamp: string
   }

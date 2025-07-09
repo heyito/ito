@@ -47,7 +47,6 @@ export class SyncService {
         this.isSyncing = false
         return
       }
-      const userId = user.id
 
       const lastSyncedAt = await KeyValueStore.get(LAST_SYNCED_AT_KEY)
 
@@ -63,9 +62,9 @@ export class SyncService {
       // =================================================================
       // PULL REMOTE CHANGES
       // =================================================================
-      await this.pullNotes(userId, lastSyncedAt)
-      await this.pullInteractions(userId, lastSyncedAt)
-      await this.pullDictionaryItems(userId, lastSyncedAt)
+      await this.pullNotes(lastSyncedAt)
+      await this.pullInteractions(lastSyncedAt)
+      await this.pullDictionaryItems(lastSyncedAt)
 
       const newSyncTimestamp = new Date().toISOString()
       // console.log('Setting last synced at to:', newSyncTimestamp)
@@ -136,8 +135,8 @@ export class SyncService {
     }
   }
 
-  private async pullNotes(userId: string, lastSyncedAt?: string) {
-    const remoteNotes = await grpcClient.listNotesSince(userId, lastSyncedAt)
+  private async pullNotes(lastSyncedAt?: string) {
+    const remoteNotes = await grpcClient.listNotesSince(lastSyncedAt)
     if (remoteNotes.length > 0) {
       for (const remoteNote of remoteNotes) {
         if (remoteNote.deletedAt) {
@@ -158,11 +157,9 @@ export class SyncService {
     }
   }
 
-  private async pullInteractions(userId: string, lastSyncedAt?: string) {
-    const remoteInteractions = await grpcClient.listInteractionsSince(
-      userId,
-      lastSyncedAt,
-    )
+  private async pullInteractions(lastSyncedAt?: string) {
+    const remoteInteractions =
+      await grpcClient.listInteractionsSince(lastSyncedAt)
     if (remoteInteractions.length > 0) {
       for (const remoteInteraction of remoteInteractions) {
         if (remoteInteraction.deletedAt) {
@@ -203,11 +200,8 @@ export class SyncService {
     }
   }
 
-  private async pullDictionaryItems(userId: string, lastSyncedAt?: string) {
-    const remoteItems = await grpcClient.listDictionaryItemsSince(
-      userId,
-      lastSyncedAt,
-    )
+  private async pullDictionaryItems(lastSyncedAt?: string) {
+    const remoteItems = await grpcClient.listDictionaryItemsSince(lastSyncedAt)
     if (remoteItems.length > 0) {
       for (const remoteItem of remoteItems) {
         if (remoteItem.deletedAt) {

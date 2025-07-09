@@ -85,7 +85,6 @@ class GrpcClient {
   async createNote(note: Note) {
     const request = create(CreateNoteRequestSchema, {
       id: note.id,
-      userId: note.user_id,
       interactionId: note.interaction_id ?? '',
       content: note.content,
     })
@@ -107,10 +106,9 @@ class GrpcClient {
     return this.client.deleteNote(request, { headers: this.getHeaders() })
   }
 
-  async listNotesSince(userId: string, since?: string): Promise<NotePb[]> {
+  async listNotesSince(since?: string): Promise<NotePb[]> {
     const request = create(ListNotesRequestSchema, {
-      userId,
-      sinceTimestamp: since,
+      sinceTimestamp: since ?? '',
     })
     const response = await this.client.listNotes(request, {
       headers: this.getHeaders(),
@@ -129,7 +127,6 @@ class GrpcClient {
 
     const request = create(CreateInteractionRequestSchema, {
       id: interaction.id,
-      userId: interaction.user_id ?? '',
       title: interaction.title ?? '',
       asrOutput: JSON.stringify(interaction.asr_output),
       llmOutput: JSON.stringify(interaction.llm_output),
@@ -165,13 +162,9 @@ class GrpcClient {
     })
   }
 
-  async listInteractionsSince(
-    userId: string,
-    since?: string,
-  ): Promise<InteractionPb[]> {
+  async listInteractionsSince(since?: string): Promise<InteractionPb[]> {
     const request = create(ListInteractionsRequestSchema, {
-      userId,
-      sinceTimestamp: since,
+      sinceTimestamp: since ?? '',
     })
     const response = await this.client.listInteractions(request, {
       headers: this.getHeaders(),
@@ -182,7 +175,6 @@ class GrpcClient {
   async createDictionaryItem(item: DictionaryItem) {
     const request = create(CreateDictionaryItemRequestSchema, {
       id: item.id,
-      userId: item.user_id,
       word: item.word,
       pronunciation: item.pronunciation ?? '',
     })
@@ -211,13 +203,9 @@ class GrpcClient {
     })
   }
 
-  async listDictionaryItemsSince(
-    userId: string,
-    since?: string,
-  ): Promise<DictionaryItemPb[]> {
+  async listDictionaryItemsSince(since?: string): Promise<DictionaryItemPb[]> {
     const request = create(ListDictionaryItemsRequestSchema, {
-      userId,
-      sinceTimestamp: since,
+      sinceTimestamp: since ?? '',
     })
     const response = await this.client.listDictionaryItems(request, {
       headers: this.getHeaders(),
@@ -226,9 +214,7 @@ class GrpcClient {
   }
 
   async deleteUserData() {
-    const request = create(DeleteUserDataRequestSchema, {
-      // userId removed - now extracted from authenticated user's token on server side
-    })
+    const request = create(DeleteUserDataRequestSchema, {})
     return this.client.deleteUserData(request, { headers: this.getHeaders() })
   }
 }

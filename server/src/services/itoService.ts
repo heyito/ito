@@ -25,6 +25,7 @@ import {
   DictionaryItem as DbDictionaryItem,
 } from '../db/models.js'
 import { ConnectError, Code } from '@connectrpc/connect'
+import { kUser } from '../auth/userContext.js'
 
 /**
  * --- NEW: WAV Header Generation Function ---
@@ -189,8 +190,19 @@ export default (router: ConnectRouter) => {
     },
 
     // Note Service
-    async createNote(request) {
-      const newNote = await NotesRepository.create(request)
+    async createNote(request, context: HandlerContext) {
+      // Extract user ID from Auth0 user info passed via contextValues
+      const user = context.values.get(kUser)
+      const userId = user?.sub
+      if (!userId) {
+        throw new ConnectError('User not authenticated', Code.Unauthenticated)
+      }
+
+      const noteRequest = {
+        ...request,
+        userId,
+      }
+      const newNote = await NotesRepository.create(noteRequest)
       return dbToNotePb(newNote)
     },
 
@@ -202,11 +214,18 @@ export default (router: ConnectRouter) => {
       return dbToNotePb(note)
     },
 
-    async listNotes(request) {
+    async listNotes(request, context: HandlerContext) {
+      // Extract user ID from Auth0 user info passed via contextValues
+      const user = context.values.get(kUser)
+      const userId = user?.sub
+      if (!userId) {
+        throw new ConnectError('User not authenticated', Code.Unauthenticated)
+      }
+
       const since = request.sinceTimestamp
         ? new Date(request.sinceTimestamp)
         : undefined
-      const notes = await NotesRepository.findByUserId(request.userId, since)
+      const notes = await NotesRepository.findByUserId(userId, since)
       return {
         notes: notes.map(dbToNotePb),
       }
@@ -226,8 +245,20 @@ export default (router: ConnectRouter) => {
     },
 
     // Interaction Service
-    async createInteraction(request) {
-      const newInteraction = await InteractionsRepository.create(request)
+    async createInteraction(request, context: HandlerContext) {
+      // Extract user ID from Auth0 user info passed via contextValues
+      const user = context.values.get(kUser)
+      const userId = user?.sub
+      if (!userId) {
+        throw new ConnectError('User not authenticated', Code.Unauthenticated)
+      }
+
+      const interactionRequest = {
+        ...request,
+        userId,
+      }
+      const newInteraction =
+        await InteractionsRepository.create(interactionRequest)
       return dbToInteractionPb(newInteraction)
     },
 
@@ -239,12 +270,19 @@ export default (router: ConnectRouter) => {
       return dbToInteractionPb(interaction)
     },
 
-    async listInteractions(request) {
+    async listInteractions(request, context: HandlerContext) {
+      // Extract user ID from Auth0 user info passed via contextValues
+      const user = context.values.get(kUser)
+      const userId = user?.sub
+      if (!userId) {
+        throw new ConnectError('User not authenticated', Code.Unauthenticated)
+      }
+
       const since = request.sinceTimestamp
         ? new Date(request.sinceTimestamp)
         : undefined
       const interactions = await InteractionsRepository.findByUserId(
-        request.userId,
+        userId,
         since,
       )
       return {
@@ -269,19 +307,34 @@ export default (router: ConnectRouter) => {
     },
 
     // Dictionary Service
-    async createDictionaryItem(request) {
-      const newItem = await DictionaryRepository.create(request)
+    async createDictionaryItem(request, context: HandlerContext) {
+      // Extract user ID from Auth0 user info passed via contextValues
+      const user = context.values.get(kUser)
+      const userId = user?.sub
+      if (!userId) {
+        throw new ConnectError('User not authenticated', Code.Unauthenticated)
+      }
+
+      const dictionaryRequest = {
+        ...request,
+        userId,
+      }
+      const newItem = await DictionaryRepository.create(dictionaryRequest)
       return dbToDictionaryItemPb(newItem)
     },
 
-    async listDictionaryItems(request) {
+    async listDictionaryItems(request, context: HandlerContext) {
+      // Extract user ID from Auth0 user info passed via contextValues
+      const user = context.values.get(kUser)
+      const userId = user?.sub
+      if (!userId) {
+        throw new ConnectError('User not authenticated', Code.Unauthenticated)
+      }
+
       const since = request.sinceTimestamp
         ? new Date(request.sinceTimestamp)
         : undefined
-      const items = await DictionaryRepository.findByUserId(
-        request.userId,
-        since,
-      )
+      const items = await DictionaryRepository.findByUserId(userId, since)
       return {
         items: items.map(dbToDictionaryItemPb),
       }
@@ -304,8 +357,9 @@ export default (router: ConnectRouter) => {
     },
 
     async deleteUserData(request, context: HandlerContext) {
-      // Extract user ID from authenticated user's token
-      const userId = (context as any).request?.user?.sub
+      // Extract user ID from Auth0 user info passed via contextValues
+      const user = context.values.get(kUser)
+      const userId = user?.sub
       if (!userId) {
         throw new ConnectError('User not authenticated', Code.Unauthenticated)
       }

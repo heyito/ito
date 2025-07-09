@@ -67,7 +67,6 @@ async function testNotesApi() {
   console.log('  - Creating a new note...')
   const createRequest = create(CreateNoteRequestSchema, {
     id: uuidv4(),
-    userId: testUserId,
     content: 'This is a test note from the client.',
   })
   const createdNote = await client.createNote(createRequest, { headers })
@@ -77,7 +76,7 @@ async function testNotesApi() {
 
   // 2. List notes for the user
   console.log(`  - Listing notes for user ${testUserId}...`)
-  const listRequest = create(ListNotesRequestSchema, { userId: testUserId })
+  const listRequest = create(ListNotesRequestSchema, {})
   const listResponse = await client.listNotes(listRequest, { headers })
   console.log(`  ✓ Found ${listResponse.notes.length} notes.`)
   if (!listResponse.notes.some(note => note.id === noteId)) {
@@ -150,7 +149,6 @@ async function testInteractionsApi() {
 
   const createRequest = create(CreateInteractionRequestSchema, {
     id: uuidv4(),
-    userId: testUserId,
     title: 'Test Interaction',
     asrOutput: JSON.stringify(asrOutput),
     llmOutput: JSON.stringify(llmOutput),
@@ -166,9 +164,7 @@ async function testInteractionsApi() {
 
   // 2. List interactions
   console.log(`  - Listing interactions for user ${testUserId}...`)
-  const listRequest = create(ListInteractionsRequestSchema, {
-    userId: testUserId,
-  })
+  const listRequest = create(ListInteractionsRequestSchema, {})
   const listResponse = await client.listInteractions(listRequest, { headers })
   if (!listResponse.interactions.some(i => i.id === interactionId)) {
     throw new Error('Newly created interaction not found in list!')
@@ -239,7 +235,6 @@ async function testDictionaryApi() {
   console.log('  - Creating a new dictionary item...')
   const createRequest = create(CreateDictionaryItemRequestSchema, {
     id: uuidv4(),
-    userId: testUserId,
     word: 'Ito',
     pronunciation: 'ee-toh',
   })
@@ -254,9 +249,7 @@ async function testDictionaryApi() {
 
   // 2. List dictionary items
   console.log(`  - Listing dictionary items for user ${testUserId}...`)
-  const listRequest = create(ListDictionaryItemsRequestSchema, {
-    userId: testUserId,
-  })
+  const listRequest = create(ListDictionaryItemsRequestSchema, {})
   const listResponse = await client.listDictionaryItems(listRequest, {
     headers,
   })

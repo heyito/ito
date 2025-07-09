@@ -1,7 +1,9 @@
 import { fastify } from 'fastify'
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify'
+import { createContextValues } from '@connectrpc/connect'
 import Auth0 from '@auth0/auth0-fastify-api'
 import itoServiceRoutes from './services/itoService.js'
+import { kUser } from './auth/userContext.js'
 import dotenv from 'dotenv'
 
 dotenv.config()
@@ -20,9 +22,7 @@ export const startServer = async () => {
     const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE
 
     if (!AUTH0_DOMAIN || !AUTH0_AUDIENCE) {
-      connectRpcServer.log.error(
-        'Auth0 client ID or secret not configured in .env file',
-      )
+      connectRpcServer.log.error('Auth0 configuration missing in .env file')
       process.exit(1)
     }
 
@@ -45,6 +45,13 @@ export const startServer = async () => {
     // Register the Connect RPC plugin with our service routes
     await fastify.register(fastifyConnectPlugin, {
       routes: itoServiceRoutes,
+      contextValues: request => {
+        // Pass Auth0 user info from Fastify request to Connect RPC context
+        if (REQUIRE_AUTH && request.user && request.user.sub) {
+          return createContextValues().set(kUser, request.user)
+        }
+        return createContextValues()
+      },
     })
   })
 

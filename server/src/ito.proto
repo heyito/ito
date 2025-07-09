@@ -75,9 +75,8 @@ message Note {
 
 message CreateNoteRequest {
   string id = 1;
-  string user_id = 2;
-  string interaction_id = 3;
-  string content = 4;
+  string interaction_id = 2;
+  string content = 3;
 }
 
 message GetNoteRequest {
@@ -85,8 +84,7 @@ message GetNoteRequest {
 }
 
 message ListNotesRequest {
-  string user_id = 1;
-  string since_timestamp = 2; // Optional. ISO 8601 format. If not provided, fetch all.
+  string since_timestamp = 1; // Optional. ISO 8601 format. If not provided, fetch all.
 }
 
 message ListNotesResponse {
@@ -118,11 +116,10 @@ message Interaction {
 
 message CreateInteractionRequest {
   string id = 1;
-  string user_id = 2;
-  string title = 3;
-  string asr_output = 4;
-  string llm_output = 5;
-  bytes raw_audio = 6;
+  string title = 2;
+  string asr_output = 3;
+  string llm_output = 4;
+  bytes raw_audio = 5;
 }
 
 message GetInteractionRequest {
@@ -130,8 +127,7 @@ message GetInteractionRequest {
 }
 
 message ListInteractionsRequest {
-  string user_id = 1;
-  string since_timestamp = 2; // Optional. ISO 8601 format. If not provided, fetch all.
+  string since_timestamp = 1; // Optional. ISO 8601 format. If not provided, fetch all.
 }
 
 message ListInteractionsResponse {
@@ -161,14 +157,12 @@ message DictionaryItem {
 
 message CreateDictionaryItemRequest {
   string id = 1;
-  string user_id = 2;
-  string word = 3;
-  string pronunciation = 4;
+  string word = 2;
+  string pronunciation = 3;
 }
 
 message ListDictionaryItemsRequest {
-  string user_id = 1;
-  string since_timestamp = 2; // Optional. ISO 8601 format. If not provided, fetch all.
+  string since_timestamp = 1; // Optional. ISO 8601 format. If not provided, fetch all.
 }
 
 message ListDictionaryItemsResponse {

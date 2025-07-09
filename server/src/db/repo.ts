@@ -10,7 +10,9 @@ import {
 } from '../generated/ito_pb.js'
 
 export class NotesRepository {
-  static async create(noteData: CreateNoteRequest): Promise<Note> {
+  static async create(
+    noteData: CreateNoteRequest & { userId: string },
+  ): Promise<Note> {
     const res = await pool.query<Note>(
       `INSERT INTO notes (id, user_id, interaction_id, content)
        VALUES ($1, $2, $3, $4)
@@ -81,7 +83,7 @@ export class NotesRepository {
 
 export class InteractionsRepository {
   static async create(
-    interactionData: CreateInteractionRequest,
+    interactionData: CreateInteractionRequest & { userId: string },
   ): Promise<Interaction> {
     const res = await pool.query<Interaction>(
       `INSERT INTO interactions (id, user_id, title, asr_output, llm_output, raw_audio)
@@ -161,7 +163,7 @@ export class InteractionsRepository {
 
 export class DictionaryRepository {
   static async create(
-    itemData: CreateDictionaryItemRequest,
+    itemData: CreateDictionaryItemRequest & { userId: string },
   ): Promise<DictionaryItem> {
     const res = await pool.query<DictionaryItem>(
       `INSERT INTO dictionary_items (id, user_id, word, pronunciation)

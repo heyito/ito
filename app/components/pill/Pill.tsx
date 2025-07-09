@@ -32,9 +32,6 @@ const Pill = () => {
   const initialShowItoBarAlways = useSettingsStore(
     state => state.showItoBarAlways,
   )
-  const initialMicrophoneDeviceId = useSettingsStore(
-    state => state.microphoneDeviceId,
-  )
   const { startRecording, stopRecording } = useAudioStore()
 
   const [isRecording, setIsRecording] = useState(false)
@@ -42,9 +39,6 @@ const Pill = () => {
   const [isHovered, setIsHovered] = useState(false)
   const [showItoBarAlways, setShowItoBarAlways] = useState(
     initialShowItoBarAlways,
-  )
-  const [microphoneDeviceId, setMicrophoneDeviceId] = useState(
-    initialMicrophoneDeviceId,
   )
   // Fixed size array of volume values to be used for the audio bars, size is 21
   const [volumeHistory, setVolumeHistory] = useState<number[]>([])
@@ -84,7 +78,6 @@ const Pill = () => {
     const unsubSettings = window.api.on('settings-update', (settings: any) => {
       // Update local state with the new setting
       setShowItoBarAlways(settings.showItoBarAlways)
-      setMicrophoneDeviceId(settings.microphoneDeviceId)
     })
 
     // Cleanup listeners when the component unmounts
@@ -183,7 +176,7 @@ const Pill = () => {
     if (isHovered && !anyRecording) {
       setIsManualRecording(true)
       // Trigger recording start via IPC
-      startRecording(microphoneDeviceId)
+      startRecording()
     }
   }
 

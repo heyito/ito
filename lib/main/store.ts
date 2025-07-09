@@ -20,6 +20,7 @@ export interface SettingsStore {
   microphoneDeviceId: string
   microphoneName: string
   keyboardShortcut: string[]
+  isShortcutGloballyEnabled: boolean
   firstName: string
   lastName: string
   email: string
@@ -95,6 +96,7 @@ const defaultValues: AppStore = {
     microphoneDeviceId: 'default',
     microphoneName: 'Auto-detect',
     keyboardShortcut: ['fn'],
+    isShortcutGloballyEnabled: false,
     firstName: '',
     lastName: '',
     email: '',

@@ -1,24 +1,5 @@
 import { useSettingsStore } from '../store/useSettingsStore'
 
-// In your renderer process (main window)
-async function setupMicrophone(deviceId?: string) {
-  try {
-    // Request microphone access with specific device if provided
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: deviceId ? { deviceId: { exact: deviceId } } : true,
-    })
-
-    // Create audio context
-    const audioContext = new window.AudioContext()
-    const source = audioContext.createMediaStreamSource(stream)
-
-    return { audioContext, source, stream }
-  } catch (error) {
-    console.error('Error accessing microphone:', error)
-    throw error
-  }
-}
-
 type Microphone = {
   deviceId: string
   label: string
@@ -94,28 +75,6 @@ export async function verifyStoredMicrophone() {
   }
 }
 
-async function setupVolumeMonitoring(
-  callback: (volume: number) => void,
-  deviceId?: string,
-) {
-  // 1. Start the native audio capture.
-  window.api.send('start-native-recording', deviceId)
-
-  // 2. Listen for volume updates from the main process.
-  const cleanupListener = window.api.on('volume-update', callback)
-
-  // 3. Return a cleanup function.
-  const cleanup = () => {
-    // Stop listening to events to prevent memory leaks.
-    cleanupListener()
-    // Tell the native process to stop capturing audio.
-    window.api.send('stop-native-recording')
-  }
-
-  // The stream object is no longer relevant here.
-  return { cleanup, stream: null }
-}
-
 const microphoneToRender = (microphone: Microphone): MicrophoneToRender => {
   const label = microphone.label.toLowerCase()
 
@@ -141,11 +100,6 @@ const microphoneToRender = (microphone: Microphone): MicrophoneToRender => {
   }
 }
 
-export {
-  setupMicrophone,
-  setupVolumeMonitoring,
-  getAvailableMicrophones,
-  microphoneToRender,
-}
+export { getAvailableMicrophones, microphoneToRender }
 
 export type { Microphone, MicrophoneToRender }

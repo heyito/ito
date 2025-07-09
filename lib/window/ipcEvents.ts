@@ -8,7 +8,7 @@ import {
   KeyListenerProcess,
   stopKeyListener,
 } from '../media/keyboard'
-import { getPillWindow } from '../main/app'
+import { getPillWindow, mainWindow } from '../main/app'
 import {
   generateNewAuthState,
   exchangeAuthCode,
@@ -20,14 +20,8 @@ import {
   DictionaryTable,
   InteractionsTable,
 } from '../main/sqlite/repo'
-// import { getPillWindow } from '../main/app'
-import {
-  handleAudioDeviceChange,
-  requestDeviceListPromise,
-  sendStopRecordingCommand,
-  startAudioRecorder,
-  stopAudioRecorder,
-} from '../media/audio'
+import { audioRecorderService } from '../media/audio'
+import { voiceInputService } from '../main/voiceInputService'
 
 const handleIPC = (channel: string, handler: (...args: any[]) => any) => {
   ipcMain.handle(channel, handler)
@@ -53,7 +47,8 @@ export function registerIPC() {
   ipcMain.on('audio-devices-changed', () => {
     log.info('[IPC] Audio devices changed, notifying windows.')
     // Notify all windows to refresh their device lists in the UI.
-    handleAudioDeviceChange()
+    mainWindow?.webContents.send('force-device-list-reload')
+    getPillWindow()?.webContents.send('force-device-list-reload')
   })
 
   // Login Item Settings
@@ -114,8 +109,12 @@ export function registerIPC() {
     startKeyListener()
   })
   handleIPC('stop-key-listener', () => stopKeyListener())
-  handleIPC('start-native-recording-service', () => startAudioRecorder())
-  handleIPC('stop-native-recording-service', () => stopAudioRecorder())
+  handleIPC('start-native-recording-service', () =>
+    voiceInputService.startSTTService(),
+  )
+  handleIPC('stop-native-recording-service', () =>
+    voiceInputService.stopSTTService(),
+  )
   handleIPC('block-keys', (_e, keys: string[]) => {
     if (KeyListenerProcess)
       KeyListenerProcess.stdin?.write(
@@ -142,6 +141,10 @@ export function registerIPC() {
   handleIPC(
     'check-microphone-permission',
     async (_e, prompt: boolean = false) => {
+      console.log(
+        'check-microphone-permission',
+        systemPreferences.getMediaAccessStatus('microphone'),
+      )
       if (prompt) return systemPreferences.askForMediaAccess('microphone')
       return systemPreferences.getMediaAccessStatus('microphone') === 'granted'
     },
@@ -225,7 +228,7 @@ export function registerIPC() {
     log.info(
       '[IPC] Received get-native-audio-devices, calling requestDeviceListPromise...',
     )
-    return requestDeviceListPromise()
+    return audioRecorderService.getDeviceList()
   })
 
   // App lifecycle
@@ -303,19 +306,21 @@ export function registerIPC() {
   )
 
   // When the hotkey is pressed, start recording and notify the pill window.
-  ipcMain.on('start-native-recording', (_event, deviceId: string) => {
-    log.info(`IPC: Received 'start-native-recording' for device: ${deviceId}`)
-    // Notify the pill to expand.
-    getPillWindow()?.webContents.send('recording-state-update', {
-      isRecording: true,
-      deviceId,
-    })
+  ipcMain.on('start-native-recording', _event => {
+    log.info(`IPC: Received 'start-native-recording'`)
+    voiceInputService.startSTTService()
+  })
+
+  ipcMain.on('start-native-recording-test', _event => {
+    log.info(`IPC: Received 'start-native-recording-test'`)
+    const sendToServer = false
+    voiceInputService.startSTTService(sendToServer)
   })
 
   // When the hotkey is released, stop recording and notify the pill window.
   ipcMain.on('stop-native-recording', () => {
     log.info('IPC: Received stop-native-recording.')
-    sendStopRecordingCommand()
+    voiceInputService.stopSTTService()
     // Notify the pill to collapse.
     getPillWindow()?.webContents.send('recording-state-update', {
       isRecording: false,

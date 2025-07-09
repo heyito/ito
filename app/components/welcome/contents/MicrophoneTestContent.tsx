@@ -60,8 +60,7 @@ export default function MicrophoneTestContent() {
   useEffect(() => {
     if (microphoneDeviceId) {
       console.log(`Starting test recording on device: ${microphoneDeviceId}`)
-      // Assumes your preload script exposes 'start-native-recording'
-      window.api.send('start-native-recording', microphoneDeviceId)
+      window.api.send('start-native-recording-test')
     }
 
     // Cleanup function: stop recording when the component unmounts or device changes

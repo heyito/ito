@@ -17,7 +17,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     set({ isShortcutEnabled: enabled })
   },
 
-  startRecording: async (deviceId: string) => {
+  startRecording: async () => {
     const { isRecording, isShortcutEnabled } = get()
     if (isRecording || !isShortcutEnabled) return
 
@@ -25,7 +25,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     set({ isRecording: true })
     // Signal the main process to start the gRPC stream and tell the
     // native recorder to begin capturing.
-    window.api.send('start-native-recording', deviceId)
+    window.api.send('start-native-recording')
   },
 
   stopRecording: async () => {

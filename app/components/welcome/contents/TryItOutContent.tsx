@@ -41,18 +41,11 @@ export default function TryItOutContent() {
             </div>
           </div>
           <div className="flex items-center gap-2 px-4 pb-4 rounded-b-2xl">
-            <div className="relative w-full h-12 border border-neutral-500 rounded-md px-3 py-2 text-sm text-muted-foreground">
-              <span
-                className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center text-sm text-muted-foreground select-none pointer-events-none"
-                style={{ height: '100%' }}
-              >
-                <span
-                  className="ml-1 w-[1px] h-5 bg-muted-foreground animate-blink rounded-sm"
-                  style={{ display: 'inline-block' }}
-                />
-                Hold down on the fn key and start speaking...
-              </span>
-            </div>
+            <input
+              type="text"
+              placeholder="Hold down on the fn key and start speaking..."
+              className="w-full h-12 border border-neutral-500 rounded-md px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-0"
+            />
           </div>
         </div>
       )
@@ -69,20 +62,17 @@ export default function TryItOutContent() {
             </div>
             <span className="text-base font-medium">Gmail</span>
           </div>
-          <div className="flex flex-col gap-2 px-6 pb-20">
+          <div className="flex flex-col gap-2 px-6 pb-6">
             <div className="text-sm text-muted-foreground">
               Subject:{' '}
               <span className="font-medium text-black">Quick update</span>
             </div>
             <div className="border-t border-neutral-200 my-2" />
-            <div className="text-sm text-muted-foreground">
-              <span className="align-middle inline-block w-[1px] h-5 bg-muted-foreground animate-blink rounded-sm" />
-              Try saying:
-              <br />
-              <br />
-              "Hi Barron, wonderful meeting with you today. Do you have any time
-              Monday to follow up on the project? Thanks, Evan"
-            </div>
+            <textarea
+              placeholder={`Try saying:\n\n"Hi Barron, wonderful meeting with you today. Do you have any time Monday to follow up on the project? Thanks, Evan"`}
+              className="w-full resize-none bg-transparent border-none focus:outline-none focus:ring-0 text-sm placeholder:text-muted-foreground"
+              rows={6}
+            />
           </div>
         </div>
       )
@@ -102,13 +92,13 @@ export default function TryItOutContent() {
             </div>
             <span className="text-base font-medium">Notion</span>
           </div>
-          <div className="flex flex-col items-start w-full px-4">
-            <span className="text-2xl font-bold py-3">New Note</span>
-            <span className="text-sm text-muted-foreground mb-4">
-              <span className="align-middle inline-block w-[1px] h-4 bg-muted-foreground animate-blink rounded-sm" />
-              Try saying: "Project tasks: Barron will draft the proposal, Evan
-              will review and finalize by Friday."
-            </span>
+          <div className="flex flex-col items-start w-full px-4 py-3">
+            <span className="text-2xl font-bold">New Note</span>
+            <textarea
+              placeholder={`Try saying: "Project tasks: Barron will draft the proposal, Evan will review and finalize by Friday."`}
+              className="w-full mt-4 resize-none bg-transparent border-none focus:outline-none focus:ring-0 text-sm placeholder:text-muted-foreground"
+              rows={4}
+            />
           </div>
         </div>
       )
@@ -130,9 +120,12 @@ export default function TryItOutContent() {
           </div>
           <div className="flex-1 flex flex-col justify-end px-4 gap-2">
             <div className="flex-1 flex flex-col justify-end px-6 py-8 gap-2"></div>
-            <div className="flex items-center mb-4 px-6 py-3 bg-neutral-100 rounded-2xl text-sm text-muted-foreground">
-              <span className="align-middle inline-block w-[1px] h-6 bg-muted-foreground animate-blink rounded-sm" />
-              Ask AI to generate a React component
+            <div className="flex items-center mb-4 bg-neutral-100 rounded-2xl">
+              <input
+                type="text"
+                placeholder="Ask AI to generate a React component"
+                className="w-full px-4 py-3 bg-transparent border-none focus:outline-none focus:ring-0 text-sm placeholder:text-muted-foreground"
+              />
             </div>
           </div>
         </div>
@@ -160,10 +153,11 @@ export default function TryItOutContent() {
                   <span className="text-[#7dd3fc]">@</span> TryItOut.tsx
                 </span>
               </div>
-              <div className="text-base text-muted-foreground mb-2">
-                <span className="align-middle inline-block w-[1px] h-6 bg-muted-foreground animate-blink rounded-sm" />
-                Plan, search, build anything
-              </div>
+              <textarea
+                placeholder="Plan, search, build anything"
+                className="w-full bg-transparent border-none focus:outline-none focus:ring-0 resize-none text-base text-muted-foreground placeholder:text-muted-foreground mt-2"
+                rows={3}
+              />
             </div>
             <div className="flex justify-between gap-2 mt-2">
               <div className="flex items-center gap-2">
@@ -185,7 +179,6 @@ export default function TryItOutContent() {
         </div>
       )
     }
-    // Optionally, add placeholder demos for other apps if needed
     return null
   }
 

@@ -13,7 +13,7 @@ import { useEffect } from 'react'
 import { useGlobalShortcut } from './hooks/useGlobalShortcut'
 
 const MainApp = () => {
-  const { onboardingCompleted } = useOnboardingStore()
+  const { onboardingCompleted, onboardingStep } = useOnboardingStore()
   const { isAuthenticated } = useAuth()
   useDeviceChangeListener()
   useGlobalShortcut()
@@ -23,11 +23,15 @@ const MainApp = () => {
   }, [])
 
   // If authenticated and onboarding completed, show main app
+  const shouldEnableShortcutGlobally = onboardingCompleted || onboardingStep >= 7
+
   if (isAuthenticated && onboardingCompleted) {
+    window.api.send('electron-store-set', 'settings.isShortcutGloballyEnabled', shouldEnableShortcutGlobally);
     return <HomeKit />
   }
 
   // If authenticated but onboarding not completed, continue onboarding
+  window.api.send('electron-store-set', 'settings.isShortcutGloballyEnabled', shouldEnableShortcutGlobally);
   return <WelcomeKit />
 }
 

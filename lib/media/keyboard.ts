@@ -1,7 +1,9 @@
 import { spawn } from 'child_process'
 import store from '../main/store' // Import the main process store
 import { getNativeBinaryPath } from './native-interface'
-import { sendStartRecordingCommand, sendStopRecordingCommand } from './audio'
+import { BrowserWindow } from 'electron'
+import { audioRecorderService } from './audio'
+import { voiceInputService } from '../main/voiceInputService'
 
 interface KeyEvent {
   type: 'keydown' | 'keyup'
@@ -92,6 +94,19 @@ function normalizeKey(rawKey: string): string {
 const pressedKeys = new Set<string>()
 
 function handleKeyEventInMain(event: KeyEvent) {
+  const { keyboardShortcut, isShortcutGloballyEnabled } = store.get('settings')
+
+  if (!isShortcutGloballyEnabled) {
+    // check to see if we should stop an in-progress recording
+    if (isShortcutActive) {
+      // Shortcut released
+      isShortcutActive = false
+      console.info('Shortcut DEACTIVATED, stopping recording...')
+      audioRecorderService.stopRecording()
+    }
+    return
+  }
+
   const normalizedKey = normalizeKey(event.key)
 
   // Ignore the "fast fn" event which can be noisy.
@@ -103,21 +118,18 @@ function handleKeyEventInMain(event: KeyEvent) {
     pressedKeys.delete(normalizedKey)
   }
 
-  // Get the latest shortcut settings from the electron-store.
-  const { keyboardShortcut } = store.get('settings')
-
   // Check if every key required by the shortcut is in our set of pressed keys.
   const isShortcutHeld = keyboardShortcut.every(key => pressedKeys.has(key))
   // Shortcut pressed
   if (isShortcutHeld && !isShortcutActive) {
     isShortcutActive = true
     console.info('lib Shortcut ACTIVATED, starting recording...')
-    sendStartRecordingCommand()
+    voiceInputService.startSTTService()
   } else if (!isShortcutHeld && isShortcutActive) {
     // Shortcut released
     isShortcutActive = false
     console.info('lib Shortcut DEACTIVATED, stopping recording...')
-    sendStopRecordingCommand()
+    voiceInputService.stopSTTService()
   }
 }
 
@@ -170,11 +182,11 @@ export const startKeyListener = () => {
             handleKeyEventInMain(event)
 
             // 2. Continue to broadcast the raw event to all renderer windows for UI updates.
-            // BrowserWindow.getAllWindows().forEach(window => {
-            //   if (!window.webContents.isDestroyed()) {
-            //     window.webContents.send('key-event', event)
-            //   }
-            // })
+            BrowserWindow.getAllWindows().forEach(window => {
+              if (!window.webContents.isDestroyed()) {
+                window.webContents.send('key-event', event)
+              }
+            })
           } catch (e) {
             console.error('Failed to parse key event:', line, e)
           }

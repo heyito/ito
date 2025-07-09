@@ -3,6 +3,7 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import {
   createAppWindow,
   createPillWindow,
+  getPillWindow,
   mainWindow,
   registerResourcesProtocol,
   startPillPositioner,
@@ -13,12 +14,13 @@ import { registerDevIPC } from '../window/ipcDev'
 import { initializeDatabase } from './sqlite/db'
 import { setupProtocolHandling } from '../protocol'
 import { startKeyListener, stopKeyListener } from '../media/keyboard'
-import { startAudioRecorder, stopAudioRecorder } from '../media/audio'
 // Import the grpcClient singleton
 import { grpcClient } from '../clients/grpcClient'
 import { allowAppNap, preventAppNap } from './appNap'
 import { syncService } from './syncService'
 import mainStore from './store'
+import { audioRecorderService } from '../media/audio'
+import { voiceInputService } from './voiceInputService'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -70,12 +72,13 @@ app.whenReady().then(async () => {
     grpcClient.setMainWindow(mainWindow)
   }
 
-  startAudioRecorder()
-
   if (systemPreferences.isTrustedAccessibilityClient(false)) {
     console.log('Accessibility permissions found, starting key listener.')
     startKeyListener()
   }
+
+  console.log('Microphone access granted, starting audio recorder.')
+  voiceInputService.setUpAudioRecorderListeners()
 
   app.on('activate', function () {
     if (mainWindow === null) {
@@ -86,7 +89,7 @@ app.whenReady().then(async () => {
   app.on('before-quit', () => {
     console.log('App is quitting, cleaning up resources...')
     stopKeyListener()
-    stopAudioRecorder()
+    audioRecorderService.terminate()
     allowAppNap()
   })
 

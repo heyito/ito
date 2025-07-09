@@ -185,7 +185,6 @@ fn start_capture(device_name: Option<String>, stdout: Arc<Mutex<io::Stdout>>) ->
 
     let input_sample_rate = config.sample_rate().0;
     let input_sample_format = config.sample_format();
-    let channels = config.channels();
     
     let mut resampler = if input_sample_rate != TARGET_SAMPLE_RATE {
         let resampler = FftFixedIn::new(

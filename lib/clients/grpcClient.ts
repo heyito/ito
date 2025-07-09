@@ -50,7 +50,7 @@ class GrpcClient {
     if (!this.authToken) {
       // Though we have guards elsewhere, this is a final check.
       // Throwing here helps us pinpoint auth issues during development.
-      throw new Error('gRPC call made without an auth token.')
+      return new Headers()
     }
     return new Headers({ Authorization: `Bearer ${this.authToken}` })
   }

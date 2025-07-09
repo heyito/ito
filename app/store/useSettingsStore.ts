@@ -105,6 +105,7 @@ export const useSettingsStore = create<SettingsState>(set => {
       syncToStore(partialState)
     },
     setKeyboardShortcut: (shortcut: string[]) => {
+      console.log('Setting keyboard shortcut to:', shortcut)
       const partialState = { keyboardShortcut: [...shortcut].sort() }
       set(partialState)
       syncToStore(partialState)

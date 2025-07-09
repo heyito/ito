@@ -87,8 +87,7 @@ const api = {
     ipcRenderer.invoke('check-accessibility-permission', prompt),
   'check-microphone-permission': (prompt: boolean) =>
     ipcRenderer.invoke('check-microphone-permission', prompt),
-  'start-native-recording': (deviceId: string) =>
-    ipcRenderer.send('start-native-recording', deviceId),
+  'start-native-recording': () => ipcRenderer.send('start-native-recording'),
   'stop-native-recording': () => ipcRenderer.send('stop-native-recording'),
   dev: {
     revertLastMigration: () => ipcRenderer.invoke('dev:revert-last-migration'),

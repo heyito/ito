@@ -3,23 +3,7 @@ import { InfoCircle, Play } from '@mynaui/icons-react'
 import { useSettingsStore } from '../../../store/useSettingsStore'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip'
 import { useAuthStore } from '@/app/store/useAuthStore'
-
-interface Interaction {
-  id: string
-  user_id: string | null
-  title: string | null
-  asr_output: {
-    transcript: string
-    audioChunkCount: number
-    totalAudioBytes: number
-    error: string | null
-    timestamp: string
-  } | null
-  llm_output: any
-  created_at: string
-  updated_at: string
-  deleted_at: string | null
-}
+import { Interaction } from '@/lib/main/sqlite/models'
 
 export default function HomeContent() {
   const { keyboardShortcut } = useSettingsStore()

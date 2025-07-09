@@ -268,6 +268,17 @@ export function registerIPC() {
     InteractionsTable.softDelete(id),
   )
 
+  // User Data Deletion
+  handleIPC('delete-user-data', async _e => {
+    const userId = getCurrentUserId()
+    if (!userId) {
+      log.error('No user ID found to delete data.')
+      return false
+    }
+    const { deleteCompleteUserData } = await import('../main/sqlite/db')
+    return deleteCompleteUserData(userId)
+  })
+
   // Debug methods
   handleIPC('debug:check-schema', async () => {
     const { getDb } = await import('../main/sqlite/db.js')

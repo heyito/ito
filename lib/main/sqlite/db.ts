@@ -159,6 +159,47 @@ const wipeDatabase = async () => {
   app.quit()
 }
 
+const deleteUserData = async (userId: string) => {
+  console.info(`Deleting all data for user: ${userId}`)
+
+  try {
+    // Import the repository classes
+    const { InteractionsTable, NotesTable, DictionaryTable } = await import(
+      './repo'
+    )
+
+    // Delete all user data from all tables
+    await Promise.all([
+      InteractionsTable.deleteAllUserData(userId),
+      NotesTable.deleteAllUserData(userId),
+      DictionaryTable.deleteAllUserData(userId),
+    ])
+
+    console.info(`Successfully deleted all data for user: ${userId}`)
+  } catch (error) {
+    console.error(`Failed to delete user data for user: ${userId}`, error)
+    throw error
+  }
+}
+
+const deleteCompleteUserData = async (userId: string) => {
+  console.info(`Starting complete data deletion for user: ${userId}`)
+
+  try {
+    // Delete local SQLite data
+    await deleteUserData(userId)
+
+    // Delete server-side data - server will extract userId from authenticated token
+    const { grpcClient } = await import('../../clients/grpcClient')
+    await grpcClient.deleteUserData()
+
+    console.info(`Successfully completed data deletion for user: ${userId}`)
+  } catch (error) {
+    console.error(`Failed to complete data deletion for user: ${userId}`, error)
+    throw error
+  }
+}
+
 const initializeDatabase = (): Promise<void> => {
   return new Promise((resolve, reject) => {
     db = new sqlite3.Database(dbPath, err => {
@@ -187,4 +228,11 @@ const getDb = () => {
   return db
 }
 
-export { initializeDatabase, getDb, revertLastMigration, wipeDatabase }
+export {
+  initializeDatabase,
+  getDb,
+  revertLastMigration,
+  wipeDatabase,
+  deleteUserData,
+  deleteCompleteUserData,
+}

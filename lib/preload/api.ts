@@ -139,6 +139,11 @@ const api = {
       accessToken,
     })
   },
+
+  // Delete user data from both local and server databases
+  deleteUserData: () => {
+    return ipcRenderer.invoke('delete-user-data')
+  },
 }
 
 export default api

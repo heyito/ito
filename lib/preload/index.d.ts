@@ -71,6 +71,7 @@ declare global {
         idToken: string | null,
         accessToken: string | null,
       ) => Promise<void>
+      deleteUserData: () => Promise<void>
     }
   }
 }

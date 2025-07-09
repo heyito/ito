@@ -67,6 +67,16 @@ export class NotesRepository {
     )
     return (res.rowCount ?? 0) > 0
   }
+
+  static async deleteAllUserData(userId: string): Promise<boolean> {
+    const res = await pool.query(
+      `UPDATE notes
+       SET deleted_at = current_timestamp
+       WHERE user_id = $1`,
+      [userId],
+    )
+    return (res.rowCount ?? 0) > 0
+  }
 }
 
 export class InteractionsRepository {
@@ -137,6 +147,16 @@ export class InteractionsRepository {
     )
     return (res.rowCount ?? 0) > 0
   }
+
+  static async deleteAllUserData(userId: string): Promise<boolean> {
+    const res = await pool.query(
+      `UPDATE interactions
+       SET deleted_at = current_timestamp
+       WHERE user_id = $1`,
+      [userId],
+    )
+    return (res.rowCount ?? 0) > 0
+  }
 }
 
 export class DictionaryRepository {
@@ -189,6 +209,16 @@ export class DictionaryRepository {
        SET deleted_at = current_timestamp
        WHERE id = $1`,
       [id],
+    )
+    return (res.rowCount ?? 0) > 0
+  }
+
+  static async deleteAllUserData(userId: string): Promise<boolean> {
+    const res = await pool.query(
+      `UPDATE dictionary_items
+       SET deleted_at = current_timestamp
+       WHERE user_id = $1`,
+      [userId],
     )
     return (res.rowCount ?? 0) > 0
   }

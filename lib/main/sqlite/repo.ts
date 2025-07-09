@@ -98,6 +98,16 @@ export class InteractionsTable {
     await run(query, [new Date().toISOString(), new Date().toISOString(), id])
   }
 
+  static async deleteAllUserData(userId: string): Promise<void> {
+    const query =
+      'UPDATE interactions SET deleted_at = ?, updated_at = ? WHERE user_id = ?'
+    await run(query, [
+      new Date().toISOString(),
+      new Date().toISOString(),
+      userId,
+    ])
+  }
+
   static async findModifiedSince(timestamp: string): Promise<Interaction[]> {
     const rows = await all<Interaction>(
       'SELECT * FROM interactions WHERE updated_at > ?',
@@ -206,6 +216,16 @@ export class NotesTable {
     await run(query, [new Date().toISOString(), new Date().toISOString(), id])
   }
 
+  static async deleteAllUserData(userId: string): Promise<void> {
+    const query =
+      'UPDATE notes SET deleted_at = ?, updated_at = ? WHERE user_id = ?'
+    await run(query, [
+      new Date().toISOString(),
+      new Date().toISOString(),
+      userId,
+    ])
+  }
+
   static async findModifiedSince(timestamp: string): Promise<Note[]> {
     return await all<Note>('SELECT * FROM notes WHERE updated_at > ?', [
       timestamp,
@@ -297,6 +317,16 @@ export class DictionaryTable {
     const query =
       'UPDATE dictionary_items SET deleted_at = ?, updated_at = ? WHERE id = ?'
     await run(query, [new Date().toISOString(), new Date().toISOString(), id])
+  }
+
+  static async deleteAllUserData(userId: string): Promise<void> {
+    const query =
+      'UPDATE dictionary_items SET deleted_at = ?, updated_at = ? WHERE user_id = ?'
+    await run(query, [
+      new Date().toISOString(),
+      new Date().toISOString(),
+      userId,
+    ])
   }
 
   static async findModifiedSince(timestamp: string): Promise<DictionaryItem[]> {

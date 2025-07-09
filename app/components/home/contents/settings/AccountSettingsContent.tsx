@@ -31,27 +31,54 @@ export default function AccountSettingsContent() {
     }
   }
 
-  const handleDeleteAccount = () => {
-    // Clear all electron store data
-    window.electron.store.set('settings', {})
-    window.electron.store.set('main', {})
-    window.electron.store.set('notes', [])
-    window.electron.store.set('dictionary', [])
-    window.electron.store.set('onboarding', {})
-    window.electron.store.set('auth', {})
+  const handleDeleteAccount = async () => {
+    try {
+      // Delete user data from both local and server databases
+      // Server now extracts userId from authenticated user's token
+      await window.api.deleteUserData()
 
-    // Clear auth state
-    clearAuth(false)
+      // Clear all electron store data
+      window.electron.store.set('settings', {})
+      window.electron.store.set('main', {})
+      window.electron.store.set('notes', [])
+      window.electron.store.set('dictionary', [])
+      window.electron.store.set('onboarding', {})
+      window.electron.store.set('auth', {})
 
-    // Reset all stores to their initial state
-    resetOnboarding()
-    loadNotes()
-    loadEntries()
+      // Clear auth state
+      clearAuth(false)
 
-    // Close the dialog
-    setShowDeleteDialog(false)
+      // Reset all stores to their initial state
+      resetOnboarding()
+      loadNotes()
+      loadEntries()
 
-    // Note: The app will automatically navigate to onboarding since user is no longer authenticated
+      // Close the dialog
+      setShowDeleteDialog(false)
+
+      // Note: The app will automatically navigate to onboarding since user is no longer authenticated
+    } catch (error) {
+      console.error('Failed to delete account data:', error)
+      // Still proceed with local cleanup even if server deletion fails
+      // Clear all electron store data
+      window.electron.store.set('settings', {})
+      window.electron.store.set('main', {})
+      window.electron.store.set('notes', [])
+      window.electron.store.set('dictionary', [])
+      window.electron.store.set('onboarding', {})
+      window.electron.store.set('auth', {})
+
+      // Clear auth state
+      clearAuth(false)
+
+      // Reset all stores to their initial state
+      resetOnboarding()
+      loadNotes()
+      loadEntries()
+
+      // Close the dialog
+      setShowDeleteDialog(false)
+    }
   }
 
   return (

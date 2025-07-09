@@ -16,6 +16,7 @@ import {
   DeleteDictionaryItemRequestSchema,
   UpdateDictionaryItemRequestSchema,
   ListDictionaryItemsRequestSchema,
+  DeleteUserDataRequestSchema,
 } from '@/app/generated/ito_pb'
 import { createClient } from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-node'
@@ -222,6 +223,13 @@ class GrpcClient {
       headers: this.getHeaders(),
     })
     return response.items
+  }
+
+  async deleteUserData() {
+    const request = create(DeleteUserDataRequestSchema, {
+      // userId removed - now extracted from authenticated user's token on server side
+    })
+    return this.client.deleteUserData(request, { headers: this.getHeaders() })
   }
 }
 

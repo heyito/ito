@@ -51,4 +51,5 @@ export interface IpcApi {
     idToken: string,
     accessToken: string,
   ) => void
+  deleteUserData: () => Promise<void>
 }

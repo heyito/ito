@@ -30,6 +30,9 @@ service ItoService {
   rpc ListDictionaryItems(ListDictionaryItemsRequest) returns (ListDictionaryItemsResponse);
   rpc UpdateDictionaryItem(UpdateDictionaryItemRequest) returns (DictionaryItem);
   rpc DeleteDictionaryItem(DeleteDictionaryItemRequest) returns (Empty);
+
+  // User Data Service
+  rpc DeleteUserData(DeleteUserDataRequest) returns (Empty);
 }
 
 // =================================================================
@@ -180,4 +183,10 @@ message UpdateDictionaryItemRequest {
 
 message DeleteDictionaryItemRequest {
   string id = 1;
+}
+
+// User Data
+// -----------------------------------------------------------------
+message DeleteUserDataRequest {
+  // Empty - user_id will be extracted from the authenticated user's token
 }

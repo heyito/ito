@@ -302,5 +302,25 @@ export default (router: ConnectRouter) => {
       await DictionaryRepository.softDelete(request.id)
       return {}
     },
+
+    async deleteUserData(request, context: HandlerContext) {
+      // Extract user ID from authenticated user's token
+      const userId = (context as any).request?.user?.sub
+      if (!userId) {
+        throw new ConnectError('User not authenticated', Code.Unauthenticated)
+      }
+
+      console.log(`Deleting all data for authenticated user: ${userId}`)
+
+      // Delete all user data from all tables
+      await Promise.all([
+        NotesRepository.deleteAllUserData(userId),
+        InteractionsRepository.deleteAllUserData(userId),
+        DictionaryRepository.deleteAllUserData(userId),
+      ])
+
+      console.log(`Successfully deleted all data for user: ${userId}`)
+      return {}
+    },
   })
 }

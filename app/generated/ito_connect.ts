@@ -11,6 +11,7 @@ import {
   DeleteDictionaryItemRequest,
   DeleteInteractionRequest,
   DeleteNoteRequest,
+  DeleteUserDataRequest,
   DictionaryItem,
   Empty,
   GetInteractionRequest,
@@ -190,6 +191,17 @@ export const ItoService = {
     deleteDictionaryItem: {
       name: 'DeleteDictionaryItem',
       I: DeleteDictionaryItemRequest,
+      O: Empty,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * User Data Service
+     *
+     * @generated from rpc ito.ItoService.DeleteUserData
+     */
+    deleteUserData: {
+      name: 'DeleteUserData',
+      I: DeleteUserDataRequest,
       O: Empty,
       kind: MethodKind.Unary,
     },

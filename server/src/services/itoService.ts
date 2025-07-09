@@ -142,7 +142,6 @@ export default (router: ConnectRouter) => {
 
       // Process each audio chunk from the stream
       for await (const chunk of requests) {
-        console.log(`Received audio chunk of size: ${chunk.audioData.length}`)
         audioChunks.push(chunk.audioData)
       }
 

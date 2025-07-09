@@ -18,7 +18,6 @@ export const useDeviceChangeListener = (): void => {
 
     // Add the event listener when the component mounts.
     navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange)
-    log.info('[useDeviceChangeListener] Attached devicechange listener.')
 
     // Return a cleanup function to remove the listener when the component unmounts.
     // This is crucial for preventing memory leaks and ensuring good practice.

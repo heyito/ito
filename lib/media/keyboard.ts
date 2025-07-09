@@ -17,12 +17,6 @@ export let KeyListenerProcess: ReturnType<typeof spawn> | null = null
 export let isShortcutActive = false
 
 const nativeModuleName = 'global-key-listener'
-console.log(
-  'expected store value for keyboard shortcut:',
-  store.get('settings').keyboardShortcut,
-)
-
-console.log(store.get('settings').microphoneDeviceId)
 
 // Map of raw key names to their normalized representations
 const keyNameMap: Record<string, string> = {

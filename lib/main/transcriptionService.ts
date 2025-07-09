@@ -101,11 +101,9 @@ export class TranscriptionService {
         this.resolveNewChunk()
         this.resolveNewChunk = null
       }
-    } else {
-      console.warn(
-        '[TranscriptionService] Received audio chunk but not streaming!',
-      )
     }
+
+    // if not streaming, do nothing
   }
 
   private async createInteraction(transcript: string, errorMessage?: string) {

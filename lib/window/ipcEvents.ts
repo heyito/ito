@@ -141,10 +141,6 @@ export function registerIPC() {
   handleIPC(
     'check-microphone-permission',
     async (_e, prompt: boolean = false) => {
-      console.log(
-        'check-microphone-permission',
-        systemPreferences.getMediaAccessStatus('microphone'),
-      )
       if (prompt) return systemPreferences.askForMediaAccess('microphone')
       return systemPreferences.getMediaAccessStatus('microphone') === 'granted'
     },
@@ -390,10 +386,6 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
   handleIPC(
     `check-accessibility-permission-${mainWindow.id}`,
     (_event, prompt: boolean = false) => {
-      console.log(
-        'check-accessibility-permission',
-        systemPreferences.isTrustedAccessibilityClient(prompt),
-      )
       return systemPreferences.isTrustedAccessibilityClient(prompt)
     },
   )
@@ -408,10 +400,6 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
         log.info('check-microphone-permission askForMediaAccess', res)
         return res
       }
-      console.log(
-        'check-microphone-permission getMediaAccessStatus',
-        systemPreferences.getMediaAccessStatus('microphone'),
-      )
       return systemPreferences.getMediaAccessStatus('microphone') === 'granted'
     },
   )

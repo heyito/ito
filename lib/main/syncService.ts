@@ -67,7 +67,6 @@ export class SyncService {
       await this.pullDictionaryItems(lastSyncedAt)
 
       const newSyncTimestamp = new Date().toISOString()
-      // console.log('Setting last synced at to:', newSyncTimestamp)
       await KeyValueStore.set(LAST_SYNCED_AT_KEY, newSyncTimestamp)
     } catch (error) {
       console.error('Sync cycle failed:', error)

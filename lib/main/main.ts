@@ -20,6 +20,7 @@ import { syncService } from './syncService'
 import mainStore from './store'
 import { audioRecorderService } from '../media/audio'
 import { voiceInputService } from './voiceInputService'
+import { initializeMicrophoneSelection } from '../media/microphoneSetUp'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -78,6 +79,9 @@ app.whenReady().then(async () => {
 
   console.log('Microphone access granted, starting audio recorder.')
   voiceInputService.setUpAudioRecorderListeners()
+
+  // Initialize microphone selection to prefer built-in microphone
+  await initializeMicrophoneSelection()
 
   app.on('activate', function () {
     if (mainWindow === null) {

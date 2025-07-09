@@ -1,5 +1,5 @@
 import { audioRecorderService } from '../media/audio'
-import { muteSystemAudio } from '../media/systemAudio'
+import { muteSystemAudio, unmuteSystemAudio } from '../media/systemAudio'
 import { getPillWindow, mainWindow } from './app'
 import store from './store'
 import { transcriptionService } from './transcriptionService'
@@ -33,7 +33,7 @@ export class VoiceInputService {
 
     if (store.get('settings').muteAudioWhenDictating) {
       console.info('[Audio] Unmuting system audio after dictation')
-      muteSystemAudio()
+      unmuteSystemAudio()
     }
 
     getPillWindow()?.webContents.send('recording-state-update', {

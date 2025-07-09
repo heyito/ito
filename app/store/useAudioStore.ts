@@ -5,7 +5,7 @@ interface AudioState {
   isRecording: boolean
   isShortcutEnabled: boolean
   setIsShortcutEnabled: (enabled: boolean) => void
-  startRecording: (deviceId: string) => Promise<void>
+  startRecording: () => Promise<void>
   stopRecording: () => Promise<void>
 }
 

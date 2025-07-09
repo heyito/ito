@@ -106,14 +106,22 @@ export default function KeyboardShortcutEditor({
 
   const handleStartEditing = () => {
     // Disable the shortcut in the main process via IPC
-    window.api.send('electron-store-set', 'settings.isShortcutGloballyEnabled', false)
+    window.api.send(
+      'electron-store-set',
+      'settings.isShortcutGloballyEnabled',
+      false,
+    )
     setIsShortcutEnabled(false)
     setIsEditing(true)
     setNewShortcut([])
   }
 
   const handleCancel = () => {
-    window.api.send('electron-store-set', 'settings.isShortcutGloballyEnabled', true)
+    window.api.send(
+      'electron-store-set',
+      'settings.isShortcutGloballyEnabled',
+      true,
+    )
     setIsShortcutEnabled(true)
     setIsEditing(false)
     setNewShortcut([])
@@ -128,7 +136,11 @@ export default function KeyboardShortcutEditor({
     onShortcutChange(newShortcut)
     setIsEditing(false)
     setIsShortcutEnabled(true)
-    window.api.send('electron-store-set', 'settings.isShortcutGloballyEnabled', true)
+    window.api.send(
+      'electron-store-set',
+      'settings.isShortcutGloballyEnabled',
+      true,
+    )
   }
 
   return (

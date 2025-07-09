@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { useOnboardingStore } from '../../store/useOnboardingStore'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
@@ -7,6 +7,7 @@ import { AudioBars } from './contents/AudioBars'
 import { PreviewAudioBars } from './contents/PreviewAudioBars'
 import { useAudioStore } from '@/app/store/useAudioStore'
 import { TooltipButton } from './contents/TooltipButton'
+import { analytics, ANALYTICS_EVENTS } from '../analytics'
 
 const globalStyles = `
   html, body, #app {
@@ -44,6 +45,7 @@ const Pill = () => {
   const [isRecording, setIsRecording] = useState(false)
   const [isManualRecording, setIsManualRecording] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  const isManualRecordingRef = useRef(false)
   const [showItoBarAlways, setShowItoBarAlways] = useState(
     initialShowItoBarAlways,
   )
@@ -64,9 +66,21 @@ const Pill = () => {
       (state: { isRecording: boolean }) => {
         // Update recording state - this is for global hotkey triggered recording
         setIsRecording(state.isRecording)
+
+        // Only track general recording analytics if it's not a manual recording
+        if (!isManualRecordingRef.current) {
+          const analyticsEvent = state.isRecording
+            ? ANALYTICS_EVENTS.RECORDING_STARTED
+            : ANALYTICS_EVENTS.RECORDING_COMPLETED
+          analytics.track(analyticsEvent, {
+            is_recording: state.isRecording,
+          })
+        }
+
         // If global recording stops, also stop manual recording
         if (!state.isRecording) {
           setIsManualRecording(false)
+          isManualRecordingRef.current = false
         }
         setVolumeHistory([])
       },
@@ -109,7 +123,7 @@ const Pill = () => {
       unsubSettings()
       unsubOnboarding()
     }
-  }, [volumeHistory, lastVolumeUpdate]) // Dependency array is empty as the logic inside doesn't depend on state.
+  }, [volumeHistory, lastVolumeUpdate])
 
   // Define dimensions for different states
   const idleWidth = 36
@@ -200,8 +214,13 @@ const Pill = () => {
   const handleClick = () => {
     if (isHovered && !anyRecording) {
       setIsManualRecording(true)
+      isManualRecordingRef.current = true
       // Trigger recording start via IPC
       startRecording()
+
+      analytics.track(ANALYTICS_EVENTS.MANUAL_RECORDING_STARTED, {
+        is_recording: true,
+      })
     }
   }
 
@@ -210,6 +229,10 @@ const Pill = () => {
     e.stopPropagation()
     setIsManualRecording(false)
     stopRecording()
+
+    analytics.track(ANALYTICS_EVENTS.MANUAL_RECORDING_ABANDONED, {
+      is_recording: false,
+    })
   }
 
   // Handle stop recording
@@ -217,6 +240,10 @@ const Pill = () => {
     e.stopPropagation()
     setIsManualRecording(false)
     stopRecording()
+
+    analytics.track(ANALYTICS_EVENTS.MANUAL_RECORDING_COMPLETED, {
+      is_recording: false,
+    })
   }
 
   const renderContent = () => {

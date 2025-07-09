@@ -23,15 +23,24 @@ const MainApp = () => {
   }, [])
 
   // If authenticated and onboarding completed, show main app
-  const shouldEnableShortcutGlobally = onboardingCompleted || onboardingStep >= 7
+  const shouldEnableShortcutGlobally =
+    onboardingCompleted || onboardingStep >= 7
 
   if (isAuthenticated && onboardingCompleted) {
-    window.api.send('electron-store-set', 'settings.isShortcutGloballyEnabled', shouldEnableShortcutGlobally);
+    window.api.send(
+      'electron-store-set',
+      'settings.isShortcutGloballyEnabled',
+      shouldEnableShortcutGlobally,
+    )
     return <HomeKit />
   }
 
   // If authenticated but onboarding not completed, continue onboarding
-  window.api.send('electron-store-set', 'settings.isShortcutGloballyEnabled', shouldEnableShortcutGlobally);
+  window.api.send(
+    'electron-store-set',
+    'settings.isShortcutGloballyEnabled',
+    shouldEnableShortcutGlobally,
+  )
   return <WelcomeKit />
 }
 

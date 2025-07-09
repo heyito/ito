@@ -119,27 +119,17 @@ export const ANALYTICS_EVENTS = {
   AUTH_STATE_GENERATION_FAILED: 'auth_state_generation_failed',
   AUTH_METHOD_FAILED: 'auth_method_failed',
 
-  // Hotkey events
-  HOTKEY_PRESSED: 'hotkey_pressed',
-  HOTKEY_RELEASED: 'hotkey_released',
-  HOTKEY_SESSION_STARTED: 'hotkey_session_started',
-  HOTKEY_SESSION_ENDED: 'hotkey_session_ended',
+  // Recording events
+  RECORDING_STARTED: 'recording_started',
+  RECORDING_COMPLETED: 'recording_completed',
+  MANUAL_RECORDING_STARTED: 'manual_recording_started',
+  MANUAL_RECORDING_COMPLETED: 'manual_recording_completed',
+  MANUAL_RECORDING_ABANDONED: 'manual_recording_abandoned',
 
   // Settings events
   SETTING_CHANGED: 'setting_changed',
   MICROPHONE_CHANGED: 'microphone_changed',
   KEYBOARD_SHORTCUT_CHANGED: 'keyboard_shortcut_changed',
-  PRIVACY_MODE_TOGGLED: 'privacy_mode_toggled',
-
-  // Permission events
-  PERMISSION_REQUESTED: 'permission_requested',
-  PERMISSION_GRANTED: 'permission_granted',
-  PERMISSION_DENIED: 'permission_denied',
-
-  // Usage events
-  TRANSCRIPTION_STARTED: 'transcription_started',
-  TRANSCRIPTION_COMPLETED: 'transcription_completed',
-  TEXT_INSERTED: 'text_inserted',
 } as const
 
 export type AnalyticsEvent =
@@ -319,36 +309,6 @@ class AnalyticsService {
     properties: OnboardingEventProperties,
   ) {
     console.log('trackOnboarding', eventName, properties)
-    this.track(eventName, properties)
-  }
-
-  /**
-   * Track hotkey events
-   */
-  trackHotkey(
-    eventName: Extract<
-      AnalyticsEvent,
-      | 'hotkey_pressed'
-      | 'hotkey_released'
-      | 'hotkey_session_started'
-      | 'hotkey_session_ended'
-    >,
-    properties: HotkeyEventProperties,
-  ) {
-    // Calculate session duration for hotkey sessions
-    if (
-      eventName === ANALYTICS_EVENTS.HOTKEY_PRESSED &&
-      !this.hotkeySessionStartTime
-    ) {
-      this.hotkeySessionStartTime = Date.now()
-    } else if (
-      eventName === ANALYTICS_EVENTS.HOTKEY_RELEASED &&
-      this.hotkeySessionStartTime
-    ) {
-      properties.duration_ms = Date.now() - this.hotkeySessionStartTime
-      this.hotkeySessionStartTime = null
-    }
-
     this.track(eventName, properties)
   }
 

@@ -207,7 +207,7 @@ export default function HomeContent() {
         URL.revokeObjectURL(audioUrl) // Clean up memory
       }
 
-      audio.onerror = async error => {
+      audio.onerror = async _error => {
         console.log(
           'Direct playback failed, trying as raw PCM with WAV headers...',
         )

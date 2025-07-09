@@ -321,11 +321,6 @@ export function registerIPC() {
   ipcMain.on('stop-native-recording', () => {
     log.info('IPC: Received stop-native-recording.')
     voiceInputService.stopSTTService()
-    // Notify the pill to collapse.
-    getPillWindow()?.webContents.send('recording-state-update', {
-      isRecording: false,
-      deviceId: '',
-    })
   })
 }
 
@@ -446,14 +441,6 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
     ipcMain.removeHandler(`check-microphone-permission-${mainWindow.id}`)
   })
 }
-
-ipcMain.on(
-  'recording-state-changed',
-  (_event, state: { isRecording: boolean; deviceId: string }) => {
-    // Its ONLY job is to forward the state to the pill's renderer.
-    getPillWindow()?.webContents.send('recording-state-update', state)
-  },
-)
 
 // Forwards volume data from the main window to the pill window
 ipcMain.on('volume-update', (_event, volume: number) => {

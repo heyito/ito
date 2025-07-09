@@ -140,7 +140,7 @@ export const useSettingsStore = create<SettingsState>(set => {
     ),
     setMicrophoneDeviceId: (deviceId: string, name: string) => {
       const currentName = useSettingsStore.getState().microphoneName
-      analytics.trackSettings(ANALYTICS_EVENTS.SETTING_CHANGED, {
+      analytics.trackSettings(ANALYTICS_EVENTS.MICROPHONE_CHANGED, {
         setting_name: 'microphoneName',
         old_value: currentName,
         new_value: name,

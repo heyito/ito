@@ -3,7 +3,6 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import {
   createAppWindow,
   createPillWindow,
-  getPillWindow,
   mainWindow,
   registerResourcesProtocol,
   startPillPositioner,

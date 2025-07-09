@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowUp, Pencil, Trash, Plus } from '@mynaui/icons-react'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip'
 import { Switch } from '../../ui/switch'
+import { StatusIndicator } from '../../ui/status-indicator'
 import { useDictionaryStore } from '../../../store/useDictionaryStore'
 import {
   Dialog,
@@ -38,6 +39,11 @@ export default function DictionaryContent() {
   const [newFrom, setNewFrom] = useState('')
   const [newTo, setNewTo] = useState('')
   const [isReplacement, setIsReplacement] = useState(false)
+  const [statusIndicator, setStatusIndicator] = useState<
+    'success' | 'error' | null
+  >(null)
+  const [errorMessage, setErrorMessage] = useState<string>('')
+  const [successMessage, setSuccessMessage] = useState<string>('')
   const containerRef = useRef<HTMLDivElement>(null)
   const editInputRef = useRef<HTMLInputElement>(null)
   const editFromRef = useRef<HTMLInputElement>(null)
@@ -159,20 +165,65 @@ export default function DictionaryContent() {
     }, 100)
   }
 
-  const handleSaveNew = () => {
-    if (isReplacement) {
-      if (newFrom.trim() !== '' && newTo.trim() !== '') {
-        addReplacement(newFrom.trim(), newTo.trim())
-        setShowAddDialog(false)
-        setNewFrom('')
-        setNewTo('')
+  const handleSaveNew = async () => {
+    try {
+      if (isReplacement) {
+        if (newFrom.trim() !== '' && newTo.trim() !== '') {
+          // Check for duplicate "from" word in existing replacements
+          const duplicateReplacement = entries.find(
+            entry =>
+              entry.type === 'replacement' &&
+              entry.from.toLowerCase() === newFrom.trim().toLowerCase(),
+          )
+
+          if (duplicateReplacement) {
+            setErrorMessage(
+              `"${newFrom.trim()}" already exists in your dictionary`,
+            )
+            setStatusIndicator('error')
+            return
+          }
+
+          await addReplacement(newFrom.trim(), newTo.trim())
+          setShowAddDialog(false)
+          setNewFrom('')
+          setNewTo('')
+          setErrorMessage('')
+          setSuccessMessage(
+            `"${newFrom.trim()}" → "${newTo.trim()}" added successfully`,
+          )
+          setStatusIndicator('success')
+        }
+      } else {
+        if (newEntryContent.trim() !== '') {
+          // Check for duplicate content in existing normal entries
+          const duplicateEntry = entries.find(
+            entry =>
+              entry.type === 'normal' &&
+              entry.content.toLowerCase() ===
+                newEntryContent.trim().toLowerCase(),
+          )
+
+          if (duplicateEntry) {
+            setErrorMessage(
+              `"${newEntryContent.trim()}" already exists in your dictionary`,
+            )
+            setStatusIndicator('error')
+            return
+          }
+
+          await addEntry(newEntryContent.trim())
+          setShowAddDialog(false)
+          setNewEntryContent('')
+          setErrorMessage('')
+          setSuccessMessage(`"${newEntryContent.trim()}" added successfully`)
+          setStatusIndicator('success')
+        }
       }
-    } else {
-      if (newEntryContent.trim() !== '') {
-        addEntry(newEntryContent.trim())
-        setShowAddDialog(false)
-        setNewEntryContent('')
-      }
+    } catch (error) {
+      console.error('Failed to add dictionary entry:', error)
+      setErrorMessage('Failed to add dictionary entry')
+      setStatusIndicator('error')
     }
   }
 
@@ -312,6 +363,18 @@ export default function DictionaryContent() {
           <ArrowUp className="w-4 h-4 font-bold" />
         </button>
       )}
+
+      {/* Status Indicator */}
+      <StatusIndicator
+        status={statusIndicator}
+        onHide={() => {
+          setStatusIndicator(null)
+          setErrorMessage('')
+          setSuccessMessage('')
+        }}
+        successMessage={successMessage || 'Dictionary entry added successfully'}
+        errorMessage={errorMessage || 'Failed to add dictionary entry'}
+      />
 
       {/* Edit Entry Dialog */}
       <Dialog

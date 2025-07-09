@@ -5,6 +5,7 @@ export interface Interaction {
   asr_output: any
   llm_output: any
   raw_audio: Buffer | null
+  duration_ms: number | null
   created_at: string
   updated_at: string
   deleted_at: string | null

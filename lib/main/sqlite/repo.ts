@@ -54,8 +54,8 @@ export class InteractionsTable {
     }
 
     const query = `
-      INSERT INTO interactions (id, user_id, title, asr_output, llm_output, raw_audio, created_at, updated_at, deleted_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO interactions (id, user_id, title, asr_output, llm_output, raw_audio, duration_ms, created_at, updated_at, deleted_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
     // Note: SQLite doesn't have a dedicated JSON type, so we stringify complex objects
     const params = [
@@ -65,6 +65,7 @@ export class InteractionsTable {
       JSON.stringify(newInteraction.asr_output),
       JSON.stringify(newInteraction.llm_output),
       newInteraction.raw_audio,
+      newInteraction.duration_ms,
       newInteraction.created_at,
       newInteraction.updated_at,
       newInteraction.deleted_at,
@@ -119,13 +120,14 @@ export class InteractionsTable {
 
   static async upsert(interaction: Interaction): Promise<void> {
     const query = `
-      INSERT INTO interactions (id, user_id, title, asr_output, llm_output, raw_audio, created_at, updated_at, deleted_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO interactions (id, user_id, title, asr_output, llm_output, raw_audio, duration_ms, created_at, updated_at, deleted_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         title = excluded.title,
         asr_output = excluded.asr_output,
         llm_output = excluded.llm_output,
         raw_audio = excluded.raw_audio,
+        duration_ms = excluded.duration_ms,
         updated_at = excluded.updated_at,
         deleted_at = excluded.deleted_at;
     `
@@ -136,6 +138,7 @@ export class InteractionsTable {
       JSON.stringify(interaction.asr_output),
       JSON.stringify(interaction.llm_output),
       interaction.raw_audio,
+      interaction.duration_ms,
       interaction.created_at,
       interaction.updated_at,
       interaction.deleted_at,

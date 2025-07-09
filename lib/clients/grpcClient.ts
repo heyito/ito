@@ -131,11 +131,15 @@ class GrpcClient {
       asrOutput: JSON.stringify(interaction.asr_output),
       llmOutput: JSON.stringify(interaction.llm_output),
       rawAudio: uint8AudioData,
+      durationMs: interaction.duration_ms ?? 0,
     })
 
     console.log(
       '[gRPC Client] Sending request with audio size:',
       request.rawAudio.length,
+      'duration:',
+      request.durationMs,
+      'ms',
     )
 
     return this.client.createInteraction(request, {

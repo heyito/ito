@@ -190,6 +190,7 @@ export class SyncService {
             ? JSON.parse(remoteInteraction.llmOutput)
             : null,
           raw_audio: audioBuffer,
+          duration_ms: remoteInteraction.durationMs || 0,
           created_at: remoteInteraction.createdAt,
           updated_at: remoteInteraction.updatedAt,
           deleted_at: remoteInteraction.deletedAt || null,

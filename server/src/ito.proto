@@ -109,9 +109,10 @@ message Interaction {
   string asr_output = 4; // JSON string
   string llm_output = 5; // JSON string
   bytes raw_audio = 6; // Raw audio data
-  string created_at = 7;
-  string updated_at = 8;
-  string deleted_at = 9;
+  int32 duration_ms = 7; // Duration in milliseconds
+  string created_at = 8;
+  string updated_at = 9;
+  string deleted_at = 10;
 }
 
 message CreateInteractionRequest {
@@ -120,6 +121,7 @@ message CreateInteractionRequest {
   string asr_output = 3;
   string llm_output = 4;
   bytes raw_audio = 5;
+  int32 duration_ms = 6; // Duration in milliseconds
 }
 
 message GetInteractionRequest {

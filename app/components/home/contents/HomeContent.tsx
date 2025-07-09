@@ -5,6 +5,13 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip'
 import { useAuthStore } from '@/app/store/useAuthStore'
 import { Interaction } from '@/lib/main/sqlite/models'
 
+// Interface for interaction statistics
+interface InteractionStats {
+  streakDays: number
+  totalWords: number
+  averageWPM: number
+}
+
 export default function HomeContent() {
   const { keyboardShortcut } = useSettingsStore()
   const { user } = useAuthStore()
@@ -12,6 +19,119 @@ export default function HomeContent() {
   const [interactions, setInteractions] = useState<Interaction[]>([])
   const [loading, setLoading] = useState(true)
   const [playingAudio, setPlayingAudio] = useState<string | null>(null)
+  const [stats, setStats] = useState<InteractionStats>({
+    streakDays: 0,
+    totalWords: 0,
+    averageWPM: 0,
+  })
+
+  // Calculate statistics from interactions
+  const calculateStats = (interactions: Interaction[]): InteractionStats => {
+    if (interactions.length === 0) {
+      return { streakDays: 0, totalWords: 0, averageWPM: 0 }
+    }
+
+    // Calculate streak (consecutive days with interactions)
+    const streakDays = calculateStreak(interactions)
+
+    // Calculate total words from transcripts
+    const totalWords = calculateTotalWords(interactions)
+
+    // Calculate average WPM (estimate based on average speaking rate)
+    const averageWPM = calculateAverageWPM(interactions)
+
+    return { streakDays, totalWords, averageWPM }
+  }
+
+  const calculateStreak = (interactions: Interaction[]): number => {
+    if (interactions.length === 0) return 0
+
+    // Group interactions by date
+    const dateGroups = new Map<string, Interaction[]>()
+    interactions.forEach(interaction => {
+      const date = new Date(interaction.created_at).toDateString()
+      if (!dateGroups.has(date)) {
+        dateGroups.set(date, [])
+      }
+      dateGroups.get(date)!.push(interaction)
+    })
+
+    // Sort dates in descending order (most recent first)
+    const sortedDates = Array.from(dateGroups.keys()).sort(
+      (a, b) => new Date(b).getTime() - new Date(a).getTime(),
+    )
+
+    let streak = 0
+    const today = new Date()
+
+    for (let i = 0; i < sortedDates.length; i++) {
+      const currentDate = new Date(sortedDates[i])
+      const expectedDate = new Date(today)
+      expectedDate.setDate(today.getDate() - i)
+
+      // Check if current date matches expected date (allowing for today or previous consecutive days)
+      if (currentDate.toDateString() === expectedDate.toDateString()) {
+        streak++
+      } else {
+        break
+      }
+    }
+
+    return streak
+  }
+
+  const calculateTotalWords = (interactions: Interaction[]): number => {
+    return interactions.reduce((total, interaction) => {
+      const transcript = interaction.asr_output?.transcript?.trim()
+      if (transcript) {
+        // Count words by splitting on whitespace and filtering out empty strings
+        const words = transcript.split(/\s+/).filter(word => word.length > 0)
+        return total + words.length
+      }
+      return total
+    }, 0)
+  }
+
+  const calculateAverageWPM = (interactions: Interaction[]): number => {
+    const validInteractions = interactions.filter(
+      interaction =>
+        interaction.asr_output?.transcript?.trim() && interaction.duration_ms,
+    )
+
+    if (validInteractions.length === 0) return 0
+
+    let totalWords = 0
+    let totalDurationMs = 0
+
+    validInteractions.forEach(interaction => {
+      const transcript = interaction.asr_output?.transcript?.trim()
+      if (transcript && interaction.duration_ms) {
+        // Count words by splitting on whitespace and filtering out empty strings
+        const words = transcript.split(/\s+/).filter(word => word.length > 0)
+        totalWords += words.length
+        totalDurationMs += interaction.duration_ms
+      }
+    })
+
+    if (totalDurationMs === 0) return 0
+
+    // Calculate WPM: (total words / total duration in minutes)
+    const totalMinutes = totalDurationMs / (1000 * 60)
+    const wpm = totalWords / totalMinutes
+
+    // Round to nearest integer and ensure it's reasonable
+    return Math.round(Math.max(1, wpm))
+  }
+
+  const formatStreakText = (days: number): string => {
+    if (days === 0) return '0 days'
+    if (days === 1) return '1 day'
+    if (days < 7) return `${days} days`
+    if (days < 14) return '1 week'
+    if (days < 30) return `${Math.floor(days / 7)} weeks`
+    if (days < 60) return '1 month'
+    return `${Math.floor(days / 30)} months`
+  }
 
   useEffect(() => {
     loadInteractions()
@@ -41,6 +161,10 @@ export default function HomeContent() {
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       )
       setInteractions(sortedInteractions)
+
+      // Calculate and set statistics
+      const calculatedStats = calculateStats(sortedInteractions)
+      setStats(calculatedStats)
     } catch (error) {
       console.error('Failed to load interactions:', error)
     } finally {
@@ -242,13 +366,13 @@ export default function HomeContent() {
           </div>
           <div className="flex items-center text-sm text-gray-700">
             <span className="flex items-center gap-1 bg-slate-100 px-3 py-2 rounded-l-2xl relative after:content-[''] after:absolute after:right-0 after:top-[17.5%] after:h-[65%] after:w-[2px] after:bg-slate-200">
-              🔥 1 week
+              🔥 {formatStreakText(stats.streakDays)}
             </span>
             <span className="flex items-center gap-1 bg-slate-100 px-3 py-2 relative after:content-[''] after:absolute after:right-0 after:top-[17.5%] after:h-[65%] after:w-[2px] after:bg-slate-200">
-              🚀 7 words
+              🚀 {stats.totalWords} {stats.totalWords === 1 ? 'word' : 'words'}
             </span>
             <span className="flex items-center gap-1 bg-slate-100 px-3 py-2 rounded-r-2xl">
-              👍 88 WPM
+              👍 {stats.averageWPM} WPM
             </span>
           </div>
         </div>

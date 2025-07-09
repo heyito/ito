@@ -96,6 +96,7 @@ function dbToInteractionPb(dbInteraction: DbInteraction): Interaction {
     rawAudio: dbInteraction.raw_audio
       ? new Uint8Array(dbInteraction.raw_audio)
       : new Uint8Array(0),
+    durationMs: dbInteraction.duration_ms ?? 0,
     createdAt: dbInteraction.created_at.toISOString(),
     updatedAt: dbInteraction.updated_at.toISOString(),
     deletedAt: dbInteraction.deleted_at?.toISOString() ?? '',

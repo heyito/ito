@@ -14,6 +14,7 @@ export class TranscriptionService {
     null
   private currentInteractionId: string | null = null
   private audioChunksForInteraction: Buffer[] = []
+  private interactionStartTime: number | null = null
 
   private async *streamAudioChunks() {
     while (this.isStreaming) {
@@ -42,6 +43,7 @@ export class TranscriptionService {
     this.audioChunkQueue = []
     this.audioChunksForInteraction = []
     this.currentInteractionId = uuidv4()
+    this.interactionStartTime = Date.now() // Record start time
     log.info('[gRPC Service] Starting new transcription stream.')
 
     grpcClient
@@ -76,6 +78,7 @@ export class TranscriptionService {
         this.isStreaming = false
         this.currentInteractionId = null
         this.audioChunksForInteraction = []
+        this.interactionStartTime = null // Reset timing
         log.info('[gRPC Service] Stream has fully terminated.')
       })
   }
@@ -125,6 +128,12 @@ export class TranscriptionService {
         return
       }
 
+      // Calculate interaction duration
+      const interactionEndTime = Date.now()
+      const durationMs = this.interactionStartTime
+        ? interactionEndTime - this.interactionStartTime
+        : 0
+
       // Create ASR output object
       const asrOutput = {
         transcript,
@@ -135,6 +144,7 @@ export class TranscriptionService {
         ),
         error: errorMessage || null,
         timestamp: new Date().toISOString(),
+        durationMs, // Add duration to ASR output for backwards compatibility
       }
 
       // Concatenate all audio chunks into a single buffer
@@ -158,13 +168,14 @@ export class TranscriptionService {
         asr_output: asrOutput,
         llm_output: null, // No LLM processing yet
         raw_audio: rawAudio,
+        duration_ms: durationMs, // Add duration as separate field
         created_at: now,
         updated_at: now,
         deleted_at: null,
       })
 
       log.info(
-        `[TranscriptionService] Created interaction: ${this.currentInteractionId}`,
+        `[TranscriptionService] Created interaction: ${this.currentInteractionId} (duration: ${durationMs}ms)`,
       )
       console.log(
         '[TranscriptionService] Successfully saved interaction to database',
@@ -176,6 +187,7 @@ export class TranscriptionService {
           id: this.currentInteractionId,
           transcript,
           timestamp: new Date().toISOString(),
+          durationMs,
         })
       })
     } catch (error) {

@@ -10,6 +10,9 @@ RUN bun install
 # Copy source code
 COPY . .
 
+# Make sure migration script is executable
+RUN chmod +x scripts/migrate.sh
+
 # Generate proto types during the build
 RUN bun run proto:gen:server
 
@@ -19,8 +22,6 @@ RUN bun build src/index.ts --outdir dist --target node
 # Expose the gRPC port
 EXPOSE 3000
 
-# Expose the health check port
-EXPOSE 3001
 
 # Run the gRPC server with Bun
 CMD ["bun", "run", "start"]

@@ -116,29 +116,75 @@ export default function DictionaryContent() {
     }
   }
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingEntry) return
 
-    if (editingEntry.type === 'normal' && editContent.trim() !== '') {
-      updateEntry(editingEntry.id, {
-        type: 'normal',
-        content: editContent.trim(),
-      } as any)
-      setEditingEntry(null)
-      setEditContent('')
-    } else if (
-      editingEntry.type === 'replacement' &&
-      editFrom.trim() !== '' &&
-      editTo.trim() !== ''
-    ) {
-      updateEntry(editingEntry.id, {
-        type: 'replacement',
-        from: editFrom.trim(),
-        to: editTo.trim(),
-      } as any)
-      setEditingEntry(null)
-      setEditFrom('')
-      setEditTo('')
+    try {
+      if (editingEntry.type === 'normal' && editContent.trim() !== '') {
+        // Check for duplicate content in other normal entries (excluding current entry)
+        const duplicateEntry = entries.find(
+          entry =>
+            entry.id !== editingEntry.id &&
+            entry.type === 'normal' &&
+            entry.content.toLowerCase() === editContent.trim().toLowerCase(),
+        )
+
+        if (duplicateEntry) {
+          setErrorMessage(
+            `"${editContent.trim()}" already exists in your dictionary`,
+          )
+          setStatusIndicator('error')
+          return
+        }
+
+        await updateEntry(editingEntry.id, {
+          type: 'normal',
+          content: editContent.trim(),
+        } as any)
+        setEditingEntry(null)
+        setEditContent('')
+        setErrorMessage('')
+        setSuccessMessage(`"${editContent.trim()}" updated successfully`)
+        setStatusIndicator('success')
+      } else if (
+        editingEntry.type === 'replacement' &&
+        editFrom.trim() !== '' &&
+        editTo.trim() !== ''
+      ) {
+        // Check for duplicate "from" word in other replacements (excluding current entry)
+        const duplicateReplacement = entries.find(
+          entry =>
+            entry.id !== editingEntry.id &&
+            entry.type === 'replacement' &&
+            entry.from.toLowerCase() === editFrom.trim().toLowerCase(),
+        )
+
+        if (duplicateReplacement) {
+          setErrorMessage(
+            `"${editFrom.trim()}" already exists in your dictionary`,
+          )
+          setStatusIndicator('error')
+          return
+        }
+
+        await updateEntry(editingEntry.id, {
+          type: 'replacement',
+          from: editFrom.trim(),
+          to: editTo.trim(),
+        } as any)
+        setEditingEntry(null)
+        setEditFrom('')
+        setEditTo('')
+        setErrorMessage('')
+        setSuccessMessage(
+          `"${editFrom.trim()}" → "${editTo.trim()}" updated successfully`,
+        )
+        setStatusIndicator('success')
+      }
+    } catch (error) {
+      console.error('Failed to update dictionary entry:', error)
+      setErrorMessage('Failed to update dictionary entry')
+      setStatusIndicator('error')
     }
   }
 
@@ -149,8 +195,21 @@ export default function DictionaryContent() {
     setEditTo('')
   }
 
-  const handleDelete = (id: string) => {
-    deleteEntry(id)
+  const handleDelete = async (id: string) => {
+    const entryToDelete = entries.find(e => e.id === id)
+    if (entryToDelete) {
+      const deletedItemText = getDisplayText(entryToDelete)
+      try {
+        await deleteEntry(id)
+        setErrorMessage('')
+        setSuccessMessage(`"${deletedItemText}" deleted successfully`)
+        setStatusIndicator('success')
+      } catch (error) {
+        console.error('Failed to delete dictionary entry:', error)
+        setErrorMessage(`Failed to delete "${deletedItemText}"`)
+        setStatusIndicator('error')
+      }
+    }
   }
 
   const handleAddNew = () => {

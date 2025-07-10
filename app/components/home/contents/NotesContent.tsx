@@ -5,6 +5,7 @@ import Masonry from '@mui/lab/Masonry'
 import { AudioIcon } from '../../icons/AudioIcon'
 import { ArrowUp, Grid, Rows, Search, X } from '@mynaui/icons-react'
 import { Note } from '../../ui/note'
+import { StatusIndicator } from '../../ui/status-indicator'
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,10 @@ export default function NotesContent() {
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState<number | null>(null)
+  const [statusIndicator, setStatusIndicator] = useState<
+    'success' | 'error' | null
+  >(null)
+  const [statusMessage, setStatusMessage] = useState<string>('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -121,12 +126,20 @@ export default function NotesContent() {
           note.content.toLowerCase().includes(searchQuery.toLowerCase()),
         )
 
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     if (noteContent.trim() !== '') {
-      addNote(noteContent.trim())
-      setNoteContent('')
-      setCreatingNote(false)
-      setShowAddNoteButton(false)
+      try {
+        await addNote(noteContent.trim())
+        setNoteContent('')
+        setCreatingNote(false)
+        setShowAddNoteButton(false)
+        setStatusMessage('Note saved')
+        setStatusIndicator('success')
+      } catch (error) {
+        console.error('Failed to add note:', error)
+        setStatusMessage('Failed to save note')
+        setStatusIndicator('error')
+      }
     }
   }
 
@@ -140,9 +153,17 @@ export default function NotesContent() {
     }
   }
 
-  const handleDeleteNote = (noteId: string) => {
-    deleteNote(noteId)
-    setShowDropdown(null)
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      await deleteNote(noteId)
+      setShowDropdown(null)
+      setStatusMessage('Deleted note')
+      setStatusIndicator('success')
+    } catch (error) {
+      console.error('Failed to delete note:', error)
+      setStatusMessage('Failed to delete note')
+      setStatusIndicator('error')
+    }
   }
 
   const handleEditNote = (noteId: string) => {
@@ -158,11 +179,19 @@ export default function NotesContent() {
     }
   }
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editingNote && editContent.trim() !== '') {
-      updateNote(editingNote.id, editContent.trim())
-      setEditingNote(null)
-      setEditContent('')
+      try {
+        await updateNote(editingNote.id, editContent.trim())
+        setEditingNote(null)
+        setEditContent('')
+        setStatusMessage('Updated note')
+        setStatusIndicator('success')
+      } catch (error) {
+        console.error('Failed to update note:', error)
+        setStatusMessage('Failed to update note')
+        setStatusIndicator('error')
+      }
     }
   }
 
@@ -481,6 +510,17 @@ export default function NotesContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Status Indicator */}
+      <StatusIndicator
+        status={statusIndicator}
+        onHide={() => {
+          setStatusIndicator(null)
+          setStatusMessage('')
+        }}
+        successMessage={statusMessage}
+        errorMessage={statusMessage}
+      />
     </div>
   )
 }

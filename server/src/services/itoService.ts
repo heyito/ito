@@ -117,27 +117,10 @@ function dbToDictionaryItemPb(
   })
 }
 
-function wrapHandler<T extends (...args: any[]) => Promise<any>>(fn: T): T {
-  return (async (...args: any[]) => {
-    try {
-      return await fn(...args)
-    } catch (err) {
-      console.error('Unhandled error in RPC handler:', err)
-      throw new ConnectError(
-        'Internal server error',
-        Code.Internal,
-        undefined,
-        undefined,
-        err,
-      )
-    }
-  }) as T
-}
-
 // Export the service implementation as a function that takes a ConnectRouter
 export default (router: ConnectRouter) => {
   router.service(ItoServiceDesc, {
-    transcribeFile: wrapHandler(async (request: TranscribeFileRequest) => {
+    async transcribeFile(request: TranscribeFileRequest) {
       if (!request.audioData || request.audioData.length === 0) {
         throw new Error('No audio data received')
       }
@@ -145,77 +128,71 @@ export default (router: ConnectRouter) => {
       return create(TranscriptionResponseSchema, {
         transcript: dummyTranscript,
       })
-    }),
+    },
 
-    transcribeStream: wrapHandler(
-      async (requests: AsyncIterable<AudioChunk>, context: HandlerContext) => {
-        const audioChunks: Uint8Array[] = []
-        for await (const chunk of requests) {
-          audioChunks.push(chunk.audioData)
-        }
+    async transcribeStream(
+      requests: AsyncIterable<AudioChunk>,
+      context: HandlerContext,
+    ) {
+      const audioChunks: Uint8Array[] = []
 
-        // Process each audio chunk from the stream
-        for await (const chunk of requests) {
-          audioChunks.push(chunk.audioData)
-        }
+      // Process each audio chunk from the stream
+      for await (const chunk of requests) {
+        audioChunks.push(chunk.audioData)
+      }
 
-        // Concatenate all audio chunks
-        const totalLength = audioChunks.reduce(
-          (sum, chunk) => sum + chunk.length,
-          0,
+      // Concatenate all audio chunks
+      const totalLength = audioChunks.reduce(
+        (sum, chunk) => sum + chunk.length,
+        0,
+      )
+      const fullAudio = new Uint8Array(totalLength)
+      let offset = 0
+      for (const chunk of audioChunks) {
+        fullAudio.set(chunk, offset)
+        offset += chunk.length
+      }
+
+      try {
+        // 1. Set audio properties to match the new capture settings.
+        const sampleRate = 16000 // Correct sample rate
+        const bitDepth = 16
+        const channels = 1 // Mono
+
+        // 2. Create the header with the correct properties.
+        const wavHeader = createWavHeader(
+          fullAudio.length,
+          sampleRate,
+          channels,
+          bitDepth,
         )
-        const fullAudio = new Uint8Array(totalLength)
-        let offset = 0
-        for (const chunk of audioChunks) {
-          fullAudio.set(chunk, offset)
-          offset += chunk.length
-        }
+        const fullAudioWAV = Buffer.concat([wavHeader, fullAudio])
 
-        try {
-          // 1. Set audio properties to match the new capture settings.
-          const sampleRate = 16000 // Correct sample rate
-          const bitDepth = 16
-          const channels = 1 // Mono
+        // 3. Extract vocabulary from gRPC metadata
+        const vocabularyHeader = context.requestHeader.get('vocabulary')
+        const vocabulary = vocabularyHeader
+          ? vocabularyHeader.split(',')
+          : undefined
 
-          // 2. Create the header with the correct properties.
-          const wavHeader = createWavHeader(
-            fullAudio.length,
-            sampleRate,
-            channels,
-            bitDepth,
-          )
-          const fullAudioWAV = Buffer.concat([wavHeader, fullAudio])
+        // 4. Send the corrected WAV file.
+        const transcript = await groqClient.transcribeAudio(
+          fullAudioWAV,
+          'wav',
+          vocabulary,
+        )
 
-          // 3. Extract vocabulary from gRPC metadata
-          const vocabularyHeader = context.requestHeader.get('vocabulary')
-          const vocabulary = vocabularyHeader
-            ? vocabularyHeader.split(',')
-            : undefined
-
-          // 4. Send the corrected WAV file.
-          const transcript = await groqClient.transcribeAudio(
-            fullAudioWAV,
-            'wav',
-            vocabulary,
-          )
-
-          return create(TranscriptionResponseSchema, {
-            transcript,
-          })
-        } catch (error: any) {
-          console.error(
-            'Failed to process transcription via GroqClient:',
-            error,
-          )
-          // return error response
-          return create(TranscriptionResponseSchema, {
-            transcript: `Error processing transcription: ${error?.message}`,
-          })
-        }
-      },
-    ),
-
-    createNote: wrapHandler(async (request, context) => {
+        return create(TranscriptionResponseSchema, {
+          transcript,
+        })
+      } catch (error: any) {
+        console.error('Failed to process transcription via GroqClient:', error)
+        // return error response
+        return create(TranscriptionResponseSchema, {
+          transcript: `Error processing transcription: ${error?.message}`,
+        })
+      }
+    },
+    async createNote(request, context: HandlerContext) {
       const user = context.values.get(kUser)
       const userId = user?.sub
       if (!userId) {
@@ -224,17 +201,17 @@ export default (router: ConnectRouter) => {
       const noteRequest = { ...request, userId }
       const newNote = await NotesRepository.create(noteRequest)
       return dbToNotePb(newNote)
-    }),
+    },
 
-    getNote: wrapHandler(async request => {
+    async getNote(request) {
       const note = await NotesRepository.findById(request.id)
       if (!note) {
         throw new ConnectError('Note not found', Code.NotFound)
       }
       return dbToNotePb(note)
-    }),
+    },
 
-    listNotes: wrapHandler(async (request, context) => {
+    async listNotes(request, context: HandlerContext) {
       const user = context.values.get(kUser)
       const userId = user?.sub
       if (!userId) {
@@ -245,22 +222,22 @@ export default (router: ConnectRouter) => {
         : undefined
       const notes = await NotesRepository.findByUserId(userId, since)
       return { notes: notes.map(dbToNotePb) }
-    }),
+    },
 
-    updateNote: wrapHandler(async request => {
+    async updateNote(request) {
       const updatedNote = await NotesRepository.update(request)
       if (!updatedNote) {
         throw new ConnectError('Note not found', Code.NotFound)
       }
       return dbToNotePb(updatedNote)
-    }),
+    },
 
-    deleteNote: wrapHandler(async request => {
+    async deleteNote(request) {
       await NotesRepository.softDelete(request.id)
       return {}
-    }),
+    },
 
-    createInteraction: wrapHandler(async (request, context) => {
+    async createInteraction(request, context: HandlerContext) {
       const user = context.values.get(kUser)
       const userId = user?.sub
       if (!userId) {
@@ -270,17 +247,17 @@ export default (router: ConnectRouter) => {
       const newInteraction =
         await InteractionsRepository.create(interactionRequest)
       return dbToInteractionPb(newInteraction)
-    }),
+    },
 
-    getInteraction: wrapHandler(async request => {
+    async getInteraction(request) {
       const interaction = await InteractionsRepository.findById(request.id)
       if (!interaction) {
         throw new ConnectError('Interaction not found', Code.NotFound)
       }
       return dbToInteractionPb(interaction)
-    }),
+    },
 
-    listInteractions: wrapHandler(async (request, context) => {
+    async listInteractions(request, context: HandlerContext) {
       const user = context.values.get(kUser)
       const userId = user?.sub
       if (!userId) {
@@ -294,9 +271,9 @@ export default (router: ConnectRouter) => {
         since,
       )
       return { interactions: interactions.map(dbToInteractionPb) }
-    }),
+    },
 
-    updateInteraction: wrapHandler(async request => {
+    async updateInteraction(request) {
       const updatedInteraction = await InteractionsRepository.update(request)
       if (!updatedInteraction) {
         throw new ConnectError(
@@ -305,14 +282,14 @@ export default (router: ConnectRouter) => {
         )
       }
       return dbToInteractionPb(updatedInteraction)
-    }),
+    },
 
-    deleteInteraction: wrapHandler(async request => {
+    async deleteInteraction(request) {
       await InteractionsRepository.softDelete(request.id)
       return {}
-    }),
+    },
 
-    createDictionaryItem: wrapHandler(async (request, context) => {
+    async createDictionaryItem(request, context: HandlerContext) {
       const user = context.values.get(kUser)
       const userId = user?.sub
       if (!userId) {
@@ -321,9 +298,9 @@ export default (router: ConnectRouter) => {
       const dictionaryRequest = { ...request, userId }
       const newItem = await DictionaryRepository.create(dictionaryRequest)
       return dbToDictionaryItemPb(newItem)
-    }),
+    },
 
-    listDictionaryItems: wrapHandler(async (request, context) => {
+    async listDictionaryItems(request, context: HandlerContext) {
       const user = context.values.get(kUser)
       const userId = user?.sub
       if (!userId) {
@@ -334,9 +311,9 @@ export default (router: ConnectRouter) => {
         : undefined
       const items = await DictionaryRepository.findByUserId(userId, since)
       return { items: items.map(dbToDictionaryItemPb) }
-    }),
+    },
 
-    updateDictionaryItem: wrapHandler(async request => {
+    async updateDictionaryItem(request) {
       const updatedItem = await DictionaryRepository.update(request)
       if (!updatedItem) {
         throw new ConnectError(
@@ -345,14 +322,14 @@ export default (router: ConnectRouter) => {
         )
       }
       return dbToDictionaryItemPb(updatedItem)
-    }),
+    },
 
-    deleteDictionaryItem: wrapHandler(async request => {
+    async deleteDictionaryItem(request) {
       await DictionaryRepository.softDelete(request.id)
       return {}
-    }),
+    },
 
-    deleteUserData: wrapHandler(async (_request, context) => {
+    async deleteUserData(_request, context: HandlerContext) {
       const user = context.values.get(kUser)
       const userId = user?.sub
       if (!userId) {
@@ -367,6 +344,6 @@ export default (router: ConnectRouter) => {
       ])
       console.log(`Successfully deleted all data for user: ${userId}`)
       return {}
-    }),
+    },
   })
 }

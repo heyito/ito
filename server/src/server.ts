@@ -4,6 +4,8 @@ import { createContextValues } from '@connectrpc/connect'
 import Auth0 from '@auth0/auth0-fastify-api'
 import itoServiceRoutes from './services/itoService.js'
 import { kUser } from './auth/userContext.js'
+import { errorInterceptor } from './services/errorInterceptor.js'
+import { loggingInterceptor } from './services/loggingInterceptor.js'
 import dotenv from 'dotenv'
 
 dotenv.config()
@@ -42,9 +44,11 @@ export const startServer = async () => {
       console.log('Authentication is DISABLED.')
     }
 
-    // Register the Connect RPC plugin with our service routes
+    // Register the Connect RPC plugin with our service routes and interceptors
     await fastify.register(fastifyConnectPlugin, {
       routes: itoServiceRoutes,
+      // Order matters: logging -> error handling
+      interceptors: [loggingInterceptor, errorInterceptor],
       contextValues: request => {
         // Pass Auth0 user info from Fastify request to Connect RPC context
         if (REQUIRE_AUTH && request.user && request.user.sub) {
@@ -55,7 +59,7 @@ export const startServer = async () => {
     })
   })
 
-  // Error handling
+  // Error handling - this handles Fastify-level errors, not RPC errors
   connectRpcServer.setErrorHandler((error, _, reply) => {
     connectRpcServer.log.error(error)
     reply.status(500).send({

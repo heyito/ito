@@ -49,7 +49,7 @@ jobs:
             --function-name ${{ vars.AWS_STAGE }}-ItoDb-migration \
             --payload '{}' \
             out.json
-          cat out.json 
+          cat out.json
 
       - name: Login to ECR
         run: |

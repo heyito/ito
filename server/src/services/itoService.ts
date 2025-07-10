@@ -171,19 +171,13 @@ export default (router: ConnectRouter) => {
         const fullAudioWAV = Buffer.concat([wavHeader, fullAudio])
 
         // 3. Send the corrected WAV file.
-        const transcript = await groqClient.transcribeAudio(
-          fullAudioWAV,
-          'wav',
-        )
+        const transcript = await groqClient.transcribeAudio(fullAudioWAV, 'wav')
 
         return create(TranscriptionResponseSchema, {
           transcript,
         })
       } catch (error: any) {
-        console.error(
-          'Failed to process transcription via GroqClient:',
-          error,
-        )
+        console.error('Failed to process transcription via GroqClient:', error)
         // return error response
         return create(TranscriptionResponseSchema, {
           transcript: `Error processing transcription: ${error?.message}`,

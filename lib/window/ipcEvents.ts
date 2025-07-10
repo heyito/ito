@@ -1,7 +1,7 @@
 import { BrowserWindow, ipcMain, shell, systemPreferences, app } from 'electron'
 import log from 'electron-log'
 import os from 'os'
-import store from '../main/store'
+import store, { getCurrentUserId } from '../main/store'
 
 import {
   startKeyListener,
@@ -25,12 +25,6 @@ import { voiceInputService } from '../main/voiceInputService'
 
 const handleIPC = (channel: string, handler: (...args: any[]) => any) => {
   ipcMain.handle(channel, handler)
-}
-
-// Helper function to get current user ID
-const getCurrentUserId = (): string | undefined => {
-  const user = store.get('userProfile') as any
-  return user?.id
 }
 
 // This single function registers all IPC handlers for the application.

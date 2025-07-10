@@ -6,7 +6,6 @@
   "license": "GPL-3.0-only",
   "dependencies": {
     "@auth0/auth0-fastify-api": "^1.0.2",
-    "@aws-sdk/client-ecs": "^3.840.0",
     "@bufbuild/buf": "^1.55.1",
     "@bufbuild/protobuf": "^2.5.2",
     "@bufbuild/protoc-gen-es": "^2.5.2",
@@ -30,8 +29,8 @@
     "proto:gen:client": "bunx buf generate --output=../app src/ito.proto",
     "proto:gen": "bun run proto:gen:server && bun run proto:gen:client",
     "db:migrate:create": "node-pg-migrate --migrations-dir src/migrations --migration-file-language js create",
-    "db:migrate": "export DATABASE_URL=postgres://$DB_USER:$DB_PASS@$DB_HOST:5432/$DB_NAME && node ./node_modules/node-pg-migrate/bin/node-pg-migrate.js --migrations-dir src/migrations up ",
-    "db:migrate:down": "export DATABASE_URL=postgres://$DB_USER:$DB_PASS@$DB_HOST:5432/$DB_NAME && node ./node_modules/node-pg-migrate/bin/node-pg-migrate.js --migrations-dir src/migrations down",
+    "db:migrate": "./scripts/migrate.sh up",
+    "db:migrate:down": "./scripts/migrate.sh down",
     "local-db-up": "docker-compose up -d db",
     "local-db-down": "docker-compose down",
     "dev": "tsx watch src/index.ts",

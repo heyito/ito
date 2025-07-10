@@ -56,7 +56,9 @@ jobs:
     secrets: inherit
 
   deploy-app:
-    needs: paths-check
+    needs: 
+      - paths-check
+      - deploy-infra
     if: ${{ needs.paths-check.outputs.server_changed == 'true' }}
     uses: ./.github/workflows/app-deploy.yml
     with:

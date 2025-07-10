@@ -183,7 +183,7 @@ export class ServiceStack extends Stack {
     // Setup migration lambda
     const migrationLambda = new NodejsFunction(this, 'ItoMigrationLambda', {
       functionName: `${stageName}-${DB_NAME}-migration`,
-      entry: '../scripts/run-migration.ts',
+      entry: 'lambdas/run-migration.ts',
       handler: 'handler',
       environment: {
         CLUSTER: cluster.clusterName,
@@ -194,12 +194,20 @@ export class ServiceStack extends Stack {
         STAGE_NAME: stageName,
         CONTAINER_NAME: containerName,
       },
+      timeout: Duration.minutes(10),
     })
 
     migrationLambda.addToRolePolicy(
       new PolicyStatement({
         actions: ['ecs:RunTask'],
         resources: [taskDefinition.taskDefinitionArn],
+      }),
+    )
+
+    migrationLambda.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['ecs:DescribeTasks'],
+        resources: ['*'], //  DescribeTasks can't be resource scoped
       }),
     )
 

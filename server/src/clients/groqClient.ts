@@ -4,6 +4,7 @@ import * as dotenv from 'dotenv'
 
 // Load environment variables from .env file
 dotenv.config()
+const itoVocabulary = ['ito']
 
 /**
  * A TypeScript client for interacting with the Groq API, inspired by your Python implementation.
@@ -42,11 +43,13 @@ class GroqClient {
    * Transcribes an audio buffer using the Groq API.
    * @param audioBuffer The audio data as a Node.js Buffer.
    * @param fileType The extension of the audio file type (e.g., 'webm', 'wav').
+   * @param vocabulary Optional custom vocabulary to improve transcription accuracy.
    * @returns The transcribed text as a string.
    */
   public async transcribeAudio(
     audioBuffer: Buffer,
     fileType: string = 'webm',
+    vocabulary?: string[],
   ): Promise<string> {
     if (!this.isAvailable) {
       throw new Error('Groq client is not available. Check API key.')
@@ -60,11 +63,14 @@ class GroqClient {
         `Transcribing ${audioBuffer.length} bytes of audio using model ${this._asrModel}...`,
       )
 
+      const fullVocabulary = [...itoVocabulary, ...(vocabulary || [])]
+
       const transcription = await this._client.audio.transcriptions.create({
         // The toFile helper correctly handles buffers for multipart/form-data uploads.
         // Providing a filename with the correct extension is crucial for the API.
         file: await toFile(audioBuffer, `audio.${fileType}`),
         model: this._asrModel,
+        prompt: fullVocabulary.join(', '),
       })
 
       // The Node SDK returns the full object, the text is in the `text` property.
@@ -77,9 +83,6 @@ class GroqClient {
       )
     }
   }
-
-  // You can add the other methods like `generateResponse` here as well if needed.
-  // For now, we will focus on the transcription functionality.
 }
 
 // --- Singleton Instance ---

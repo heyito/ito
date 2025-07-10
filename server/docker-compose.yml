@@ -2,7 +2,7 @@ services:
   ito-grpc-server:
     build: .
     ports:
-      - '3000:3000'
+      - "$PORT:$PORT"
     env_file:
       - ./.env
     volumes:
@@ -15,22 +15,22 @@ services:
       - db
     environment:
       NODE_ENV: development
-      PORT: '3000'
-      DB_HOST: localhost
-      DB_PORT: '5432'
-      DB_USER: devuser
-      DB_PASS: devpass
-      DB_NAME: devdb
+      PORT: $PORT
+      DB_HOST: $DB_HOST
+      DB_PORT: $DB_PORT
+      DB_USER: $DB_USER
+      DB_PASS: $DB_PASS
+      DB_NAME: DB_NAME
   db:
     image: postgres:16
     container_name: ito-postgres
     restart: always
     environment:
-      POSTGRES_USER: devuser
-      POSTGRES_PASSWORD: devpass
-      POSTGRES_DB: devdb
+      POSTGRES_USER: $DB_USER
+      POSTGRES_PASSWORD: $DB_PASS
+      POSTGRES_DB: $DB_NAME
     ports:
-      - '5432:5432'
+      - "$DB_PORT:$DB_PORT"
     volumes:
       - pgdata:/var/lib/postgresql/data
 

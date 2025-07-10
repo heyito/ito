@@ -69,6 +69,12 @@ interface AppStore {
   accessToken: string | null
 }
 
+// Helper function to get current user ID
+export const getCurrentUserId = (): string | undefined => {
+  const user = store.get('userProfile') as any
+  return user?.id
+}
+
 // Generate new auth state with crypto
 export const createNewAuthState = (): AuthState => {
   const codeVerifier = crypto.randomBytes(32).toString('base64url')

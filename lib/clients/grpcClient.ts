@@ -24,6 +24,8 @@ import { BrowserWindow } from 'electron'
 import { create } from '@bufbuild/protobuf'
 import { setFocusedText } from '../media/text-writer'
 import { Note, Interaction, DictionaryItem } from '../main/sqlite/models'
+import { DictionaryTable } from '../main/sqlite/repo'
+import { getCurrentUserId } from '../main/store'
 
 class GrpcClient {
   private client: ReturnType<typeof createClient<typeof ItoService>>
@@ -55,10 +57,34 @@ class GrpcClient {
     return new Headers({ Authorization: `Bearer ${this.authToken}` })
   }
 
+  private async getHeadersWithVocabulary() {
+    const headers = this.getHeaders()
+
+    try {
+      // Fetch vocabulary from local database
+      const user_id = getCurrentUserId()
+      const dictionaryItems = await DictionaryTable.findAll(user_id)
+
+      // Convert to vocabulary format for transcription
+      const vocabularyWords = dictionaryItems
+        .filter(item => item.deleted_at === null)
+        .map(item => item.word)
+
+      // Add vocabulary to headers if available
+      if (vocabularyWords.length > 0) {
+        headers.set('vocabulary', vocabularyWords.join(','))
+      }
+    } catch (error) {
+      console.error('Failed to fetch vocabulary for transcription:', error)
+    }
+
+    return headers
+  }
+
   async transcribeStream(stream: AsyncIterable<AudioChunk>) {
     try {
       const response = await this.client.transcribeStream(stream, {
-        headers: this.getHeaders(),
+        headers: await this.getHeadersWithVocabulary(),
       })
 
       // Type the transcribed text into the focused application

@@ -148,7 +148,7 @@ export default (router: ConnectRouter) => {
     }),
 
     transcribeStream: wrapHandler(
-      async (requests: AsyncIterable<AudioChunk>, _context: HandlerContext) => {
+      async (requests: AsyncIterable<AudioChunk>, context: HandlerContext) => {
         const audioChunks: Uint8Array[] = []
         for await (const chunk of requests) {
           audioChunks.push(chunk.audioData)
@@ -164,7 +164,6 @@ export default (router: ConnectRouter) => {
           (sum, chunk) => sum + chunk.length,
           0,
         )
-
         const fullAudio = new Uint8Array(totalLength)
         let offset = 0
         for (const chunk of audioChunks) {
@@ -173,7 +172,6 @@ export default (router: ConnectRouter) => {
         }
 
         try {
-          // --- THIS IS THE FIX ---
           // 1. Set audio properties to match the new capture settings.
           const sampleRate = 16000 // Correct sample rate
           const bitDepth = 16
@@ -188,10 +186,17 @@ export default (router: ConnectRouter) => {
           )
           const fullAudioWAV = Buffer.concat([wavHeader, fullAudio])
 
-          // 3. Send the corrected WAV file.
+          // 3. Extract vocabulary from gRPC metadata
+          const vocabularyHeader = context.requestHeader.get('vocabulary')
+          const vocabulary = vocabularyHeader
+            ? vocabularyHeader.split(',')
+            : undefined
+
+          // 4. Send the corrected WAV file.
           const transcript = await groqClient.transcribeAudio(
             fullAudioWAV,
             'wav',
+            vocabulary,
           )
 
           return create(TranscriptionResponseSchema, {

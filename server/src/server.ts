@@ -55,6 +55,16 @@ export const startServer = async () => {
     })
   })
 
+  // Error handling
+  connectRpcServer.setErrorHandler((error, _, reply) => {
+    connectRpcServer.log.error(error)
+    reply.status(500).send({
+      error: 'Internal Server Error',
+      message: error.message,
+    })
+  })
+
+  // Basic REST route for health check
   connectRpcServer.get('/', async (_, reply) => {
     reply.type('text/plain')
     reply.send('Welcome to the Ito Connect RPC server!')

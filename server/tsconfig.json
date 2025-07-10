@@ -6,9 +6,10 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "strict": true,
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "allowJs": true
   },
-  "include": ["src/**/*", "test-client.ts"],
+  "include": ["src/**/*", "test-client.ts", "scripts/**/*"],
   "ts-node": {
     "esm": true
   }

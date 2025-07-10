@@ -2,6 +2,7 @@ import { Stack, StackProps, Tags } from 'aws-cdk-lib'
 import { Peer, Port, SecurityGroup } from 'aws-cdk-lib/aws-ec2'
 import { FargateService } from 'aws-cdk-lib/aws-ecs'
 import { Construct } from 'constructs'
+import { DB_PORT } from './constants'
 
 export interface SecurityStackProps extends StackProps {
   fargateService: FargateService
@@ -22,7 +23,7 @@ export class SecurityStack extends Stack {
       Peer.securityGroupId(
         props.fargateService.connections.securityGroups[0].securityGroupId,
       ),
-      Port.tcp(5432),
+      Port.tcp(DB_PORT),
       'Allow app to connect to aurora',
     )
 

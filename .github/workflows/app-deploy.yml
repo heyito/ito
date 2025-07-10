@@ -43,6 +43,14 @@ jobs:
           role-to-assume: arn:aws:iam::287641434880:role/ItoGitHubCiCdRole
           aws-region: us-west-2
 
+      - name: Run migrations
+        run: |
+          aws lambda invoke \
+            --function-name ${{ vars.AWS_STAGE }}-ItoDb-migration \
+            --payload '{}' \
+            out.json
+          cat out.json 
+
       - name: Login to ECR
         run: |
           aws ecr get-login-password \

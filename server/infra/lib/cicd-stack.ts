@@ -10,6 +10,7 @@ import {
 import { Repository } from 'aws-cdk-lib/aws-ecr'
 import {
   CLUSTER_NAME,
+  DB_NAME,
   ITO_PREFIX,
   SERVER_NAME,
   SERVICE_NAME,
@@ -89,6 +90,21 @@ export class GitHubOidcStack extends Stack {
           resources: [
             `arn:aws:ecs:${this.region}:${this.account}:cluster/${stage}-${CLUSTER_NAME}`,
             `arn:aws:ecs:${this.region}:${this.account}:service/${stage}-${CLUSTER_NAME}/${stage}-${SERVICE_NAME}`,
+          ],
+        }),
+      )
+
+      ciCdRole.addToPolicy(
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'lambda:GetFunction',
+            'lambda:UpdateFunctionCode',
+            'lambda:UpdateFunctionConfiguration',
+            'lambda:InvokeFunction',
+          ],
+          resources: [
+            `arn:aws:lambda:${this.region}:${this.account}:function:${stage}-${DB_NAME}-migration`,
           ],
         }),
       )

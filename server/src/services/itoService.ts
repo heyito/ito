@@ -117,167 +117,170 @@ function dbToDictionaryItemPb(
   })
 }
 
+function wrapHandler<T extends (...args: any[]) => Promise<any>>(fn: T): T {
+  return (async (...args: any[]) => {
+    try {
+      return await fn(...args)
+    } catch (err) {
+      console.error('Unhandled error in RPC handler:', err)
+      throw new ConnectError(
+        'Internal server error',
+        Code.Internal,
+        undefined,
+        undefined,
+        err,
+      )
+    }
+  }) as T
+}
+
 // Export the service implementation as a function that takes a ConnectRouter
 export default (router: ConnectRouter) => {
   router.service(ItoServiceDesc, {
-    // Transcribe file implementation
-    async transcribeFile(request: TranscribeFileRequest) {
-      // Validate audio data exists
+    transcribeFile: wrapHandler(async (request: TranscribeFileRequest) => {
       if (!request.audioData || request.audioData.length === 0) {
         throw new Error('No audio data received')
       }
-
       const dummyTranscript = 'This is a transcript from the whole file.'
-
       return create(TranscriptionResponseSchema, {
         transcript: dummyTranscript,
       })
-    },
+    }),
 
-    // Transcribe stream implementation
-    async transcribeStream(
-      requests: AsyncIterable<AudioChunk>,
-      _context: HandlerContext,
-    ) {
-      const audioChunks: Uint8Array[] = []
+    transcribeStream: wrapHandler(
+      async (requests: AsyncIterable<AudioChunk>, _context: HandlerContext) => {
+        const audioChunks: Uint8Array[] = []
+        for await (const chunk of requests) {
+          audioChunks.push(chunk.audioData)
+        }
 
-      // Process each audio chunk from the stream
-      for await (const chunk of requests) {
-        audioChunks.push(chunk.audioData)
-      }
+        // Process each audio chunk from the stream
+        for await (const chunk of requests) {
+          audioChunks.push(chunk.audioData)
+        }
 
-      // Concatenate all audio chunks
-      const totalLength = audioChunks.reduce(
-        (sum, chunk) => sum + chunk.length,
-        0,
-      )
-      const fullAudio = new Uint8Array(totalLength)
-      let offset = 0
-      for (const chunk of audioChunks) {
-        fullAudio.set(chunk, offset)
-        offset += chunk.length
-      }
-
-      try {
-        // --- THIS IS THE FIX ---
-        // 1. Set audio properties to match the new capture settings.
-        const sampleRate = 16000 // Correct sample rate
-        const bitDepth = 16
-        const channels = 1 // Mono
-
-        // 2. Create the header with the correct properties.
-        const wavHeader = createWavHeader(
-          fullAudio.length,
-          sampleRate,
-          channels,
-          bitDepth,
+        // Concatenate all audio chunks
+        const totalLength = audioChunks.reduce(
+          (sum, chunk) => sum + chunk.length,
+          0,
         )
-        const fullAudioWAV = Buffer.concat([wavHeader, fullAudio])
 
-        // 3. Send the corrected WAV file.
-        const transcript = await groqClient.transcribeAudio(fullAudioWAV, 'wav')
+        const fullAudio = new Uint8Array(totalLength)
+        let offset = 0
+        for (const chunk of audioChunks) {
+          fullAudio.set(chunk, offset)
+          offset += chunk.length
+        }
 
-        return create(TranscriptionResponseSchema, {
-          transcript,
-        })
-      } catch (error: any) {
-        console.error('Failed to process transcription via GroqClient:', error)
-        // return error response
-        return create(TranscriptionResponseSchema, {
-          transcript: `Error processing transcription: ${error?.message}`,
-        })
-      }
-    },
+        try {
+          // --- THIS IS THE FIX ---
+          // 1. Set audio properties to match the new capture settings.
+          const sampleRate = 16000 // Correct sample rate
+          const bitDepth = 16
+          const channels = 1 // Mono
 
-    // Note Service
-    async createNote(request, context: HandlerContext) {
-      // Extract user ID from Auth0 user info passed via contextValues
+          // 2. Create the header with the correct properties.
+          const wavHeader = createWavHeader(
+            fullAudio.length,
+            sampleRate,
+            channels,
+            bitDepth,
+          )
+          const fullAudioWAV = Buffer.concat([wavHeader, fullAudio])
+
+          // 3. Send the corrected WAV file.
+          const transcript = await groqClient.transcribeAudio(
+            fullAudioWAV,
+            'wav',
+          )
+
+          return create(TranscriptionResponseSchema, {
+            transcript,
+          })
+        } catch (error: any) {
+          console.error(
+            'Failed to process transcription via GroqClient:',
+            error,
+          )
+          // return error response
+          return create(TranscriptionResponseSchema, {
+            transcript: `Error processing transcription: ${error?.message}`,
+          })
+        }
+      },
+    ),
+
+    createNote: wrapHandler(async (request, context) => {
       const user = context.values.get(kUser)
       const userId = user?.sub
       if (!userId) {
         throw new ConnectError('User not authenticated', Code.Unauthenticated)
       }
-
-      const noteRequest = {
-        ...request,
-        userId,
-      }
+      const noteRequest = { ...request, userId }
       const newNote = await NotesRepository.create(noteRequest)
       return dbToNotePb(newNote)
-    },
+    }),
 
-    async getNote(request) {
+    getNote: wrapHandler(async request => {
       const note = await NotesRepository.findById(request.id)
       if (!note) {
         throw new ConnectError('Note not found', Code.NotFound)
       }
       return dbToNotePb(note)
-    },
+    }),
 
-    async listNotes(request, context: HandlerContext) {
-      // Extract user ID from Auth0 user info passed via contextValues
+    listNotes: wrapHandler(async (request, context) => {
       const user = context.values.get(kUser)
       const userId = user?.sub
       if (!userId) {
         throw new ConnectError('User not authenticated', Code.Unauthenticated)
       }
-
       const since = request.sinceTimestamp
         ? new Date(request.sinceTimestamp)
         : undefined
       const notes = await NotesRepository.findByUserId(userId, since)
-      return {
-        notes: notes.map(dbToNotePb),
-      }
-    },
+      return { notes: notes.map(dbToNotePb) }
+    }),
 
-    async updateNote(request) {
+    updateNote: wrapHandler(async request => {
       const updatedNote = await NotesRepository.update(request)
       if (!updatedNote) {
         throw new ConnectError('Note not found', Code.NotFound)
       }
       return dbToNotePb(updatedNote)
-    },
+    }),
 
-    async deleteNote(request) {
+    deleteNote: wrapHandler(async request => {
       await NotesRepository.softDelete(request.id)
       return {}
-    },
+    }),
 
-    // Interaction Service
-    async createInteraction(request, context: HandlerContext) {
-      // Extract user ID from Auth0 user info passed via contextValues
+    createInteraction: wrapHandler(async (request, context) => {
       const user = context.values.get(kUser)
       const userId = user?.sub
       if (!userId) {
         throw new ConnectError('User not authenticated', Code.Unauthenticated)
       }
-
-      const interactionRequest = {
-        ...request,
-        userId,
-      }
+      const interactionRequest = { ...request, userId }
       const newInteraction =
         await InteractionsRepository.create(interactionRequest)
       return dbToInteractionPb(newInteraction)
-    },
+    }),
 
-    async getInteraction(request) {
+    getInteraction: wrapHandler(async request => {
       const interaction = await InteractionsRepository.findById(request.id)
       if (!interaction) {
         throw new ConnectError('Interaction not found', Code.NotFound)
       }
       return dbToInteractionPb(interaction)
-    },
+    }),
 
-    async listInteractions(request, context: HandlerContext) {
-      // Extract user ID from Auth0 user info passed via contextValues
+    listInteractions: wrapHandler(async (request, context) => {
       const user = context.values.get(kUser)
       const userId = user?.sub
       if (!userId) {
         throw new ConnectError('User not authenticated', Code.Unauthenticated)
       }
-
       const since = request.sinceTimestamp
         ? new Date(request.sinceTimestamp)
         : undefined
@@ -285,12 +288,10 @@ export default (router: ConnectRouter) => {
         userId,
         since,
       )
-      return {
-        interactions: interactions.map(dbToInteractionPb),
-      }
-    },
+      return { interactions: interactions.map(dbToInteractionPb) }
+    }),
 
-    async updateInteraction(request) {
+    updateInteraction: wrapHandler(async request => {
       const updatedInteraction = await InteractionsRepository.update(request)
       if (!updatedInteraction) {
         throw new ConnectError(
@@ -299,48 +300,38 @@ export default (router: ConnectRouter) => {
         )
       }
       return dbToInteractionPb(updatedInteraction)
-    },
+    }),
 
-    async deleteInteraction(request) {
+    deleteInteraction: wrapHandler(async request => {
       await InteractionsRepository.softDelete(request.id)
       return {}
-    },
+    }),
 
-    // Dictionary Service
-    async createDictionaryItem(request, context: HandlerContext) {
-      // Extract user ID from Auth0 user info passed via contextValues
+    createDictionaryItem: wrapHandler(async (request, context) => {
       const user = context.values.get(kUser)
       const userId = user?.sub
       if (!userId) {
         throw new ConnectError('User not authenticated', Code.Unauthenticated)
       }
-
-      const dictionaryRequest = {
-        ...request,
-        userId,
-      }
+      const dictionaryRequest = { ...request, userId }
       const newItem = await DictionaryRepository.create(dictionaryRequest)
       return dbToDictionaryItemPb(newItem)
-    },
+    }),
 
-    async listDictionaryItems(request, context: HandlerContext) {
-      // Extract user ID from Auth0 user info passed via contextValues
+    listDictionaryItems: wrapHandler(async (request, context) => {
       const user = context.values.get(kUser)
       const userId = user?.sub
       if (!userId) {
         throw new ConnectError('User not authenticated', Code.Unauthenticated)
       }
-
       const since = request.sinceTimestamp
         ? new Date(request.sinceTimestamp)
         : undefined
       const items = await DictionaryRepository.findByUserId(userId, since)
-      return {
-        items: items.map(dbToDictionaryItemPb),
-      }
-    },
+      return { items: items.map(dbToDictionaryItemPb) }
+    }),
 
-    async updateDictionaryItem(request) {
+    updateDictionaryItem: wrapHandler(async request => {
       const updatedItem = await DictionaryRepository.update(request)
       if (!updatedItem) {
         throw new ConnectError(
@@ -349,15 +340,14 @@ export default (router: ConnectRouter) => {
         )
       }
       return dbToDictionaryItemPb(updatedItem)
-    },
+    }),
 
-    async deleteDictionaryItem(request) {
+    deleteDictionaryItem: wrapHandler(async request => {
       await DictionaryRepository.softDelete(request.id)
       return {}
-    },
+    }),
 
-    async deleteUserData(request, context: HandlerContext) {
-      // Extract user ID from Auth0 user info passed via contextValues
+    deleteUserData: wrapHandler(async (_request, context) => {
       const user = context.values.get(kUser)
       const userId = user?.sub
       if (!userId) {
@@ -365,16 +355,13 @@ export default (router: ConnectRouter) => {
       }
 
       console.log(`Deleting all data for authenticated user: ${userId}`)
-
-      // Delete all user data from all tables
       await Promise.all([
         NotesRepository.deleteAllUserData(userId),
         InteractionsRepository.deleteAllUserData(userId),
         DictionaryRepository.deleteAllUserData(userId),
       ])
-
       console.log(`Successfully deleted all data for user: ${userId}`)
       return {}
-    },
+    }),
   })
 }

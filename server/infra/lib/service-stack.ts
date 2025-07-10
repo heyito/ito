@@ -18,7 +18,7 @@ import {
   SslPolicy,
 } from 'aws-cdk-lib/aws-elasticloadbalancingv2'
 import { BlockPublicAccess, Bucket } from 'aws-cdk-lib/aws-s3'
-import { CLUSTER_NAME, DB_NAME, SERVICE_NAME } from './constants'
+import { CLUSTER_NAME, DB_NAME, DB_PORT, SERVICE_NAME } from './constants'
 import {
   AwsLogDriver,
   Cluster,
@@ -41,7 +41,11 @@ import { isDev } from './helpers'
 import {
   Role as IamRole,
   ServicePrincipal as IamServicePrincipal,
+  ManagedPolicy,
+  PolicyStatement,
+  ServicePrincipal,
 } from 'aws-cdk-lib/aws-iam'
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
 
 export interface ServiceStackProps extends StackProps {
   dbSecretArn: string
@@ -52,6 +56,7 @@ export interface ServiceStackProps extends StackProps {
 
 export class ServiceStack extends Stack {
   public readonly fargateService: FargateService
+  public readonly migrationLambda: NodejsFunction
   constructor(scope: Construct, id: string, props: ServiceStackProps) {
     super(scope, id, props)
 
@@ -77,7 +82,14 @@ export class ServiceStack extends Stack {
     dbCredentialsSecret.grantRead(fargateTaskRole)
     groqApiKeySecret.grantRead(fargateTaskRole)
 
-    // --- 2. DEFINE THE TASK DEFINITION AND CONTAINER ---
+    const taskExecutionRole = new IamRole(this, 'ItoTaskExecRole', {
+      assumedBy: new ServicePrincipal('ecs-tasks.amazonaws.com'),
+      managedPolicies: [
+        ManagedPolicy.fromAwsManagedPolicyName(
+          'service-role/AmazonECSTaskExecutionRolePolicy',
+        ),
+      ],
+    })
 
     const taskDefinition = new FargateTaskDefinition(
       this,
@@ -90,23 +102,22 @@ export class ServiceStack extends Stack {
           operatingSystemFamily: OperatingSystemFamily.LINUX,
           cpuArchitecture: CpuArchitecture.ARM64,
         },
+        executionRole: taskExecutionRole,
       },
     )
-
-    taskDefinition.addContainer('ItoServerContainer', {
+    const containerName = 'ItoServerContainer'
+    taskDefinition.addContainer(containerName, {
       image: ContainerImage.fromEcrRepository(props.serviceRepo, 'latest'),
       portMappings: [{ containerPort: 3000 }],
       secrets: {
         DB_USER: EcsSecret.fromSecretsManager(dbCredentialsSecret, 'username'),
-        DB_PASSWORD: EcsSecret.fromSecretsManager(
-          dbCredentialsSecret,
-          'password',
-        ),
+        DB_PASS: EcsSecret.fromSecretsManager(dbCredentialsSecret, 'password'),
         GROQ_API_KEY: EcsSecret.fromSecretsManager(groqApiKeySecret),
       },
       environment: {
         DB_HOST: props.dbEndpoint,
         DB_NAME,
+        DB_PORT: DB_PORT.toString(),
         REQUIRE_AUTH: 'true',
         AUTH0_DOMAIN: 'dev-8rsdprb2tatdfcps.us.auth0.com',
         AUTH0_AUDIENCE: 'http://localhost:3000',
@@ -169,10 +180,46 @@ export class ServiceStack extends Stack {
       unhealthyThresholdCount: 5,
     })
 
+    // Setup migration lambda
+    const migrationLambda = new NodejsFunction(this, 'ItoMigrationLambda', {
+      functionName: `${stageName}-${DB_NAME}-migration`,
+      entry: '../scripts/run-migration.ts',
+      handler: 'handler',
+      environment: {
+        CLUSTER: cluster.clusterName,
+        TASK_DEF: taskDefinition.taskDefinitionArn,
+        SUBNETS: props.vpc.privateSubnets.map(s => s.subnetId).join(','),
+        SECURITY_GROUPS:
+          fargateService.service.connections.securityGroups[0].securityGroupId,
+        STAGE_NAME: stageName,
+        CONTAINER_NAME: containerName,
+      },
+    })
+
+    migrationLambda.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['ecs:RunTask'],
+        resources: [taskDefinition.taskDefinitionArn],
+      }),
+    )
+
+    migrationLambda.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['iam:PassRole'],
+        resources: [taskExecutionRole.roleArn, fargateTaskRole.roleArn],
+        conditions: {
+          StringEquals: {
+            'iam:PassedToService': 'ecs-tasks.amazonaws.com',
+          },
+        },
+      }),
+    )
+
     const alb = fargateService.loadBalancer
     alb.logAccessLogs(logBucket, 'ito-alb-access-logs')
 
     this.fargateService = fargateService.service
+    this.migrationLambda = migrationLambda
 
     new CfnOutput(this, 'ServiceURL', {
       value: fargateService.loadBalancer.loadBalancerDnsName,

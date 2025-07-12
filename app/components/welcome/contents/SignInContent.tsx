@@ -10,6 +10,7 @@ import { useAuth } from '../../auth/useAuth'
 import { useAuthStore } from '@/app/store/useAuthStore'
 import { useNotesStore } from '@/app/store/useNotesStore'
 import { useDictionaryStore } from '@/app/store/useDictionaryStore'
+import { AppOrbitImage } from '@/app/components/ui/app-orbit-image'
 
 // Auth provider configuration
 const AUTH_PROVIDERS = {
@@ -239,7 +240,7 @@ export default function SignInContent() {
   return (
     <div className="flex h-full w-full bg-background">
       {/* Left side - Sign in form */}
-      <div className="flex w-[25%] flex-col items-center justify-center px-6 py-12">
+      <div className="flex w-[30%] flex-col items-center justify-center px-12 py-12">
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="mb-8 bg-black rounded-md p-2 w-10 h-10 mx-auto">
@@ -303,13 +304,8 @@ export default function SignInContent() {
       </div>
 
       {/* Right side - Placeholder for image */}
-      <div className="flex w-[75%] bg-muted/20 flex items-center justify-center border-l border-border">
-        <div className="text-center text-muted-foreground">
-          <div className="w-24 h-24 mx-auto mb-4 bg-muted rounded-lg flex items-center justify-center">
-            <ItoIcon height={48} width={48} style={{ color: 'currentColor' }} />
-          </div>
-          <p className="text-sm">Image placeholder</p>
-        </div>
+      <div className="flex w-[70%] bg-muted/20 items-center justify-center border-l border-border">
+        <AppOrbitImage />
       </div>
     </div>
   )

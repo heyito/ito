@@ -1,10 +1,15 @@
-const GmailIcon = () => (
+interface GmailIconProps {
+  className?: string
+}
+
+const GmailIcon = ({ className }: GmailIconProps) => (
   <svg
     fill="none"
     height="100%"
     viewBox="0 0 53.3208 36.6354"
     width="100%"
     xmlns="http://www.w3.org/2000/svg"
+    className={className}
   >
     <path
       d="m3.6354 36.6354h8.4828v-20.6008l-12.1182-9.0887v26.0541c0 2.0116 1.6299 3.6354 3.6354 3.6354z"

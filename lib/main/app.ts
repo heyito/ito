@@ -99,6 +99,7 @@ export function createPillWindow(): void {
       preload: join(__dirname, '../preload/preload.js'),
       sandbox: false,
     },
+    hiddenInMissionControl: true,
   })
 
   pillWindow.setIgnoreMouseEvents(true, { forward: true })

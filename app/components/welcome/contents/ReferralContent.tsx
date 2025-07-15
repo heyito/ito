@@ -74,8 +74,8 @@ export default function ReferralContent() {
             </DropdownMenu>
           </div>
           <div className="flex flex-col items-start mb-8">
-            <Button 
-              className="w-24" 
+            <Button
+              className="w-24"
               onClick={incrementOnboardingStep}
               disabled={!referralSource}
             >

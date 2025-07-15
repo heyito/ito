@@ -64,9 +64,17 @@ export default function DataControlContent() {
             </div>
             <div className="text-sm text-muted-foreground">
               You can always change this later in settings.{' '}
-              <a href="#" className="underline">
+              <button
+                onClick={() =>
+                  window.api?.invoke(
+                    'web-open-url',
+                    'https://www.heyito.ai/privacy',
+                  )
+                }
+                className="underline hover:text-foreground cursor-pointer"
+              >
                 Read more here.
-              </a>
+              </button>
             </div>
           </div>
           <div className="flex flex-col items-start mb-8">

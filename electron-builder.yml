@@ -35,9 +35,8 @@ mac:
   darkModeSupport: true
   hardenedRuntime: true
   gatekeeperAssess: false
-  identity: 'Developer ID Application: Demox Labs, Inc. (294ZSTM7UB)'
-  notarize:
-    teamId: ${APPLE_TEAM_ID}
+  identity: 'Demox Labs, Inc. (294ZSTM7UB)'
+  notarize: true
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.inherit.plist
   extendInfo:

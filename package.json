@@ -1,6 +1,6 @@
 {
   "name": "ito",
-  "version": "0.1.0",
+  "version": "11.0.0",
   "description": "Ito, a smart voice assistant",
   "main": "./out/main/main.js",
   "license": "MIT",

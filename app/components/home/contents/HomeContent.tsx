@@ -397,7 +397,12 @@ export default function HomeContent() {
               <span key="and"> and speak into any textbox</span>
             </div>
           </div>
-          <button className="bg-gray-900 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-800 cursor-pointer">
+          <button
+            className="bg-gray-900 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-800 cursor-pointer"
+            onClick={() =>
+              window.api?.invoke('web-open-url', 'https://www.heyito.ai/')
+            }
+          >
             Explore use cases
           </button>
         </div>

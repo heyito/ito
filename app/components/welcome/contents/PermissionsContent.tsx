@@ -11,8 +11,8 @@ import { AnimatedCheck } from '@/app/components/ui/animated-checkmark'
 import { Lock } from '@mynaui/icons-react'
 import { usePermissionsStore } from '@/app/store/usePermissionsStore'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
-import accessibilityImage from '@/app/assets/accesssibility.png'
-import microphoneImage from '@/app/assets/microphone.png'
+import accessibilityVideo from '@/app/assets/accesssibility.webm'
+import microphoneVideo from '@/app/assets/microphone.webm'
 
 export default function PermissionsContent() {
   const { incrementOnboardingStep, decrementOnboardingStep } =
@@ -270,15 +270,19 @@ export default function PermissionsContent() {
           {isAccessibilityEnabled && isMicrophoneEnabled ? (
             <Lock style={{ width: 220, height: 220, color: '#c4b5fd' }} />
           ) : !isAccessibilityEnabled ? (
-            <img
-              src={accessibilityImage}
-              alt="Accessibility permission setup"
-              className="max-w-full max-h-full object-contain"
+            <video
+              src={accessibilityVideo}
+              autoPlay
+              loop
+              muted
+              className="max-w-full max-h-full object-contain rounded-lg"
             />
           ) : (
-            <img
-              src={microphoneImage}
-              alt="Microphone permission setup"
+            <video
+              src={microphoneVideo}
+              autoPlay
+              loop
+              muted
               className="max-w-full max-h-full object-contain"
             />
           )}

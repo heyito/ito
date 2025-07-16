@@ -19,7 +19,7 @@ export default function GoodToGoContent() {
               &lt; Back
             </button>
             <h1 className="text-3xl mb-4 mt-12">
-              Your hardware setup is good to go
+              Your hardware setup is good to go!
             </h1>
           </div>
           <div className="flex flex-col items-start mb-8">

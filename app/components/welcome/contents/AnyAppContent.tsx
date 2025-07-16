@@ -18,7 +18,7 @@ export default function AnyAppContent() {
             >
               &lt; Back
             </button>
-            <h1 className="text-3xl mb-4 mt-12">Ito works in any app</h1>
+            <h1 className="text-3xl mb-4 mt-12">Ito works in any app.</h1>
             <p className="text-base text-muted-foreground mt-6">
               From emails to chats to documents—Ito works in any textbox on your
               computer.

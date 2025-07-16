@@ -97,11 +97,11 @@ export default function MicrophoneTestContent() {
               &lt; Back
             </button>
             <h1 className="text-3xl mb-4 mt-12">
-              Speak to test your microphone
+              Speak to test your microphone.
             </h1>
             <div className="text-base text-muted-foreground mb-8 max-w-md">
               Your computer's built-in mic will ensure accurate transcription
-              with minimal latency
+              with minimal latency.
             </div>
           </div>
         </div>

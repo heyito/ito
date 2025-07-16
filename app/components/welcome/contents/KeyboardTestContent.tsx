@@ -20,10 +20,10 @@ export default function KeyboardTestContent() {
               &lt; Back
             </button>
             <h1 className="text-3xl mb-4 mt-12">
-              Press the keyboard shortcut to test it out
+              Press the keyboard shortcut to test it out.
             </h1>
             <div className="text-base text-muted-foreground mb-8 max-w-md">
-              We recommend the{' '}
+              We recommend the{''}
               <span className="inline-flex items-center px-2 py-0.5 bg-neutral-100 border rounded text-xs font-mono ml-1">
                 fn
               </span>{' '}

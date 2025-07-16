@@ -20,13 +20,13 @@ export default function DataControlContent() {
             >
               &lt; Back
             </button>
-            <h1 className="text-3xl mb-4 mt-12">You control your data</h1>
+            <h1 className="text-3xl mb-4 mt-12">You control your data.</h1>
             <div className="flex flex-col gap-4 my-8 pr-24">
               <div
                 className={`border rounded-lg p-4 cursor-pointer transition-all ${shareAnalytics ? 'border-green-200 bg-green-50 border-2' : 'border-border border-2 bg-background'}`}
                 onClick={() => setShareAnalytics(true)}
               >
-                <div className="flex items-center justify-between w-full my-2">
+                <div className="flex items-center justify-between w-full mb-2">
                   <div className="font-medium">Help improve Ito</div>
                   {shareAnalytics && (
                     <div>
@@ -39,14 +39,14 @@ export default function DataControlContent() {
                 <div className="text-sm text-muted-foreground max-w-md mt-1">
                   To make Ito better, this option lets us collect your audio,
                   transcript, and edits to evaluate, train and improve Ito's
-                  features and AI models
+                  features and AI models.
                 </div>
               </div>
               <div
                 className={`border rounded-lg p-4 cursor-pointer transition-all ${!shareAnalytics ? 'border-purple-200 bg-purple-50 border-2' : 'border-border border-2 bg-background'}`}
                 onClick={() => setShareAnalytics(false)}
               >
-                <div className="flex items-center justify-between w-full my-2">
+                <div className="flex items-center justify-between w-full mb-2">
                   <div className="font-medium">Privacy Mode</div>
                   {!shareAnalytics && (
                     <div>

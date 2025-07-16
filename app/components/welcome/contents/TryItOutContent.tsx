@@ -36,8 +36,8 @@ export default function TryItOutContent() {
               B
             </div>
             <div>
-              <div className="font-medium">Barron</div>
-              <div className="text-sm">Hey Evan, is Ito working for you?</div>
+              <div className="font-medium">Jordan</div>
+              <div className="text-sm">Hey Taylor, is Ito working for you?</div>
             </div>
           </div>
           <div className="flex items-center gap-2 px-4 pb-4 rounded-b-2xl">
@@ -69,7 +69,7 @@ export default function TryItOutContent() {
             </div>
             <div className="border-t border-neutral-200 my-2" />
             <textarea
-              placeholder={`Try saying:\n\n"Hi Barron, wonderful meeting with you today. Do you have any time Monday to follow up on the project? Thanks, Evan"`}
+              placeholder={`Try saying:\n\n"Hi Jordan, wonderful meeting with you today. Do you have any time Monday to follow up on the project? Thanks, Taylor"`}
               className="w-full resize-none bg-transparent border-none focus:outline-none focus:ring-0 text-sm placeholder:text-muted-foreground"
               rows={6}
             />
@@ -95,7 +95,7 @@ export default function TryItOutContent() {
           <div className="flex flex-col items-start w-full px-4 py-3">
             <span className="text-2xl font-bold">New Note</span>
             <textarea
-              placeholder={`Try saying: "Project tasks: Barron will draft the proposal, Evan will review and finalize by Friday."`}
+              placeholder={`Try saying: "Project tasks: Jordan will draft the proposal, Taylor will review and finalize by Friday."`}
               className="w-full mt-4 resize-none bg-transparent border-none focus:outline-none focus:ring-0 text-sm placeholder:text-muted-foreground"
               rows={4}
             />
@@ -203,7 +203,7 @@ export default function TryItOutContent() {
               &lt; Back
             </button>
             <h1 className="text-3xl mb-4 mt-12">
-              Use Ito with the keyboard shortcut
+              Use Ito with the keyboard shortcut.
             </h1>
             <p className="text-base text-muted-foreground mt-6">
               Hold down on the{' '}

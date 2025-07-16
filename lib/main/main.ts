@@ -81,6 +81,14 @@ app.whenReady().then(async () => {
   registerResourcesProtocol()
   electronApp.setAppUserModelId('com.electron')
 
+  // IMPORTANT: Register IPC handlers BEFORE creating windows
+  // This prevents the renderer from making IPC calls before handlers are ready
+  registerIPC()
+
+  if (!app.isPackaged) {
+    registerDevIPC()
+  }
+
   // Create windows
   createAppWindow()
   createPillWindow()
@@ -119,12 +127,6 @@ app.whenReady().then(async () => {
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
-
-  registerIPC()
-
-  if (!app.isPackaged) {
-    registerDevIPC()
-  }
 
   // Set up periodic token refresh check (every 10 minutes)
   setInterval(

@@ -1,5 +1,6 @@
 import { spawn } from 'child_process'
 import store from '../main/store' // Import the main process store
+import { STORE_KEYS } from '../constants/store-keys'
 import { getNativeBinaryPath } from './native-interface'
 import { BrowserWindow } from 'electron'
 import { audioRecorderService } from './audio'
@@ -88,7 +89,9 @@ function normalizeKey(rawKey: string): string {
 const pressedKeys = new Set<string>()
 
 function handleKeyEventInMain(event: KeyEvent) {
-  const { keyboardShortcut, isShortcutGloballyEnabled } = store.get('settings')
+  const { keyboardShortcut, isShortcutGloballyEnabled } = store.get(
+    STORE_KEYS.SETTINGS,
+  )
 
   if (!isShortcutGloballyEnabled) {
     // check to see if we should stop an in-progress recording
@@ -257,7 +260,7 @@ const getKeysToBlock = (): string[] => {
     normalizedKey => reverseKeyNameMap[normalizedKey] || [],
   )
 
-  const { keyboardShortcut } = store.get('settings')
+  const { keyboardShortcut } = store.get(STORE_KEYS.SETTINGS)
 
   // Also block the special "fast fn" key if fn is part of the shortcut.
   if (keyboardShortcut.includes('fn')) {

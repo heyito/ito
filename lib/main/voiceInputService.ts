@@ -2,14 +2,15 @@ import { audioRecorderService } from '../media/audio'
 import { muteSystemAudio, unmuteSystemAudio } from '../media/systemAudio'
 import { getPillWindow, mainWindow } from './app'
 import store from './store'
+import { STORE_KEYS } from '../constants/store-keys'
 import { transcriptionService } from './transcriptionService'
 
 export class VoiceInputService {
   public startSTTService = (sendToServer: boolean = true) => {
     console.info('[Audio] Starting STT service')
-    const deviceId = store.get('settings').microphoneDeviceId
+    const deviceId = store.get(STORE_KEYS.SETTINGS).microphoneDeviceId
 
-    const settings = store.get('settings')
+    const settings = store.get(STORE_KEYS.SETTINGS)
     if (settings && settings.muteAudioWhenDictating) {
       console.info('[Audio] Muting system audio for dictation')
       muteSystemAudio()
@@ -31,7 +32,7 @@ export class VoiceInputService {
 
     transcriptionService.stopTranscription()
 
-    if (store.get('settings').muteAudioWhenDictating) {
+    if (store.get(STORE_KEYS.SETTINGS).muteAudioWhenDictating) {
       console.info('[Audio] Unmuting system audio after dictation')
       unmuteSystemAudio()
     }

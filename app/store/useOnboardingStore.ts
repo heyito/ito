@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { analytics, ANALYTICS_EVENTS } from '../components/analytics'
+import { STORE_KEYS } from '../../lib/constants/store-keys'
 
 type OnboardingCategory = 'sign-up' | 'permissions' | 'set-up' | 'try-it'
 
@@ -49,7 +50,7 @@ const getStepName = (step: number): string => {
 
 // Initialize from electron store
 const getInitialState = () => {
-  const storedOnboarding = window.electron.store.get('onboarding')
+  const storedOnboarding = window.electron.store.get(STORE_KEYS.ONBOARDING)
 
   return {
     onboardingStep: storedOnboarding?.onboardingStep ?? 0,
@@ -60,8 +61,8 @@ const getInitialState = () => {
 // Sync to electron store
 const syncToStore = (state: Partial<OnboardingState>) => {
   if ('onboardingStep' in state || 'onboardingCompleted' in state) {
-    const currentStore = window.electron.store.get('onboarding') || {}
-    window.electron.store.set('onboarding', {
+    const currentStore = window.electron.store.get(STORE_KEYS.ONBOARDING) || {}
+    window.electron.store.set(STORE_KEYS.ONBOARDING, {
       ...currentStore,
       onboardingStep: state.onboardingStep ?? currentStore.onboardingStep,
       onboardingCompleted:

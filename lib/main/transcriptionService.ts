@@ -1,5 +1,6 @@
 import { grpcClient } from '../clients/grpcClient'
 import mainStore from './store'
+import { STORE_KEYS } from '../constants/store-keys'
 import log from 'electron-log'
 import { AudioChunkSchema } from '@/app/generated/ito_pb'
 import { create } from '@bufbuild/protobuf'
@@ -111,7 +112,8 @@ export class TranscriptionService {
 
   private async createInteraction(transcript: string, errorMessage?: string) {
     try {
-      const userProfile = mainStore.get('userProfile') as any
+      // Save to database
+      const userProfile = mainStore.get(STORE_KEYS.USER_PROFILE) as any
       const userId = userProfile?.id
 
       if (!userId) {

@@ -1,30 +1,13 @@
 import { create } from 'zustand'
+import type {
+  AuthState,
+  AuthUser,
+  AuthTokens,
+  AuthStore,
+} from '../../lib/main/store'
+import { STORE_KEYS } from '../../lib/constants/store-keys'
 
-export interface AuthState {
-  id: string
-  codeVerifier: string
-  codeChallenge: string
-  state: string
-}
-
-export interface AuthUser {
-  id: string
-  email?: string
-  name?: string
-  picture?: string
-  provider?: string
-  lastSignInAt?: string
-}
-
-export interface AuthTokens {
-  access_token?: string
-  refresh_token?: string
-  id_token?: string
-  token_type?: string
-  expires_in?: number
-}
-
-interface AuthStore {
+interface AuthZustandStore {
   // State
   isAuthenticated: boolean
   user: AuthUser | null
@@ -47,7 +30,9 @@ interface AuthStore {
 
 // Initialize from electron store
 const getInitialState = () => {
-  const storedAuth = window.electron?.store?.get('auth')
+  const storedAuth = window.electron?.store?.get(STORE_KEYS.AUTH) as
+    | (AuthStore & { isSelfHosted?: boolean })
+    | undefined
 
   // Generate new auth state if no stored auth stat
 
@@ -72,7 +57,7 @@ const syncToStore = (state: {
 }) => {
   if (!window.electron?.store) return
 
-  const currentStore = window.electron.store.get('auth') || {}
+  const currentStore = window.electron.store.get(STORE_KEYS.AUTH) || {}
   const updates: any = { ...currentStore }
 
   if ('user' in state) {
@@ -91,31 +76,41 @@ const syncToStore = (state: {
     updates.isSelfHosted = state.isSelfHosted
   }
 
-  window.electron.store.set('auth', updates)
+  window.electron.store.set(STORE_KEYS.AUTH, updates)
 }
 
-export const useAuthStore = create<AuthStore>((set, get) => {
+export const useAuthStore = create<AuthZustandStore>((set, get) => {
   const initialState = getInitialState()
 
   return {
     ...initialState,
 
     setAuthData: (tokens: AuthTokens, user: AuthUser, provider?: string) => {
+      // Calculate expires_at if not provided
+      const expiresAt =
+        tokens.expires_at ||
+        (tokens.expires_in ? Date.now() + tokens.expires_in * 1000 : undefined)
+
       const enhancedUser: AuthUser = {
         ...user,
         provider,
         lastSignInAt: new Date().toISOString(),
       }
 
+      const enhancedTokens = {
+        ...tokens,
+        expires_at: expiresAt,
+      }
+
       const newState = {
         isAuthenticated: true,
-        tokens,
+        tokens: enhancedTokens,
         user: enhancedUser,
         state: get().state || null,
         error: null,
       }
 
-      syncToStore({ tokens, user: enhancedUser })
+      syncToStore({ tokens: enhancedTokens, user: enhancedUser })
       set(newState)
     },
 

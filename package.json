@@ -81,6 +81,7 @@
     "dotenv": "^17.0.1",
     "electron-log": "^5.4.1",
     "electron-store": "^8.1.0",
+    "jwt-decode": "^4.0.0",
     "lucide-react": "^0.511.0",
     "react-router-dom": "^7.6.2",
     "sqlite3": "^5.1.7",

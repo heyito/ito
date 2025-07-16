@@ -1,13 +1,11 @@
 import { useAuth0 } from '@auth0/auth0-react'
 import { useCallback, useEffect } from 'react'
-import { Auth0Connections, Auth0Config } from './config'
-import {
-  useAuthStore,
-  type AuthUser,
-  type AuthTokens,
-} from '../../store/useAuthStore'
+import { Auth0Connections, Auth0Config } from '../../../lib/auth/config'
+import { useAuthStore } from '../../store/useAuthStore'
+import { type AuthUser, type AuthTokens } from '../../../lib/main/store'
 import { useMainStore } from '@/app/store/useMainStore'
 import { analytics, ANALYTICS_EVENTS } from '../analytics'
+import { STORE_KEYS } from '../../../lib/constants/store-keys'
 
 export const useAuth = () => {
   const {
@@ -50,6 +48,37 @@ export const useAuth = () => {
 
   // Prioritize store user over Auth0 user
   const authUser = storeUser || auth0User
+
+  // Check for token expiration on startup
+  useEffect(() => {
+    // Check if we have valid auth state stored
+    const storedAuth = window.electron?.store?.get(STORE_KEYS.AUTH)
+    const hasStoredTokens = storedAuth?.tokens?.access_token
+    // Also check main store for tokens (backwards compatibility)
+    const hasMainStoreToken = window.electron?.store?.get(
+      STORE_KEYS.ACCESS_TOKEN,
+    )
+
+    if ((hasStoredTokens || hasMainStoreToken) && !isAuthenticated) {
+      console.log('Detected expired tokens on startup, clearing auth state')
+
+      // Clear any remaining auth data
+      clearAuth(true)
+
+      // Track the automatic logout
+      const currentUser = authUser
+      if (currentUser) {
+        analytics.trackAuth(ANALYTICS_EVENTS.AUTH_LOGOUT, {
+          provider: currentUser.provider || 'unknown',
+          is_returning_user: true,
+          user_id: currentUser.id,
+          complete_signout: false,
+          session_duration_ms: analytics.getSessionDuration(),
+          reason: 'token_expired_startup',
+        })
+      }
+    }
+  }, [isAuthenticated, authUser, clearAuth])
 
   useEffect(() => {
     if (authUser) {
@@ -350,6 +379,25 @@ export const useAuth = () => {
     }
   }, [getAccessTokenSilently, tokens])
 
+  // Manual token refresh
+  const refreshTokens = useCallback(async () => {
+    try {
+      console.log('Manually refreshing tokens...')
+      const result = await window.api.invoke('refresh-tokens')
+
+      if (result.success) {
+        console.log('Manual token refresh successful')
+        return result
+      } else {
+        console.error('Manual token refresh failed:', result.error)
+        throw new Error(result.error)
+      }
+    } catch (error) {
+      console.error('Error during manual token refresh:', error)
+      throw error
+    }
+  }, [])
+
   // Logout
   const logoutUser = useCallback(
     async (completelySignOut: boolean = false) => {
@@ -396,6 +444,89 @@ export const useAuth = () => {
     [logout, clearAuth, auth0IsAuthenticated, authUser],
   )
 
+  // Handle auth token events from main process
+  useEffect(() => {
+    if (!window.api?.on) {
+      console.warn('window.api.on not available')
+      return
+    }
+
+    // Check if listener is already set up
+    if ((window as any).__authTokenListenerSetup) {
+      return
+    }
+
+    // Mark that we've set up the listener
+    ;(window as any).__authTokenListenerSetup = true
+
+    // Handle token refresh success
+    const cleanupTokensRefreshed = window.api.on(
+      'tokens-refreshed',
+      async (newTokens: AuthTokens) => {
+        console.log('Tokens refreshed successfully, updating auth store')
+
+        try {
+          // Update the auth store with refreshed tokens
+          const currentUser = authUser
+          if (currentUser) {
+            useAuthStore
+              .getState()
+              .setAuthData(newTokens, currentUser, currentUser.provider)
+
+            // Track successful token refresh
+            analytics.track(ANALYTICS_EVENTS.AUTH_SIGNIN_COMPLETED, {
+              provider: currentUser.provider || 'unknown',
+              user_id: currentUser.id,
+              is_returning_user: true,
+              reason: 'token_refresh',
+            })
+          }
+        } catch (error) {
+          console.error(
+            'Error updating auth store with refreshed tokens:',
+            error,
+          )
+        }
+      },
+    )
+
+    // Handle token expiration (when refresh fails or no refresh token available)
+    const cleanupTokenExpired = window.api.on(
+      'auth-token-expired',
+      async () => {
+        console.log('Auth token expired, automatically signing out user')
+
+        try {
+          // Track automatic logout due to token expiration
+          const currentUser = authUser
+          analytics.trackAuth(ANALYTICS_EVENTS.AUTH_LOGOUT, {
+            provider: currentUser?.provider || 'unknown',
+            is_returning_user: true,
+            user_id: currentUser?.id,
+            complete_signout: false,
+            session_duration_ms: analytics.getSessionDuration(),
+            reason: 'token_expired',
+          })
+
+          logoutUser(false)
+
+          // Auth state will automatically redirect to welcome page
+        } catch (error) {
+          console.error('Error during automatic logout:', error)
+
+          // Still try to clear local auth even if main process logout fails
+          clearAuth(true)
+        }
+      },
+    )
+
+    return () => {
+      cleanupTokensRefreshed()
+      cleanupTokenExpired()
+      ;(window as any).__authTokenListenerSetup = false
+    }
+  }, [logout, clearAuth, auth0IsAuthenticated, authUser, logoutUser])
+
   return {
     // Auth state
     user: authUser,
@@ -414,5 +545,6 @@ export const useAuth = () => {
     // Utilities
     getAccessToken,
     getIdTokenClaims,
+    refreshTokens,
   }
 }

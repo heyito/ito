@@ -10,7 +10,7 @@ function MicrophoneBars({ volume }: { volume: number }) {
     .fill(0)
     .map((_, i) => {
       const threshold = (i / 12) * 0.5
-      const normalizedVolume = Math.min(volume * 2.5, 1)
+      const normalizedVolume = Math.min(volume * 8, 1)
       return normalizedVolume > threshold ? 1 : minHeight
     })
 

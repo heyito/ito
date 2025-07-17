@@ -7,11 +7,13 @@ import {
 import { grpcClient } from '../clients/grpcClient'
 import { Note, Interaction, DictionaryItem } from './sqlite/models'
 import mainStore from './store'
+import { STORE_KEYS } from '../constants/store-keys'
 
 const LAST_SYNCED_AT_KEY = 'lastSyncedAt'
 
 export class SyncService {
   private isSyncing = false
+  private syncInterval: NodeJS.Timeout | null = null
   private static instance: SyncService
 
   private constructor() {
@@ -26,9 +28,22 @@ export class SyncService {
   }
 
   public async start() {
+    // Clear any existing interval
+    if (this.syncInterval) {
+      clearInterval(this.syncInterval)
+    }
+
     // Initial sync on startup, then schedule periodic syncs
     this.runSync()
-    setInterval(() => this.runSync(), 1000 * 5) // Sync every 5 seconds
+    this.syncInterval = setInterval(() => this.runSync(), 1000 * 5) // Sync every 5 seconds
+  }
+
+  public stop() {
+    if (this.syncInterval) {
+      clearInterval(this.syncInterval)
+      this.syncInterval = null
+    }
+    this.isSyncing = false
   }
 
   private async runSync() {
@@ -39,7 +54,7 @@ export class SyncService {
     this.isSyncing = true
 
     try {
-      const user = mainStore.get('userProfile') as any
+      const user = mainStore.get(STORE_KEYS.USER_PROFILE) as any
       if (!user?.id) {
         console.log(
           'No user logged in or user profile is missing ID. Skipping sync.',

@@ -19,9 +19,12 @@ import { grpcClient } from '../clients/grpcClient'
 import { allowAppNap, preventAppNap } from './appNap'
 import { syncService } from './syncService'
 import mainStore from './store'
+import { STORE_KEYS } from '../constants/store-keys'
 import { audioRecorderService } from '../media/audio'
 import { voiceInputService } from './voiceInputService'
 import { initializeMicrophoneSelection } from '../media/microphoneSetUp'
+import { validateStoredTokens, ensureValidTokens } from '../auth/events'
+import { Auth0Config, validateAuth0Config } from '../auth/config'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -45,11 +48,28 @@ app.whenReady().then(async () => {
     return
   }
 
-  // If we have a token from a previous session, start the sync service
-  const accessToken = mainStore.get('accessToken') as string | undefined
-  if (accessToken) {
-    grpcClient.setAuthToken(accessToken)
-    syncService.start()
+  // Validate Auth0 configuration
+  try {
+    validateAuth0Config()
+  } catch (error) {
+    console.error('Auth0 configuration error:', error)
+    console.warn(
+      'Token refresh will be disabled due to missing Auth0 configuration',
+    )
+  }
+
+  // Validate stored tokens before using them (will attempt refresh if needed)
+  const tokensAreValid = await validateStoredTokens(Auth0Config)
+
+  // If we have valid tokens from a previous session, start the sync service
+  if (tokensAreValid) {
+    const accessToken = mainStore.get(STORE_KEYS.ACCESS_TOKEN) as
+      | string
+      | undefined
+    if (accessToken) {
+      grpcClient.setAuthToken(accessToken)
+      syncService.start()
+    }
   }
 
   // Setup protocol handling for deep links
@@ -61,6 +81,14 @@ app.whenReady().then(async () => {
   // Register the handler for the 'res' protocol now that the app is ready.
   registerResourcesProtocol()
   electronApp.setAppUserModelId('com.electron')
+
+  // IMPORTANT: Register IPC handlers BEFORE creating windows
+  // This prevents the renderer from making IPC calls before handlers are ready
+  registerIPC()
+
+  if (!app.isPackaged) {
+    registerDevIPC()
+  }
 
   // Create windows
   createAppWindow()
@@ -101,9 +129,6 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  registerIPC()
-
-  // If the app is packaged, start the auto updater
   if (app.isPackaged) {
     try {
       console.log('App is packaged, initializing auto updater...')
@@ -133,9 +158,17 @@ app.whenReady().then(async () => {
     }
   }
 
-  if (!app.isPackaged) {
-    registerDevIPC()
-  }
+  // Set up periodic token refresh check (every 10 minutes)
+  setInterval(
+    async () => {
+      try {
+        await ensureValidTokens(Auth0Config)
+      } catch (error) {
+        console.error('Periodic token refresh failed:', error)
+      }
+    },
+    10 * 60 * 1000,
+  ) // Check every 10 minutes
 })
 
 app.on('window-all-closed', () => {

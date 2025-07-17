@@ -1,5 +1,6 @@
 import Store from 'electron-store'
 import crypto from 'crypto'
+import { STORE_KEYS } from '../constants/store-keys'
 
 interface MainStore {
   navExpanded: boolean
@@ -33,7 +34,7 @@ export interface AuthState {
   state: string
 }
 
-interface AuthUser {
+export interface AuthUser {
   id: string
   email?: string
   name?: string
@@ -42,15 +43,16 @@ interface AuthUser {
   lastSignInAt?: string
 }
 
-interface AuthTokens {
+export interface AuthTokens {
   access_token?: string
   refresh_token?: string
   id_token?: string
   token_type?: string
   expires_in?: number
+  expires_at?: number
 }
 
-interface AuthStore {
+export interface AuthStore {
   user: AuthUser | null
   tokens: AuthTokens | null
   state: AuthState
@@ -71,7 +73,7 @@ interface AppStore {
 
 // Helper function to get current user ID
 export const getCurrentUserId = (): string | undefined => {
-  const user = store.get('userProfile') as any
+  const user = store.get(STORE_KEYS.USER_PROFILE) as any
   return user?.id
 }
 
@@ -129,20 +131,20 @@ const store = new Store<AppStore>({
 
 // electron quirk -- default values are only used if the entire object is missing.
 // We need to manually merge defaults for nested objects to ensure all keys exist.
-const currentSettings = store.get('settings')
+const currentSettings = store.get(STORE_KEYS.SETTINGS)
 const completeSettings = { ...defaultValues.settings, ...currentSettings }
-store.set('settings', completeSettings)
+store.set(STORE_KEYS.SETTINGS, completeSettings)
 
-const currentMain = store.get('main')
+const currentMain = store.get(STORE_KEYS.MAIN)
 const completeMain = { ...defaultValues.main, ...currentMain }
-store.set('main', completeMain)
+store.set(STORE_KEYS.MAIN, completeMain)
 
-const currentOnboarding = store.get('onboarding')
+const currentOnboarding = store.get(STORE_KEYS.ONBOARDING)
 const completeOnboarding = { ...defaultValues.onboarding, ...currentOnboarding }
-store.set('onboarding', completeOnboarding)
+store.set(STORE_KEYS.ONBOARDING, completeOnboarding)
 
-const currentAuth = store.get('auth')
+const currentAuth = store.get(STORE_KEYS.AUTH)
 const completeAuth = { ...defaultValues.auth, ...currentAuth }
-store.set('auth', completeAuth)
+store.set(STORE_KEYS.AUTH, completeAuth)
 
 export default store

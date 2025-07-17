@@ -21,7 +21,9 @@ import {
   exchangeAuthCode,
   handleLogin,
   handleLogout,
+  ensureValidTokens,
 } from '../auth/events'
+import { Auth0Config } from '../auth/config'
 import {
   NotesTable,
   DictionaryTable,
@@ -159,6 +161,20 @@ export function registerIPC() {
   handleIPC('logout', () => handleLogout())
   handleIPC('notify-login-success', (_e, { profile, idToken, accessToken }) => {
     handleLogin(profile, idToken, accessToken)
+  })
+
+  // Token refresh handler
+  handleIPC('refresh-tokens', async () => {
+    try {
+      const result = await ensureValidTokens(Auth0Config)
+      return result
+    } catch (error) {
+      console.error('Manual token refresh failed:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      }
+    }
   })
 
   // Window Init & Controls

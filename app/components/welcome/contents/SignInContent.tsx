@@ -11,6 +11,7 @@ import { useAuthStore } from '@/app/store/useAuthStore'
 import { useNotesStore } from '@/app/store/useNotesStore'
 import { useDictionaryStore } from '@/app/store/useDictionaryStore'
 import { AppOrbitImage } from '@/app/components/ui/app-orbit-image'
+import { STORE_KEYS } from '../../../../lib/constants/store-keys'
 
 // Auth provider configuration
 const AUTH_PROVIDERS = {
@@ -131,7 +132,7 @@ export default function SignInContent() {
   }
 
   // Get stored user info for display
-  const storedUser = window.electron?.store?.get('auth')?.user
+  const storedUser = window.electron?.store?.get(STORE_KEYS.AUTH)?.user
   const userEmail = storedUser?.email
   const userProvider = storedUser?.provider as keyof typeof AUTH_PROVIDERS
 

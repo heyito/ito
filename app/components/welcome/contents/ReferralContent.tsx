@@ -11,7 +11,7 @@ import { useAuthStore } from '@/app/store/useAuthStore'
 
 const sources = [
   'Twitter',
-  'Youtube',
+  'YouTube',
   'Reddit',
   'Friend',
   'Google Search',
@@ -31,7 +31,7 @@ export default function ReferralContent() {
         <div className="flex flex-col h-full min-h-[400px] justify-between py-12">
           <div className="pt-32">
             <h1 className="text-3xl mb-4">
-              Welcome {firstName ? `, ${firstName}!` : '!'}
+              Welcome{firstName ? `, ${firstName}!` : '!'}
             </h1>
             <p className="mb-6 text-base text-muted-foreground">
               Where did you hear about us?

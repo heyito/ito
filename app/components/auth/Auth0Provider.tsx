@@ -1,6 +1,6 @@
 import React from 'react'
 import { Auth0Provider as Auth0ReactProvider } from '@auth0/auth0-react'
-import { Auth0Config, validateAuth0Config } from './config'
+import { Auth0Config, validateAuth0Config } from '../../../lib/auth/config'
 
 interface Auth0ProviderProps {
   children: React.ReactNode

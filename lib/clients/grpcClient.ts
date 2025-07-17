@@ -20,17 +20,21 @@ import {
 } from '@/app/generated/ito_pb'
 import { createClient } from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-node'
+import { ConnectError, Code } from '@connectrpc/connect'
 import { BrowserWindow } from 'electron'
 import { create } from '@bufbuild/protobuf'
 import { setFocusedText } from '../media/text-writer'
 import { Note, Interaction, DictionaryItem } from '../main/sqlite/models'
 import { DictionaryTable } from '../main/sqlite/repo'
 import { getCurrentUserId } from '../main/store'
+import { ensureValidTokens } from '../auth/events'
+import { Auth0Config } from '../auth/config'
 
 class GrpcClient {
   private client: ReturnType<typeof createClient<typeof ItoService>>
   private authToken: string | null = null
   private mainWindow: BrowserWindow | null = null
+  private isRefreshingTokens: boolean = false
 
   constructor() {
     const transport = createConnectTransport({
@@ -81,8 +85,79 @@ class GrpcClient {
     return headers
   }
 
-  async transcribeStream(stream: AsyncIterable<AudioChunk>) {
+  private async withRetry<T>(operation: () => Promise<T>): Promise<T> {
     try {
+      return await operation()
+    } catch (error) {
+      const shouldRetry = await this.handleAuthError(error)
+
+      if (shouldRetry) {
+        console.log('Retrying operation after token refresh')
+        return await operation()
+      }
+
+      throw error
+    }
+  }
+
+  private async handleAuthError(error: any): Promise<boolean> {
+    console.log('handleAuthError', error)
+
+    // Check if this is an authentication error
+    if (error instanceof ConnectError && error.code === Code.Unauthenticated) {
+      console.log(
+        'Authentication error detected, attempting token refresh before logout',
+      )
+
+      // Prevent multiple simultaneous refresh attempts
+      if (this.isRefreshingTokens) {
+        console.log('Token refresh already in progress, skipping')
+        return false
+      }
+
+      try {
+        this.isRefreshingTokens = true
+
+        // Attempt to refresh tokens
+        const refreshResult = await ensureValidTokens(Auth0Config)
+
+        if (
+          refreshResult.success &&
+          'tokens' in refreshResult &&
+          refreshResult.tokens?.access_token
+        ) {
+          console.log('Token refresh successful, updating auth token')
+          this.authToken = refreshResult.tokens.access_token
+
+          // Return true to indicate the caller should retry
+          return true
+        } else {
+          console.log('Token refresh failed, proceeding with logout')
+        }
+      } catch (refreshError) {
+        console.error('Error during token refresh:', refreshError)
+      } finally {
+        this.isRefreshingTokens = false
+      }
+
+      // If we get here, token refresh failed - proceed with logout
+      console.log('Signing out user due to authentication failure')
+
+      // Notify the main window to sign out the user
+      if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+        this.mainWindow.webContents.send('auth-token-expired')
+      }
+
+      // Clear the auth token
+      this.authToken = null
+    }
+
+    // Return false to indicate no retry should be attempted
+    return false
+  }
+
+  async transcribeStream(stream: AsyncIterable<AudioChunk>) {
+    return this.withRetry(async () => {
       const response = await this.client.transcribeStream(stream, {
         headers: await this.getHeadersWithVocabulary(),
       })
@@ -96,12 +171,13 @@ class GrpcClient {
         this.mainWindow.webContents.send('transcription-result', response)
       }
       return response
-    } catch (error) {
+    }).catch(error => {
+      // Handle transcription errors separately
       if (this.mainWindow) {
         this.mainWindow.webContents.send('transcription-error', error)
       }
       throw error
-    }
+    })
   }
 
   // =================================================================
@@ -109,143 +185,177 @@ class GrpcClient {
   // =================================================================
 
   async createNote(note: Note) {
-    const request = create(CreateNoteRequestSchema, {
-      id: note.id,
-      interactionId: note.interaction_id ?? '',
-      content: note.content,
+    return this.withRetry(async () => {
+      const request = create(CreateNoteRequestSchema, {
+        id: note.id,
+        interactionId: note.interaction_id ?? '',
+        content: note.content,
+      })
+      return await this.client.createNote(request, {
+        headers: this.getHeaders(),
+      })
     })
-    return this.client.createNote(request, { headers: this.getHeaders() })
   }
 
   async updateNote(note: Note) {
-    const request = create(UpdateNoteRequestSchema, {
-      id: note.id,
-      content: note.content,
+    return this.withRetry(async () => {
+      const request = create(UpdateNoteRequestSchema, {
+        id: note.id,
+        content: note.content,
+      })
+      return await this.client.updateNote(request, {
+        headers: this.getHeaders(),
+      })
     })
-    return this.client.updateNote(request, { headers: this.getHeaders() })
   }
 
   async deleteNote(note: Note) {
-    const request = create(DeleteNoteRequestSchema, {
-      id: note.id,
+    return this.withRetry(async () => {
+      const request = create(DeleteNoteRequestSchema, {
+        id: note.id,
+      })
+      return await this.client.deleteNote(request, {
+        headers: this.getHeaders(),
+      })
     })
-    return this.client.deleteNote(request, { headers: this.getHeaders() })
   }
 
   async listNotesSince(since?: string): Promise<NotePb[]> {
-    const request = create(ListNotesRequestSchema, {
-      sinceTimestamp: since ?? '',
+    return this.withRetry(async () => {
+      const request = create(ListNotesRequestSchema, {
+        sinceTimestamp: since ?? '',
+      })
+      const response = await this.client.listNotes(request, {
+        headers: this.getHeaders(),
+      })
+      return response.notes
     })
-    const response = await this.client.listNotes(request, {
-      headers: this.getHeaders(),
-    })
-    return response.notes
   }
 
   async createInteraction(interaction: Interaction) {
-    // Convert Buffer to Uint8Array for protobuf
-    let uint8AudioData: Uint8Array
-    if (interaction.raw_audio) {
-      uint8AudioData = new Uint8Array(interaction.raw_audio)
-    } else {
-      uint8AudioData = new Uint8Array()
-    }
+    return this.withRetry(async () => {
+      // Convert Buffer to Uint8Array for protobuf
+      let uint8AudioData: Uint8Array
+      if (interaction.raw_audio) {
+        uint8AudioData = new Uint8Array(interaction.raw_audio)
+      } else {
+        uint8AudioData = new Uint8Array()
+      }
 
-    const request = create(CreateInteractionRequestSchema, {
-      id: interaction.id,
-      title: interaction.title ?? '',
-      asrOutput: JSON.stringify(interaction.asr_output),
-      llmOutput: JSON.stringify(interaction.llm_output),
-      rawAudio: uint8AudioData,
-      durationMs: interaction.duration_ms ?? 0,
-    })
+      const request = create(CreateInteractionRequestSchema, {
+        id: interaction.id,
+        title: interaction.title ?? '',
+        asrOutput: JSON.stringify(interaction.asr_output),
+        llmOutput: JSON.stringify(interaction.llm_output),
+        rawAudio: uint8AudioData,
+        durationMs: interaction.duration_ms ?? 0,
+      })
 
-    console.log(
-      '[gRPC Client] Sending request with audio size:',
-      request.rawAudio.length,
-      'duration:',
-      request.durationMs,
-      'ms',
-    )
+      console.log(
+        '[gRPC Client] Sending request with audio size:',
+        request.rawAudio.length,
+        'duration:',
+        request.durationMs,
+        'ms',
+      )
 
-    return this.client.createInteraction(request, {
-      headers: this.getHeaders(),
+      return await this.client.createInteraction(request, {
+        headers: this.getHeaders(),
+      })
     })
   }
 
   async updateInteraction(interaction: Interaction) {
-    const request = create(UpdateInteractionRequestSchema, {
-      id: interaction.id,
-      title: interaction.title ?? '',
-    })
-    return this.client.updateInteraction(request, {
-      headers: this.getHeaders(),
+    return this.withRetry(async () => {
+      const request = create(UpdateInteractionRequestSchema, {
+        id: interaction.id,
+        title: interaction.title ?? '',
+      })
+      return await this.client.updateInteraction(request, {
+        headers: this.getHeaders(),
+      })
     })
   }
 
   async deleteInteraction(interaction: Interaction) {
-    const request = create(DeleteInteractionRequestSchema, {
-      id: interaction.id,
-    })
-    return this.client.deleteInteraction(request, {
-      headers: this.getHeaders(),
+    return this.withRetry(async () => {
+      const request = create(DeleteInteractionRequestSchema, {
+        id: interaction.id,
+      })
+      return await this.client.deleteInteraction(request, {
+        headers: this.getHeaders(),
+      })
     })
   }
 
   async listInteractionsSince(since?: string): Promise<InteractionPb[]> {
-    const request = create(ListInteractionsRequestSchema, {
-      sinceTimestamp: since ?? '',
+    return this.withRetry(async () => {
+      const request = create(ListInteractionsRequestSchema, {
+        sinceTimestamp: since ?? '',
+      })
+      const response = await this.client.listInteractions(request, {
+        headers: this.getHeaders(),
+      })
+      return response.interactions
     })
-    const response = await this.client.listInteractions(request, {
-      headers: this.getHeaders(),
-    })
-    return response.interactions
   }
 
   async createDictionaryItem(item: DictionaryItem) {
-    const request = create(CreateDictionaryItemRequestSchema, {
-      id: item.id,
-      word: item.word,
-      pronunciation: item.pronunciation ?? '',
-    })
-    return this.client.createDictionaryItem(request, {
-      headers: this.getHeaders(),
+    return this.withRetry(async () => {
+      const request = create(CreateDictionaryItemRequestSchema, {
+        id: item.id,
+        word: item.word,
+        pronunciation: item.pronunciation ?? '',
+      })
+      return await this.client.createDictionaryItem(request, {
+        headers: this.getHeaders(),
+      })
     })
   }
 
   async updateDictionaryItem(item: DictionaryItem) {
-    const request = create(UpdateDictionaryItemRequestSchema, {
-      id: item.id,
-      word: item.word,
-      pronunciation: item.pronunciation ?? '',
-    })
-    return this.client.updateDictionaryItem(request, {
-      headers: this.getHeaders(),
+    return this.withRetry(async () => {
+      const request = create(UpdateDictionaryItemRequestSchema, {
+        id: item.id,
+        word: item.word,
+        pronunciation: item.pronunciation ?? '',
+      })
+      return await this.client.updateDictionaryItem(request, {
+        headers: this.getHeaders(),
+      })
     })
   }
 
   async deleteDictionaryItem(item: DictionaryItem) {
-    const request = create(DeleteDictionaryItemRequestSchema, {
-      id: item.id,
-    })
-    return this.client.deleteDictionaryItem(request, {
-      headers: this.getHeaders(),
+    return this.withRetry(async () => {
+      const request = create(DeleteDictionaryItemRequestSchema, {
+        id: item.id,
+      })
+      return await this.client.deleteDictionaryItem(request, {
+        headers: this.getHeaders(),
+      })
     })
   }
 
   async listDictionaryItemsSince(since?: string): Promise<DictionaryItemPb[]> {
-    const request = create(ListDictionaryItemsRequestSchema, {
-      sinceTimestamp: since ?? '',
+    return this.withRetry(async () => {
+      const request = create(ListDictionaryItemsRequestSchema, {
+        sinceTimestamp: since ?? '',
+      })
+      const response = await this.client.listDictionaryItems(request, {
+        headers: this.getHeaders(),
+      })
+      return response.items
     })
-    const response = await this.client.listDictionaryItems(request, {
-      headers: this.getHeaders(),
-    })
-    return response.items
   }
 
   async deleteUserData() {
-    const request = create(DeleteUserDataRequestSchema, {})
-    return this.client.deleteUserData(request, { headers: this.getHeaders() })
+    return this.withRetry(async () => {
+      const request = create(DeleteUserDataRequestSchema, {})
+      return await this.client.deleteUserData(request, {
+        headers: this.getHeaders(),
+      })
+    })
   }
 }
 

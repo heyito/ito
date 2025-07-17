@@ -11,8 +11,8 @@ import { AnimatedCheck } from '@/app/components/ui/animated-checkmark'
 import { Lock } from '@mynaui/icons-react'
 import { usePermissionsStore } from '@/app/store/usePermissionsStore'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
-import accessibilityImage from '@/app/assets/accesssibility.png'
-import microphoneImage from '@/app/assets/microphone.png'
+import accessibilityVideo from '@/app/assets/accesssibility.webm'
+import microphoneVideo from '@/app/assets/microphone.webm'
 
 export default function PermissionsContent() {
   const { incrementOnboardingStep, decrementOnboardingStep } =
@@ -156,14 +156,16 @@ export default function PermissionsContent() {
             </h1>
             <div className="flex flex-col gap-4 my-8 pr-24">
               <div className="border rounded-lg p-4 flex flex-col gap-2 bg-background border-border border-2">
-                <div className="flex items-center mb-2 gap-2">
+                <div
+                  className={`flex items-center gap-2 ${isAccessibilityEnabled ? '' : 'mb-2'}`}
+                >
                   {isAccessibilityEnabled && (
                     <AnimatedCheck trigger={accessibilityCheckTrigger} />
                   )}
                   <div className="font-medium text-base flex">
                     {isAccessibilityEnabled
-                      ? 'Ito can insert and edit text'
-                      : 'Allow Ito to insert spoken words'}
+                      ? 'Ito can insert and edit text.'
+                      : 'Allow Ito to insert spoken words.'}
                   </div>
                 </div>
                 {!isAccessibilityEnabled && (
@@ -206,14 +208,16 @@ export default function PermissionsContent() {
                 )}
               </div>
               <div className="border rounded-lg p-4 flex flex-col gap-2 bg-background border-border border-2">
-                <div className="flex items-center mb-2 gap-2">
+                <div
+                  className={`flex items-center gap-2 ${isMicrophoneEnabled ? '' : 'mb-2'}`}
+                >
                   {isMicrophoneEnabled && (
                     <AnimatedCheck trigger={microphoneCheckTrigger} />
                   )}
                   <div className="font-medium text-base flex">
                     {isMicrophoneEnabled
-                      ? 'Ito can use your microphone'
-                      : 'Allow Ito to use your microphone'}
+                      ? 'Ito can use your microphone.'
+                      : 'Allow Ito to use your microphone.'}
                   </div>
                 </div>
                 {isAccessibilityEnabled && !isMicrophoneEnabled && (
@@ -270,15 +274,19 @@ export default function PermissionsContent() {
           {isAccessibilityEnabled && isMicrophoneEnabled ? (
             <Lock style={{ width: 220, height: 220, color: '#c4b5fd' }} />
           ) : !isAccessibilityEnabled ? (
-            <img
-              src={accessibilityImage}
-              alt="Accessibility permission setup"
-              className="max-w-full max-h-full object-contain"
+            <video
+              src={accessibilityVideo}
+              autoPlay
+              loop
+              muted
+              className="max-w-full max-h-full object-contain rounded-lg"
             />
           ) : (
-            <img
-              src={microphoneImage}
-              alt="Microphone permission setup"
+            <video
+              src={microphoneVideo}
+              autoPlay
+              loop
+              muted
               className="max-w-full max-h-full object-contain"
             />
           )}

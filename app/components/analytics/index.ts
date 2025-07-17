@@ -6,6 +6,7 @@ import {
   Identify,
 } from '@amplitude/analytics-browser'
 import log from 'electron-log'
+import { STORE_KEYS } from '../../../lib/constants/store-keys'
 
 // Check if analytics should be enabled
 const getAnalyticsEnabled = (): boolean => {
@@ -17,7 +18,7 @@ const getAnalyticsEnabled = (): boolean => {
 
   // Then check user settings
   try {
-    const settings = window.electron?.store?.get('settings')
+    const settings = window.electron?.store?.get(STORE_KEYS.SETTINGS)
     return settings?.shareAnalytics ?? true
   } catch (error) {
     console.warn(
@@ -144,7 +145,6 @@ class AnalyticsService {
   private currentUserId: string | null = null
   private currentProvider: string | null = null
   private sessionStartTime: number = Date.now()
-  private hotkeySessionStartTime: number | null = null
 
   constructor() {
     log.info(`[Analytics] Service initialized (enabled: ${this.isInitialized})`)
@@ -180,7 +180,6 @@ class AnalyticsService {
     this.isInitialized = false
     this.currentUserId = null
     this.currentProvider = null
-    this.hotkeySessionStartTime = null
     log.info('[Analytics] Analytics disabled')
   }
 
@@ -375,7 +374,6 @@ class AnalyticsService {
       // Note: Node.js SDK doesn't have a reset function, so we just clear local state
       this.currentUserId = null
       this.currentProvider = null
-      this.hotkeySessionStartTime = null
       log.info('[Analytics] User session reset')
     } catch (error) {
       log.error('[Analytics] Failed to reset user session:', error)

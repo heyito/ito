@@ -1,4 +1,5 @@
 import mainStore from '../main/store'
+import { STORE_KEYS } from '../constants/store-keys'
 import { audioRecorderService } from './audio'
 
 /**
@@ -11,7 +12,7 @@ export const initializeMicrophoneSelection = async () => {
     )
 
     // Get current settings from store
-    const currentSettings = mainStore.get('settings')
+    const currentSettings = mainStore.get(STORE_KEYS.SETTINGS)
 
     // If user has already selected a specific microphone (not default), keep their choice
     if (
@@ -48,7 +49,7 @@ export const initializeMicrophoneSelection = async () => {
         microphoneDeviceId: builtInDevice,
         microphoneName: 'Built-in mic (recommended)',
       }
-      mainStore.set('settings', updatedSettings)
+      mainStore.set(STORE_KEYS.SETTINGS, updatedSettings)
     } else {
       console.log(
         '[initializeMicrophoneSelection] No built-in microphone found. Keeping "Auto-detect".',

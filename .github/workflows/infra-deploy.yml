@@ -13,10 +13,6 @@ on:
         type: string
         required: true
         description: 'The environment to build for'
-<<<<<<< HEAD
-=======
-
->>>>>>> main
 
 permissions:
   contents: read

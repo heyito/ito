@@ -14,13 +14,6 @@ on:
         type: string
         required: true
         description: 'The environment to build for'
-  workflow_dispatch:
-    inputs:
-      environment:
-        type: string
-        required: true
-        description: 'The environment to build for'
-
 
 permissions:
   contents: read

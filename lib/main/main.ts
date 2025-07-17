@@ -1,4 +1,5 @@
 import { app, protocol, systemPreferences } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import {
   createAppWindow,
@@ -127,6 +128,41 @@ app.whenReady().then(async () => {
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
+
+  if (app.isPackaged) {
+    try {
+      console.log('App is packaged, initializing auto updater...')
+
+      const bucket = import.meta.env.VITE_UPDATER_BUCKET
+      if (!bucket) {
+        throw new Error('VITE_UPDATER_BUCKET environment variable is not set')
+      }
+
+      autoUpdater.setFeedURL({
+        provider: 's3',
+        bucket,
+        path: 'releases/',
+        region: 'us-west-2',
+      })
+
+      autoUpdater.on('update-available', () => {
+        mainWindow?.webContents.send('update-available')
+      })
+
+      autoUpdater.on('update-downloaded', () => {
+        mainWindow?.webContents.send('update-downloaded')
+      })
+
+      autoUpdater.on('download-progress', progressObj => {
+        const log_message = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent.toFixed(2)}% (${progressObj.transferred}/${progressObj.total})`
+        console.log(log_message)
+      })
+
+      autoUpdater.checkForUpdates()
+    } catch (e) {
+      console.error('Failed to check for auto updates:', e)
+    }
+  }
 
   // Set up periodic token refresh check (every 10 minutes)
   setInterval(

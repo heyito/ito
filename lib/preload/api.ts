@@ -148,6 +148,13 @@ const api = {
   deleteUserData: () => {
     return ipcRenderer.invoke('delete-user-data')
   },
+
+  updater: {
+    onUpdateAvailable: callback => ipcRenderer.on('update-available', callback),
+    onUpdateDownloaded: callback =>
+      ipcRenderer.on('update-downloaded', callback),
+    installUpdate: () => ipcRenderer.send('install-update'),
+  },
 }
 
 export default api

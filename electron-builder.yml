@@ -29,8 +29,7 @@ protocols:
   name: ito
   schemes: [ito]
 mac:
-  target:
-    - dmg
+  target: default
   icon: resources/build/icon.icns
   darkModeSupport: true
   hardenedRuntime: true

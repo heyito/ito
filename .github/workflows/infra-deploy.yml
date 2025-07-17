@@ -56,4 +56,7 @@ jobs:
 
       - name: Deploy to AWS
         working-directory: server/infra
+        env: 
+          AUTH0_DOMAIN: "${{ secrets.VITE_AUTH0_DOMAIN }}"
+          AUTH0_AUDIENCE: "${{ secrets.VITE_AUTH0_AUDIENCE }}"
         run: npx cdk deploy "Ito-${{ vars.AWS_STAGE }}/*" --require-approval never

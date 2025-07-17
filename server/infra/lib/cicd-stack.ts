@@ -1,4 +1,4 @@
-import { Stack, StackProps } from 'aws-cdk-lib'
+import { RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import {
   OpenIdConnectProvider,
@@ -6,6 +6,7 @@ import {
   Role,
   PolicyStatement,
   Effect,
+  AnyPrincipal,
 } from 'aws-cdk-lib/aws-iam'
 import { Repository } from 'aws-cdk-lib/aws-ecr'
 import {
@@ -15,6 +16,7 @@ import {
   SERVER_NAME,
   SERVICE_NAME,
 } from './constants'
+import { BlockPublicAccess, Bucket } from 'aws-cdk-lib/aws-s3'
 
 export interface GitHubOidcStackProps extends StackProps {
   stages: string[]
@@ -45,6 +47,29 @@ export class GitHubOidcStack extends Stack {
       assumedBy: principal,
       roleName: 'ItoGitHubCiCdRole',
       description: 'GitHub Actions can assume this via OIDC',
+    })
+
+    // ─── create s3 bucket for releases ────────────────────────
+    props.stages.forEach(stage => {
+      const bucketName = `${stage}-${ITO_PREFIX.toLowerCase()}-releases`
+      const bucket = new Bucket(this, `${stage}-ItoReleasesBucket`, {
+        bucketName,
+        removalPolicy: RemovalPolicy.RETAIN,
+
+        blockPublicAccess: BlockPublicAccess.BLOCK_ACLS_ONLY,
+      })
+
+      bucket.grantReadWrite(ciCdRole)
+      bucket.grantDelete(ciCdRole)
+
+      bucket.addToResourcePolicy(
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          principals: [new AnyPrincipal()],
+          actions: ['s3:GetObject'],
+          resources: [bucket.arnForObjects('releases/*')],
+        }),
+      )
     })
 
     // ─── ECR: login + push ─────────────────────────────────────────────────────

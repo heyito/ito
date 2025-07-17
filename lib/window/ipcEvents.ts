@@ -1,4 +1,11 @@
-import { BrowserWindow, ipcMain, shell, systemPreferences, app } from 'electron'
+import {
+  BrowserWindow,
+  ipcMain,
+  shell,
+  systemPreferences,
+  app,
+  autoUpdater,
+} from 'electron'
 import log from 'electron-log'
 import os from 'os'
 import store, { getCurrentUserId } from '../main/store'
@@ -43,6 +50,10 @@ export function registerIPC() {
     // Notify all windows to refresh their device lists in the UI.
     mainWindow?.webContents.send('force-device-list-reload')
     getPillWindow()?.webContents.send('force-device-list-reload')
+  })
+
+  ipcMain.on('install-update', () => {
+    autoUpdater.quitAndInstall()
   })
 
   // Login Item Settings

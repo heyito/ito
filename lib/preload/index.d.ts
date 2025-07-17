@@ -13,12 +13,19 @@ interface StoreAPI {
   set(property: string, val: any): void
 }
 
+interface UpdaterAPI {
+  onUpdateAvailable: (callback: () => void) => void
+  onUpdateDownloaded: (callback: () => void) => void
+  installUpdate: () => void
+}
+
 declare global {
   interface Window {
     electron: ElectronAPI & {
       store: StoreAPI
     }
     api: typeof api & {
+      updater: UpdaterAPI
       startKeyListener: () => Promise<boolean>
       stopKeyListener: () => Promise<boolean>
       startNativeRecording: (deviceId: string) => Promise<void>

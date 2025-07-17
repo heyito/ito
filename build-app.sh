@@ -149,6 +149,20 @@ main() {
     print_status "Starting Ito build process..."
     echo
     
+    # Parse command line arguments
+    SKIP_BINARIES=false
+    for arg in "$@"; do
+        case $arg in
+            --skip-binaries)
+                SKIP_BINARIES=true
+                shift
+                ;;
+            *)
+                # Unknown option
+                ;;
+        esac
+    done
+    
     # Clear output directory first
     clear_output_dir
     echo
@@ -160,13 +174,19 @@ main() {
         setup_rust_env
     fi
     
+    
     # Check prerequisites
     check_prerequisites
     echo
     
-    # Build native modules
-    build_native_modules
-    echo
+    # Build native modules (unless skipped)
+    if [ "$SKIP_BINARIES" = false ]; then
+        build_native_modules
+        echo
+    else
+        print_info "Skipping native modules build (--skip-binaries flag passed)"
+        echo
+    fi
     
     # Create DMG (includes Electron build)
     create_dmg

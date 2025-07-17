@@ -16,6 +16,8 @@ export const Titlebar = () => {
   const { logoutUser } = useAuth()
   const wcontext = useWindowContext().window
   const [showUserDropdown, setShowUserDropdown] = useState(false)
+  const [isUpdateAvailable, setIsUpdateAvailable] = useState(false)
+  const [isUpdateDownloaded, setUpdateDownloaded] = useState(false)
 
   // Handle clicks outside dropdown to close it
   useEffect(() => {
@@ -30,6 +32,16 @@ export const Titlebar = () => {
 
     return () => {}
   }, [showUserDropdown])
+
+  useEffect(() => {
+    window.api.updater.onUpdateAvailable(() => {
+      setIsUpdateAvailable(true)
+    })
+
+    window.api.updater.onUpdateDownloaded(() => {
+      setUpdateDownloaded(true)
+    })
+  }, [])
 
   const toggleUserDropdown = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -127,6 +139,27 @@ export const Titlebar = () => {
             zIndex: 10,
           }}
         >
+          {isUpdateAvailable && (
+            <button
+              className={`titlebar-action-btn bg-sky-800 text-white px-3 py-1 rounded-md font-semibold ${
+                isUpdateDownloaded
+                  ? 'hover:bg-sky-700 cursor-pointer'
+                  : 'cursor-not-allowed opacity-70'
+              }`}
+              disabled={!isUpdateDownloaded}
+              onClick={() => {
+                if (
+                  confirm(
+                    'Are you sure you want to install the update? The app will restart.',
+                  )
+                ) {
+                  window.api.updater.installUpdate()
+                }
+              }}
+            >
+              {isUpdateDownloaded ? 'Install Update' : 'Downloading Update...'}
+            </button>
+          )}
           <div className="relative">
             <div
               className="titlebar-action-btn hover:bg-slate-200"

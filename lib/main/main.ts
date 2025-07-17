@@ -132,9 +132,15 @@ app.whenReady().then(async () => {
   if (app.isPackaged) {
     try {
       console.log('App is packaged, initializing auto updater...')
+
+      const bucket = import.meta.env.VITE_UPDATER_BUCKET
+      if (!bucket) {
+        throw new Error('VITE_UPDATER_BUCKET environment variable is not set')
+      }
+
       autoUpdater.setFeedURL({
         provider: 's3',
-        bucket: 'dev-ito-releases', // TODO: Should come from env variable
+        bucket,
         path: 'releases/',
         region: 'us-west-2',
       })

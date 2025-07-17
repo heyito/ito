@@ -5,6 +5,7 @@ interface ImportMetaEnv {
   readonly VITE_AUTH0_AUDIENCE: string
   readonly VITE_GRPC_BASE_URL: string
   readonly VITE_AMPLITUDE_API_KEY: string
+  readonly VITE_UPDATER_BUCKET: string
 }
 
 interface ImportMeta {

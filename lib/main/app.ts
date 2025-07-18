@@ -133,29 +133,45 @@ export function createPillWindow(): void {
   })
 }
 
-// --- No changes to startPillPositioner ---
 export function startPillPositioner() {
-  setInterval(() => {
-    if (!pillWindow) return
+  // Listen for display changes to handle dock visibility changes
+  screen.on('display-metrics-changed', () => {
+    updatePillPosition()
+  })
+  
+  setInterval(updatePillPosition, 100) // Update position 10 times per second.
+}
 
-    try {
-      // Get the display that the mouse cursor is currently on.
-      const point = screen.getCursorScreenPoint()
-      const display = screen.getDisplayNearestPoint(point)
-      const { width: pillWidth, height: pillHeight } = pillWindow.getBounds()
-      const { x, y, width, height } = display.bounds
+function updatePillPosition() {
+  if (!pillWindow) return
 
-      // Calculate position: Horizontally centered, 20px from the bottom.
-      const newX = Math.round(x + width / 2 - pillWidth / 2)
-      const newY = Math.round(y + height - pillHeight - 40) // Increased margin from bottom
+  try {
+    // Get the display that the mouse cursor is currently on.
+    const point = screen.getCursorScreenPoint()
+    const display = screen.getDisplayNearestPoint(point)
+    const { width: pillWidth, height: pillHeight } = pillWindow.getBounds()
+    
+    // Use workArea instead of bounds to account for dock/menu bar
+    const { x, y, width, height } = display.workArea
+    const screenBounds = display.bounds
 
-      // Set the position of the pill window.
-      pillWindow.setPosition(newX, newY, false) // `false` = not animated
-    } catch (error) {
-      // This can fail if the app is starting up or shutting down.
-      console.warn('Could not update pill position:', error)
-    }
-  }, 100) // Update position 10 times per second.
+    // Calculate position: Horizontally centered, positioned above dock
+    const newX = Math.round(x + width / 2 - pillWidth / 2)
+    
+    // Position just above the work area bottom (which excludes dock)
+    // Add small margin to avoid touching the dock
+    const newY = Math.round(y + height - pillHeight - 10)
+    
+    // Ensure we don't go below the screen bounds
+    const maxY = screenBounds.y + screenBounds.height - pillHeight - 10
+    const finalY = Math.min(newY, maxY)
+
+    // Set the position of the pill window.
+    pillWindow.setPosition(newX, finalY, false) // `false` = not animated
+  } catch (error) {
+    // This can fail if the app is starting up or shutting down.
+    console.warn('Could not update pill position:', error)
+  }
 }
 
 // --- No changes to other functions ---

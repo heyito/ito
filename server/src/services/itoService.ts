@@ -175,11 +175,20 @@ export default (router: ConnectRouter) => {
           : undefined
 
         // 4. Send the corrected WAV file.
-        const transcript = await groqClient.transcribeAudio(
+        let transcript = await groqClient.transcribeAudio(
           fullAudioWAV,
           'wav',
           vocabulary,
         )
+
+        // 5. Check if transcript contains "Hey Ito" in the first 5 words
+        const words = transcript.trim().split(/\s+/)
+        const firstFiveWords = words.slice(0, 5).join(' ').toLowerCase()
+        
+        if (firstFiveWords.includes('hey ito')) {
+          // Use thinking model to adjust the transcript
+          transcript = await groqClient.adjustTranscript(transcript)
+        }
 
         return create(TranscriptionResponseSchema, {
           transcript,

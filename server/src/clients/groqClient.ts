@@ -40,6 +40,40 @@ class GroqClient {
   }
 
   /**
+   * Uses a thinking model to adjust/improve a transcript.
+   * @param transcript The original transcript text.
+   * @returns The adjusted transcript.
+   */
+  public async adjustTranscript(transcript: string): Promise<string> {
+    if (!this.isAvailable) {
+      throw new Error('Groq client is not available. Check API key.')
+    }
+
+    try {
+      const completion = await this._client.chat.completions.create({
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
+          },
+          {
+            role: 'user',
+            content: `Please fulfill this request: "${transcript}"`,
+          },
+        ],
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.1,
+      })
+
+      return completion.choices[0]?.message?.content?.trim() || transcript
+    } catch (error: any) {
+      console.error('An error occurred during transcript adjustment:', error)
+      return transcript
+    }
+  }
+
+  /**
    * Transcribes an audio buffer using the Groq API.
    * @param audioBuffer The audio data as a Node.js Buffer.
    * @param fileType The extension of the audio file type (e.g., 'webm', 'wav').

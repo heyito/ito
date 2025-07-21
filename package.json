@@ -35,7 +35,7 @@
     "start": "electron-vite preview",
     "clean": "rm -rf node_modules dist .vite",
     "clean:ito-app-data": "rm -rf ~/Library/Application\\ Support/Ito",
-    "postinstall": "bunx @electron/rebuild",
+    "postinstall": "bunx @electron/rebuild && husky init",
     "vite:build:app": "electron-vite build",
     "build:rust": "./build-binaries.sh",
     "build:rust:mac": "./build-binaries.sh --mac --universal",
@@ -47,7 +47,8 @@
     "build:win": "electron-vite build && electron-builder --win --x64",
     "build:mac": "electron-vite build && electron-builder --mac --universal",
     "build:app": "./build-app.sh",
-    "build:app:skip-binaries": "./build-app.sh --skip-binaries"
+    "build:app:skip-binaries": "./build-app.sh --skip-binaries",
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
@@ -111,6 +112,8 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
     "framer-motion": "^12.15.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.2",
     "npm-run-all": "^4.1.5",
     "prettier": "^3.5.3",
     "react": "^19.1.0",

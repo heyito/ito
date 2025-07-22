@@ -1,3 +1,5 @@
+name: Check Changelog Update
+
 on:
   pull_request:
     paths:

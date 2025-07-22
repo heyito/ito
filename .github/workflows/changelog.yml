@@ -1,0 +1,33 @@
+on:
+  pull_request:
+    paths:
+      - package.json
+      - lib/**
+      - native/**
+      - resources/**
+      - app/**
+      - electron-builder.yml
+      - build-binaries.sh
+      - build-app.sh
+      - build/**
+
+jobs: 
+  check-changelog:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with: 
+          fetch-depth: 0 
+
+      - name: Check if changelog was updated
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q '^CHANGELOG.md$'; then
+            echo "CHANGELOG.md was updated."
+          else
+            echo "CHANGELOG.md was NOT updated, but source files changed."
+            echo "Please update CHANGELOG.md."
+            exit 1
+          fi

@@ -1,18 +1,18 @@
 name: Build and Release
 
 on:
-  workflow_call:
-    inputs:
-      environment:
-        type: string
-        required: true
-        description: 'The environment to build for'
   workflow_dispatch:
     inputs:
       environment:
         type: string
         required: true
         description: 'The environment to build for'
+  push: 
+    branches:
+      - main
+      - dev
+    tags:
+      - 'v*.*.*'
 
 jobs:
   build:
@@ -66,3 +66,16 @@ jobs:
         with:
           name: Ito-Installer
           path: dist/Ito-Installer.dmg
+
+      - name: Upload Build Output to S3
+        # Only upload if this is a tagged push
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          echo "Deploying version ${{ github.ref_name }} to S3"
+
+          BUILD_OUTPUT=dist
+
+          aws s3 cp $BUILD_OUTPUT s3://${{ vars.AWS_STAGE }}-ito-releases/releases/${{ github.ref_name }}/ --recursive
+
+          # Upload same files to root of releases/ (acts as 'latest')
+          aws s3 cp $BUILD_OUTPUT s3://${{ vars.AWS_STAGE }}-ito-releases/releases/ --recursive

@@ -16,6 +16,7 @@ export default [
       '.eslintignore',
       '.eslintrc',
       '.prettierrc',
+      'commitlint.config.js',
     ],
   },
   eslint.configs.recommended,

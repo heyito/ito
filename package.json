@@ -96,6 +96,8 @@
     "zustand": "^5.0.5"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
     "@electron/rebuild": "^4.0.1",
@@ -122,6 +124,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "release-it": "^19.0.4",
+    "semantic-release": "^24.2.7",
     "tailwindcss": "^4.1.8",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.33.0",

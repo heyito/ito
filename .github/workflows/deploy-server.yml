@@ -1,4 +1,4 @@
-name: Build and Deploy Worfklow
+name: Deployy Server Worfklow
 
 on:
   workflow_call:
@@ -11,7 +11,6 @@ jobs:
   paths-check:
     runs-on: ubuntu-latest
     outputs:
-      ui_changed: ${{ steps.filter.outputs.build }}
       server_changed: ${{ steps.filter.outputs.server }}
       infra_changed: ${{ steps.filter.outputs.infra }}
     steps:
@@ -22,16 +21,6 @@ jobs:
         with:
           base: ${{ github.ref_name }}
           filters: |
-            build:
-              - package.json
-              - lib/**
-              - native/**
-              - resources/**
-              - app/**
-              - electron-builder.yml
-              - build-binaries.sh
-              - build-app.sh
-              - build/**
             server:
               - server/src/**
               - server/Dockerfile
@@ -39,13 +28,6 @@ jobs:
             infra:
               - server/infra/**
           list-files: 'none'
-  build:
-    needs: paths-check
-    if: ${{ needs.paths-check.outputs.ui_changed == 'true' }}
-    uses: ./.github/workflows/build.yml
-    with:
-      environment: ${{ inputs.environment }}
-    secrets: inherit
 
   deploy-infra:
     needs: paths-check

@@ -60,6 +60,7 @@ export class GitHubOidcStack extends Stack {
       })
 
       bucket.grantReadWrite(ciCdRole)
+      bucket.grantPut(ciCdRole)
       bucket.grantDelete(ciCdRole)
 
       bucket.addToResourcePolicy(

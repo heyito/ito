@@ -1,0 +1,24 @@
+name: CI Controller
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  run-tests:
+    uses: ./.github/workflows/test-runner.yml
+
+  # This job ONLY runs for pushes to 'dev' and 'main'
+  build-and-deploy:
+    needs: run-tests
+    if: github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'dev')
+    uses: ./.github/workflows/build-and-deploy.yml
+    with:
+      # Dynamically set the environment based on the branch
+      environment: ${{ github.ref_name == 'main' && 'production' || 'develop' }}
+    secrets: inherit

@@ -1,0 +1,27 @@
+name: Test Runner
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v1
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run tests
+        run: bun test
+
+      - name: Check code formatting
+        run: bun format:app
+
+      - name: Check code linting
+        run: bun lint:app

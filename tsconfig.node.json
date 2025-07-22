@@ -11,7 +11,7 @@
   "compilerOptions": {
     "composite": true,
     "moduleResolution": "bundler",
-    "types": ["electron-vite/node"],
+    "types": ["electron-vite/node", "bun-types"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]

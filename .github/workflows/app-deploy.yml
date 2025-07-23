@@ -37,6 +37,9 @@ jobs:
         working-directory: server
         run: bun install
 
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -49,7 +52,14 @@ jobs:
             --function-name ${{ vars.AWS_STAGE }}-ItoDb-migration \
             --payload '{}' \
             out.json
+
           cat out.json
+
+          if jq -e '.FunctionError' out.json > /dev/null; then
+            echo "❌ Lambda function failed:"
+            echo "Message: $(jq -r '.errorMessage' out.json)"
+            exit 1
+          fi
 
       - name: Login to ECR
         run: |

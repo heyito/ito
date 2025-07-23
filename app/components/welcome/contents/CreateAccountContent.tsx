@@ -9,7 +9,7 @@ import { useEffect } from 'react'
 import { useAuth } from '../../auth/useAuth'
 
 export default function CreateAccountContent() {
-  const { incrementOnboardingStep } = useOnboardingStore()
+  const { incrementOnboardingStep, initializeOnboarding } = useOnboardingStore()
 
   const {
     user,
@@ -27,6 +27,10 @@ export default function CreateAccountContent() {
       incrementOnboardingStep()
     }
   }, [isAuthenticated, user, incrementOnboardingStep])
+
+  useEffect(() => {
+    initializeOnboarding()
+  }, [initializeOnboarding])
 
   const handleSelfHosted = async () => {
     try {

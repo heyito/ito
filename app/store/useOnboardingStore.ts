@@ -15,7 +15,20 @@ interface OnboardingState {
   setReferralSource: (source: string) => void
   setOnboardingCompleted: () => void
   resetOnboarding: () => void
+  initializeOnboarding: () => void
 }
+
+const STEP_NAMES = [
+  'create_account',
+  'referral_source',
+  'data_control',
+  'permissions',
+  'microphone_test',
+  'keyboard_test',
+  'good_to_go',
+  'any_app',
+  'try_it_out',
+]
 
 const getOnboardingCategory = (onboardingStep: number): OnboardingCategory => {
   if (onboardingStep < 3) return 'sign-up'
@@ -34,18 +47,7 @@ export const getOnboardingCategoryIndex = (
 }
 
 const getStepName = (step: number): string => {
-  const stepNames = [
-    'create_account',
-    'referral_source',
-    'data_control',
-    'permissions',
-    'microphone_test',
-    'keyboard_test',
-    'good_to_go',
-    'any_app',
-    'try_it_out',
-  ]
-  return stepNames[step] || 'unknown'
+  return STEP_NAMES[step] || 'unknown'
 }
 
 // Initialize from electron store
@@ -75,10 +77,11 @@ const syncToStore = (state: Partial<OnboardingState>) => {
 
 export const useOnboardingStore = create<OnboardingState>(set => {
   const initialState = getInitialState()
+  const totalOnboardingSteps = STEP_NAMES.length
 
   return {
     onboardingStep: initialState.onboardingStep,
-    totalOnboardingSteps: 9,
+    totalOnboardingSteps,
     onboardingCompleted: initialState.onboardingCompleted,
     onboardingCategory: getOnboardingCategory(initialState.onboardingStep),
     referralSource: null,
@@ -138,6 +141,14 @@ export const useOnboardingStore = create<OnboardingState>(set => {
       }),
     setOnboardingCompleted: () =>
       set(state => {
+        const step = state.totalOnboardingSteps - 1
+        analytics.trackOnboarding(ANALYTICS_EVENTS.ONBOARDING_STEP_COMPLETED, {
+          step: state.totalOnboardingSteps,
+          step_name: getStepName(step),
+          category: getOnboardingCategory(step),
+          total_steps: state.totalOnboardingSteps,
+        })
+
         analytics.trackOnboarding(ANALYTICS_EVENTS.ONBOARDING_COMPLETED, {
           step: state.totalOnboardingSteps,
           step_name: 'completed',
@@ -173,5 +184,15 @@ export const useOnboardingStore = create<OnboardingState>(set => {
         syncToStore(newState)
         return newState
       }),
+    initializeOnboarding: () => {
+      const step = 0
+      const onboardingCategory = getOnboardingCategory(step)
+      analytics.trackOnboarding(ANALYTICS_EVENTS.ONBOARDING_STEP_VIEWED, {
+        step,
+        step_name: getStepName(0),
+        category: onboardingCategory,
+        total_steps: totalOnboardingSteps,
+      })
+    },
   }
 })

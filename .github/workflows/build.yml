@@ -8,9 +8,6 @@ on:
         required: true
         description: 'The environment to build for'
   push: 
-    branches:
-      - main
-      - dev
     tags:
       - 'v*.*.*'
 

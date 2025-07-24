@@ -1,20 +1,13 @@
 name: Build and Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      environment:
-        type: string
-        required: true
-        description: 'The environment to build for'
-  push: 
-    tags:
-      - 'v*.*.*'
+  release:
+    types: [published]
 
 jobs:
   build:
     runs-on: macos-latest
-    environment: ${{ inputs.environment }}
+    environment: ${{ github.event.release.target_commitish == 'main' && 'production' || 'develop' }}
 
     steps:
       - name: Checkout repository
@@ -66,8 +59,6 @@ jobs:
           path: dist/Ito-Installer.dmg
 
       - name: Upload Build Output to S3
-        # Only upload if this is a tagged push
-        if: startsWith(github.ref, 'refs/tags/')
         run: |
           echo "Deploying version ${{ github.ref_name }} to S3"
 

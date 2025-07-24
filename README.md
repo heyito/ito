@@ -1,217 +1,328 @@
-# Electron React App
+# Ito
 
-<br />
-<p align="center">
-    <img src="resources/build/icon.svg" width="64" />
-</p>
+<div align="center">
+  <img src="resources/build/icon.png" width="128" height="128" alt="Ito Logo" />
+  
+  <h3>Smart dictation. Everywhere you want.</h3>
+  
+  <p>
+    <strong>Ito</strong> is an intelligent voice assistant that brings seamless voice dictation to any application on your computer. Simply hold down your trigger key, speak naturally, and watch your words appear instantly in any text field.
+  </p>
 
-A modern Electron application template with React, Vite, TypeScript, and TailwindCSS. This project provides a solid foundation for developing cross-platform desktop applications.
+  <p>
+    <img alt="macOS" src="https://img.shields.io/badge/macOS-supported-blue?logo=apple&logoColor=white">
+    <img alt="Version" src="https://img.shields.io/badge/version-0.2.0-green">
+    <img alt="License" src="https://img.shields.io/badge/license-GPL-blue">
+  </p>
+</div>
 
-<br />
+---
 
-<p align="center">
-    <img src="app/assets/era-preview.png" target="_blank" />
-</p>
+## ✨ Features
 
-<p align="center">
-    <a href="https://imgur.com/B5pGkDk">Watch Video Preview</a>
-</p>
+### 🎙️ **Universal Voice Dictation**
+- **Works in any app**: Emails, documents, chat applications, web browsers, code editors
+- **Global keyboard shortcuts**: Customizable trigger keys that work system-wide
+- **Real-time transcription**: High-accuracy speech-to-text powered by advanced AI models
+- **Instant text insertion**: Automatically types transcribed text into the focused text field
 
-<br />
+### 🧠 **Smart & Adaptive**
+- **Custom dictionary**: Add technical terms, names, and specialized vocabulary
+- **Context awareness**: Learns from your usage patterns to improve accuracy
+- **Multi-language support**: Transcribe in multiple languages
+- **Intelligent punctuation**: Automatically adds appropriate punctuation
 
-## Building the App
+### ⚙️ **Powerful Customization**
+- **Flexible shortcuts**: Configure any key combination as your trigger
+- **Audio preferences**: Choose your preferred microphone
+- **Privacy controls**: Local processing options and data control settings
+- **Seamless integration**: Works with any application
 
-1. Make sure you have cargo/rust installed.
-2. Make sure mingw-w64 is installed `brew install mingw-w64`.
+### 💾 **Data Management**
+- **Notes system**: Automatically save transcriptions for later reference
+- **Interaction history**: Track your dictation sessions and improve over time
+- **Cloud sync**: Keep your settings and data synchronized across devices
+- **Export capabilities**: Export your notes and interaction data
 
-## Features
+---
 
-- 🚀 Electron - Cross-platform desktop application framework
-- ⚛️ React - Component-based UI library
-- 📦 TypeScript - Type-safe JavaScript
-- 🎨 Shadcn UI - Beautiful and accessible component library
-- 🎨 TailwindCSS - Utility-first CSS framework
-- ⚡ Vite - Lightning-fast build tool
-- 🔥 Fast HMR - Hot Module Replacement
-- 🎨 Dark/Light Mode - Built-in theme switching
-- 🪟 Custom Window & Titlebar - Professional-looking window with custom titlebar & file menus
-- 📐 Clean Project Structure - Separation of main and renderer processes
-- 🧩 Path Aliases – Keep your code organized
-- 🛠️ Electron Builder - Configured for packaging applications
+## 🚀 Quick Start
 
-<br />
+### Prerequisites
 
-## Prerequisites
+- **macOS 10.15+**
+- **Node.js 20+** and **Bun** (for development)
+- **Rust toolchain** (for building native components)
+- **Microphone access** and **Accessibility permissions**
 
-- Node.js (v18 or higher)
-- npm, yarn, pnpm, or bun
+### Installation
 
-<br />
+1. **Download the latest release** from the [releases page](https://github.com/demox-labs/ito/releases)
 
-## Installation
+2. **Install the application**:
+   - **macOS**: Open the `.dmg` file and drag Ito to Applications
 
-Clone the repository and install dependencies:
+3. **Grant permissions** when prompted:
+   - **Microphone access**: Required for voice input
+   - **Accessibility access**: Required for global keyboard shortcuts and text insertion
+
+4. **Set up authentication**:
+   - Sign in with Google, Apple, Github through Auth0 or create a local account
+   - Complete the guided onboarding process
+
+### First Use
+
+1. **Configure your trigger key**: Choose a comfortable keyboard shortcut (default: `Fn + Space`)
+2. **Test your microphone**: Ensure clear audio input during the setup process
+3. **Try it out**: Hold your trigger key and speak into any text field
+4. **Customize settings**: Adjust voice sensitivity, shortcuts, and preferences
+
+---
+
+## 🛠️ Development
+
+### Building from Source
+
+> **Important**: Ito requires a local transcription server for voice processing. See [server/README.md](server/README.md) for detailed server setup instructions.
 
 ```bash
 # Clone the repository
-git clone https://github.com/guasam/electron-react-app
-cd electron-react-app
+git clone https://github.com/heyito/ito.git
+cd ito
 
 # Install dependencies
-npm install
-# or
-yarn
-# or
-pnpm install
-# or
 bun install
-```
 
-<br />
+# Set up environment variables
+cp .env.example .env
 
-## Development
+# Build native components (Rust binaries)
+./build-binaries.sh
 
-Start the development server:
+# Set up and start the server (required for transcription)
+cd server
+cp .env.example .env  # Edit with your API keys
+bun install
+bun run local-db-up   # Start PostgreSQL database
+bun run db:migrate    # Run database migrations
+bun run dev           # Start development server
+cd ..
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
+# Start the Electron app (in a new terminal)
 bun run dev
 ```
 
-This will start Electron with hot-reload enabled so you can see changes in real time.
+### Build Requirements
 
-<br />
+- **Rust**: Install via [rustup.rs](https://rustup.rs/)
+- **macOS**: Xcode Command Line Tools
 
-## Building for Production
+### Project Structure
 
-Build the application for your platform:
+```
+ito/
+├── app/                    # Electron renderer (React frontend)
+│   ├── components/         # React components
+│   ├── store/             # Zustand state management
+│   └── styles/            # TailwindCSS styles
+├── lib/                   # Shared library code
+│   ├── main/              # Electron main process
+│   ├── preload/           # Preload scripts & IPC
+│   └── media/             # Audio/keyboard native interfaces
+├── native/                # Native components (Rust/Swift)
+│   ├── audio-recorder/    # Audio capture (Rust)
+│   ├── global-key-listener/ # Keyboard events (Rust)
+│   ├── text-writer/       # Text insertion (Rust)
+│   └── macos-text/        # macOS text reading (Swift)
+├── server/                # gRPC transcription server
+│   ├── src/               # Server implementation
+│   └── infra/             # AWS infrastructure (CDK)
+└── resources/             # Build resources & assets
+```
+
+### Available Scripts
 
 ```bash
-# For Windows
-npm run build:win
+# Development
+bun run dev                 # Start with hot reload
+bun run dev:rust           # Build Rust components and start dev
 
-# For macOS
-npm run build:mac
+# Building
+bun run build:mac          # Build for macOS
+bun run build:unpack       # Build unpacked for testing
 
-# For Linux
-npm run build:linux
-
-# Unpacked for all platforms
-npm run build:unpack
+# Code Quality
+bun run lint               # Run ESLint
+bun run format             # Run Prettier
+bun run lint:fix           # Fix linting issues
 ```
 
-Distribution files will be located in the `dist` directory.
+---
 
-<br />
+## 🏗️ Architecture
 
-## IPC Communication
+### Client Architecture
 
-The app uses a secure IPC (Inter-Process Communication) system to communicate between the renderer and main processes:
+**Ito** is built as a modern Electron application with a sophisticated multi-process architecture:
 
-```ts
-// Renderer process (send message to main)
-window.api.send('channel-name', ...args)
+- **Main Process**: Handles system integration, permissions, and native component coordination
+- **Renderer Process**: React-based UI with real-time audio visualization
+- **Preload Scripts**: Secure IPC bridge between main and renderer processes
+- **Native Components**: High-performance Rust binaries for audio capture and keyboard handling
 
-// Renderer process (receive message from main)
-window.api.receive('channel-name', data => {
-  console.log(data)
-})
+### Technology Stack
 
-// Renderer process (invoke a method in main and get a response)
-const result = await window.api.invoke('channel-name', ...args)
+**Frontend:**
+- **Electron** - Cross-platform desktop framework
+- **React 19** - Modern UI library with concurrent features
+- **TypeScript** - Type-safe development
+- **TailwindCSS** - Utility-first styling
+- **Zustand** - Lightweight state management
+- **Framer Motion** - Smooth animations
+
+**Backend:**
+- **Node.js** - Runtime environment
+- **gRPC** - High-performance RPC for transcription services
+- **SQLite** - Local data storage
+- **Protocol Buffers** - Efficient data serialization
+
+**Native Components:**
+- **Rust** - System-level audio recording and keyboard event handling
+- **Swift** - macOS-specific text manipulation and accessibility features
+- **cpal** - Cross-platform audio library
+- **enigo** - Cross-platform input simulation
+
+**Infrastructure:**
+- **AWS CDK** - Infrastructure as code
+- **Docker** - Containerized deployments
+- **Auth0** - Authentication and user management
+
+### Communication Flow
+
+```mermaid
+graph TD
+    A[User Holds Trigger Key] --> B[Global Key Listener]
+    B --> C[Main Process]
+    C --> D[Audio Recorder Service]
+    D --> E[gRPC Transcription Service]
+    E --> F[AI Transcription Model]
+    F --> G[Transcribed Text]
+    G --> H[Text Writer Service]
+    H --> I[Active Text Field]
 ```
 
-<br />
+---
 
-## Custom Window Components
+## 🔧 Configuration
 
-This template includes a custom window implementation with:
+### Keyboard Shortcuts
 
-- Custom titlebar with app icon
-- Window control buttons (minimize, maximize, close)
-- Menu system with keyboard shortcuts
-- Dark/light mode toggle
-- Cross-platform support for Windows and macOS
+Customize your trigger keys in **Settings > Keyboard**:
 
-<br />
+- **Single key**: `Space`, `Fn`, etc.
+- **Key combinations**: `Cmd + Space`, `Ctrl + Shift + V`, etc.
+- **Complex shortcuts**: `Fn + Cmd + Space` for advanced workflows
 
-### Titlebar Menu Toggle
+### Audio Settings
 
-The titlebar menu can be toggled using:
+Fine-tune audio capture in **Settings > Audio**:
 
-- **Windows**: Press the `Alt` key
-- **macOS**: Press the `Option (⌥)` key
+- **Microphone selection**: Choose from available input devices
+- **Sensitivity adjustment**: Optimize for your voice and environment
+- **Noise reduction**: Filter background noise automatically
+- **Audio feedback**: Enable/disable sound effects
 
-When you press the toggle key:
+### Privacy & Data
 
-- If the menu is hidden, it becomes visible
-- If the menu is already visible, it gets hidden
-- The menu only toggles if menu items are available
+Control your data in **Settings > General**:
 
-<br />
+- **Local processing**: Keep voice data on your device
+- **Cloud sync**: Synchronize settings across devices
+- **Analytics**: Share anonymous usage data (optional)
+- **Data export**: Download your notes and interaction history
 
-### Customizing Menu Items
+---
 
-To add, remove or modify menu items, update the `lib/window/titlebarMenus.ts` file.
+## 🔒 Privacy & Security
 
-<br />
+### Data Handling
 
-## Tailwind Styling
+- **Local-enabled**: Voice processing can be done entirely on your device or using our cloud
+- **Encrypted transmission**: All network communication uses TLS encryption
+- **Minimal data collection**: Only essential data is processed and stored
+- **User control**: Full control and transparency over data retention and deletion
 
-The project supports **TailwindCSS** for styling:
+### Permissions
 
-```ts
-// Example component with Tailwind classes
-const Button = () => (
-  <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-    Click me
-  </button>
-);
-```
+**Ito** requires specific system permissions to function:
 
-<br />
+- **Microphone Access**: To capture your voice for transcription
+- **Accessibility Access**: To detect keyboard shortcuts and insert text
+- **Network Access**: For cloud features and updates (optional)
 
-## Contributing
+### Open Source
 
-Contributions are welcome! Feel free to submit a Pull Request.
+This project is open source under the GNU General Public License. You can:
+- Audit the source code for security and privacy
+- Contribute improvements and bug fixes
+- Fork and customize for your specific needs
+- Report security issues through responsible disclosure
 
-<br />
+---
 
-## Project Structure
+## 🤝 Contributing
 
-<!-- prettier-ignore-start -->
-```markdown
-├── app/                        # Renderer process files
-│   ├── assets/                 # Static assets (images, fonts, etc)
-│   ├── components/             # React components
-│   │   ├── App.tsx             # Application component
-│   ├── styles/                 # CSS and Tailwind files
-│   │   ├── app.css             # App stylesheet
-│   │   └── tailwind.css        # Tailwind stylesheet
-│   ├── index.html              # Entry HTML file
-│   └── renderer.tsx            # Renderer process entry
-├── lib/                        # Shared library code
-│   ├── main/                   # Main process code
-│   │   ├── index.ts            # Main entry point for Electron
-│   │   └── ...                 # Other main process modules
-│   ├── preload/                # Preload scripts for IPC
-│   │   ├── index.ts            # Preload script entry
-│   │   └── api.ts              # Exposed API for renderer
-│   ├── welcome/                # Welcome kit components
-│   └── window/                 # Custom window implementation
-├── resources/                  # Build resources
-├── .eslintrc                   # ESLint configuration
-├── .prettierrc                 # Prettier format configuration
-├── electron-builder.yml        # Electron builder configuration
-├── electron.vite.config.ts     # Vite configuration for Electron
-├── package.json                # Project dependencies and scripts
-└── tsconfig.node.json          # Main process tsconfig
-└── tsconfig.web.json           # Renderer process tsconfig
+We welcome contributions! Whether you're fixing bugs, adding features, or improving documentation, your help makes **Ito** better for everyone.
 
-```
-<!-- prettier-ignore-end -->
+### Getting Started
+
+1. **Fork the repository** and clone your fork
+2. **Create a feature branch** from `dev`
+3. **Make your changes** with clear commit messages
+4. **Test thoroughly** across supported platforms
+5. **Submit a pull request** with a detailed description
+
+### Development Guidelines
+
+- **Code Style**: Use Prettier and ESLint configurations
+- **Type Safety**: Maintain strong TypeScript typing
+- **Testing**: Add tests for new features
+- **Documentation**: Update docs for API changes
+- **Performance**: Consider impact on time between recording and text insertion
+
+### Areas for Contribution
+
+- **Accuracy improvements**: Better transcription algorithms
+- **Language support**: Additional language models
+- **UI/UX enhancements**: Better user experience
+- **Platform support**: Windows stability testing, Linux compatibility
+- **Documentation**: Tutorials, guides, and examples
+
+---
+
+## 📄 License
+
+This project is licensed under the **GNU General Public License** - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+**Ito** is built with and inspired by amazing open source projects:
+
+- **[Electron React App](https://github.com/guasam/electron-react-app)** by @guasam - The foundational template that provided our modern Electron + React architecture
+- **Electron** - Cross-platform desktop apps with web technologies
+- **React** - Modern UI development
+- **Rust** - Systems programming language for native components
+- **gRPC** - High-performance RPC framework
+- **TailwindCSS** - Utility-first CSS framework
+
+---
+
+## 📞 Support
+
+- **Community**: [GitHub Discussions](https://github.com/heyito/ito/discussions)
+- **Issues**: [GitHub Issues](https://github.com/heyito/ito/issues)
+- **Website**: [heyito.ai](https://www.heyito.ai)
+
+

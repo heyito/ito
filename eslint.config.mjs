@@ -17,6 +17,7 @@ export default [
       '.eslintrc',
       '.prettierrc',
       'commitlint.config.js',
+      'electron-builder.config.js',
     ],
   },
   eslint.configs.recommended,

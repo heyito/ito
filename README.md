@@ -324,5 +324,3 @@ This project is licensed under the **GNU General Public License** - see the [LIC
 - **Community**: [GitHub Discussions](https://github.com/heyito/ito/discussions)
 - **Issues**: [GitHub Issues](https://github.com/heyito/ito/issues)
 - **Website**: [heyito.ai](https://www.heyito.ai)
-
-

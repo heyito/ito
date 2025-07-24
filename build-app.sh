@@ -120,7 +120,7 @@ create_dmg() {
     print_status "Creating DMG installer..."
     
     # Check for notarization credentials if notarize is enabled in config
-    if grep -q "notarize: true" electron-builder.yml; then
+    if grep -q "notarize: true" electron-builder.config.js; then
       if [ -z "$APPLE_ID" ] || [ -z "$APPLE_APP_SPECIFIC_PASSWORD" ] || [ -z "$APPLE_TEAM_ID" ]; then
         print_error "Notarization is enabled, but the required environment variables are not set."
         print_error "Please set APPLE_ID, APPLE_TEAM_ID, and APPLE_APP_SPECIFIC_PASSWORD."
@@ -133,7 +133,7 @@ create_dmg() {
     print_info "Packaging application with Electron Builder..."
     # First build the Electron app, then run electron-builder
     bun run vite:build:app
-    bun run electron-builder --config electron-builder.yml --mac --universal
+    bun run electron-builder --config electron-builder.config.js --mac --universal
     
     print_status "DMG installer created successfully!"
     

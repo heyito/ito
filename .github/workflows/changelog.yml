@@ -8,7 +8,7 @@ on:
       - native/**
       - resources/**
       - app/**
-      - electron-builder.yml
+      - electron-builder.config.js
       - build-binaries.sh
       - build-app.sh
       - build/**

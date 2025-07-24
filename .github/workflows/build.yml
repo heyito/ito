@@ -48,6 +48,7 @@ jobs:
           echo "CSC_KEY_PASSWORD=\"${{ secrets.MACOS_CERT_PASSWORD }}\"" >> .env
           echo "GH_TOKEN=\"${{ secrets.GITHUB_TOKEN }}\"" >> .env
           echo "GRPC_BASE_URL=\"${{ vars.GRPC_BASE_URL }}\"" >> .env
+          echo "ITO_VERSION=\"${GITHUB_REF#refs/tags/}\"" >> .env
           echo "Created .env file:"
           cat .env
 

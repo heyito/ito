@@ -8,6 +8,7 @@ All notable changes to the electron-react-app (ERA) are listed here.
 
 - position pill above dock
 - barebones hey ito functionality
+- update versioning system
 - additional analytics
 - add readme and license 
 

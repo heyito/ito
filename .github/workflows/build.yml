@@ -58,6 +58,12 @@ jobs:
           name: Ito-Installer
           path: dist/Ito-Installer.dmg
 
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::287641434880:role/ItoGitHubCiCdRole
+          aws-region: us-west-2
+
       - name: Upload Build Output to S3
         run: |
           echo "Deploying version ${{ github.ref_name }} to S3"

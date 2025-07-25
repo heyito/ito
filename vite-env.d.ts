@@ -6,6 +6,7 @@ interface ImportMetaEnv {
   readonly VITE_GRPC_BASE_URL: string
   readonly VITE_AMPLITUDE_API_KEY: string
   readonly VITE_UPDATER_BUCKET: string
+  readonly VITE_LOCAL_SERVER_PORT?: string
 }
 
 interface ImportMeta {

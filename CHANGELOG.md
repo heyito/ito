@@ -4,6 +4,10 @@ All notable changes to the electron-react-app (ERA) are listed here.
 
 <br>
 
+### v0.2.2
+
+- check localhost, not grpc_base_url
+
 ### v0.2.1
 
 - disable localhost sign in option if a local server is not running

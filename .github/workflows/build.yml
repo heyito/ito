@@ -4,6 +4,10 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+  id-token: write  # required for OIDC role assumption
+
 jobs:
   build:
     runs-on: macos-latest

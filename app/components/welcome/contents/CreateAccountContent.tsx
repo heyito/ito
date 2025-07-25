@@ -1,15 +1,23 @@
 import { Button } from '@/app/components/ui/button'
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from '@/app/components/ui/tooltip'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import ItoIcon from '../../icons/ItoIcon'
 import GoogleIcon from '../../icons/GoogleIcon'
 import AppleIcon from '../../icons/AppleIcon'
 import GitHubIcon from '../../icons/GitHubIcon'
 import MicrosoftIcon from '../../icons/MicrosoftIcon'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../../auth/useAuth'
+import { checkLocalServerHealth } from '@/app/utils/healthCheck'
 
 export default function CreateAccountContent() {
   const { incrementOnboardingStep, initializeOnboarding } = useOnboardingStore()
+  const [isServerHealthy, setIsServerHealthy] = useState(true)
+  const [healthCheckComplete, setHealthCheckComplete] = useState(false)
 
   const {
     user,
@@ -31,6 +39,26 @@ export default function CreateAccountContent() {
   useEffect(() => {
     initializeOnboarding()
   }, [initializeOnboarding])
+
+  // Check server health on component mount and every 5 seconds
+  useEffect(() => {
+    const checkHealth = async () => {
+      const { isHealthy } = await checkLocalServerHealth()
+      setIsServerHealthy(isHealthy)
+      setHealthCheckComplete(true)
+    }
+
+    // Initial check
+    checkHealth()
+
+    // Set up periodic checks every 5 seconds
+    const intervalId = setInterval(checkHealth, 5000)
+
+    // Cleanup interval on unmount
+    return () => {
+      clearInterval(intervalId)
+    }
+  }, [])
 
   const handleSelfHosted = async () => {
     try {
@@ -139,14 +167,34 @@ export default function CreateAccountContent() {
           <div className="flex-1 border-t border-border"></div>
         </div>
 
-        {/* Email input */}
+        {/* Self-hosted option */}
         <div className="w-1/2 space-y-4">
-          <Button
-            className="w-full h-12 text-sm font-medium"
-            onClick={handleSelfHosted}
-          >
-            Self-Hosted
-          </Button>
+          {!isServerHealthy ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-full">
+                  <Button
+                    className="w-full h-12 text-sm font-medium"
+                    onClick={handleSelfHosted}
+                    disabled={!isServerHealthy}
+                  >
+                    Self-Hosted
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Local server must be running to use self-hosted option</p>
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <Button
+              className="w-full h-12 text-sm font-medium"
+              onClick={handleSelfHosted}
+              disabled={!isServerHealthy}
+            >
+              Self-Hosted
+            </Button>
+          )}
         </div>
 
         {/* Terms and privacy */}

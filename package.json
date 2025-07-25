@@ -23,7 +23,7 @@
   },
   "scripts": {
     "dev": "electron-vite dev -w",
-    "dev:rust": "build:rust:mac && bun dev",
+    "dev:rust": "bun build:rust:mac && bun dev",
     "format:fix:app": "prettier --write app lib",
     "format:fix": "prettier --write .",
     "lint:fix:app": "eslint app lib --ext .ts,.tsx --fix",

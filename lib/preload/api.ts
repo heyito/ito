@@ -149,6 +149,11 @@ const api = {
     return ipcRenderer.invoke('delete-user-data')
   },
 
+  // Check if the local server is healthy and accessible
+  checkServerHealth: () => {
+    return ipcRenderer.invoke('check-server-health')
+  },
+
   updater: {
     onUpdateAvailable: callback => ipcRenderer.on('update-available', callback),
     onUpdateDownloaded: callback =>

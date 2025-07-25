@@ -121,7 +121,7 @@ export class ServiceStack extends Stack {
         REQUIRE_AUTH: 'true',
         AUTH0_DOMAIN: process.env.AUTH0_DOMAIN || '',
         AUTH0_AUDIENCE: process.env.AUTH0_AUDIENCE || '',
-        GROQ_TRANSCRIPTION_MODEL: 'whisper-large-v3',
+        GROQ_TRANSCRIPTION_MODEL: 'whisper-large-v3-turbo',
       },
       logging: new AwsLogDriver({ streamPrefix: 'ito-server' }),
     })

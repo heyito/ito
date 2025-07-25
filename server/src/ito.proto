@@ -2,12 +2,10 @@ syntax = "proto3";
 
 package ito;
 
-service ItoService {
-  // Method 1: Sends a whole audio file and gets a single response.
-  // Good for simple, non-real-time use cases.
-  rpc TranscribeFile(TranscribeFileRequest) returns (TranscriptionResponse);
+import "buf/validate/validate.proto";
 
-  // Method 2: Streams audio chunks from the client and gets a single response.
+service ItoService {
+  // Streams audio chunks from the client and gets a single response.
   // This is the ideal method for dictation to reduce latency and memory usage.
   rpc TranscribeStream(stream AudioChunk) returns (TranscriptionResponse);
 
@@ -33,6 +31,10 @@ service ItoService {
 
   // User Data Service
   rpc DeleteUserData(DeleteUserDataRequest) returns (Empty);
+
+  // Advanced Settings Service
+  rpc GetAdvancedSettings(GetAdvancedSettingsRequest) returns (AdvancedSettings);
+  rpc UpdateAdvancedSettings(UpdateAdvancedSettingsRequest) returns (AdvancedSettings);
 }
 
 // =================================================================
@@ -45,15 +47,9 @@ message Empty {}
 
 // Transcription
 // -----------------------------------------------------------------
-// The request message containing the entire audio file data.
-message TranscribeFileRequest {
-  // The raw audio data.
-  bytes audio_data = 1;
-}
-
 // A chunk of audio data for streaming.
 message AudioChunk {
-  bytes audio_data = 1;
+  bytes audio_data = 1 [(buf.validate.field).bytes.max_len = 1048576]; // 1 MB limit per chunk
 }
 
 // The response message containing the final transcript.
@@ -108,7 +104,7 @@ message Interaction {
   string title = 3;
   string asr_output = 4; // JSON string
   string llm_output = 5; // JSON string
-  bytes raw_audio = 6; // Raw audio data
+  bytes raw_audio = 6 [(buf.validate.field).bytes.max_len = 100000000]; // 100 MB limit
   int32 duration_ms = 7; // Duration in milliseconds
   string created_at = 8;
   string updated_at = 9;
@@ -120,7 +116,7 @@ message CreateInteractionRequest {
   string title = 2;
   string asr_output = 3;
   string llm_output = 4;
-  bytes raw_audio = 5;
+  bytes raw_audio = 5 [(buf.validate.field).bytes.max_len = 100000000]; // 100 MB limit
   int32 duration_ms = 6; // Duration in milliseconds
 }
 
@@ -185,4 +181,26 @@ message DeleteDictionaryItemRequest {
 // -----------------------------------------------------------------
 message DeleteUserDataRequest {
   // Empty - user_id will be extracted from the authenticated user's token
+}
+
+// Advanced Settings
+// -----------------------------------------------------------------
+message LlmSettings {
+  string asr_model = 1;
+}
+
+message AdvancedSettings {
+  string id = 1;
+  string user_id = 2;
+  string created_at = 3;
+  string updated_at = 4;
+  LlmSettings llm = 5;
+}
+
+message GetAdvancedSettingsRequest {
+  // Empty - user_id will be extracted from the authenticated user's token
+}
+
+message UpdateAdvancedSettingsRequest {
+  LlmSettings llm = 1;
 }

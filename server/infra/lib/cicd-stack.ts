@@ -37,7 +37,7 @@ export class GitHubOidcStack extends Stack {
     // ─── allow only workflows from your repo/org ────────────────────────────────
     const principal = new OpenIdConnectPrincipal(oidc, {
       StringLike: {
-        'token.actions.githubusercontent.com:sub': `repo:demox-labs/ito-rewrite:*`,
+        'token.actions.githubusercontent.com:sub': `repo:heyito/ito:*`,
         'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com',
       },
     })

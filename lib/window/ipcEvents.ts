@@ -299,6 +299,45 @@ export function registerIPC() {
     return deleteCompleteUserData(userId)
   })
 
+  // Server health check
+  handleIPC('check-server-health', async () => {
+    try {
+      const response = await fetch(import.meta.env.VITE_GRPC_BASE_URL, {
+        method: 'GET',
+      })
+
+      if (response.ok) {
+        const text = await response.text()
+        const isValidResponse = text.includes(
+          'Welcome to the Ito Connect RPC server!',
+        )
+
+        return {
+          isHealthy: isValidResponse,
+          error: isValidResponse ? undefined : 'Invalid server response',
+        }
+      } else {
+        return {
+          isHealthy: false,
+          error: `Server responded with status: ${response.status}`,
+        }
+      }
+    } catch (error: any) {
+      const errorMessage =
+        error.name === 'TimeoutError' || error.name === 'AbortError'
+          ? 'Connection timed out'
+          : error.message?.includes('ECONNREFUSED') ||
+              error.message?.includes('fetch')
+            ? 'Local server not running'
+            : error.message || 'Unknown error occurred'
+
+      return {
+        isHealthy: false,
+        error: errorMessage,
+      }
+    }
+  })
+
   // Debug methods
   handleIPC('debug:check-schema', async () => {
     const { getDb } = await import('../main/sqlite/db.js')

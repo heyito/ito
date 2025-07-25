@@ -1,12 +1,18 @@
 import { Button } from '@/app/components/ui/button'
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from '@/app/components/ui/tooltip'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import ItoIcon from '../../icons/ItoIcon'
 import GoogleIcon from '../../icons/GoogleIcon'
 import AppleIcon from '../../icons/AppleIcon'
 import GitHubIcon from '../../icons/GitHubIcon'
 import MicrosoftIcon from '../../icons/MicrosoftIcon'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../../auth/useAuth'
+import { checkLocalServerHealth } from '@/app/utils/healthCheck'
 import { useAuthStore } from '@/app/store/useAuthStore'
 import { useNotesStore } from '@/app/store/useNotesStore'
 import { useDictionaryStore } from '@/app/store/useDictionaryStore'
@@ -53,6 +59,8 @@ interface AuthButtonProps {
   onClick: () => void
   className?: string
   children?: React.ReactNode
+  disabled?: boolean
+  title?: string
 }
 
 function AuthButton({
@@ -60,20 +68,38 @@ function AuthButton({
   onClick,
   className = '',
   children,
+  disabled = false,
+  title,
 }: AuthButtonProps) {
   const config = AUTH_PROVIDERS[provider]
   const IconComponent = config.icon
 
-  return (
+  const button = (
     <Button
       variant={config.variant}
       className={`h-12 flex items-center justify-center gap-3 text-sm font-medium ${className}`}
       onClick={onClick}
+      disabled={disabled}
     >
       {IconComponent && <IconComponent className="size-5" />}
       <span>{children || config.label}</span>
     </Button>
   )
+
+  if (disabled && title) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="w-full">{button}</div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{title}</p>
+        </TooltipContent>
+      </Tooltip>
+    )
+  }
+
+  return button
 }
 
 export default function SignInContent() {
@@ -82,6 +108,8 @@ export default function SignInContent() {
   const { loadNotes } = useNotesStore()
   const { loadEntries } = useDictionaryStore()
   const { resetOnboarding } = useOnboardingStore()
+  const [isServerHealthy, setIsServerHealthy] = useState(true)
+  const [healthCheckComplete, setHealthCheckComplete] = useState(false)
 
   const {
     user,
@@ -92,6 +120,26 @@ export default function SignInContent() {
     loginWithGitHub,
     loginWithSelfHosted,
   } = useAuth()
+
+  // Check server health on component mount and every 5 seconds
+  useEffect(() => {
+    const checkHealth = async () => {
+      const { isHealthy } = await checkLocalServerHealth()
+      setIsServerHealthy(isHealthy)
+      setHealthCheckComplete(true)
+    }
+
+    // Initial check
+    checkHealth()
+
+    // Set up periodic checks every 5 seconds
+    const intervalId = setInterval(checkHealth, 5000)
+
+    // Cleanup interval on unmount
+    return () => {
+      clearInterval(intervalId)
+    }
+  }, [])
 
   // If user is authenticated, proceed to next step
   useEffect(() => {
@@ -185,6 +233,12 @@ export default function SignInContent() {
           provider="self-hosted"
           onClick={handleSelfHosted}
           className="w-full"
+          disabled={!isServerHealthy}
+          title={
+            !isServerHealthy
+              ? 'Local server must be running to use self-hosted option'
+              : undefined
+          }
         />
       </div>
     </>
@@ -222,6 +276,12 @@ export default function SignInContent() {
           provider={provider}
           onClick={getClickHandler()}
           className="w-full"
+          disabled={provider === 'self-hosted' && !isServerHealthy}
+          title={
+            provider === 'self-hosted' && !isServerHealthy
+              ? 'Local server must be running to use self-hosted option'
+              : undefined
+          }
         >
           {getLabel()}
         </AuthButton>

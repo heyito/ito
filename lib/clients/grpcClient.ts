@@ -38,7 +38,7 @@ class GrpcClient {
 
   constructor() {
     const transport = createConnectTransport({
-      baseUrl: import.meta.env.VITE_GRPC_BASE_URL || 'http://localhost:3000',
+      baseUrl: import.meta.env.VITE_GRPC_BASE_URL,
       httpVersion: '1.1',
     })
     this.client = createClient(ItoService, transport)

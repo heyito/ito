@@ -184,7 +184,7 @@ export default (router: ConnectRouter) => {
         // 5. Check if transcript contains "Hey Ito" in the first 5 words
         const words = transcript.trim().split(/\s+/)
         const firstFiveWords = words.slice(0, 5).join(' ').toLowerCase()
-        
+
         if (firstFiveWords.includes('hey ito')) {
           // Use thinking model to adjust the transcript
           transcript = await groqClient.adjustTranscript(transcript)

@@ -68,6 +68,8 @@ export default function DictionaryContent() {
       container.addEventListener('scroll', handleScroll)
       return () => container.removeEventListener('scroll', handleScroll)
     }
+
+    return undefined
   }, [])
 
   const scrollToTop = () => {

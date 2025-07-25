@@ -30,6 +30,8 @@ export function StatusIndicator({
 
       return () => clearTimeout(timer)
     }
+
+    return undefined
   }, [status, duration, onHide])
 
   if (!status) return null

@@ -7,7 +7,7 @@ on:
       environment:
         type: string
         required: true
-        description: 'The environment to build for'    
+        description: 'The environment to build for'
   workflow_dispatch:
     inputs:
       environment:

@@ -317,19 +317,17 @@ export class DictionaryTable {
   }
 
   static async softDelete(id: string): Promise<void> {
+    const now = new Date().toISOString()
     const query =
       'UPDATE dictionary_items SET deleted_at = ?, updated_at = ? WHERE id = ?'
-    await run(query, [new Date().toISOString(), new Date().toISOString(), id])
+    await run(query, [now, now, id])
   }
 
   static async deleteAllUserData(userId: string): Promise<void> {
+    const now = new Date().toISOString()
     const query =
       'UPDATE dictionary_items SET deleted_at = ?, updated_at = ? WHERE user_id = ?'
-    await run(query, [
-      new Date().toISOString(),
-      new Date().toISOString(),
-      userId,
-    ])
+    await run(query, [now, now, userId])
   }
 
   static async findModifiedSince(timestamp: string): Promise<DictionaryItem[]> {

@@ -34,7 +34,7 @@ export class SyncService {
     }
 
     // Initial sync on startup, then schedule periodic syncs
-    this.runSync()
+    await this.runSync()
     this.syncInterval = setInterval(() => this.runSync(), 1000 * 5) // Sync every 5 seconds
   }
 

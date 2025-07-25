@@ -11,3 +11,4 @@ dist/*
 .DS_Store
 native/**/target
 out.json
+tsconfig.node.tsbuildinfo

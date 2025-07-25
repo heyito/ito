@@ -18,7 +18,7 @@ jobs:
         run: bun install
 
       - name: Run tests
-        run: bun test
+        run: bun runLibTests
 
       - name: Check code formatting
         run: bun format:app

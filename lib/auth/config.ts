@@ -17,10 +17,16 @@ export const Auth0Connections = {
   github: 'github',
 }
 
+export const RequiredAuth0Fields = [
+  'domain',
+  'clientId',
+  'redirectUri',
+  'audience',
+]
+
 // Validate configuration
 export const validateAuth0Config = () => {
-  const required = ['domain', 'clientId', 'redirectUri', 'audience']
-  const missing = required.filter(
+  const missing = RequiredAuth0Fields.filter(
     key => !Auth0Config[key as keyof typeof Auth0Config],
   )
 

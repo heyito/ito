@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { InfoCircle, Play } from '@mynaui/icons-react'
 import { useSettingsStore } from '../../../store/useSettingsStore'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip'
@@ -26,22 +26,25 @@ export default function HomeContent() {
   })
 
   // Calculate statistics from interactions
-  const calculateStats = (interactions: Interaction[]): InteractionStats => {
-    if (interactions.length === 0) {
-      return { streakDays: 0, totalWords: 0, averageWPM: 0 }
-    }
+  const calculateStats = useCallback(
+    (interactions: Interaction[]): InteractionStats => {
+      if (interactions.length === 0) {
+        return { streakDays: 0, totalWords: 0, averageWPM: 0 }
+      }
 
-    // Calculate streak (consecutive days with interactions)
-    const streakDays = calculateStreak(interactions)
+      // Calculate streak (consecutive days with interactions)
+      const streakDays = calculateStreak(interactions)
 
-    // Calculate total words from transcripts
-    const totalWords = calculateTotalWords(interactions)
+      // Calculate total words from transcripts
+      const totalWords = calculateTotalWords(interactions)
 
-    // Calculate average WPM (estimate based on average speaking rate)
-    const averageWPM = calculateAverageWPM(interactions)
+      // Calculate average WPM (estimate based on average speaking rate)
+      const averageWPM = calculateAverageWPM(interactions)
 
-    return { streakDays, totalWords, averageWPM }
-  }
+      return { streakDays, totalWords, averageWPM }
+    },
+    [],
+  )
 
   const calculateStreak = (interactions: Interaction[]): number => {
     if (interactions.length === 0) return 0
@@ -133,25 +136,7 @@ export default function HomeContent() {
     return `${Math.floor(days / 30)} months`
   }
 
-  useEffect(() => {
-    loadInteractions()
-
-    // Listen for new interactions
-    const handleInteractionCreated = () => {
-      console.log('[HomeContent] New interaction created, refreshing list...')
-      loadInteractions()
-    }
-
-    const unsubscribe = window.api.on(
-      'interaction-created',
-      handleInteractionCreated,
-    )
-
-    // Cleanup listener on unmount
-    return unsubscribe
-  }, [])
-
-  const loadInteractions = async () => {
+  const loadInteractions = useCallback(async () => {
     try {
       const allInteractions = await window.api.interactions.getAll()
 
@@ -170,7 +155,25 @@ export default function HomeContent() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [calculateStats])
+
+  useEffect(() => {
+    loadInteractions()
+
+    // Listen for new interactions
+    const handleInteractionCreated = () => {
+      console.log('[HomeContent] New interaction created, refreshing list...')
+      loadInteractions()
+    }
+
+    const unsubscribe = window.api.on(
+      'interaction-created',
+      handleInteractionCreated,
+    )
+
+    // Cleanup listener on unmount
+    return unsubscribe
+  }, [loadInteractions])
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString)

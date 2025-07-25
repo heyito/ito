@@ -182,12 +182,23 @@ class AudioRecorderService extends EventEmitter {
    */
   #handleMessage(message: Message): void {
     if (message.type === 'json') {
-      const jsonResponse = JSON.parse(message.payload.toString('utf-8'))
-      if (jsonResponse.type === 'device-list' && this.#deviceListPromise) {
-        this.#deviceListPromise.resolve(jsonResponse.devices || [])
-        this.#deviceListPromise = null
+      try {
+        const jsonResponse = JSON.parse(message.payload.toString('utf-8'))
+        if (jsonResponse.type === 'device-list' && this.#deviceListPromise) {
+          this.#deviceListPromise.resolve(jsonResponse.devices || [])
+          this.#deviceListPromise = null
+        }
+        // You could emit a generic 'json-message' event here if needed
+      } catch (err) {
+        log.error('[AudioService] Failed to parse JSON response:', err)
+        // Optionally reject pending device list promise if parsing fails
+        if (this.#deviceListPromise) {
+          this.#deviceListPromise.reject(
+            new Error('Failed to parse JSON response'),
+          )
+          this.#deviceListPromise = null
+        }
       }
-      // You could emit a generic 'json-message' event here if needed
     } else if (message.type === 'audio') {
       const volume = this.#calculateVolume(message.payload)
       this.emit('volume-update', volume)

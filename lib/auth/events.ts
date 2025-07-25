@@ -18,7 +18,7 @@ interface JwtPayload {
 }
 
 // Utility function to check if a JWT token is expired
-const isTokenExpired = (token: string): boolean => {
+export const isTokenExpired = (token: string): boolean => {
   try {
     const payload = jwtDecode<JwtPayload>(token)
 

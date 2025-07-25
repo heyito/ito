@@ -17,6 +17,15 @@ interface KeyEvent {
 export let KeyListenerProcess: ReturnType<typeof spawn> | null = null
 export let isShortcutActive = false
 
+// Test utility function - only available in development
+export const resetForTesting = () => {
+  if (process.env.NODE_ENV !== 'production') {
+    KeyListenerProcess = null
+    isShortcutActive = false
+    pressedKeys.clear()
+  }
+}
+
 const nativeModuleName = 'global-key-listener'
 
 // Map of raw key names to their normalized representations

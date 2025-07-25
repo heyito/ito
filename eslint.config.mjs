@@ -18,6 +18,8 @@ export default [
       '.prettierrc',
       'commitlint.config.js',
       'electron-builder.config.js',
+      'tailwind.config.js',
+      'server/infra/jest.config.js',
     ],
   },
   eslint.configs.recommended,

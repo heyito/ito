@@ -2,7 +2,6 @@ import { createClient } from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-node'
 import {
   ItoService,
-  TranscribeFileRequestSchema,
   CreateNoteRequestSchema,
   GetNoteRequestSchema,
   ListNotesRequestSchema,
@@ -34,26 +33,6 @@ const client = createClient(ItoService, transport)
 // Create headers with Auth0 JWT token
 const createAuthHeaders = (token: string) => {
   return { authorization: `Bearer ${token}` }
-}
-
-// Test the TranscribeFile method with authentication
-async function testTranscribeFile() {
-  console.log('Testing TranscribeFile with Auth0 authentication...')
-
-  const audioData = new TextEncoder().encode('fake-audio-data')
-  const request = create(TranscribeFileRequestSchema, {
-    audioData: audioData,
-  })
-  const headers = createAuthHeaders(TEST_JWT_TOKEN)
-
-  try {
-    const response = await client.transcribeFile(request, { headers })
-    console.log('✓ TranscribeFile response:', response)
-    return response
-  } catch (error) {
-    console.error('✗ TranscribeFile error:', error)
-    throw error
-  }
 }
 
 // Test the Notes API with authentication
@@ -334,7 +313,6 @@ async function runTests() {
 
     if (TEST_JWT_TOKEN !== 'your-jwt-token-here') {
       console.log('\n🚀 Testing Authenticated Connect RPC calls:')
-      await testTranscribeFile()
       await testNotesApi()
       await testInteractionsApi()
       await testDictionaryApi()

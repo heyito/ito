@@ -8,6 +8,7 @@ export const STORE_KEYS = {
   MAIN: 'main',
   ONBOARDING: 'onboarding',
   SETTINGS: 'settings',
+  ADVANCED_SETTINGS: 'advancedSettings',
   OPEN_MIC: 'openMic',
   SELECTED_AUDIO_INPUT: 'selectedAudioInput',
   INTERACTION_SOUNDS: 'interactionSounds',

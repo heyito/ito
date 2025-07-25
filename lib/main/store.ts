@@ -58,11 +58,18 @@ export interface AuthStore {
   state: AuthState
 }
 
+export interface AdvancedSettings {
+  llm: {
+    asrModel: string
+  }
+}
+
 interface AppStore {
   main: MainStore
   onboarding: OnboardingStore
   settings: SettingsStore
   auth: AuthStore
+  advancedSettings: AdvancedSettings
   openMic: boolean
   selectedAudioInput: string | null
   interactionSounds: boolean
@@ -75,6 +82,11 @@ interface AppStore {
 export const getCurrentUserId = (): string | undefined => {
   const user = store.get(STORE_KEYS.USER_PROFILE) as any
   return user?.id
+}
+
+// Helper function to get advanced settings
+export const getAdvancedSettings = (): AdvancedSettings => {
+  return store.get(STORE_KEYS.ADVANCED_SETTINGS) as AdvancedSettings
 }
 
 // Generate new auth state with crypto
@@ -117,6 +129,11 @@ const defaultValues: AppStore = {
     tokens: null,
     state: createNewAuthState(),
   },
+  advancedSettings: {
+    llm: {
+      asrModel: 'whisper-large-v3',
+    },
+  },
   openMic: false,
   selectedAudioInput: null,
   interactionSounds: false,
@@ -146,5 +163,12 @@ store.set(STORE_KEYS.ONBOARDING, completeOnboarding)
 const currentAuth = store.get(STORE_KEYS.AUTH)
 const completeAuth = { ...defaultValues.auth, ...currentAuth }
 store.set(STORE_KEYS.AUTH, completeAuth)
+
+const currentAdvancedSettings = store.get(STORE_KEYS.ADVANCED_SETTINGS)
+const completeAdvancedSettings = {
+  ...defaultValues.advancedSettings,
+  ...currentAdvancedSettings,
+}
+store.set(STORE_KEYS.ADVANCED_SETTINGS, completeAdvancedSettings)
 
 export default store

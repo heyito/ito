@@ -17,7 +17,7 @@ export const up = pgm => {
     },
     asr_model: {
       type: 'text',
-      default: 'whisper-large-v3-turbo',
+      default: 'whisper-large-v3',
     },
     created_at: {
       type: 'timestamptz',

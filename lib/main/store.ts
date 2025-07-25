@@ -131,7 +131,7 @@ const defaultValues: AppStore = {
   },
   advancedSettings: {
     llm: {
-      asrModel: 'whisper-large-v3-turbo',
+      asrModel: 'whisper-large-v3',
     },
   },
   openMic: false,

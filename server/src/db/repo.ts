@@ -1,5 +1,11 @@
 import pool from '../db.js'
-import { Note, Interaction, DictionaryItem, LlmSettings, AdvancedSettings } from './models.js'
+import {
+  Note,
+  Interaction,
+  DictionaryItem,
+  LlmSettings,
+  AdvancedSettings,
+} from './models.js'
 import {
   CreateNoteRequest,
   UpdateNoteRequest,
@@ -229,16 +235,18 @@ export class DictionaryRepository {
 }
 
 export class AdvancedSettingsRepository {
-  static async findByUserId(userId: string): Promise<AdvancedSettings | undefined> {
+  static async findByUserId(
+    userId: string,
+  ): Promise<AdvancedSettings | undefined> {
     const res = await pool.query<LlmSettings>(
       'SELECT * FROM llm_settings WHERE user_id = $1',
       [userId],
     )
-    
+
     if (res.rows.length === 0) {
       return undefined
     }
-    
+
     const llmSettings = res.rows[0]
     return {
       id: llmSettings.id,
@@ -263,7 +271,7 @@ export class AdvancedSettingsRepository {
          asr_model = EXCLUDED.asr_model,
          updated_at = current_timestamp
        RETURNING *`,
-      [userId, settingsData.llm?.asrModel || 'whisper-large-v3-turbo'],
+      [userId, settingsData.llm?.asrModel || 'whisper-large-v3'],
     )
 
     const llmSettings = res.rows[0]

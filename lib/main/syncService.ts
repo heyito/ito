@@ -256,7 +256,7 @@ export class SyncService {
       if (remoteUpdatedAt > lastSyncTime) {
         const updatedLocalSettings: AdvancedSettings = {
           llm: {
-            asrModel: remoteSettings.llm?.asrModel || 'whisper-large-v3-turbo',
+            asrModel: remoteSettings.llm?.asrModel || 'whisper-large-v3',
           },
         }
 

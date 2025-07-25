@@ -65,7 +65,7 @@ describe('GroqClient', () => {
       )
 
       const audioBuffer = Buffer.from('mock audio data')
-      const asrModel = 'whisper-large-v3-turbo'
+      const asrModel = 'whisper-large-v3'
       const vocabulary = ['hello', 'world']
 
       const result = await groqClient.transcribeAudio(
@@ -163,7 +163,11 @@ describe('GroqClient', () => {
       const audioBuffer = Buffer.from('mock audio data')
       const asrModel = 'whisper-large-v3'
 
-      const result = await groqClient.transcribeAudio(audioBuffer, 'wav', asrModel)
+      const result = await groqClient.transcribeAudio(
+        audioBuffer,
+        'wav',
+        asrModel,
+      )
 
       expect(result).toBe('Hello world')
     })

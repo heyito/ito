@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { act, useCallback, useEffect, useState } from 'react'
 import { InfoCircle, Play } from '@mynaui/icons-react'
 import { useSettingsStore } from '../../../store/useSettingsStore'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip'
 import { useAuthStore } from '@/app/store/useAuthStore'
 import { Interaction } from '@/lib/main/sqlite/models'
+import { getActiveWindowName } from '@/lib/media/active-application'
 
 // Interface for interaction statistics
 interface InteractionStats {
@@ -13,6 +14,11 @@ interface InteractionStats {
 }
 
 export default function HomeContent() {
+  useEffect(() => {
+    const activeWindowName = getActiveWindowName()
+    console.log({ activeWindowName })
+  }, [])
+
   const { keyboardShortcut } = useSettingsStore()
   const { user } = useAuthStore()
   const firstName = user?.name?.split(' ')[0]

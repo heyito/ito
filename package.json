@@ -87,6 +87,7 @@
     "electron-log": "^5.4.1",
     "electron-store": "^8.1.0",
     "electron-updater": "^6.6.2",
+    "get-windows": "^9.2.0",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.511.0",
     "react-router-dom": "^7.6.2",

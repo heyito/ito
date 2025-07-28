@@ -49,6 +49,11 @@ class GroqClient {
       throw new Error('Groq client is not available. Check API key.')
     }
 
+    const startTime = Date.now()
+    console.log(
+      `🧠 [${new Date().toISOString()}] Starting transcript adjustment: "${transcript}"`,
+    )
+
     try {
       const completion = await this._client.chat.completions.create({
         messages: [
@@ -66,9 +71,19 @@ class GroqClient {
         temperature: 0.1,
       })
 
-      return completion.choices[0]?.message?.content?.trim() || transcript
+      const adjustedTranscript =
+        completion.choices[0]?.message?.content?.trim() || transcript
+      const duration = Date.now() - startTime
+      console.log(
+        `✅ [${new Date().toISOString()}] Transcript adjustment completed in ${duration}ms: "${adjustedTranscript}"`,
+      )
+      return adjustedTranscript
     } catch (error: any) {
-      console.error('An error occurred during transcript adjustment:', error)
+      const duration = Date.now() - startTime
+      console.error(
+        `❌ [${new Date().toISOString()}] Transcript adjustment failed after ${duration}ms:`,
+        error,
+      )
       return transcript
     }
   }
@@ -92,12 +107,16 @@ class GroqClient {
       throw new Error('Groq ASR model is not configured.')
     }
 
-    try {
-      console.log(
-        `Transcribing ${audioBuffer.length} bytes of audio using model ${this._asrModel}...`,
-      )
+    const startTime = Date.now()
+    console.log(
+      `🤖 [${new Date().toISOString()}] Starting Groq transcription: ${audioBuffer.length} bytes, model: ${this._asrModel}`,
+    )
 
+    try {
       const fullVocabulary = [...itoVocabulary, ...(vocabulary || [])]
+      console.log(
+        `📚 [${new Date().toISOString()}] Using vocabulary: ${fullVocabulary.length} words`,
+      )
 
       const transcription = await this._client.audio.transcriptions.create({
         // The toFile helper correctly handles buffers for multipart/form-data uploads.
@@ -107,10 +126,20 @@ class GroqClient {
         prompt: fullVocabulary.join(', '),
       })
 
+      const duration = Date.now() - startTime
+      const transcript = transcription.text.trim()
+      console.log(
+        `✅ [${new Date().toISOString()}] Groq transcription completed in ${duration}ms: "${transcript}"`,
+      )
+
       // The Node SDK returns the full object, the text is in the `text` property.
-      return transcription.text.trim()
+      return transcript
     } catch (error: any) {
-      console.error('An error occurred during Groq transcription:', error)
+      const duration = Date.now() - startTime
+      console.error(
+        `❌ [${new Date().toISOString()}] Groq transcription failed after ${duration}ms:`,
+        error,
+      )
       // Re-throw the error to be handled by the caller (e.g., the gRPC service handler).
       throw new Error(
         `Groq API Error: ${error.message || 'An unknown error occurred'}`,

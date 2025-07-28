@@ -29,6 +29,7 @@ import { DictionaryTable } from '../main/sqlite/repo'
 import { getCurrentUserId } from '../main/store'
 import { ensureValidTokens } from '../auth/events'
 import { Auth0Config } from '../auth/config'
+import { traceLogger } from '../main/traceLogger'
 
 class GrpcClient {
   private client: ReturnType<typeof createClient<typeof ItoService>>
@@ -158,13 +159,37 @@ class GrpcClient {
 
   async transcribeStream(stream: AsyncIterable<AudioChunk>) {
     return this.withRetry(async () => {
+      // Get current interaction ID for trace logging
+      const interactionId = (globalThis as any).currentInteractionId
+      if (interactionId) {
+        traceLogger.logStep(interactionId, 'GRPC_STREAM_START', {
+          hasAuthToken: !!this.authToken,
+        })
+      }
+
       const response = await this.client.transcribeStream(stream, {
         headers: await this.getHeadersWithVocabulary(),
       })
 
+      // Log successful transcription response
+      if (interactionId) {
+        traceLogger.logStep(interactionId, 'GRPC_STREAM_SUCCESS', {
+          transcript: response.transcript,
+          transcriptLength: response.transcript?.length || 0,
+        })
+      }
+
       // Type the transcribed text into the focused application
       if (response.transcript) {
         setFocusedText(response.transcript)
+
+        // Log text insertion
+        if (interactionId) {
+          traceLogger.logStep(interactionId, 'TEXT_INSERTION', {
+            transcript: response.transcript,
+            transcriptLength: response.transcript.length,
+          })
+        }
       }
 
       if (this.mainWindow) {
@@ -172,6 +197,20 @@ class GrpcClient {
       }
       return response
     }).catch(error => {
+      // Log gRPC error
+      const interactionId = (globalThis as any).currentInteractionId
+      if (interactionId) {
+        traceLogger.logError(
+          interactionId,
+          'GRPC_STREAM_ERROR',
+          error.message,
+          {
+            error: error.message,
+            errorCode: error.code,
+          },
+        )
+      }
+
       // Handle transcription errors separately
       if (this.mainWindow) {
         this.mainWindow.webContents.send('transcription-error', error)

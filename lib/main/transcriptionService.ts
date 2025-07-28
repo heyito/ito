@@ -7,6 +7,7 @@ import { create } from '@bufbuild/protobuf'
 import { InteractionsTable } from './sqlite/repo'
 import { v4 as uuidv4 } from 'uuid'
 import { BrowserWindow } from 'electron'
+import { traceLogger } from './traceLogger'
 
 export class TranscriptionService {
   private isStreaming = false
@@ -47,6 +48,15 @@ export class TranscriptionService {
     this.interactionStartTime = Date.now() // Record start time
     log.info('[gRPC Service] Starting new transcription stream.')
 
+    // Get current interaction ID for trace logging
+    const globalInteractionId = (globalThis as any).currentInteractionId
+    if (globalInteractionId) {
+      traceLogger.logStep(globalInteractionId, 'TRANSCRIPTION_START', {
+        localInteractionId: this.currentInteractionId,
+        startTime: this.interactionStartTime,
+      })
+    }
+
     grpcClient
       .transcribeStream(this.streamAudioChunks())
       .then(response => {
@@ -60,6 +70,16 @@ export class TranscriptionService {
             interactionId: this.currentInteractionId,
           },
         )
+
+        // Log successful transcription
+        if (globalInteractionId) {
+          traceLogger.logStep(globalInteractionId, 'TRANSCRIPTION_SUCCESS', {
+            transcript: response.transcript,
+            transcriptLength: response.transcript?.length || 0,
+            localInteractionId: this.currentInteractionId,
+          })
+        }
+
         // Create interaction when transcription completes successfully
         this.createInteraction(response.transcript)
       })
@@ -72,6 +92,20 @@ export class TranscriptionService {
           '[gRPC Service] An unexpected error occurred during transcription:',
           error,
         )
+
+        // Log transcription error
+        if (globalInteractionId) {
+          traceLogger.logError(
+            globalInteractionId,
+            'TRANSCRIPTION_ERROR',
+            error.message,
+            {
+              localInteractionId: this.currentInteractionId,
+              error: error.message,
+            },
+          )
+        }
+
         // Still create interaction even if transcription failed
         this.createInteraction('', error.message)
       })
@@ -204,6 +238,19 @@ export class TranscriptionService {
   }
 
   public stopTranscription() {
+    // Get current interaction ID for trace logging
+    const globalInteractionId = (globalThis as any).currentInteractionId
+    if (globalInteractionId) {
+      traceLogger.logStep(globalInteractionId, 'TRANSCRIPTION_STOP', {
+        localInteractionId: this.currentInteractionId,
+        audioChunkCount: this.audioChunksForInteraction.length,
+        totalAudioBytes: this.audioChunksForInteraction.reduce(
+          (sum, chunk) => sum + chunk.length,
+          0,
+        ),
+      })
+    }
+
     return this.stopStreaming()
   }
 

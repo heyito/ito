@@ -6,7 +6,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write  # required for OIDC role assumption
+  id-token: write # required for OIDC role assumption
 
 jobs:
   build:

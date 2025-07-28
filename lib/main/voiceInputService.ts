@@ -4,6 +4,7 @@ import { getPillWindow, mainWindow } from './app'
 import store from './store'
 import { STORE_KEYS } from '../constants/store-keys'
 import { transcriptionService } from './transcriptionService'
+import { traceLogger } from './traceLogger'
 
 export class VoiceInputService {
   public startSTTService = (sendToServer: boolean = true) => {
@@ -14,6 +15,16 @@ export class VoiceInputService {
     if (settings && settings.muteAudioWhenDictating) {
       console.info('[Audio] Muting system audio for dictation')
       muteSystemAudio()
+    }
+
+    // Get current interaction ID for trace logging
+    const interactionId = (globalThis as any).currentInteractionId
+    if (interactionId) {
+      traceLogger.logStep(interactionId, 'VOICE_INPUT_START', {
+        deviceId,
+        sendToServer,
+        muteAudioWhenDictating: settings?.muteAudioWhenDictating,
+      })
     }
 
     if (sendToServer) {
@@ -28,6 +39,15 @@ export class VoiceInputService {
   }
 
   public stopSTTService = () => {
+    // Get current interaction ID for trace logging
+    const interactionId = (globalThis as any).currentInteractionId
+    if (interactionId) {
+      traceLogger.logStep(interactionId, 'VOICE_INPUT_STOP', {
+        muteAudioWhenDictating: store.get(STORE_KEYS.SETTINGS)
+          .muteAudioWhenDictating,
+      })
+    }
+
     audioRecorderService.stopRecording()
 
     transcriptionService.stopTranscription()

@@ -134,12 +134,21 @@ export default (router: ConnectRouter) => {
       requests: AsyncIterable<AudioChunk>,
       context: HandlerContext,
     ) {
+      const startTime = Date.now()
       const audioChunks: Uint8Array[] = []
+
+      console.log(
+        `📩 [${new Date().toISOString()}] Starting transcription stream`,
+      )
 
       // Process each audio chunk from the stream
       for await (const chunk of requests) {
         audioChunks.push(chunk.audioData)
       }
+
+      console.log(
+        `📊 [${new Date().toISOString()}] Processed ${audioChunks.length} audio chunks`,
+      )
 
       // Concatenate all audio chunks
       const totalLength = audioChunks.reduce(
@@ -152,6 +161,10 @@ export default (router: ConnectRouter) => {
         fullAudio.set(chunk, offset)
         offset += chunk.length
       }
+
+      console.log(
+        `🔧 [${new Date().toISOString()}] Concatenated audio: ${totalLength} bytes`,
+      )
 
       try {
         // 1. Set audio properties to match the new capture settings.
@@ -168,17 +181,32 @@ export default (router: ConnectRouter) => {
         )
         const fullAudioWAV = Buffer.concat([wavHeader, fullAudio])
 
+        console.log(
+          `🎵 [${new Date().toISOString()}] Created WAV file: ${fullAudioWAV.length} bytes`,
+        )
+
         // 3. Extract vocabulary from gRPC metadata
         const vocabularyHeader = context.requestHeader.get('vocabulary')
         const vocabulary = vocabularyHeader
           ? vocabularyHeader.split(',')
           : undefined
 
+        console.log(
+          `📚 [${new Date().toISOString()}] Using vocabulary: ${vocabulary?.length || 0} words`,
+        )
+
         // 4. Send the corrected WAV file.
+        console.log(
+          `🤖 [${new Date().toISOString()}] Sending to Groq for transcription`,
+        )
         let transcript = await groqClient.transcribeAudio(
           fullAudioWAV,
           'wav',
           vocabulary,
+        )
+
+        console.log(
+          `📝 [${new Date().toISOString()}] Received transcript: "${transcript}"`,
         )
 
         // 5. Check if transcript contains "Hey Ito" in the first 5 words
@@ -186,15 +214,30 @@ export default (router: ConnectRouter) => {
         const firstFiveWords = words.slice(0, 5).join(' ').toLowerCase()
 
         if (firstFiveWords.includes('hey ito')) {
+          console.log(
+            `🧠 [${new Date().toISOString()}] Detected "Hey Ito", adjusting transcript`,
+          )
           // Use thinking model to adjust the transcript
           transcript = await groqClient.adjustTranscript(transcript)
+          console.log(
+            `📝 [${new Date().toISOString()}] Adjusted transcript: "${transcript}"`,
+          )
         }
+
+        const duration = Date.now() - startTime
+        console.log(
+          `✅ [${new Date().toISOString()}] Transcription completed in ${duration}ms`,
+        )
 
         return create(TranscriptionResponseSchema, {
           transcript,
         })
       } catch (error: any) {
-        console.error('Failed to process transcription via GroqClient:', error)
+        const duration = Date.now() - startTime
+        console.error(
+          `❌ [${new Date().toISOString()}] Transcription failed after ${duration}ms:`,
+          error,
+        )
         // return error response
         return create(TranscriptionResponseSchema, {
           transcript: `Error processing transcription: ${error?.message}`,

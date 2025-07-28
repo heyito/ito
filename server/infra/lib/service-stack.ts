@@ -69,10 +69,12 @@ export class ServiceStack extends Stack {
       props.dbSecretArn,
     )
 
+    const groqApiKeyName = `${stageName}/ito/groq-api-key`
+
     const groqApiKeySecret = Secret.fromSecretNameV2(
       this,
       'GroqApiKey',
-      'groq-api-key',
+      groqApiKeyName,
     )
 
     const fargateTaskRole = new IamRole(this, 'ItoFargateTaskRole', {

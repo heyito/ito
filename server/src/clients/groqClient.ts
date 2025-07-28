@@ -4,7 +4,7 @@ import * as dotenv from 'dotenv'
 
 // Load environment variables from .env file
 dotenv.config()
-const itoVocabulary = ['ito']
+const itoVocabulary = ['Ito', 'Hey Ito']
 
 /**
  * A TypeScript client for interacting with the Groq API, inspired by your Python implementation.

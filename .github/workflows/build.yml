@@ -73,8 +73,49 @@ jobs:
           echo "Deploying version ${{ github.ref_name }} to S3"
 
           BUILD_OUTPUT=dist
+          BUCKET=s3://${{ vars.AWS_STAGE }}-ito-releases/releases
 
-          aws s3 cp $BUILD_OUTPUT s3://${{ vars.AWS_STAGE }}-ito-releases/releases/${{ github.ref_name }}/ --recursive
+          echo "Listing existing files in root of releases/"
+          aws s3 ls "$BUCKET/" | grep -vE '/$' | awk '{print $4}' > existing_files.txt
 
-          # Upload same files to root of releases/ (acts as 'latest')
-          aws s3 cp $BUILD_OUTPUT s3://${{ vars.AWS_STAGE }}-ito-releases/releases/ --recursive
+          echo "Identifying which files to delete post-upload"
+
+          find $BUILD_OUTPUT -maxdepth 1 \( \
+            -name '*.yml' -o \
+            -name '*universal-mac.zip' -o \
+            -name '*universal-mac.zip.blockmap' -o \
+            -name '*.dmg' -o \
+            -name '*.dmg.blockmap' \
+          \) | xargs -I{} basename {} > uploaded_root_files.txt
+
+          echo "Uploading full dist to versioned folder: $BUCKET/${{ github.ref_name }}/"
+          aws s3 cp $BUILD_OUTPUT $BUCKET/${{ github.ref_name }}/ --recursive
+
+          echo "Uploading selected files to root of releases/"
+          for FILE in \
+            $(find $BUILD_OUTPUT -maxdepth 1 -name '*.yml') \
+            $(find $BUILD_OUTPUT -maxdepth 1 -name '*universal-mac.zip') \
+            $(find $BUILD_OUTPUT -maxdepth 1 -name '*universal-mac.zip.blockmap') \
+            $(find $BUILD_OUTPUT -maxdepth 1 -name '*.dmg') \
+            $(find $BUILD_OUTPUT -maxdepth 1 -name '*.dmg.blockmap')
+          do
+            aws s3 cp "$FILE" $BUCKET/
+          done
+
+          # Compare and find stale files (exist in bucket but not in upload list)
+          comm -23 <(sort existing_files.txt) <(sort uploaded_root_files.txt) > stale_files.txt
+
+          echo "Stale files identified for deletion:"
+          cat stale_files.txt
+
+          # Delete each stale file
+          while IFS= read -r file; do
+            echo "Deleting stale file: $file"
+            aws s3 rm "$BUCKET/$file"
+          done < stale_files.txt
+      - name: Upload DMG to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+        files: |
+          dist/Ito-Installer.dmg

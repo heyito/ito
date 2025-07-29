@@ -21,24 +21,28 @@
 ## ✨ Features
 
 ### 🎙️ **Universal Voice Dictation**
+
 - **Works in any app**: Emails, documents, chat applications, web browsers, code editors
 - **Global keyboard shortcuts**: Customizable trigger keys that work system-wide
 - **Real-time transcription**: High-accuracy speech-to-text powered by advanced AI models
 - **Instant text insertion**: Automatically types transcribed text into the focused text field
 
 ### 🧠 **Smart & Adaptive**
+
 - **Custom dictionary**: Add technical terms, names, and specialized vocabulary
 - **Context awareness**: Learns from your usage patterns to improve accuracy
 - **Multi-language support**: Transcribe in multiple languages
 - **Intelligent punctuation**: Automatically adds appropriate punctuation
 
 ### ⚙️ **Powerful Customization**
+
 - **Flexible shortcuts**: Configure any key combination as your trigger
 - **Audio preferences**: Choose your preferred microphone
 - **Privacy controls**: Local processing options and data control settings
 - **Seamless integration**: Works with any application
 
 ### 💾 **Data Management**
+
 - **Notes system**: Automatically save transcriptions for later reference
 - **Interaction history**: Track your dictation sessions and improve over time
 - **Cloud sync**: Keep your settings and data synchronized across devices
@@ -173,6 +177,7 @@ bun run lint:fix           # Fix linting issues
 ### Technology Stack
 
 **Frontend:**
+
 - **Electron** - Cross-platform desktop framework
 - **React 19** - Modern UI library with concurrent features
 - **TypeScript** - Type-safe development
@@ -181,18 +186,21 @@ bun run lint:fix           # Fix linting issues
 - **Framer Motion** - Smooth animations
 
 **Backend:**
+
 - **Node.js** - Runtime environment
 - **gRPC** - High-performance RPC for transcription services
 - **SQLite** - Local data storage
 - **Protocol Buffers** - Efficient data serialization
 
 **Native Components:**
+
 - **Rust** - System-level audio recording and keyboard event handling
 - **Swift** - macOS-specific text manipulation and accessibility features
 - **cpal** - Cross-platform audio library
 - **enigo** - Cross-platform input simulation
 
 **Infrastructure:**
+
 - **AWS CDK** - Infrastructure as code
 - **Docker** - Containerized deployments
 - **Auth0** - Authentication and user management
@@ -263,6 +271,7 @@ Control your data in **Settings > General**:
 ### Open Source
 
 This project is open source under the GNU General Public License. You can:
+
 - Audit the source code for security and privacy
 - Contribute improvements and bug fixes
 - Fork and customize for your specific needs

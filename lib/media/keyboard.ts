@@ -5,6 +5,7 @@ import { getNativeBinaryPath } from './native-interface'
 import { BrowserWindow } from 'electron'
 import { audioRecorderService } from './audio'
 import { voiceInputService } from '../main/voiceInputService'
+import { traceLogger } from '../main/traceLogger'
 
 interface KeyEvent {
   type: 'keydown' | 'keyup'
@@ -127,15 +128,35 @@ function handleKeyEventInMain(event: KeyEvent) {
   // Check if every key required by the shortcut is in our set of pressed keys.
   const isShortcutHeld =
     keyboardShortcut && keyboardShortcut.every(key => pressedKeys.has(key))
+
   // Shortcut pressed
   if (isShortcutHeld && !isShortcutActive) {
     isShortcutActive = true
     console.info('lib Shortcut ACTIVATED, starting recording...')
+
+    // Start trace logging for new interaction
+    const interactionId = traceLogger.startInteraction('HOTKEY_ACTIVATED', {
+      shortcut: keyboardShortcut,
+      pressedKeys: Array.from(pressedKeys),
+      event: {
+        type: event.type,
+        key: event.key,
+        normalizedKey,
+        timestamp: event.timestamp,
+      },
+    })
+
+    // Store interaction ID for later use
+    ;(globalThis as any).currentInteractionId = interactionId
+
     voiceInputService.startSTTService()
   } else if (!isShortcutHeld && isShortcutActive) {
     // Shortcut released
     isShortcutActive = false
     console.info('lib Shortcut DEACTIVATED, stopping recording...')
+
+    // Don't end the interaction yet - let the transcription service handle it
+    // The interaction will be ended when transcription completes or fails
     voiceInputService.stopSTTService()
   }
 }

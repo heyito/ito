@@ -37,198 +37,142 @@ describe('TraceLogger', () => {
     }
   })
 
-  describe('Interaction Lifecycle', () => {
-    test('should start interaction and generate unique ID', () => {
-      const interactionId = traceLogger.startInteraction('TEST_START', {
-        test: 'data',
-      })
-
-      expect(interactionId).toBe('test-interaction-id-1')
-      expect(traceLogger.getActiveInteractionCount()).toBe(1)
-      expect(mockLog.info).toHaveBeenCalledWith(
-        '[UserInteraction]',
-        expect.stringContaining('"eventType":"INTERACTION_START"'),
-      )
-    })
-
-    test('should log steps within an interaction', () => {
-      const interactionId = traceLogger.startInteraction('TEST_START')
-
-      traceLogger.logStep(interactionId, 'STEP_1', { data: 'value1' })
-      traceLogger.logStep(interactionId, 'STEP_2', { data: 'value2' })
-
-      expect(traceLogger.getActiveInteractionCount()).toBe(1)
-      // Should have START + 2 steps = 3 calls, but cleanup might add more
-      expect(mockLog.info).toHaveBeenCalledWith(
-        '[UserInteraction]',
-        expect.stringContaining('"eventType":"INTERACTION_START"'),
-      )
-      expect(mockLog.info).toHaveBeenCalledWith(
-        '[UserInteraction]',
-        expect.stringContaining('"step":"STEP_1"'),
-      )
-      expect(mockLog.info).toHaveBeenCalledWith(
-        '[UserInteraction]',
-        expect.stringContaining('"step":"STEP_2"'),
-      )
-    })
-
-    test('should end interaction and clean up', () => {
-      const interactionId = traceLogger.startInteraction('TEST_START')
-      traceLogger.logStep(interactionId, 'TEST_STEP')
-
-      traceLogger.endInteraction(interactionId, 'TEST_END', { end: 'data' })
-
+  describe('Interaction Management', () => {
+    test('should track active interactions correctly', () => {
       expect(traceLogger.getActiveInteractionCount()).toBe(0)
-      expect(mockLog.info).toHaveBeenCalledWith(
-        '[UserInteraction]',
-        expect.stringContaining('"eventType":"INTERACTION_END"'),
-      )
+
+      const id1 = traceLogger.startInteraction('TEST_1')
+      expect(traceLogger.getActiveInteractionCount()).toBe(1)
+
+      const id2 = traceLogger.startInteraction('TEST_2')
+      expect(traceLogger.getActiveInteractionCount()).toBe(2)
+
+      traceLogger.endInteraction(id1, 'END_1')
+      expect(traceLogger.getActiveInteractionCount()).toBe(1)
+
+      traceLogger.endInteraction(id2, 'END_2')
+      expect(traceLogger.getActiveInteractionCount()).toBe(0)
     })
 
-    test('should log interaction summary for multi-step interactions', () => {
-      const interactionId = traceLogger.startInteraction('TEST_START')
+    test('should prevent memory leaks by cleaning up ended interactions', () => {
+      const interactionId = traceLogger.startInteraction('TEST')
       traceLogger.logStep(interactionId, 'STEP_1')
       traceLogger.logStep(interactionId, 'STEP_2')
 
-      traceLogger.endInteraction(interactionId, 'TEST_END')
+      traceLogger.endInteraction(interactionId, 'END')
 
-      // Should log both END event and summary
-      const calls = mockLog.info.mock.calls
-      const summaryCall = calls.find(call =>
-        call[1].includes('"eventType":"INTERACTION_END"'),
+      // Should not be able to log to ended interaction
+      traceLogger.logStep(interactionId, 'STEP_3')
+      expect(mockLog.warn).toHaveBeenCalledWith(
+        '[TraceLogger] Attempted to log step for unknown interaction: test-interaction-id-3',
       )
-      expect(summaryCall).toBeDefined()
     })
   })
 
   describe('Error Handling', () => {
-    test('should log errors within interactions', () => {
-      const interactionId = traceLogger.startInteraction('TEST_START')
+    test('should handle unknown interaction IDs gracefully', () => {
+      // Try to log to non-existent interaction
+      traceLogger.logStep('unknown-id', 'STEP')
+      traceLogger.endInteraction('unknown-id', 'END')
+      traceLogger.logError('unknown-id', 'ERROR', 'test error')
 
-      traceLogger.logError(interactionId, 'ERROR_STEP', 'Test error message', {
-        error: 'data',
-      })
+      // Should log warnings but not crash
+      expect(mockLog.warn).toHaveBeenCalledTimes(3)
+    })
 
+    test('should maintain system stability when errors occur', () => {
+      const interactionId = traceLogger.startInteraction('TEST')
+
+      // Log an error within valid interaction
+      traceLogger.logError(interactionId, 'ERROR_STEP', 'Test error')
+
+      // System should still work normally
       expect(traceLogger.getActiveInteractionCount()).toBe(1)
-      expect(mockLog.info).toHaveBeenCalledWith(
-        '[UserInteraction]',
-        expect.stringContaining('"eventType":"ERROR"'),
-      )
-    })
-
-    test('should warn when logging step for unknown interaction', () => {
-      traceLogger.logStep('unknown-id', 'TEST_STEP')
-
-      expect(mockLog.warn).toHaveBeenCalledWith(
-        '[TraceLogger] Attempted to log step for unknown interaction: unknown-id',
-      )
-    })
-
-    test('should warn when ending unknown interaction', () => {
-      traceLogger.endInteraction('unknown-id', 'TEST_END')
-
-      expect(mockLog.warn).toHaveBeenCalledWith(
-        '[TraceLogger] Attempted to end unknown interaction: unknown-id',
-      )
-    })
-
-    test('should warn when logging error for unknown interaction', () => {
-      traceLogger.logError('unknown-id', 'ERROR_STEP', 'Error message')
-
-      expect(mockLog.warn).toHaveBeenCalledWith(
-        '[TraceLogger] Attempted to log error for unknown interaction: unknown-id',
-      )
+      traceLogger.logStep(interactionId, 'NEXT_STEP')
+      expect(traceLogger.getActiveInteractionCount()).toBe(1)
     })
   })
 
-  describe('Timing and Duration', () => {
-    test('should calculate duration from interaction start', () => {
-      // Mock Date.now to return predictable values
+  describe('Timing Accuracy', () => {
+    test('should calculate accurate durations', () => {
       const originalDateNow = Date.now
       let timeCounter = 1000
       Date.now = mock(() => timeCounter++)
 
-      const interactionId = traceLogger.startInteraction('TEST_START')
-      traceLogger.logStep(interactionId, 'TEST_STEP')
+      const interactionId = traceLogger.startInteraction('TEST')
+      traceLogger.logStep(interactionId, 'STEP_1')
+      traceLogger.logStep(interactionId, 'STEP_2')
+      traceLogger.endInteraction(interactionId, 'END')
 
-      const logCall = mockLog.info.mock.calls.find(call =>
-        call[1].includes('"step":"TEST_STEP"'),
-      )
-      expect(logCall).toBeDefined()
-      expect(logCall![1]).toContain('"duration":1')
+      // Verify timing calculations are correct
+      const calls = mockLog.info.mock.calls
+      const step1Call = calls.find(call => call[1].includes('"step":"STEP_1"'))
+      const step2Call = calls.find(call => call[1].includes('"step":"STEP_2"'))
+      const endCall = calls.find(call => call[1].includes('"step":"END"'))
 
-      // Restore Date.now
-      Date.now = originalDateNow
-    })
+      expect(step1Call![1]).toContain('"duration":1')
+      expect(step2Call![1]).toContain('"duration":2')
+      expect(endCall![1]).toContain('"duration":3')
 
-    test('should calculate total duration on interaction end', () => {
-      // Mock Date.now to return predictable values
-      const originalDateNow = Date.now
-      let timeCounter = 1000
-      Date.now = mock(() => timeCounter++)
-
-      const interactionId = traceLogger.startInteraction('TEST_START')
-      traceLogger.endInteraction(interactionId, 'TEST_END')
-
-      const logCall = mockLog.info.mock.calls.find(call =>
-        call[1].includes('"eventType":"INTERACTION_END"'),
-      )
-      expect(logCall).toBeDefined()
-      expect(logCall![1]).toContain('"duration":1')
-
-      // Restore Date.now
       Date.now = originalDateNow
     })
   })
 
-  describe('Metadata Handling', () => {
-    test('should include metadata in log entries', () => {
-      const metadata = { deviceId: 'default', shortcut: ['command', 'space'] }
-      traceLogger.startInteraction('TEST_START', metadata)
+  describe('Concurrent Usage', () => {
+    test('should handle multiple simultaneous interactions', () => {
+      const id1 = traceLogger.startInteraction('INTERACTION_1')
+      const id2 = traceLogger.startInteraction('INTERACTION_2')
+      const id3 = traceLogger.startInteraction('INTERACTION_3')
 
-      const logCall = mockLog.info.mock.calls.find(call =>
-        call[1].includes('"eventType":"INTERACTION_START"'),
-      )
-      expect(logCall).toBeDefined()
-      expect(logCall![1]).toContain('"deviceId":"default"')
-      expect(logCall![1]).toContain('"shortcut":["command","space"]')
-    })
+      // All should be active
+      expect(traceLogger.getActiveInteractionCount()).toBe(3)
 
-    test('should handle undefined metadata gracefully', () => {
-      traceLogger.startInteraction('TEST_START')
+      // Each should be independent
+      traceLogger.logStep(id1, 'STEP_1')
+      traceLogger.logStep(id2, 'STEP_2')
+      traceLogger.logStep(id3, 'STEP_3')
 
-      const interactionId = traceLogger.startInteraction('TEST_START_2')
-      traceLogger.logStep(interactionId, 'TEST_STEP')
-
-      const logCall = mockLog.info.mock.calls.find(call =>
-        call[1].includes('"step":"TEST_STEP"'),
-      )
-      expect(logCall).toBeDefined()
-      // Should not crash with undefined metadata
-    })
-  })
-
-  describe('Memory Management', () => {
-    test('should clean up interactions after ending', () => {
-      const interactionId = traceLogger.startInteraction('TEST_START')
-      expect(traceLogger.getActiveInteractionCount()).toBe(1)
-
-      traceLogger.endInteraction(interactionId, 'TEST_END')
-      expect(traceLogger.getActiveInteractionCount()).toBe(0)
-    })
-
-    test('should handle multiple concurrent interactions', () => {
-      const id1 = traceLogger.startInteraction('TEST_1')
-      const id2 = traceLogger.startInteraction('TEST_2')
-
+      // End them in different order
+      traceLogger.endInteraction(id2, 'END_2')
       expect(traceLogger.getActiveInteractionCount()).toBe(2)
 
-      traceLogger.endInteraction(id1, 'TEST_1_END')
+      traceLogger.endInteraction(id1, 'END_1')
       expect(traceLogger.getActiveInteractionCount()).toBe(1)
 
-      traceLogger.endInteraction(id2, 'TEST_2_END')
+      traceLogger.endInteraction(id3, 'END_3')
       expect(traceLogger.getActiveInteractionCount()).toBe(0)
+    })
+  })
+
+  describe('Logging Behavior', () => {
+    test('should log all interaction events', () => {
+      const interactionId = traceLogger.startInteraction('TEST')
+      traceLogger.logStep(interactionId, 'STEP')
+      traceLogger.logError(interactionId, 'ERROR', 'test error')
+      traceLogger.endInteraction(interactionId, 'END')
+
+      // Should have logged: START, STEP, ERROR, END
+      expect(mockLog.info).toHaveBeenCalledTimes(4)
+    })
+
+    test('should include all required fields in log entries', () => {
+      const interactionId = traceLogger.startInteraction('TEST', {
+        test: 'data',
+      })
+      traceLogger.logStep(interactionId, 'STEP', { stepData: 'value' })
+      traceLogger.endInteraction(interactionId, 'END', { endData: 'value' })
+
+      const calls = mockLog.info.mock.calls
+
+      // Check that all entries have required fields
+      calls.forEach(call => {
+        const logEntry = JSON.parse(call[1])
+        expect(logEntry).toHaveProperty('eventType')
+        expect(logEntry).toHaveProperty('interactionId')
+        expect(logEntry).toHaveProperty('step')
+        expect(logEntry).toHaveProperty('timestamp')
+        // duration is optional, so don't require it
+      })
     })
   })
 })

@@ -11,7 +11,6 @@ export function initializeLogging() {
     log.transports.file.format =
       '[{y}-{m}-{d} {h}:{i}:{s}.{l}] [{processType}] [{level}] {text}'
   } else {
-    // In development, log everything to the console and also enable file logging for trace logs
     log.transports.console.level = 'debug'
     log.transports.file.level = false
   }

@@ -155,22 +155,8 @@ function handleKeyEventInMain(event: KeyEvent) {
     isShortcutActive = false
     console.info('lib Shortcut DEACTIVATED, stopping recording...')
 
-    // End trace logging for interaction
-    const interactionId = (globalThis as any).currentInteractionId
-    if (interactionId) {
-      traceLogger.endInteraction(interactionId, 'HOTKEY_DEACTIVATED', {
-        shortcut: keyboardShortcut,
-        pressedKeys: Array.from(pressedKeys),
-        event: {
-          type: event.type,
-          key: event.key,
-          normalizedKey,
-          timestamp: event.timestamp,
-        },
-      })
-      ;(globalThis as any).currentInteractionId = null
-    }
-
+    // Don't end the interaction yet - let the transcription service handle it
+    // The interaction will be ended when transcription completes or fails
     voiceInputService.stopSTTService()
   }
 }

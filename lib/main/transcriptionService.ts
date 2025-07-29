@@ -82,6 +82,20 @@ export class TranscriptionService {
 
         // Create interaction when transcription completes successfully
         this.createInteraction(response.transcript)
+
+        // End the interaction after successful transcription
+        if (globalInteractionId) {
+          traceLogger.endInteraction(
+            globalInteractionId,
+            'TRANSCRIPTION_COMPLETED',
+            {
+              transcript: response.transcript,
+              transcriptLength: response.transcript?.length || 0,
+              localInteractionId: this.currentInteractionId,
+            },
+          )
+          ;(globalThis as any).currentInteractionId = null
+        }
       })
       .catch(error => {
         console.error(
@@ -108,6 +122,19 @@ export class TranscriptionService {
 
         // Still create interaction even if transcription failed
         this.createInteraction('', error.message)
+
+        // End the interaction after transcription error
+        if (globalInteractionId) {
+          traceLogger.endInteraction(
+            globalInteractionId,
+            'TRANSCRIPTION_FAILED',
+            {
+              error: error.message,
+              localInteractionId: this.currentInteractionId,
+            },
+          )
+          ;(globalThis as any).currentInteractionId = null
+        }
       })
       .finally(() => {
         this.isStreaming = false
@@ -249,6 +276,17 @@ export class TranscriptionService {
           0,
         ),
       })
+
+      // End the interaction when transcription is manually stopped
+      traceLogger.endInteraction(globalInteractionId, 'TRANSCRIPTION_STOPPED', {
+        localInteractionId: this.currentInteractionId,
+        audioChunkCount: this.audioChunksForInteraction.length,
+        totalAudioBytes: this.audioChunksForInteraction.reduce(
+          (sum, chunk) => sum + chunk.length,
+          0,
+        ),
+      })
+      ;(globalThis as any).currentInteractionId = null
     }
 
     return this.stopStreaming()

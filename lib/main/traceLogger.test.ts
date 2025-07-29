@@ -106,13 +106,13 @@ describe('TraceLogger', () => {
 
       // Verify timing calculations are correct
       const calls = mockLog.info.mock.calls
-      const step1Call = calls.find(call => call[1].includes('"step":"STEP_1"'))
-      const step2Call = calls.find(call => call[1].includes('"step":"STEP_2"'))
-      const endCall = calls.find(call => call[1].includes('"step":"END"'))
+      const step1Call = calls.find(call => call[1].includes('"step": "STEP_1"'))
+      const step2Call = calls.find(call => call[1].includes('"step": "STEP_2"'))
+      const endCall = calls.find(call => call[1].includes('"step": "END"'))
 
-      expect(step1Call![1]).toContain('"duration":1')
-      expect(step2Call![1]).toContain('"duration":2')
-      expect(endCall![1]).toContain('"duration":3')
+      expect(step1Call![1]).toContain('"duration": 1')
+      expect(step2Call![1]).toContain('"duration": 2')
+      expect(endCall![1]).toContain('"duration": 3')
 
       Date.now = originalDateNow
     })

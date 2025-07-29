@@ -171,7 +171,7 @@ class TraceLogger {
       error,
     }
 
-    log.info('[UserInteraction]', JSON.stringify(logEntry))
+    log.info('[UserInteraction]', JSON.stringify(logEntry, null, 2))
   }
 
   private logInteractionSummary(
@@ -190,7 +190,7 @@ class TraceLogger {
       })),
     }
 
-    log.info('[UserInteraction] Summary:', JSON.stringify(summary))
+    log.info('[UserInteraction] Summary:', JSON.stringify(summary, null, 2))
   }
 
   /**

@@ -1,5 +1,47 @@
-import log from 'electron-log'
-import { v4 as uuidv4 } from 'uuid'
+import { trace, SpanStatusCode, SpanKind } from '@opentelemetry/api'
+import { Resource } from '@opentelemetry/resources'
+import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
+import { NodeSDK } from '@opentelemetry/sdk-node'
+import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base'
+
+// Simple console exporter
+class ConsoleSpanExporter {
+  export(spans: any[], resultCallback: (result: any) => void) {
+    spans.forEach(span => {
+      console.log('[OpenTelemetry]', {
+        name: span.name,
+        traceId: span.spanContext().traceId,
+        spanId: span.spanContext().spanId,
+        startTime: span.startTime,
+        endTime: span.endTime,
+        attributes: span.attributes,
+        events: span.events,
+        status: span.status,
+      })
+    })
+    resultCallback({ code: 0 })
+  }
+
+  shutdown(): Promise<void> {
+    // No cleanup needed for console exporter
+    return Promise.resolve()
+  }
+}
+
+// Initialize OpenTelemetry SDK
+const sdk = new NodeSDK({
+  resource: new Resource({
+    [SemanticResourceAttributes.SERVICE_NAME]: 'ito-app',
+    [SemanticResourceAttributes.SERVICE_VERSION]: '1.0.0',
+  }),
+  spanProcessor: new BatchSpanProcessor(new ConsoleSpanExporter()),
+})
+
+// Start the SDK
+sdk.start()
+
+// Get the tracer
+const tracer = trace.getTracer('ito-user-interactions')
 
 export interface TraceContext {
   interactionId: string
@@ -19,31 +61,36 @@ export interface TraceEvent {
 }
 
 class TraceLogger {
-  private activeInteractions = new Map<
-    string,
-    { startTime: number; steps: TraceEvent[] }
-  >()
+  private activeSpans = new Map<string, any>()
 
   /**
    * Start a new user interaction trace
    */
   startInteraction(step: string, metadata?: Record<string, any>): string {
-    const interactionId = uuidv4()
+    const interactionId = crypto.randomUUID()
     const timestamp = Date.now()
 
-    this.activeInteractions.set(interactionId, {
-      startTime: timestamp,
-      steps: [],
+    // Create a new span for this interaction
+    const span = tracer.startSpan(step, {
+      kind: SpanKind.INTERNAL,
+      attributes: {
+        'interaction.id': interactionId,
+        'interaction.start_time': timestamp,
+        ...metadata,
+      },
     })
 
-    const context: TraceContext = {
+    // Store the span for later use
+    this.activeSpans.set(interactionId, span)
+
+    // Log the start event
+    span.addEvent(`START: ${step}`, {
       interactionId,
       step,
       timestamp,
-      metadata,
-    }
+      ...(metadata ? { ...metadata } : {}),
+    })
 
-    this.logTrace('INTERACTION_START', context)
     return interactionId
   }
 
@@ -55,42 +102,29 @@ class TraceLogger {
     step: string,
     metadata?: Record<string, any>,
   ): void {
-    const interaction = this.activeInteractions.get(interactionId)
-    if (!interaction) {
-      log.warn(
+    const span = this.activeSpans.get(interactionId)
+    if (!span) {
+      console.warn(
         `[TraceLogger] Attempted to log step for unknown interaction: ${interactionId}`,
       )
       return
     }
 
     const timestamp = Date.now()
-    // Calculate duration from the previous step, or from start if this is the first step
-    const previousStep =
-      interaction.steps.length > 0
-        ? interaction.steps[interaction.steps.length - 1]
-        : null
-    const duration = previousStep
-      ? timestamp - previousStep.timestamp
-      : timestamp - interaction.startTime
 
-    const context: TraceContext = {
-      interactionId,
+    // Add an event to the span with the step name
+    span.addEvent(`STEP: ${step}`, {
       step,
       timestamp,
-      duration,
-      metadata,
-    }
-
-    this.logTrace('STEP', context)
-
-    // Store the step for later analysis
-    interaction.steps.push({
-      interactionId,
-      step,
-      timestamp,
-      duration,
-      metadata,
+      ...(metadata ? { ...metadata } : {}),
     })
+
+    // Update span attributes with step metadata
+    if (metadata) {
+      Object.entries(metadata).forEach(([key, value]) => {
+        span.setAttribute(`step.${key}`, String(value))
+      })
+    }
   }
 
   /**
@@ -102,34 +136,46 @@ class TraceLogger {
     metadata?: Record<string, any>,
     error?: string,
   ): void {
-    const interaction = this.activeInteractions.get(interactionId)
-    if (!interaction) {
-      log.warn(
+    const span = this.activeSpans.get(interactionId)
+    if (!span) {
+      console.warn(
         `[TraceLogger] Attempted to end unknown interaction: ${interactionId}`,
       )
       return
     }
 
     const timestamp = Date.now()
-    const totalDuration = timestamp - interaction.startTime
 
-    const context: TraceContext = {
-      interactionId,
+    // Add the end event
+    span.addEvent(`END: ${step}`, {
       step,
       timestamp,
-      duration: totalDuration,
-      metadata,
+      ...(metadata ? { ...metadata } : {}),
+      ...(error ? { error } : {}),
+    })
+
+    // Set final attributes
+    if (metadata) {
+      Object.entries(metadata).forEach(([key, value]) => {
+        span.setAttribute(`end.${key}`, String(value))
+      })
     }
 
-    this.logTrace('INTERACTION_END', context, error)
-
-    // Log summary if there were multiple steps
-    if (interaction.steps.length > 1) {
-      this.logInteractionSummary(interactionId, interaction, totalDuration)
+    if (error) {
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: error,
+      })
+      span.recordException(new Error(error))
+    } else {
+      span.setStatus({ code: SpanStatusCode.OK })
     }
+
+    // End the span
+    span.end()
 
     // Clean up
-    this.activeInteractions.delete(interactionId)
+    this.activeSpans.delete(interactionId)
   }
 
   /**
@@ -141,72 +187,72 @@ class TraceLogger {
     error: string,
     metadata?: Record<string, any>,
   ): void {
-    const interaction = this.activeInteractions.get(interactionId)
-    if (!interaction) {
-      log.warn(
+    const span = this.activeSpans.get(interactionId)
+    if (!span) {
+      console.warn(
         `[TraceLogger] Attempted to log error for unknown interaction: ${interactionId}`,
       )
       return
     }
 
     const timestamp = Date.now()
-    const duration = timestamp - interaction.startTime
 
-    const context: TraceContext = {
-      interactionId,
+    // Add error event
+    span.addEvent(`ERROR: ${step}`, {
       step,
       timestamp,
-      duration,
-      metadata,
-    }
-
-    this.logTrace('ERROR', context, error)
-  }
-
-  private logTrace(
-    eventType: string,
-    context: TraceContext,
-    error?: string,
-  ): void {
-    const logEntry = {
-      eventType,
-      interactionId: context.interactionId,
-      step: context.step,
-      timestamp: context.timestamp,
-      duration: context.duration,
-      metadata: context.metadata,
       error,
+      ...(metadata ? { ...metadata } : {}),
+    })
+
+    // Record the exception
+    span.recordException(new Error(error))
+
+    // Set error status
+    span.setStatus({
+      code: SpanStatusCode.ERROR,
+      message: error,
+    })
+
+    // Update span attributes with error metadata
+    if (metadata) {
+      Object.entries(metadata).forEach(([key, value]) => {
+        span.setAttribute(`error.${key}`, String(value))
+      })
     }
-
-    log.info('[UserInteraction]', JSON.stringify(logEntry, null, 2))
-  }
-
-  private logInteractionSummary(
-    interactionId: string,
-    interaction: { startTime: number; steps: TraceEvent[] },
-    totalDuration: number,
-  ): void {
-    const summary = {
-      interactionId,
-      totalDuration,
-      stepCount: interaction.steps.length,
-      steps: interaction.steps.map(step => ({
-        step: step.step,
-        duration: step.duration,
-        timestamp: step.timestamp,
-      })),
-    }
-
-    log.info('[UserInteraction] Summary:', JSON.stringify(summary, null, 2))
   }
 
   /**
    * Get active interaction count (for debugging)
    */
   getActiveInteractionCount(): number {
-    return this.activeInteractions.size
+    return this.activeSpans.size
+  }
+
+  /**
+   * Cleanup method to end all active spans (useful for shutdown)
+   */
+  cleanup(): void {
+    this.activeSpans.forEach((span, interactionId) => {
+      console.warn(
+        `[TraceLogger] Cleaning up active interaction: ${interactionId}`,
+      )
+      span.end()
+    })
+    this.activeSpans.clear()
   }
 }
 
 // Export singleton instance
 export const traceLogger = new TraceLogger()
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  traceLogger.cleanup()
+  sdk.shutdown()
+})
+
+process.on('SIGINT', () => {
+  traceLogger.cleanup()
+  sdk.shutdown()
+})

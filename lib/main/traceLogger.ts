@@ -64,7 +64,14 @@ class TraceLogger {
     }
 
     const timestamp = Date.now()
-    const duration = timestamp - interaction.startTime
+    // Calculate duration from the previous step, or from start if this is the first step
+    const previousStep =
+      interaction.steps.length > 0
+        ? interaction.steps[interaction.steps.length - 1]
+        : null
+    const duration = previousStep
+      ? timestamp - previousStep.timestamp
+      : timestamp - interaction.startTime
 
     const context: TraceContext = {
       interactionId,

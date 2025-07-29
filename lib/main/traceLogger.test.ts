@@ -111,7 +111,7 @@ describe('TraceLogger', () => {
       const endCall = calls.find(call => call[1].includes('"step": "END"'))
 
       expect(step1Call![1]).toContain('"duration": 1')
-      expect(step2Call![1]).toContain('"duration": 2')
+      expect(step2Call![1]).toContain('"duration": 1')
       expect(endCall![1]).toContain('"duration": 3')
 
       Date.now = originalDateNow

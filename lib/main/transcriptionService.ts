@@ -137,6 +137,20 @@ export class TranscriptionService {
         }
       })
       .finally(() => {
+        // Ensure interaction is ended if it hasn't been ended yet
+        const globalInteractionId = (globalThis as any).currentInteractionId
+        if (globalInteractionId) {
+          traceLogger.endInteraction(
+            globalInteractionId,
+            'TRANSCRIPTION_FINALLY',
+            {
+              localInteractionId: this.currentInteractionId,
+              reason: 'finally_block',
+            },
+          )
+          ;(globalThis as any).currentInteractionId = null
+        }
+
         this.isStreaming = false
         this.currentInteractionId = null
         this.audioChunksForInteraction = []
@@ -277,16 +291,8 @@ export class TranscriptionService {
         ),
       })
 
-      // End the interaction when transcription is manually stopped
-      traceLogger.endInteraction(globalInteractionId, 'TRANSCRIPTION_STOPPED', {
-        localInteractionId: this.currentInteractionId,
-        audioChunkCount: this.audioChunksForInteraction.length,
-        totalAudioBytes: this.audioChunksForInteraction.reduce(
-          (sum, chunk) => sum + chunk.length,
-          0,
-        ),
-      })
-      ;(globalThis as any).currentInteractionId = null
+      // Don't end the interaction here - let it end when transcription completes or fails
+      // The interaction will be ended in the .then() or .catch() blocks of the transcription promise
     }
 
     return this.stopStreaming()

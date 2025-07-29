@@ -89,7 +89,7 @@ class AudioRecorderService extends EventEmitter {
     if (interactionId) {
       traceLogger.logStep(interactionId, 'AUDIO_RECORDING_START', {
         deviceName,
-        isRecording: this.#isRecording,
+        hasProcess: !!this.#audioRecorderProcess,
       })
     }
 
@@ -105,7 +105,7 @@ class AudioRecorderService extends EventEmitter {
     const interactionId = (globalThis as any).currentInteractionId
     if (interactionId) {
       traceLogger.logStep(interactionId, 'AUDIO_RECORDING_STOP', {
-        isRecording: this.#isRecording,
+        hasProcess: !!this.#audioRecorderProcess,
       })
     }
 

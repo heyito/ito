@@ -24,11 +24,13 @@ describe('TraceLogger', () => {
     mockLog.info.mockClear()
     mockLog.warn.mockClear()
     mockLog.error.mockClear()
-    
+
     // Reset the traceLogger state by clearing all active interactions
     while (traceLogger.getActiveInteractionCount() > 0) {
       // Get the first interaction ID and end it
-      const interactionId = traceLogger['activeInteractions'].keys().next().value
+      const interactionId = traceLogger['activeInteractions']
+        .keys()
+        .next().value
       if (interactionId) {
         traceLogger.endInteraction(interactionId, 'TEST_CLEANUP')
       }
@@ -154,7 +156,7 @@ describe('TraceLogger', () => {
         call[1].includes('"step":"TEST_STEP"'),
       )
       expect(logCall).toBeDefined()
-      expect(logCall[1]).toContain('"duration":1')
+      expect(logCall![1]).toContain('"duration":1')
 
       // Restore Date.now
       Date.now = originalDateNow
@@ -173,7 +175,7 @@ describe('TraceLogger', () => {
         call[1].includes('"eventType":"INTERACTION_END"'),
       )
       expect(logCall).toBeDefined()
-      expect(logCall[1]).toContain('"duration":1')
+      expect(logCall![1]).toContain('"duration":1')
 
       // Restore Date.now
       Date.now = originalDateNow
@@ -183,19 +185,20 @@ describe('TraceLogger', () => {
   describe('Metadata Handling', () => {
     test('should include metadata in log entries', () => {
       const metadata = { deviceId: 'default', shortcut: ['command', 'space'] }
-      const interactionId = traceLogger.startInteraction('TEST_START', metadata)
+      traceLogger.startInteraction('TEST_START', metadata)
 
       const logCall = mockLog.info.mock.calls.find(call =>
         call[1].includes('"eventType":"INTERACTION_START"'),
       )
       expect(logCall).toBeDefined()
-      expect(logCall[1]).toContain('"deviceId":"default"')
-      expect(logCall[1]).toContain('"shortcut":["command","space"]')
+      expect(logCall![1]).toContain('"deviceId":"default"')
+      expect(logCall![1]).toContain('"shortcut":["command","space"]')
     })
 
     test('should handle undefined metadata gracefully', () => {
-      const interactionId = traceLogger.startInteraction('TEST_START')
+      traceLogger.startInteraction('TEST_START')
 
+      const interactionId = traceLogger.startInteraction('TEST_START_2')
       traceLogger.logStep(interactionId, 'TEST_STEP')
 
       const logCall = mockLog.info.mock.calls.find(call =>

@@ -7,12 +7,12 @@ export function initializeLogging() {
 
   // Configure file transport for the packaged app
   if (app.isPackaged) {
-    log.transports.file.level = 'trace' // Enable trace level for user interaction logging
+    log.transports.file.level = 'info' // Log 'info' and higher (info, warn, error)
     log.transports.file.format =
       '[{y}-{m}-{d} {h}:{i}:{s}.{l}] [{processType}] [{level}] {text}'
   } else {
-    // In development, log everything to the console and disable file logging
-    log.transports.console.level = 'trace' // Enable trace level for development
+    // In development, log everything to the console and also enable file logging for trace logs
+    log.transports.console.level = 'debug'
     log.transports.file.level = false
   }
 

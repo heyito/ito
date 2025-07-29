@@ -89,6 +89,7 @@ The server will start on `http://localhost:3000`
 ## 📋 Available Scripts
 
 ### Development
+
 ```bash
 bun run dev              # Start development server with hot reload
 bun run start            # Start production server
@@ -96,6 +97,7 @@ bun run build            # Build TypeScript to JavaScript
 ```
 
 ### Database Management
+
 ```bash
 bun run local-db-up      # Start PostgreSQL container
 bun run local-db-down    # Stop PostgreSQL container
@@ -105,6 +107,7 @@ bun run db:migrate:create <name>  # Create new migration
 ```
 
 ### Protocol Buffers
+
 ```bash
 bun run proto:gen        # Generate both server and client types
 bun run proto:gen:server # Generate server types only
@@ -112,6 +115,7 @@ bun run proto:gen:client # Generate client types only
 ```
 
 ### Testing
+
 ```bash
 bun run test-client      # Run gRPC client tests
 ```
@@ -128,22 +132,27 @@ bun run test-client      # Run gRPC client tests
 ### API Services
 
 #### 1. Transcription Service
+
 - `TranscribeFile`: Single file transcription
 - `TranscribeStream`: Real-time streaming transcription
 
 #### 2. Notes Service
+
 - Create, read, update, delete user notes
 - Automatic transcription saving
 
 #### 3. Dictionary Service
+
 - Custom vocabulary management
 - Pronunciation corrections
 
 #### 4. Interactions Service
+
 - Dictation session tracking
 - Usage analytics
 
 #### 5. User Data Service
+
 - Complete user data deletion
 - Privacy compliance
 
@@ -151,18 +160,18 @@ bun run test-client      # Run gRPC client tests
 
 ### Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `DB_HOST` | Yes | `localhost` | PostgreSQL host |
-| `DB_PORT` | Yes | `5432` | PostgreSQL port |
-| `DB_USER` | Yes | - | Database username |
-| `DB_PASS` | Yes | - | Database password |
-| `DB_NAME` | Yes | - | Database name |
-| `GROQ_API_KEY` | Yes | - | GROQ API key for transcription |
-| `GROQ_TRANSCRIPTION_MODEL` | Yes | `whisper-large-v3` | Transcription model |
-| `REQUIRE_AUTH` | No | `false` | Enable Auth0 authentication |
-| `AUTH0_DOMAIN` | No* | - | Auth0 domain (*required if auth enabled) |
-| `AUTH0_AUDIENCE` | No* | - | Auth0 audience (*required if auth enabled) |
+| Variable                   | Required | Default            | Description                                 |
+| -------------------------- | -------- | ------------------ | ------------------------------------------- |
+| `DB_HOST`                  | Yes      | `localhost`        | PostgreSQL host                             |
+| `DB_PORT`                  | Yes      | `5432`             | PostgreSQL port                             |
+| `DB_USER`                  | Yes      | -                  | Database username                           |
+| `DB_PASS`                  | Yes      | -                  | Database password                           |
+| `DB_NAME`                  | Yes      | -                  | Database name                               |
+| `GROQ_API_KEY`             | Yes      | -                  | GROQ API key for transcription              |
+| `GROQ_TRANSCRIPTION_MODEL` | Yes      | `whisper-large-v3` | Transcription model                         |
+| `REQUIRE_AUTH`             | No       | `false`            | Enable Auth0 authentication                 |
+| `AUTH0_DOMAIN`             | No\*     | -                  | Auth0 domain (\*required if auth enabled)   |
+| `AUTH0_AUDIENCE`           | No\*     | -                  | Auth0 audience (\*required if auth enabled) |
 
 ### Database Configuration
 
@@ -204,6 +213,7 @@ cdk deploy --all
 ```
 
 This deploys:
+
 - ECS Fargate service
 - Application Load Balancer
 - Aurora Serverless PostgreSQL
@@ -227,6 +237,7 @@ bun run test-client
 ### Manual Testing
 
 Test individual services using the included test client or tools like:
+
 - [grpcurl](https://github.com/fullstorydev/grpcurl)
 - [Postman](https://www.postman.com/) (with gRPC support)
 - [BloomRPC](https://github.com/bloomrpc/bloomrpc)
@@ -236,6 +247,7 @@ Test individual services using the included test client or tools like:
 ### Common Issues
 
 #### 1. Database Connection Errors
+
 ```bash
 # Check if PostgreSQL is running
 bun run local-db-up
@@ -245,6 +257,7 @@ bun run local-db-up
 ```
 
 #### 2. GROQ API Errors
+
 ```bash
 # Verify API key is valid
 # Check GROQ_API_KEY in .env file
@@ -252,6 +265,7 @@ bun run local-db-up
 ```
 
 #### 3. Migration Failures
+
 ```bash
 # Reset migrations (WARNING: destroys data)
 bun run local-db-down
@@ -260,6 +274,7 @@ bun run db:migrate
 ```
 
 #### 4. Auth0 Configuration
+
 ```bash
 # For local development, disable auth
 echo "REQUIRE_AUTH=false" >> .env
@@ -278,6 +293,7 @@ NODE_ENV=development bun run dev
 ### Logs
 
 Check server logs for detailed error information:
+
 - Database connection issues
 - API authentication failures
 - Transcription service errors
@@ -294,7 +310,7 @@ service ItoService {
   // Transcription
   rpc TranscribeFile(TranscribeFileRequest) returns (TranscriptionResponse);
   rpc TranscribeStream(stream AudioChunk) returns (TranscriptionResponse);
-  
+
   // Data Management
   rpc CreateNote(CreateNoteRequest) returns (Note);
   rpc ListNotes(ListNotesRequest) returns (ListNotesResponse);

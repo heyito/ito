@@ -57,6 +57,7 @@ export interface ServiceStackProps extends StackProps {
 export class ServiceStack extends Stack {
   public readonly fargateService: FargateService
   public readonly migrationLambda: NodejsFunction
+  public readonly albFargate: ApplicationLoadBalancedFargateService
   constructor(scope: Construct, id: string, props: ServiceStackProps) {
     super(scope, id, props)
 
@@ -98,8 +99,8 @@ export class ServiceStack extends Stack {
       'ItoTaskDefinition',
       {
         taskRole: fargateTaskRole,
-        cpu: 256,
-        memoryLimitMiB: 512,
+        cpu: 1024,
+        memoryLimitMiB: 2048,
         runtimePlatform: {
           operatingSystemFamily: OperatingSystemFamily.LINUX,
           cpuArchitecture: CpuArchitecture.ARM64,
@@ -182,6 +183,15 @@ export class ServiceStack extends Stack {
       unhealthyThresholdCount: 5,
     })
 
+    const scalableTarget = fargateService.service.autoScaleTaskCount({
+      minCapacity: 1,
+      maxCapacity: 5,
+    })
+
+    scalableTarget.scaleOnCpuUtilization('ItoServerCpuScalingPolicy', {
+      targetUtilizationPercent: 65,
+    })
+
     // Setup migration lambda
     const migrationLambda = new NodejsFunction(this, 'ItoMigrationLambda', {
       functionName: `${stageName}-${DB_NAME}-migration`,
@@ -229,6 +239,7 @@ export class ServiceStack extends Stack {
     alb.logAccessLogs(logBucket, 'ito-alb-access-logs')
 
     this.fargateService = fargateService.service
+    this.albFargate = fargateService
     this.migrationLambda = migrationLambda
 
     new CfnOutput(this, 'ServiceURL', {

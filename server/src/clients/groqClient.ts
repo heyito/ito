@@ -85,6 +85,7 @@ class GroqClient {
     fileType: string = 'webm',
     vocabulary?: string[],
   ): Promise<string> {
+    const file = await toFile(audioBuffer, `audio.${fileType}`)
     if (!this.isAvailable) {
       throw new Error('Groq client is not available. Check API key.')
     }
@@ -102,7 +103,7 @@ class GroqClient {
       const transcription = await this._client.audio.transcriptions.create({
         // The toFile helper correctly handles buffers for multipart/form-data uploads.
         // Providing a filename with the correct extension is crucial for the API.
-        file: await toFile(audioBuffer, `audio.${fileType}`),
+        file,
         model: this._asrModel,
         prompt: fullVocabulary.join(', '),
       })
@@ -110,6 +111,13 @@ class GroqClient {
       // The Node SDK returns the full object, the text is in the `text` property.
       return transcription.text.trim()
     } catch (error: any) {
+      console.log(
+        `Failed to transcribe audio of size ${audioBuffer.length} bytes.`,
+      )
+      console.log('Audio file type:', fileType)
+      // log file size
+      console.log('File size (bytes):', file.size)
+      console.log('File', file)
       console.error('An error occurred during Groq transcription:', error)
       // Re-throw the error to be handled by the caller (e.g., the gRPC service handler).
       throw new Error(

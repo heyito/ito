@@ -12,16 +12,14 @@ const itoVocabulary = ['Ito', 'Hey Ito']
 class GroqClient {
   private readonly _client: Groq
   private readonly _userCommandModel: string
-  private readonly _asrModel: string
   private readonly _isValid: boolean
 
-  constructor(apiKey: string, userCommandModel: string, asrModel: string) {
+  constructor(apiKey: string, userCommandModel: string) {
     if (!apiKey) {
       throw new Error('Groq API key is required.')
     }
     this._client = new Groq({ apiKey })
     this._userCommandModel = userCommandModel
-    this._asrModel = asrModel
     this._isValid = true
   }
 
@@ -30,13 +28,6 @@ class GroqClient {
    */
   public get isAvailable(): boolean {
     return this._isValid
-  }
-
-  /**
-   * Gets the configured model name for Automatic Speech Recognition (ASR).
-   */
-  public get asrModelName(): string {
-    return this._asrModel
   }
 
   /**
@@ -78,24 +69,26 @@ class GroqClient {
    * @param audioBuffer The audio data as a Node.js Buffer.
    * @param fileType The extension of the audio file type (e.g., 'webm', 'wav').
    * @param vocabulary Optional custom vocabulary to improve transcription accuracy.
+   * @param asrModel The ASR model to use for transcription (required).
    * @returns The transcribed text as a string.
    */
   public async transcribeAudio(
     audioBuffer: Buffer,
     fileType: string = 'webm',
+    asrModel: string,
     vocabulary?: string[],
   ): Promise<string> {
     const file = await toFile(audioBuffer, `audio.${fileType}`)
     if (!this.isAvailable) {
       throw new Error('Groq client is not available. Check API key.')
     }
-    if (!this._asrModel) {
-      throw new Error('Groq ASR model is not configured.')
+    if (!asrModel) {
+      throw new Error('ASR model is required for transcription.')
     }
 
     try {
       console.log(
-        `Transcribing ${audioBuffer.length} bytes of audio using model ${this._asrModel}...`,
+        `Transcribing ${audioBuffer.length} bytes of audio using model ${asrModel}...`,
       )
 
       const fullVocabulary = [...itoVocabulary, ...(vocabulary || [])]
@@ -104,7 +97,7 @@ class GroqClient {
         // The toFile helper correctly handles buffers for multipart/form-data uploads.
         // Providing a filename with the correct extension is crucial for the API.
         file,
-        model: this._asrModel,
+        model: asrModel,
         prompt: fullVocabulary.join(', '),
       })
 
@@ -129,21 +122,14 @@ class GroqClient {
 
 // --- Singleton Instance ---
 // Create and export a single, pre-configured instance of the client for use across the server.
-// log error if groq api key or transcription model is not set
-if (!process.env.GROQ_API_KEY || !process.env.GROQ_TRANSCRIPTION_MODEL) {
-  console.error(
-    'FATAL: GROQ_API_KEY or GROQ_TRANSCRIPTION_MODEL is not set in the .env file. The application cannot start.',
-  )
-  process.exit(1)
-}
-const apiKey = process.env.GROQ_API_KEY
-const asrModel = process.env.GROQ_TRANSCRIPTION_MODEL
-if (!apiKey) {
+// Only check for GROQ_API_KEY since ASR model is now provided per-request
+if (!process.env.GROQ_API_KEY) {
   console.error(
     'FATAL: GROQ_API_KEY is not set in the .env file. The application cannot start.',
   )
   process.exit(1)
 }
+const apiKey = process.env.GROQ_API_KEY
 
 // Note: userCommandModel is empty for now as we are only using transcription.
-export const groqClient = new GroqClient(apiKey, '', asrModel)
+export const groqClient = new GroqClient(apiKey, '')

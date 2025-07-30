@@ -8,6 +8,7 @@ import { grpcClient } from '../clients/grpcClient'
 import { Note, Interaction, DictionaryItem } from './sqlite/models'
 import mainStore from './store'
 import { STORE_KEYS } from '../constants/store-keys'
+import type { AdvancedSettings } from './store'
 
 const LAST_SYNCED_AT_KEY = 'lastSyncedAt'
 
@@ -80,6 +81,11 @@ export class SyncService {
       await this.pullNotes(lastSyncedAt)
       await this.pullInteractions(lastSyncedAt)
       await this.pullDictionaryItems(lastSyncedAt)
+
+      // =================================================================
+      // SYNC ADVANCED SETTINGS
+      // =================================================================
+      await this.syncAdvancedSettings(lastSyncedAt)
 
       const newSyncTimestamp = new Date().toISOString()
       await KeyValueStore.set(LAST_SYNCED_AT_KEY, newSyncTimestamp)
@@ -234,6 +240,36 @@ export class SyncService {
         }
         await DictionaryTable.upsert(localItem)
       }
+    }
+  }
+
+  private async syncAdvancedSettings(lastSyncedAt?: string) {
+    try {
+      // Get remote advanced settings
+      const remoteSettings = await grpcClient.getAdvancedSettings()
+
+      // Compare timestamps to determine sync direction
+      const remoteUpdatedAt = new Date(remoteSettings.updatedAt)
+      const lastSyncTime = lastSyncedAt ? new Date(lastSyncedAt) : new Date(0)
+
+      // If remote settings were updated after last sync, pull them to local
+      if (remoteUpdatedAt > lastSyncTime) {
+        const updatedLocalSettings: AdvancedSettings = {
+          llm: {
+            asrModel: remoteSettings.llm?.asrModel || 'whisper-large-v3',
+          },
+        }
+
+        // Update local store
+        mainStore.set(STORE_KEYS.ADVANCED_SETTINGS, updatedLocalSettings)
+        console.log('Advanced settings synced from server to local store')
+      }
+      // Note: We don't push local changes to server in this implementation
+      // since advanced settings are typically managed through the UI which
+      // directly calls the server API. This sync is primarily for pulling
+      // changes made on other devices or through other clients.
+    } catch (error) {
+      console.error('Failed to sync advanced settings:', error)
     }
   }
 }

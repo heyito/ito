@@ -3,6 +3,7 @@ import GeneralSettingsContent from './settings/GeneralSettingsContent'
 import AudioSettingsContent from './settings/AudioSettingsContent'
 import AccountSettingsContent from './settings/AccountSettingsContent'
 import KeyboardSettingsContent from './settings/KeyboardSettingsContent'
+import AdvancedSettingsContent from './settings/AdvancedSettingsContent'
 
 export default function SettingsContent() {
   const { settingsPage, setSettingsPage } = useMainStore()
@@ -12,6 +13,7 @@ export default function SettingsContent() {
     { id: 'keyboard', label: 'Keyboard', active: settingsPage === 'keyboard' },
     { id: 'audio', label: 'Audio & Mic', active: settingsPage === 'audio' },
     { id: 'account', label: 'Account', active: settingsPage === 'account' },
+    { id: 'advanced', label: 'Advanced', active: settingsPage === 'advanced' },
   ]
 
   const renderSettingsContent = () => {
@@ -24,6 +26,8 @@ export default function SettingsContent() {
         return <AudioSettingsContent />
       case 'account':
         return <AccountSettingsContent />
+      case 'advanced':
+        return <AdvancedSettingsContent />
       default:
         return <GeneralSettingsContent />
     }

@@ -81,7 +81,7 @@ describe('GroqClient', () => {
           filename: 'audio.wav',
         }),
         model: asrModel,
-        prompt: 'ito, hello, world',
+        prompt: 'Ito, Hey Ito, hello, world',
       })
     })
 
@@ -101,7 +101,7 @@ describe('GroqClient', () => {
           filename: 'audio.webm',
         }),
         model: asrModel,
-        prompt: 'ito',
+        prompt: 'Ito, Hey Ito',
       })
     })
 
@@ -122,7 +122,7 @@ describe('GroqClient', () => {
           filename: 'audio.wav',
         }),
         model: asrModel,
-        prompt: 'ito, custom, vocabulary, test',
+        prompt: 'Ito, Hey Ito, custom, vocabulary, test',
       })
     })
 
@@ -142,7 +142,7 @@ describe('GroqClient', () => {
           filename: 'audio.wav',
         }),
         model: asrModel,
-        prompt: 'ito',
+        prompt: 'Ito, Hey Ito',
       })
     })
 

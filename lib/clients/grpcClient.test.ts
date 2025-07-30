@@ -41,6 +41,11 @@ mock.module('../main/store', () => ({
     state: 'test-state',
     codeVerifier: 'test-verifier',
   })),
+  getAdvancedSettings: mock(() => ({
+    llm: {
+      asrModel: 'whisper-large-v3',
+    },
+  })),
 }))
 
 mock.module('../main/sqlite/repo', () => ({
@@ -157,6 +162,10 @@ mock.module('@/app/generated/ito_pb', () => ({
   },
   ListDictionaryItemsRequestSchema: { typeName: 'ListDictionaryItemsRequest' },
   DeleteUserDataRequestSchema: { typeName: 'DeleteUserDataRequest' },
+  UpdateAdvancedSettingsRequestSchema: {
+    typeName: 'UpdateAdvancedSettingsRequest',
+  },
+  GetAdvancedSettingsRequestSchema: { typeName: 'GetAdvancedSettingsRequest' },
 }))
 
 // Mock console to avoid noise

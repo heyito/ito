@@ -18,7 +18,7 @@ jobs:
         run: bun install && cd server && bun install && cd ..
 
       - name: Run tests
-        run: bun runLibTests
+        run: bun runAllTests
 
       - name: Check code formatting
         run: bun format:app

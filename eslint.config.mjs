@@ -20,6 +20,7 @@ export default [
       'electron-builder.config.js',
       'tailwind.config.js',
       'server/infra/jest.config.js',
+      '**/generated/**',
     ],
   },
   eslint.configs.recommended,

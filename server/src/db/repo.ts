@@ -1,5 +1,11 @@
 import pool from '../db.js'
-import { Note, Interaction, DictionaryItem } from './models.js'
+import {
+  Note,
+  Interaction,
+  DictionaryItem,
+  LlmSettings,
+  AdvancedSettings,
+} from './models.js'
 import {
   CreateNoteRequest,
   UpdateNoteRequest,
@@ -7,6 +13,7 @@ import {
   UpdateInteractionRequest,
   CreateDictionaryItemRequest,
   UpdateDictionaryItemRequest,
+  UpdateAdvancedSettingsRequest,
 } from '../generated/ito_pb.js'
 
 export class NotesRepository {
@@ -224,5 +231,58 @@ export class DictionaryRepository {
       [userId],
     )
     return (res.rowCount ?? 0) > 0
+  }
+}
+
+export class AdvancedSettingsRepository {
+  static async findByUserId(
+    userId: string,
+  ): Promise<AdvancedSettings | undefined> {
+    const res = await pool.query<LlmSettings>(
+      'SELECT * FROM llm_settings WHERE user_id = $1',
+      [userId],
+    )
+
+    if (res.rows.length === 0) {
+      return undefined
+    }
+
+    const llmSettings = res.rows[0]
+    return {
+      id: llmSettings.id,
+      user_id: llmSettings.user_id,
+      llm: {
+        asr_model: llmSettings.asr_model,
+      },
+      created_at: llmSettings.created_at,
+      updated_at: llmSettings.updated_at,
+    }
+  }
+
+  static async upsert(
+    userId: string,
+    settingsData: UpdateAdvancedSettingsRequest,
+  ): Promise<AdvancedSettings> {
+    const res = await pool.query<LlmSettings>(
+      `INSERT INTO llm_settings (user_id, asr_model, updated_at)
+       VALUES ($1, $2, current_timestamp)
+       ON CONFLICT (user_id)
+       DO UPDATE SET
+         asr_model = EXCLUDED.asr_model,
+         updated_at = current_timestamp
+       RETURNING *`,
+      [userId, settingsData.llm?.asrModel || 'whisper-large-v3'],
+    )
+
+    const llmSettings = res.rows[0]
+    return {
+      id: llmSettings.id,
+      user_id: llmSettings.user_id,
+      llm: {
+        asr_model: llmSettings.asr_model,
+      },
+      created_at: llmSettings.created_at,
+      updated_at: llmSettings.updated_at,
+    }
   }
 }

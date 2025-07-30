@@ -2,7 +2,14 @@ version: v2
 plugins:
   - local: protoc-gen-es
     out: generated
-    opt: target=ts
+    opt:
+      - target=ts
+      - import_extension=.js
   - local: protoc-gen-connect-es
     out: generated
-    opt: target=ts
+    opt:
+      - target=ts
+      - import_extension=.js
+inputs:
+  - directory: src
+  - module: buf.build/bufbuild/protovalidate

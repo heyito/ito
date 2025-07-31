@@ -11,6 +11,9 @@ import { useAuthStore } from '@/app/store/useAuthStore'
 
 const sources = [
   'Twitter',
+  'TikTok',
+  'Instagram',
+  'Discord',
   'YouTube',
   'Reddit',
   'Friend',

@@ -45,6 +45,10 @@ module.exports = {
       from: 'native/text-writer/target/${arch}-apple-darwin/release/text-writer',
       to: 'binaries/text-writer',
     },
+    {
+      from: 'native/active-application/target/${arch}-apple-darwin/release/text-writer',
+      to: 'binaries/active-application',
+    },
   ],
   extraMetadata: {
     version: process.env.ITO_VERSION || '0.0.0-dev',

@@ -14,9 +14,9 @@ fn main() {
 fn output_result(active_window: ActiveWindow) {
     let event_json = json!({
         "title": active_window.title,
-        "app_name": active_window.app_name,
-        "window_id": active_window.window_id,
-        "process_id": active_window.process_id,
+        "appName": active_window.app_name,
+        "windowId": active_window.window_id,
+        "processId": active_window.process_id,
         "position": {
             "x": active_window.position.x,
             "y": active_window.position.y,

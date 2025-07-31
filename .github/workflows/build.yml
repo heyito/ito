@@ -6,7 +6,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write  # required for OIDC role assumption
+  id-token: write # required for OIDC role assumption
 
 jobs:
   build:
@@ -117,5 +117,4 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
-        files: |
-          dist/Ito-Installer.dmg
+          files: dist/Ito-Installer.dmg

@@ -1,6 +1,11 @@
-import { activeWindow, BaseResult } from 'get-windows'
+import { getNativeBinaryPath } from './native-interface'
 
-export async function getActiveWindowName() {
-  const result = (await activeWindow()) as BaseResult
-  return result.title
+const nativeModuleName = 'active-application'
+
+export async function getActiveWindow() {
+  const path = getNativeBinaryPath(nativeModuleName)
+  if (!path) {
+    console.error(`Cannot determine ${nativeModuleName} binary path`)
+    return null
+  }
 }

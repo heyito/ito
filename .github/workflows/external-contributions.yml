@@ -1,0 +1,54 @@
+name: External Contributions to Slack
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+  issue_comment:
+    types: [created]
+
+jobs:
+  notify-external:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Filter and notify
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const internalUsers = [
+              'julgmz',
+              'evanmarshall',
+              'JohnDonavon',
+              'fulltimemike',
+              'DevStrategist'
+            ];
+
+            const actor = context.payload.sender.login;
+            if (internalUsers.includes(actor)) {
+              console.log(`${actor} is internal; skipping`);
+              return;
+            }
+
+            let message;
+            const repo = `${context.repo.owner}/${context.repo.repo}`;
+
+            if (context.eventName === 'issues') {
+              const issue = context.payload.issue;
+              message = `🆕 External issue in *${repo}*: <${issue.html_url}|${issue.title}> by \`${actor}\``;
+            } else if (context.eventName === 'pull_request') {
+              const pr = context.payload.pull_request;
+              message = `🔀 External PR in *${repo}*: <${pr.html_url}|${pr.title}> by \`${actor}\``;
+            } else if (context.eventName === 'issue_comment') {
+              const comment = context.payload.comment;
+              const issue = context.payload.issue;
+              message = `💬 External comment on <${issue.html_url}|${issue.title}> by \`${actor}\`: “${comment.body.slice(0, 80)}…”`;
+            }
+
+            await fetch(process.env.SLACK_WEBHOOK_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: message })
+            });
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

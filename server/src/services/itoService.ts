@@ -32,6 +32,11 @@ export enum ItoMode {
   EDIT,
 }
 
+export type WindowContext = {
+  windowTitle: string
+  appName: string
+}
+
 export const MODE_PROMPT: { [key in ItoMode]: string } = {
   [ItoMode.TRANSCRIBE]: `
   You are a real-time Transcript Polisher assistant. Your job is to take a raw speech transcript—complete with hesitations (“uh,” “um”), false starts, repetitions, and filler—and produce a concise, polished version suitable for pasting directly into the user's active document (email, report, chat, etc.).
@@ -51,7 +56,10 @@ Raw transcript:
 Cleaned output:
 “Let's schedule the meeting for the first week of May.”
 
-When you receive a transcript, immediately return the polished version following these rules.`,
+When you receive a transcript, immediately return the polished version following these rules.
+
+
+`,
 
   [ItoMode.EDIT]: `
   You are a Command-Interpreter assistant. Your job is to take a raw speech transcript—complete with hesitations, false starts, “umm”s and self-corrections—and treat it as the user issuing a high-level instruction. Instead of merely polishing their words, you must:
@@ -61,7 +69,23 @@ When you receive a transcript, immediately return the polished version following
 	4.	Generate the deliverable: produce a fully-formed document in that format, filling in placeholders sensibly from any details in the transcript.
 	5.	Do not add new intent: if the transcript doesn't specify something (e.g. title, recipients, date), use reasonable defaults (e.g. “Untitled Issue,” “To: [Recipient]”) or prompt the user for the missing piece.
 	6.	Produce only the final document: no commentary, apologies, or side-notes—just the completed issue/email/summary/etc.
+
 `,
+}
+
+export function addContextToPrompt(
+  prompt: string,
+  context?: WindowContext,
+): string {
+  if (context) {
+    const contextPrompt = `
+    To assist with this, you have been given the following context:
+    - ${context.windowTitle}: The title of the current window where the user is working.
+    - ${context.appName}: The name of the application where the user is issuing this command.
+    `
+    return prompt + contextPrompt
+  }
+  return prompt
 }
 
 /**
@@ -227,6 +251,8 @@ export default (router: ConnectRouter) => {
           mode = ItoMode.EDIT
         }
 
+        const windowTitle = context.requestHeader.get('window-title') || ''
+        const appName = context.requestHeader.get('app-name') || ''
         transcript = await groqClient.adjustTranscript(transcript, mode)
 
         return create(TranscriptionResponseSchema, {

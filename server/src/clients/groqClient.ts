@@ -1,7 +1,12 @@
 import Groq from 'groq-sdk'
 import { toFile } from 'groq-sdk/uploads'
 import * as dotenv from 'dotenv'
-import { ItoMode, MODE_PROMPT } from '../services/itoService.js'
+import {
+  addContextToPrompt,
+  ItoMode,
+  MODE_PROMPT,
+  WindowContext,
+} from '../services/itoService.js'
 
 // Load environment variables from .env file
 dotenv.config()
@@ -48,6 +53,7 @@ class GroqClient {
   public async adjustTranscript(
     transcript: string,
     mode: ItoMode,
+    context?: WindowContext,
   ): Promise<string> {
     if (!this.isAvailable) {
       throw new Error('Groq client is not available. Check API key.')
@@ -59,7 +65,10 @@ class GroqClient {
         messages: [
           {
             role: 'system',
-            content: MODE_PROMPT[mode] || defaultPrompt,
+            content: addContextToPrompt(
+              MODE_PROMPT[mode] || defaultPrompt,
+              context,
+            ),
           },
           {
             role: 'user',

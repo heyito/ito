@@ -1,6 +1,7 @@
 import Groq from 'groq-sdk'
 import { toFile } from 'groq-sdk/uploads'
 import * as dotenv from 'dotenv'
+import { ItoMode, MODE_PROMPT } from '../services/itoService.js'
 
 // Load environment variables from .env file
 dotenv.config()
@@ -44,22 +45,25 @@ class GroqClient {
    * @param transcript The original transcript text.
    * @returns The adjusted transcript.
    */
-  public async adjustTranscript(transcript: string): Promise<string> {
+  public async adjustTranscript(
+    transcript: string,
+    mode: ItoMode,
+  ): Promise<string> {
     if (!this.isAvailable) {
       throw new Error('Groq client is not available. Check API key.')
     }
-
+    const defaultPrompt =
+      'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.'
     try {
       const completion = await this._client.chat.completions.create({
         messages: [
           {
             role: 'system',
-            content:
-              'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
+            content: MODE_PROMPT[mode] || defaultPrompt,
           },
           {
             role: 'user',
-            content: `Please fulfill this request: "${transcript}"`,
+            content: transcript,
           },
         ],
         model: 'llama-3.3-70b-versatile',

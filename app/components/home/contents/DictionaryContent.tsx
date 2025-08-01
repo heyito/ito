@@ -334,7 +334,7 @@ export default function DictionaryContent() {
   return (
     <div
       ref={containerRef}
-      className="w-full px-36 max-h-160 overflow-y-auto relative"
+      className="w-full px-24 max-h-160 overflow-y-auto relative"
       style={{
         msOverflowStyle: 'none',
         scrollbarWidth: 'none',

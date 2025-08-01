@@ -1,4 +1,4 @@
-import { Grid, BookOpen, FileText, CogFour } from '@mynaui/icons-react'
+import { Home, BookOpen, FileText, CogFour } from '@mynaui/icons-react'
 import { ItoIcon } from '../icons/ItoIcon'
 import { useMainStore } from '@/app/store/useMainStore'
 import { useEffect, useState } from 'react'
@@ -45,10 +45,10 @@ export default function HomeKit() {
   }
 
   return (
-    <div className="flex h-full bg-slate-50">
+    <div className="flex h-full">
       {/* Sidebar */}
       <div
-        className={`${navExpanded ? 'w-64' : 'w-20'} flex flex-col justify-between py-4 px-4 transition-all duration-100 ease-in-out`}
+        className={`${navExpanded ? 'w-48' : 'w-20'} flex flex-col justify-between py-4 px-4 transition-all duration-100 ease-in-out border-r border-neutral-200`}
       >
         <div>
           {/* Logo and Plan */}
@@ -63,7 +63,7 @@ export default function HomeKit() {
           {/* Nav */}
           <div className="flex flex-col gap-1 text-sm">
             <NavItem
-              icon={<Grid className="w-5 h-5" />}
+              icon={<Home className="w-5 h-5" />}
               label="Home"
               isActive={currentPage === 'home'}
               showText={showText}
@@ -95,7 +95,7 @@ export default function HomeKit() {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-col w-full items-center bg-white rounded-lg m-2 ml-0 mt-0 border border-neutral-200 pt-12">
+      <div className="flex flex-col flex-1 items-center bg-white rounded-lg m-2 ml-0 mt-0 pt-12">
         {renderContent()}
       </div>
     </div>

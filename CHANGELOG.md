@@ -4,6 +4,9 @@ All notable changes to the electron-react-app (ERA) are listed here.
 
 <br>
 
+### v0.2.3
+- Update referral sources
+
 ### v0.2.2
 
 - check localhost, not grpc_base_url

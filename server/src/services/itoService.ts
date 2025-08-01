@@ -253,7 +253,12 @@ export default (router: ConnectRouter) => {
 
         const windowTitle = context.requestHeader.get('window-title') || ''
         const appName = context.requestHeader.get('app-name') || ''
-        transcript = await groqClient.adjustTranscript(transcript, mode)
+        const windowContext: WindowContext = { windowTitle, appName }
+        transcript = await groqClient.adjustTranscript(
+          transcript,
+          mode,
+          windowContext,
+        )
 
         return create(TranscriptionResponseSchema, {
           transcript,

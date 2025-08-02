@@ -200,13 +200,19 @@ export default function CreateAccountContent() {
         {/* Terms and privacy */}
         <p className="w-1/2 text-xs text-muted-foreground text-center mt-6 leading-relaxed">
           Running Ito locally requires additional setup. Please refer to our{' '}
-          <a href="#" className="underline">
+          <button
+            onClick={() => window.api?.invoke('web-open-url', 'https://github.com/heyito/ito')}
+            className="underline text-inherit bg-transparent border-none cursor-pointer p-0"
+          >
             Github
-          </a>{' '}
+          </button>{' '}
           and{' '}
-          <a href="#" className="underline">
+          <button
+            onClick={() => window.api?.invoke('web-open-url', 'https://github.com/heyito/ito')}
+            className="underline text-inherit bg-transparent border-none cursor-pointer p-0"
+          >
             Documentation
-          </a>
+          </button>
         </p>
       </div>
     </div>

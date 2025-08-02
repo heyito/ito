@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { InfoCircle, Play } from '@mynaui/icons-react'
+import { InfoCircle, Play, Pause } from '@mynaui/icons-react'
 import { useSettingsStore } from '../../../store/useSettingsStore'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip'
 import { useAuthStore } from '@/app/store/useAuthStore'
@@ -19,6 +19,7 @@ export default function HomeContent() {
   const [interactions, setInteractions] = useState<Interaction[]>([])
   const [loading, setLoading] = useState(true)
   const [playingAudio, setPlayingAudio] = useState<string | null>(null)
+  const [audioInstances, setAudioInstances] = useState<Map<string, HTMLAudioElement>>(new Map())
   const [stats, setStats] = useState<InteractionStats>({
     streakDays: 0,
     totalWords: 0,
@@ -175,6 +176,17 @@ export default function HomeContent() {
     return unsubscribe
   }, [loadInteractions])
 
+  // Cleanup audio instances on unmount
+  useEffect(() => {
+    return () => {
+      // Pause all audio and clear instances
+      audioInstances.forEach((audio) => {
+        audio.pause()
+        audio.src = ''
+      })
+    }
+  }, [audioInstances])
+
   const formatTime = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleString('en-US', {
@@ -287,13 +299,26 @@ export default function HomeContent() {
     return buffer
   }
 
-  const playAudio = async (interaction: Interaction) => {
+  const handleAudioPlayPause = async (interaction: Interaction) => {
     try {
-      // Stop any currently playing audio
-      if (playingAudio) {
+      // Check if this audio is currently playing
+      const existingAudio = audioInstances.get(interaction.id)
+      
+      if (existingAudio && playingAudio === interaction.id) {
+        // Pause the audio
+        existingAudio.pause()
         setPlayingAudio(null)
-        // Small delay to ensure previous audio stops
-        await new Promise(resolve => setTimeout(resolve, 100))
+        return
+      }
+
+      // Stop any other playing audio
+      if (playingAudio) {
+        const currentAudio = audioInstances.get(playingAudio)
+        if (currentAudio) {
+          currentAudio.pause()
+          currentAudio.currentTime = 0
+        }
+        setPlayingAudio(null)
       }
 
       if (!interaction.raw_audio) {
@@ -301,56 +326,58 @@ export default function HomeContent() {
         return
       }
 
-      setPlayingAudio(interaction.id)
-
-      // Convert Buffer to Uint8Array for browser compatibility
-      const pcmData = new Uint8Array(interaction.raw_audio)
-
-      // Try to play as-is first (in case it's already a valid audio format)
-      let audioBlob = new Blob([pcmData], { type: 'audio/wav' })
-      let audioUrl = URL.createObjectURL(audioBlob)
-
-      // Create and play the audio
-      const audio = new Audio(audioUrl)
-
-      audio.onended = () => {
-        setPlayingAudio(null)
-        URL.revokeObjectURL(audioUrl) // Clean up memory
-      }
-
-      audio.onerror = async _error => {
-        console.log(
-          'Direct playback failed, trying as raw PCM with WAV headers...',
-        )
-        URL.revokeObjectURL(audioUrl)
-
-        try {
-          // If direct playback fails, try converting raw PCM to WAV
-          const wavBuffer = createWavFile(pcmData)
-          audioBlob = new Blob([wavBuffer], { type: 'audio/wav' })
-          audioUrl = URL.createObjectURL(audioBlob)
-
-          const newAudio = new Audio(audioUrl)
-          newAudio.onended = () => {
-            setPlayingAudio(null)
-            URL.revokeObjectURL(audioUrl)
-          }
-          newAudio.onerror = err => {
-            console.error('WAV playback also failed:', err)
-            setPlayingAudio(null)
-            URL.revokeObjectURL(audioUrl)
-          }
-
-          await newAudio.play()
-        } catch (wavError) {
-          console.error('Failed to create/play WAV file:', wavError)
+      // Check if we already have an audio instance for this interaction
+      let audio = audioInstances.get(interaction.id)
+      
+      if (!audio) {
+        // Create new audio instance
+        const pcmData = new Uint8Array(interaction.raw_audio)
+        let audioBlob = new Blob([pcmData], { type: 'audio/wav' })
+        let audioUrl = URL.createObjectURL(audioBlob)
+        
+        audio = new Audio(audioUrl)
+        
+        audio.onended = () => {
           setPlayingAudio(null)
         }
+
+        audio.onerror = async _error => {
+          console.log('Direct playback failed, trying as raw PCM with WAV headers...')
+          URL.revokeObjectURL(audioUrl)
+
+          try {
+            const wavBuffer = createWavFile(pcmData)
+            audioBlob = new Blob([wavBuffer], { type: 'audio/wav' })
+            audioUrl = URL.createObjectURL(audioBlob)
+
+            const newAudio = new Audio(audioUrl)
+            newAudio.onended = () => {
+              setPlayingAudio(null)
+            }
+            newAudio.onerror = err => {
+              console.error('WAV playback also failed:', err)
+              setPlayingAudio(null)
+            }
+
+            // Store the new audio instance
+            setAudioInstances(prev => new Map(prev).set(interaction.id, newAudio))
+            setPlayingAudio(interaction.id)
+            await newAudio.play()
+          } catch (wavError) {
+            console.error('Failed to create/play WAV file:', wavError)
+            setPlayingAudio(null)
+          }
+          return
+        }
+
+        // Store the audio instance
+        setAudioInstances(prev => new Map(prev).set(interaction.id, audio))
       }
 
+      setPlayingAudio(interaction.id)
       await audio.play()
     } catch (error) {
-      console.error('Failed to play audio:', error)
+      console.error('Failed to play/pause audio:', error)
       setPlayingAudio(null)
     }
   }
@@ -475,19 +502,21 @@ export default function HomeContent() {
                                 ? 'bg-blue-50 text-blue-600'
                                 : 'text-gray-600'
                             }`}
-                            onClick={() => playAudio(interaction)}
+                            onClick={() => handleAudioPlayPause(interaction)}
                             disabled={!interaction.raw_audio}
                             title={
                               !interaction.raw_audio
                                 ? 'No audio available'
                                 : playingAudio === interaction.id
-                                  ? 'Playing audio...'
+                                  ? 'Pause audio'
                                   : 'Play audio'
                             }
                           >
-                            <Play
-                              className={`w-4 h-4 ${playingAudio === interaction.id ? 'animate-pulse' : ''}`}
-                            />
+                            {playingAudio === interaction.id ? (
+                              <Pause className="w-4 h-4" />
+                            ) : (
+                              <Play className="w-4 h-4" />
+                            )}
                           </button>
                         </div>
                       </div>

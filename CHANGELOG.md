@@ -4,6 +4,10 @@ All notable changes to the electron-react-app (ERA) are listed here.
 
 <br>
 
+### Unreleased
+
+- Add pause functionality for audio playback in history view
+
 ### v0.2.2
 
 - check localhost, not grpc_base_url

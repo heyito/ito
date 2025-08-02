@@ -57,7 +57,7 @@
 
 ### Installation
 
-1. **Download the latest release** from the [releases page](https://github.com/demox-labs/ito/releases)
+1. **Download the latest release** from [heyito.ai](https://www.heyito.ai/) or the [GitHub releases page](https://github.com/demox-labs/ito/releases)
 
 2. **Install the application**:
    - **macOS**: Open the `.dmg` file and drag Ito to Applications

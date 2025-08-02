@@ -1,4 +1,10 @@
-import { Home, BookOpen, FileText, CogFour } from '@mynaui/icons-react'
+import {
+  Home,
+  BookOpen,
+  FileText,
+  CogFour,
+  InfoCircle,
+} from '@mynaui/icons-react'
 import { ItoIcon } from '../icons/ItoIcon'
 import { useMainStore } from '@/app/store/useMainStore'
 import { useEffect, useState } from 'react'
@@ -7,6 +13,7 @@ import HomeContent from './contents/HomeContent'
 import DictionaryContent from './contents/DictionaryContent'
 import NotesContent from './contents/NotesContent'
 import SettingsContent from './contents/SettingsContent'
+import AboutContent from './contents/AboutContent'
 
 export default function HomeKit() {
   const { navExpanded, currentPage, setCurrentPage } = useMainStore()
@@ -39,6 +46,8 @@ export default function HomeKit() {
         return <NotesContent />
       case 'settings':
         return <SettingsContent />
+      case 'about':
+        return <AboutContent />
       default:
         return <HomeContent />
     }
@@ -89,6 +98,13 @@ export default function HomeKit() {
               isActive={currentPage === 'settings'}
               showText={showText}
               onClick={() => setCurrentPage('settings')}
+            />
+            <NavItem
+              icon={<InfoCircle className="w-5 h-5" />}
+              label="About"
+              isActive={currentPage === 'about'}
+              showText={showText}
+              onClick={() => setCurrentPage('about')}
             />
           </div>
         </div>

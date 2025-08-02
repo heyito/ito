@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { ChartNoAxesColumn, InfoCircle, Play } from '@mynaui/icons-react'
+import { EXTERNAL_LINKS } from '@/lib/constants/external-links'
 import { useSettingsStore } from '../../../store/useSettingsStore'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip'
 import { useAuthStore } from '@/app/store/useAuthStore'
@@ -473,7 +474,7 @@ export default function HomeContent() {
           <button
             className="bg-gray-900 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-800 cursor-pointer"
             onClick={() =>
-              window.api?.invoke('web-open-url', 'https://www.heyito.ai/')
+              window.api?.invoke('web-open-url', EXTERNAL_LINKS.WEBSITE)
             }
           >
             Explore use cases

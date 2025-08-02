@@ -1,5 +1,6 @@
 import { Button } from '@/app/components/ui/button'
 import { CheckCircle, Lock } from '@mynaui/icons-react'
+import { EXTERNAL_LINKS } from '@/lib/constants/external-links'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { useSettingsStore } from '@/app/store/useSettingsStore'
 
@@ -68,7 +69,7 @@ export default function DataControlContent() {
                 onClick={() =>
                   window.api?.invoke(
                     'web-open-url',
-                    'https://www.heyito.ai/privacy',
+                    EXTERNAL_LINKS.PRIVACY_POLICY,
                   )
                 }
                 className="underline hover:text-foreground cursor-pointer"

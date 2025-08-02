@@ -6,6 +6,8 @@ All notable changes to the electron-react-app (ERA) are listed here.
 
 ### v0.2.3
 - Update referral sources
+- Create about page
+- Update layout to new design
 
 ### v0.2.2
 

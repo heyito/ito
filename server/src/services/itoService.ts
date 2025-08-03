@@ -31,6 +31,8 @@ import {
 import { ConnectError, Code } from '@connectrpc/connect'
 import { kUser } from '../auth/userContext.js'
 import { HeaderValidator } from '../validation/HeaderValidator.js'
+import { errorToProtobuf } from '../clients/errors.js'
+import { ClientProvider } from '../clients/providers.js'
 
 /**
  * --- NEW: WAV Header Generation Function ---
@@ -227,9 +229,11 @@ export default (router: ConnectRouter) => {
         }
 
         console.error('Failed to process transcription via GroqClient:', error)
-        // return error response for other errors (like Groq API failures)
+
+        // Return structured error response
         return create(TranscriptionResponseSchema, {
-          transcript: `Error processing transcription: ${error?.message}`,
+          transcript: '',
+          error: errorToProtobuf(error, ClientProvider.GROQ),
         })
       }
     },

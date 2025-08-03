@@ -4,7 +4,9 @@ import { describe, test, expect, beforeEach, mock } from 'bun:test'
 
 // Mock gRPC client
 const mockGrpcClient = {
-  transcribeStream: mock(() => Promise.resolve({ transcript: 'default' })),
+  transcribeStream: mock(() =>
+    Promise.resolve({ transcript: 'default' } as any),
+  ),
 }
 mock.module('../clients/grpcClient', () => ({
   grpcClient: mockGrpcClient,
@@ -424,6 +426,27 @@ describe('TranscriptionService Integration Tests', () => {
 
       expect(asrOutputParam.audioChunkCount).toBe(0)
       expect(asrOutputParam.totalAudioBytes).toBe(0)
+    })
+
+    test('should not create interaction when transcription fails due to short audio', async () => {
+      mockGrpcClient.transcribeStream.mockResolvedValueOnce({
+        transcript: '',
+        error: {
+          code: 'CLIENT_AUDIO_TOO_SHORT',
+          type: 'audio',
+          message: 'Audio file is too short for transcription.',
+          provider: 'groq',
+        },
+      })
+      mockDbRun.mockResolvedValue(undefined)
+
+      transcriptionService.startStreaming()
+      transcriptionService.forwardAudioChunk(Buffer.from('audio'))
+      transcriptionService.stopStreaming()
+
+      await expect(waitForInteractionCreation()).rejects.toThrow()
+
+      expect(mockDbRun).not.toHaveBeenCalled()
     })
 
     test('should include error information in ASR output when transcription fails', async () => {

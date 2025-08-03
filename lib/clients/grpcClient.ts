@@ -115,8 +115,6 @@ class GrpcClient {
   }
 
   private async handleAuthError(error: any): Promise<boolean> {
-    console.log('handleAuthError', error)
-
     // Check if this is an authentication error
     if (error instanceof ConnectError && error.code === Code.Unauthenticated) {
       console.log(
@@ -177,7 +175,7 @@ class GrpcClient {
       })
 
       // Type the transcribed text into the focused application
-      if (response.transcript) {
+      if (response.transcript && !response.error) {
         setFocusedText(response.transcript)
       }
 

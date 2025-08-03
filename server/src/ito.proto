@@ -45,6 +45,27 @@ service ItoService {
 // -----------------------------------------------------------------
 message Empty {}
 
+// Error Types
+// -----------------------------------------------------------------
+enum ClientProvider {
+  GROQ = 0;
+}
+
+enum ErrorType {
+  CONFIGURATION = 0;
+  AVAILABILITY = 1;
+  AUDIO = 2;
+  API = 3;
+}
+
+message ClientError {
+  string code = 1;
+  ErrorType type = 2;
+  string message = 3;
+  ClientProvider provider = 4;
+  map<string, string> details = 5;
+}
+
 // Transcription
 // -----------------------------------------------------------------
 // A chunk of audio data for streaming.
@@ -55,6 +76,7 @@ message AudioChunk {
 // The response message containing the final transcript.
 message TranscriptionResponse {
   string transcript = 1;
+  ClientError error = 2;
 }
 
 // Notes

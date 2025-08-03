@@ -1,10 +1,24 @@
 import Groq from 'groq-sdk'
 import { toFile } from 'groq-sdk/uploads'
 import * as dotenv from 'dotenv'
+import { createTranscriptionPrompt } from '../prompts/transcription.js'
+import {
+  ClientApiKeyError,
+  ClientUnavailableError,
+  ClientModelError,
+  ClientNoSpeechError,
+  ClientTranscriptionQualityError,
+  ClientAudioTooShortError,
+  ClientApiError,
+  ClientError,
+} from './errors.js'
+import { ClientProvider } from './providers.js'
 
 // Load environment variables from .env file
 dotenv.config()
-const itoVocabulary = ['Ito', 'Hey Ito']
+export const itoVocabulary = ['Ito', 'Hey Ito']
+export const NO_SPEECH_THRESHOLD = 0.35
+export const LOW_QUALITY_THRESHOLD = -0.55
 
 /**
  * A TypeScript client for interacting with the Groq API, inspired by your Python implementation.
@@ -16,7 +30,7 @@ class GroqClient {
 
   constructor(apiKey: string, userCommandModel: string) {
     if (!apiKey) {
-      throw new Error('Groq API key is required.')
+      throw new ClientApiKeyError(ClientProvider.GROQ)
     }
     this._client = new Groq({ apiKey })
     this._userCommandModel = userCommandModel
@@ -37,7 +51,7 @@ class GroqClient {
    */
   public async adjustTranscript(transcript: string): Promise<string> {
     if (!this.isAvailable) {
-      throw new Error('Groq client is not available. Check API key.')
+      throw new ClientUnavailableError(ClientProvider.GROQ)
     }
 
     try {
@@ -80,10 +94,10 @@ class GroqClient {
   ): Promise<string> {
     const file = await toFile(audioBuffer, `audio.${fileType}`)
     if (!this.isAvailable) {
-      throw new Error('Groq client is not available. Check API key.')
+      throw new ClientUnavailableError(ClientProvider.GROQ)
     }
     if (!asrModel) {
-      throw new Error('ASR model is required for transcription.')
+      throw new ClientModelError(ClientProvider.GROQ)
     }
 
     try {
@@ -93,13 +107,33 @@ class GroqClient {
 
       const fullVocabulary = [...itoVocabulary, ...(vocabulary || [])]
 
+      // Create a concise but effective transcription prompt
+      const transcriptionPrompt = createTranscriptionPrompt(fullVocabulary)
+
       const transcription = await this._client.audio.transcriptions.create({
         // The toFile helper correctly handles buffers for multipart/form-data uploads.
         // Providing a filename with the correct extension is crucial for the API.
         file,
         model: asrModel,
-        prompt: fullVocabulary.join(', '),
+        prompt: transcriptionPrompt,
+        response_format: 'verbose_json',
       })
+
+      const segments = (transcription as any).segments
+      if (segments && segments.length > 0) {
+        const segment = segments[0]
+        if (segment.no_speech_prob > NO_SPEECH_THRESHOLD) {
+          throw new ClientNoSpeechError(
+            ClientProvider.GROQ,
+            segment.no_speech_prob,
+          )
+        } else if (segment.avg_logprob < LOW_QUALITY_THRESHOLD) {
+          throw new ClientTranscriptionQualityError(
+            ClientProvider.GROQ,
+            segment.avg_logprob,
+          )
+        }
+      }
 
       // The Node SDK returns the full object, the text is in the `text` property.
       return transcription.text.trim()
@@ -107,14 +141,24 @@ class GroqClient {
       console.log(
         `Failed to transcribe audio of size ${audioBuffer.length} bytes.`,
       )
-      console.log('Audio file type:', fileType)
-      // log file size
-      console.log('File size (bytes):', file.size)
-      console.log('File', file)
       console.error('An error occurred during Groq transcription:', error)
+      if (error instanceof ClientError) {
+        throw error
+      }
+
+      const errorMessage = error.message || 'An unknown error occurred'
+
+      // Check for specific audio too short error
+      if (errorMessage.includes('Audio file is too short')) {
+        throw new ClientAudioTooShortError(ClientProvider.GROQ)
+      }
+
       // Re-throw the error to be handled by the caller (e.g., the gRPC service handler).
-      throw new Error(
-        `Groq API Error: ${error.message || 'An unknown error occurred'}`,
+      throw new ClientApiError(
+        errorMessage,
+        ClientProvider.GROQ,
+        error,
+        error.status || error.statusCode,
       )
     }
   }

@@ -43,7 +43,15 @@ mock.module('dotenv', () => ({
 }))
 
 // Now we can safely import the groqClient
-const { groqClient } = await import('./groqClient.js')
+const {
+  groqClient,
+  itoVocabulary,
+  LOW_QUALITY_THRESHOLD,
+  NO_SPEECH_THRESHOLD,
+} = await import('./groqClient.js')
+const { createTranscriptionPrompt } = await import(
+  '../prompts/transcription.js'
+)
 
 describe('GroqClient', () => {
   beforeEach(() => {
@@ -67,6 +75,10 @@ describe('GroqClient', () => {
       const audioBuffer = Buffer.from('mock audio data')
       const asrModel = 'whisper-large-v3'
       const vocabulary = ['hello', 'world']
+      const transcriptionPrompt = createTranscriptionPrompt([
+        ...itoVocabulary,
+        ...vocabulary,
+      ])
 
       const result = await groqClient.transcribeAudio(
         audioBuffer,
@@ -81,7 +93,8 @@ describe('GroqClient', () => {
           filename: 'audio.wav',
         }),
         model: asrModel,
-        prompt: 'Ito, Hey Ito, hello, world',
+        prompt: transcriptionPrompt,
+        response_format: 'verbose_json',
       })
     })
 
@@ -93,6 +106,7 @@ describe('GroqClient', () => {
 
       const audioBuffer = Buffer.from('mock audio data')
       const asrModel = 'distil-whisper-large-v3-en'
+      const transcriptionPrompt = createTranscriptionPrompt(itoVocabulary)
 
       await groqClient.transcribeAudio(audioBuffer, undefined, asrModel)
 
@@ -101,7 +115,8 @@ describe('GroqClient', () => {
           filename: 'audio.webm',
         }),
         model: asrModel,
-        prompt: 'Ito, Hey Ito',
+        prompt: transcriptionPrompt,
+        response_format: 'verbose_json',
       })
     })
 
@@ -114,6 +129,10 @@ describe('GroqClient', () => {
       const audioBuffer = Buffer.from('mock audio data')
       const asrModel = 'whisper-large-v3'
       const vocabulary = ['custom', 'vocabulary', 'test']
+      const transcriptionPrompt = createTranscriptionPrompt([
+        ...itoVocabulary,
+        ...vocabulary,
+      ])
 
       await groqClient.transcribeAudio(audioBuffer, 'wav', asrModel, vocabulary)
 
@@ -122,7 +141,8 @@ describe('GroqClient', () => {
           filename: 'audio.wav',
         }),
         model: asrModel,
-        prompt: 'Ito, Hey Ito, custom, vocabulary, test',
+        prompt: transcriptionPrompt,
+        response_format: 'verbose_json',
       })
     })
 
@@ -134,6 +154,7 @@ describe('GroqClient', () => {
 
       const audioBuffer = Buffer.from('mock audio data')
       const asrModel = 'whisper-large-v3'
+      const transcriptionPrompt = createTranscriptionPrompt(itoVocabulary)
 
       await groqClient.transcribeAudio(audioBuffer, 'wav', asrModel, [])
 
@@ -142,7 +163,8 @@ describe('GroqClient', () => {
           filename: 'audio.wav',
         }),
         model: asrModel,
-        prompt: 'Ito, Hey Ito',
+        prompt: transcriptionPrompt,
+        response_format: 'verbose_json',
       })
     })
 
@@ -172,6 +194,39 @@ describe('GroqClient', () => {
       expect(result).toBe('Hello world')
     })
 
+    it('should throw when low quality transcription', async () => {
+      const mockTranscription = {
+        text: 'Low quality transcription',
+        segments: [{ avg_logprob: LOW_QUALITY_THRESHOLD - 0.01 }],
+      }
+      mockGroqClient.audio.transcriptions.create.mockResolvedValue(
+        mockTranscription,
+      )
+
+      const audioBuffer = Buffer.from('mock audio data')
+      const asrModel = 'whisper-large-v3'
+
+      await expect(
+        groqClient.transcribeAudio(audioBuffer, 'wav', asrModel, []),
+      ).rejects.toThrow('Unable to transcribe audio.')
+    })
+
+    it('should throw when the transcript contains no speech', async () => {
+      const mockTranscription = {
+        text: '',
+        segments: [{ no_speech_prob: NO_SPEECH_THRESHOLD + 0.01 }],
+      }
+      mockGroqClient.audio.transcriptions.create.mockResolvedValue(
+        mockTranscription,
+      )
+      const audioBuffer = Buffer.from('mock audio data')
+      const asrModel = 'whisper-large-v3'
+
+      await expect(
+        groqClient.transcribeAudio(audioBuffer, 'wav', asrModel),
+      ).rejects.toThrow('No speech detected')
+    })
+
     it('should handle Groq API errors properly', async () => {
       const mockError = new Error('Groq API error')
       mockGroqClient.audio.transcriptions.create.mockRejectedValue(mockError)
@@ -181,7 +236,7 @@ describe('GroqClient', () => {
 
       await expect(
         groqClient.transcribeAudio(audioBuffer, 'wav', asrModel),
-      ).rejects.toThrow('Groq API Error: Groq API error')
+      ).rejects.toThrow('Groq API error')
     })
   })
 

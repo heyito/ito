@@ -267,6 +267,16 @@ export default function HomeContent() {
   const getDisplayText = (interaction: Interaction) => {
     // Check for errors first
     if (interaction.asr_output?.error) {
+      if (
+        interaction.asr_output.error.includes('No speech detected in audio.') ||
+        interaction.asr_output.error.includes('Unable to transcribe audio.')
+      ) {
+        return {
+          text: 'Audio is silent',
+          isError: true,
+          tooltip: "Ito didn't detect any words so the transcript is empty",
+        }
+      }
       return {
         text: 'Transcription failed',
         isError: true,

@@ -33,6 +33,7 @@
     "db:migrate:create": "node-pg-migrate --migrations-dir src/migrations --migration-file-language js create",
     "db:migrate": "./scripts/migrate.sh up",
     "db:migrate:down": "./scripts/migrate.sh down",
+    "docker": "docker compose up --build",
     "local-db-up": "docker compose up -d db",
     "local-db-down": "docker compose down",
     "dev": "tsx watch src/index.ts",

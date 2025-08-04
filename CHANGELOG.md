@@ -6,6 +6,7 @@ All notable changes to the electron-react-app (ERA) are listed here.
 
 ### v0.2.3
 - Update referral sources
+- Enhance copy button tooltip to stay visible and show "Copied 🎉" feedback
 
 ### v0.2.2
 

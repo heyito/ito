@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { InfoCircle, Play } from '@mynaui/icons-react'
+import { InfoCircle, Play, Copy, Check } from '@mynaui/icons-react'
 import { useSettingsStore } from '../../../store/useSettingsStore'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip'
 import { useAuthStore } from '@/app/store/useAuthStore'
@@ -19,6 +19,8 @@ export default function HomeContent() {
   const [interactions, setInteractions] = useState<Interaction[]>([])
   const [loading, setLoading] = useState(true)
   const [playingAudio, setPlayingAudio] = useState<string | null>(null)
+  const [copiedItems, setCopiedItems] = useState<Set<string>>(new Set())
+  const [tooltipOpen, setTooltipOpen] = useState<string | null>(null)
   const [stats, setStats] = useState<InteractionStats>({
     streakDays: 0,
     totalWords: 0,
@@ -357,6 +359,27 @@ export default function HomeContent() {
 
   const groupedInteractions = groupInteractionsByDate(interactions)
 
+  const copyToClipboard = async (text: string, interactionId: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedItems(prev => new Set(prev).add(interactionId))
+      setTooltipOpen(interactionId) // Keep tooltip open
+      
+      // Reset the copied state after 2 seconds
+      setTimeout(() => {
+        setCopiedItems(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(interactionId)
+          return newSet
+        })
+        // Close tooltip if it's still open for this item
+        setTooltipOpen(prev => prev === interactionId ? null : prev)
+      }, 2000)
+    } catch (error) {
+      console.error('Failed to copy text:', error)
+    }
+  }
+
   return (
     <div className="w-full h-full flex flex-col">
       {/* Fixed Header Content */}
@@ -465,10 +488,41 @@ export default function HomeContent() {
                           </div>
                         </div>
 
-                        {/* Play button - only shows on hover or when playing */}
+                        {/* Copy and Play buttons - only show on hover or when playing */}
                         <div
-                          className={`${playingAudio === interaction.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200`}
+                          className={`flex items-center gap-2 ${playingAudio === interaction.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200`}
                         >
+                          {/* Copy button */}
+                          {!displayInfo.isError && (
+                            <Tooltip 
+                              open={tooltipOpen === interaction.id}
+                              onOpenChange={(open) => {
+                                if (!copiedItems.has(interaction.id)) {
+                                  setTooltipOpen(open ? interaction.id : null)
+                                }
+                              }}
+                            >
+                              <TooltipTrigger asChild>
+                                <button
+                                  className={`p-1.5 hover:bg-gray-200 rounded transition-colors cursor-pointer ${
+                                    copiedItems.has(interaction.id) ? 'text-green-600' : 'text-gray-600'
+                                  }`}
+                                  onClick={() => copyToClipboard(displayInfo.text, interaction.id)}
+                                >
+                                  {copiedItems.has(interaction.id) ? (
+                                    <Check className="w-4 h-4" />
+                                  ) : (
+                                    <Copy className="w-4 h-4" />
+                                  )}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{copiedItems.has(interaction.id) ? 'Copied 🎉' : 'Copy'}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                          
+                          {/* Play button */}
                           <button
                             className={`p-1.5 hover:bg-gray-200 rounded transition-colors cursor-pointer ${
                               playingAudio === interaction.id

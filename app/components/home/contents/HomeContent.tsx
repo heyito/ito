@@ -364,7 +364,7 @@ export default function HomeContent() {
       await navigator.clipboard.writeText(text)
       setCopiedItems(prev => new Set(prev).add(interactionId))
       setTooltipOpen(interactionId) // Keep tooltip open
-      
+
       // Reset the copied state after 2 seconds
       setTimeout(() => {
         setCopiedItems(prev => {
@@ -373,7 +373,7 @@ export default function HomeContent() {
           return newSet
         })
         // Close tooltip if it's still open for this item
-        setTooltipOpen(prev => prev === interactionId ? null : prev)
+        setTooltipOpen(prev => (prev === interactionId ? null : prev))
       }, 2000)
     } catch (error) {
       console.error('Failed to copy text:', error)
@@ -494,9 +494,9 @@ export default function HomeContent() {
                         >
                           {/* Copy button */}
                           {!displayInfo.isError && (
-                            <Tooltip 
+                            <Tooltip
                               open={tooltipOpen === interaction.id}
-                              onOpenChange={(open) => {
+                              onOpenChange={open => {
                                 if (!copiedItems.has(interaction.id)) {
                                   setTooltipOpen(open ? interaction.id : null)
                                 }
@@ -505,9 +505,16 @@ export default function HomeContent() {
                               <TooltipTrigger asChild>
                                 <button
                                   className={`p-1.5 hover:bg-gray-200 rounded transition-colors cursor-pointer ${
-                                    copiedItems.has(interaction.id) ? 'text-green-600' : 'text-gray-600'
+                                    copiedItems.has(interaction.id)
+                                      ? 'text-green-600'
+                                      : 'text-gray-600'
                                   }`}
-                                  onClick={() => copyToClipboard(displayInfo.text, interaction.id)}
+                                  onClick={() =>
+                                    copyToClipboard(
+                                      displayInfo.text,
+                                      interaction.id,
+                                    )
+                                  }
                                 >
                                   {copiedItems.has(interaction.id) ? (
                                     <Check className="w-4 h-4" />
@@ -517,11 +524,15 @@ export default function HomeContent() {
                                 </button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>{copiedItems.has(interaction.id) ? 'Copied 🎉' : 'Copy'}</p>
+                                <p>
+                                  {copiedItems.has(interaction.id)
+                                    ? 'Copied 🎉'
+                                    : 'Copy'}
+                                </p>
                               </TooltipContent>
                             </Tooltip>
                           )}
-                          
+
                           {/* Play button */}
                           <button
                             className={`p-1.5 hover:bg-gray-200 rounded transition-colors cursor-pointer ${

@@ -47,7 +47,7 @@ module.exports = {
     },
   ],
   extraMetadata: {
-    version: process.env.ITO_VERSION || '0.0.0-dev',
+    version: process.env.VITE_ITO_VERSION || '0.0.0-dev',
   },
   protocols: {
     name: 'ito',

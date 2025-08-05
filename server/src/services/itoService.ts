@@ -225,7 +225,7 @@ export default (router: ConnectRouter) => {
         if (error instanceof ConnectError) {
           throw error
         }
-        
+
         console.error('Failed to process transcription via GroqClient:', error)
         // return error response for other errors (like Groq API failures)
         return create(TranscriptionResponseSchema, {
@@ -403,7 +403,7 @@ export default (router: ConnectRouter) => {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           llm: create(LlmSettingsSchema, {
-            asrModel: 'distil-whisper-large-v3-en',
+            asrModel: 'whisper-large-v3',
           }),
         })
       }

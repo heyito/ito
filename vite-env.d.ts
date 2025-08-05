@@ -7,6 +7,7 @@ interface ImportMetaEnv {
   readonly VITE_AMPLITUDE_API_KEY: string
   readonly VITE_UPDATER_BUCKET: string
   readonly VITE_LOCAL_SERVER_PORT?: string
+  readonly VITE_ITO_VERSION: string
 }
 
 interface ImportMeta {

@@ -23,8 +23,9 @@ export const startServer = async () => {
   if (REQUIRE_AUTH) {
     const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN
     const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE
+    const AUTH0_CLIENT_ID = process.env.AUTH0_CLIENT_ID
 
-    if (!AUTH0_DOMAIN || !AUTH0_AUDIENCE) {
+    if (!AUTH0_DOMAIN || !AUTH0_AUDIENCE || !AUTH0_CLIENT_ID) {
       connectRpcServer.log.error('Auth0 configuration missing in .env file')
       process.exit(1)
     }
@@ -32,6 +33,17 @@ export const startServer = async () => {
     await connectRpcServer.register(Auth0, {
       domain: AUTH0_DOMAIN,
       audience: AUTH0_AUDIENCE,
+    })
+
+    connectRpcServer.get('/login', async (_, reply) => {
+      const redirectUrl = new URL(`https://${AUTH0_DOMAIN}/authorize`)
+      redirectUrl.searchParams.set('response_type', 'code')
+      redirectUrl.searchParams.set('client_id', AUTH0_CLIENT_ID) // TODO: add this in the aws / .env's
+      redirectUrl.searchParams.set('redirect_uri', AUTH0_CALLBACK_URL) // TODO: from evans changes
+      redirectUrl.searchParams.set('scope', 'openid profile email')
+      redirectUrl.searchParams.set('state', 'randomOrEncodedAppState')
+
+      reply.redirect(redirectUrl.toString(), 302)
     })
   }
 

@@ -17,7 +17,6 @@ import { checkLocalServerHealth } from '@/app/utils/healthCheck'
 export default function CreateAccountContent() {
   const { incrementOnboardingStep, initializeOnboarding } = useOnboardingStore()
   const [isServerHealthy, setIsServerHealthy] = useState(true)
-  const [_healthCheckComplete, setHealthCheckComplete] = useState(false)
 
   const {
     user,
@@ -45,7 +44,6 @@ export default function CreateAccountContent() {
     const checkHealth = async () => {
       const { isHealthy } = await checkLocalServerHealth()
       setIsServerHealthy(isHealthy)
-      setHealthCheckComplete(true)
     }
 
     // Initial check

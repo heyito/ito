@@ -30,3 +30,21 @@ export interface DictionaryItem {
   updated_at: Date
   deleted_at: Date | null
 }
+
+export interface LlmSettings {
+  id: string
+  user_id: string
+  asr_model: string
+  created_at: Date
+  updated_at: Date
+}
+
+export interface AdvancedSettings {
+  id: string
+  user_id: string
+  llm: {
+    asr_model: string
+  }
+  created_at: Date
+  updated_at: Date
+}

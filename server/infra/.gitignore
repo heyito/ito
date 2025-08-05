@@ -2,6 +2,8 @@
 !jest.config.js
 *.d.ts
 node_modules
+yarn.lock
+bun.lockb
 
 # CDK asset staging directory
 .cdk.staging

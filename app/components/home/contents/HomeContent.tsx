@@ -1,15 +1,58 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { InfoCircle, Play } from '@mynaui/icons-react'
+import {
+  ChartNoAxesColumn,
+  InfoCircle,
+  Play,
+  Copy,
+  Check,
+} from '@mynaui/icons-react'
+import { EXTERNAL_LINKS } from '@/lib/constants/external-links'
 import { useSettingsStore } from '../../../store/useSettingsStore'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip'
 import { useAuthStore } from '@/app/store/useAuthStore'
 import { Interaction } from '@/lib/main/sqlite/models'
+import { TotalWordsIcon } from '../../icons/TotalWordsIcon'
+import { SpeedIcon } from '../../icons/SpeedIcon'
+import {
+  STREAK_MESSAGES,
+  SPEED_MESSAGES,
+  TOTAL_WORDS_MESSAGES,
+  getStreakLevel,
+  getSpeedLevel,
+  getTotalWordsLevel,
+  getActivityMessage,
+} from './activityMessages'
 
 // Interface for interaction statistics
 interface InteractionStats {
   streakDays: number
   totalWords: number
   averageWPM: number
+}
+
+const StatCard = ({
+  title,
+  value,
+  description,
+  icon,
+}: {
+  title: string
+  value: string
+  description: string
+  icon: React.ReactNode
+}) => {
+  return (
+    <div className="flex flex-col p-4 w-1/3 border-2 border-neutral-100 rounded-xl gap-4">
+      <div className="flex flex-row items-center">
+        <div className="flex flex-col gap-1">
+          <div>{title}</div>
+          <div className="font-bold">{value}</div>
+        </div>
+        <div className="flex flex-col items-end flex-1">{icon}</div>
+      </div>
+      <div className="w-full text-neutral-400">{description}</div>
+    </div>
+  )
 }
 
 export default function HomeContent() {
@@ -19,6 +62,8 @@ export default function HomeContent() {
   const [interactions, setInteractions] = useState<Interaction[]>([])
   const [loading, setLoading] = useState(true)
   const [playingAudio, setPlayingAudio] = useState<string | null>(null)
+  const [copiedItems, setCopiedItems] = useState<Set<string>>(new Set())
+  const [tooltipOpen, setTooltipOpen] = useState<string | null>(null)
   const [stats, setStats] = useState<InteractionStats>({
     streakDays: 0,
     totalWords: 0,
@@ -222,6 +267,16 @@ export default function HomeContent() {
   const getDisplayText = (interaction: Interaction) => {
     // Check for errors first
     if (interaction.asr_output?.error) {
+      if (
+        interaction.asr_output.error.includes('No speech detected in audio.') ||
+        interaction.asr_output.error.includes('Unable to transcribe audio.')
+      ) {
+        return {
+          text: 'Audio is silent',
+          isError: true,
+          tooltip: "Ito didn't detect any words so the transcript is empty",
+        }
+      }
       return {
         text: 'Transcription failed',
         isError: true,
@@ -357,29 +412,84 @@ export default function HomeContent() {
 
   const groupedInteractions = groupInteractionsByDate(interactions)
 
+  const copyToClipboard = async (text: string, interactionId: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedItems(prev => new Set(prev).add(interactionId))
+      setTooltipOpen(interactionId) // Keep tooltip open
+
+      // Reset the copied state after 2 seconds
+      setTimeout(() => {
+        setCopiedItems(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(interactionId)
+          return newSet
+        })
+        // Close tooltip if it's still open for this item
+        setTooltipOpen(prev => (prev === interactionId ? null : prev))
+      }, 2000)
+    } catch (error) {
+      console.error('Failed to copy text:', error)
+    }
+  }
+
   return (
     <div className="w-full h-full flex flex-col">
       {/* Fixed Header Content */}
-      <div className="flex-shrink-0 px-36">
+      <div className="flex-shrink-0 px-24">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-medium">
               Welcome back{firstName ? `, ${firstName}!` : '!'}
             </h1>
           </div>
-          <div className="flex items-center text-sm text-gray-700">
-            <span className="flex items-center gap-1 bg-slate-100 px-3 py-2 rounded-l-2xl relative after:content-[''] after:absolute after:right-0 after:top-[17.5%] after:h-[65%] after:w-[2px] after:bg-slate-200">
-              🔥 {formatStreakText(stats.streakDays)}
-            </span>
-            <span className="flex items-center gap-1 bg-slate-100 px-3 py-2 relative after:content-[''] after:absolute after:right-0 after:top-[17.5%] after:h-[65%] after:w-[2px] after:bg-slate-200">
-              🚀 {stats.totalWords} {stats.totalWords === 1 ? 'word' : 'words'}
-            </span>
-            <span className="flex items-center gap-1 bg-slate-100 px-3 py-2 rounded-r-2xl">
-              👍 {stats.averageWPM} WPM
-            </span>
+        </div>
+        <div className="flex gap-4 w-full mb-6">
+          <div className="flex w-full items-center text-sm text-gray-700 gap-2">
+            <StatCard
+              title="Weekly Streak"
+              value={formatStreakText(stats.streakDays)}
+              description={getActivityMessage(
+                STREAK_MESSAGES,
+                getStreakLevel(stats.streakDays),
+              )}
+              icon={
+                <div className="p-2 bg-blue-50 rounded-md">
+                  <ChartNoAxesColumn
+                    className="w-6 h-6 text-blue-400 border-2 p-1 rounded-full"
+                    strokeWidth={4}
+                  />
+                </div>
+              }
+            />
+            <StatCard
+              title="Average Speed"
+              value={`${stats.averageWPM} words / minute`}
+              description={getActivityMessage(
+                SPEED_MESSAGES,
+                getSpeedLevel(stats.averageWPM),
+              )}
+              icon={
+                <div className="p-2 bg-green-50 rounded-md">
+                  <SpeedIcon />
+                </div>
+              }
+            />
+            <StatCard
+              title="Total Words"
+              value={`${stats.totalWords} ${stats.totalWords === 1 ? 'word' : 'words'}`}
+              description={getActivityMessage(
+                TOTAL_WORDS_MESSAGES,
+                getTotalWordsLevel(stats.totalWords),
+              )}
+              icon={
+                <div className="p-2 bg-orange-50 rounded-md">
+                  <TotalWordsIcon />
+                </div>
+              }
+            />
           </div>
         </div>
-        <div className="w-full h-[1px] bg-slate-200 my-10"></div>
 
         {/* Dictation Info Box */}
         <div className="bg-slate-100 rounded-xl p-6 flex items-center justify-between mb-10">
@@ -401,9 +511,9 @@ export default function HomeContent() {
             </div>
           </div>
           <button
-            className="bg-gray-900 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-800 cursor-pointer"
+            className="bg-gray-900 text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-800 cursor-pointer"
             onClick={() =>
-              window.api?.invoke('web-open-url', 'https://www.heyito.ai/')
+              window.api?.invoke('web-open-url', EXTERNAL_LINKS.WEBSITE)
             }
           >
             Explore use cases
@@ -417,7 +527,7 @@ export default function HomeContent() {
       </div>
 
       {/* Scrollable Recent Activity Section */}
-      <div className="flex-1 px-36 overflow-y-auto scrollbar-hide">
+      <div className="flex-1 px-24 overflow-y-auto scrollbar-hide">
         {loading ? (
           <div className="bg-white rounded-lg border border-slate-200 p-8 text-center text-gray-500">
             Loading recent activity...
@@ -465,10 +575,52 @@ export default function HomeContent() {
                           </div>
                         </div>
 
-                        {/* Play button - only shows on hover or when playing */}
+                        {/* Copy and Play buttons - only show on hover or when playing */}
                         <div
-                          className={`${playingAudio === interaction.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200`}
+                          className={`flex items-center gap-2 ${playingAudio === interaction.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200`}
                         >
+                          {/* Copy button */}
+                          {!displayInfo.isError && (
+                            <Tooltip
+                              open={tooltipOpen === interaction.id}
+                              onOpenChange={open => {
+                                if (!copiedItems.has(interaction.id)) {
+                                  setTooltipOpen(open ? interaction.id : null)
+                                }
+                              }}
+                            >
+                              <TooltipTrigger asChild>
+                                <button
+                                  className={`p-1.5 hover:bg-gray-200 rounded transition-colors cursor-pointer ${
+                                    copiedItems.has(interaction.id)
+                                      ? 'text-green-600'
+                                      : 'text-gray-600'
+                                  }`}
+                                  onClick={() =>
+                                    copyToClipboard(
+                                      displayInfo.text,
+                                      interaction.id,
+                                    )
+                                  }
+                                >
+                                  {copiedItems.has(interaction.id) ? (
+                                    <Check className="w-4 h-4" />
+                                  ) : (
+                                    <Copy className="w-4 h-4" />
+                                  )}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>
+                                  {copiedItems.has(interaction.id)
+                                    ? 'Copied 🎉'
+                                    : 'Copy'}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+
+                          {/* Play button */}
                           <button
                             className={`p-1.5 hover:bg-gray-200 rounded transition-colors cursor-pointer ${
                               playingAudio === interaction.id

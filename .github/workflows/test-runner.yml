@@ -15,10 +15,10 @@ jobs:
         uses: oven-sh/setup-bun@v1
 
       - name: Install dependencies
-        run: bun install
+        run: bun install && cd server && bun install && cd ..
 
       - name: Run tests
-        run: bun runLibTests
+        run: bun runAllTests
 
       - name: Check code formatting
         run: bun format:app

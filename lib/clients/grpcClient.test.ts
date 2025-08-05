@@ -42,6 +42,11 @@ mock.module('../main/store', () => ({
     state: 'test-state',
     codeVerifier: 'test-verifier',
   })),
+  getAdvancedSettings: mock(() => ({
+    llm: {
+      asrModel: 'whisper-large-v3',
+    },
+  })),
 }))
 
 mock.module('../main/sqlite/repo', () => ({
@@ -106,7 +111,7 @@ mock.module('../media/active-application', () => ({
 // Mock the entire gRPC stack to avoid network calls
 const mockGrpcClientMethods = {
   transcribeStream: mock(() =>
-    Promise.resolve({ transcript: 'test transcript' }),
+    Promise.resolve({ transcript: 'test transcript' } as any),
   ),
   createNote: mock(() => Promise.resolve({ success: true } as any)),
   updateNote: mock(() => Promise.resolve({ success: true } as any)),
@@ -171,6 +176,10 @@ mock.module('@/app/generated/ito_pb', () => ({
   },
   ListDictionaryItemsRequestSchema: { typeName: 'ListDictionaryItemsRequest' },
   DeleteUserDataRequestSchema: { typeName: 'DeleteUserDataRequest' },
+  UpdateAdvancedSettingsRequestSchema: {
+    typeName: 'UpdateAdvancedSettingsRequest',
+  },
+  GetAdvancedSettingsRequestSchema: { typeName: 'GetAdvancedSettingsRequest' },
 }))
 
 // Mock console to avoid noise
@@ -287,6 +296,29 @@ describe('GrpcClient Business Logic Tests', () => {
 
       mockGrpcClientMethods.transcribeStream.mockResolvedValueOnce({
         transcript: '',
+      })
+
+      const audioStream = (async function* () {
+        yield { data: new Uint8Array([1, 2, 3]) } as any
+      })()
+
+      await grpcClient.transcribeStream(audioStream)
+
+      expect(mockSetFocusedText).not.toHaveBeenCalled()
+    })
+
+    test('should not set focused text for error', async () => {
+      const { grpcClient } = await import('./grpcClient')
+      grpcClient.setAuthToken('test-token')
+
+      mockGrpcClientMethods.transcribeStream.mockResolvedValueOnce({
+        transcript: 'Some transcript',
+        error: {
+          code: 'CLIENT_NO_SPEECH_DETECTED',
+          type: 'audio',
+          message: 'No speech detected in audio.',
+          provider: 'groq',
+        },
       })
 
       const audioStream = (async function* () {

@@ -1,4 +1,4 @@
-import { RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib'
+import { CfnOutput, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import {
   OpenIdConnectProvider,
@@ -17,6 +17,8 @@ import {
   SERVICE_NAME,
 } from './constants'
 import { BlockPublicAccess, Bucket } from 'aws-cdk-lib/aws-s3'
+import { CachePolicy, Distribution } from 'aws-cdk-lib/aws-cloudfront'
+import { S3BucketOrigin, S3Origin } from 'aws-cdk-lib/aws-cloudfront-origins'
 
 export interface GitHubOidcStackProps extends StackProps {
   stages: string[]
@@ -71,6 +73,19 @@ export class GitHubOidcStack extends Stack {
           resources: [bucket.arnForObjects('releases/*')],
         }),
       )
+
+      const distribution = new Distribution(this, `${stage}-ReleasesCDN`, {
+        defaultBehavior: {
+          origin: S3BucketOrigin.withBucketDefaults(bucket, {
+            originPath: '/releases',
+          }),
+          cachePolicy: CachePolicy.CACHING_OPTIMIZED,
+        },
+      })
+
+      new CfnOutput(this, `${stage}-ReleasesCDNUrl`, {
+        value: `https://${distribution.domainName}`,
+      })
     })
 
     // ─── ECR: login + push ─────────────────────────────────────────────────────

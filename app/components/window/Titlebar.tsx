@@ -12,7 +12,8 @@ export const Titlebar = () => {
   const { onboardingCompleted } = useOnboardingStore()
   const { isAuthenticated } = useAuthStore()
   const showOnboarding = !onboardingCompleted || !isAuthenticated
-  const { toggleNavExpanded, setCurrentPage, setSettingsPage } = useMainStore()
+  const { toggleNavExpanded, setCurrentPage, setSettingsPage, navExpanded } =
+    useMainStore()
   const { logoutUser } = useAuth()
   const wcontext = useWindowContext().window
   const [showUserDropdown, setShowUserDropdown] = useState(false)
@@ -69,7 +70,6 @@ export const Titlebar = () => {
   const style: React.CSSProperties = onboardingCompleted
     ? {
         position: 'relative' as const,
-        backgroundColor: '#f8fafc',
         borderBottom: 'none',
       }
     : { position: 'relative' as const }
@@ -90,11 +90,13 @@ export const Titlebar = () => {
             alignItems: 'center',
             gap: '2px',
             zIndex: 10,
-            marginLeft: 100,
           }}
         >
           <div
-            className="titlebar-action-btn hover:bg-slate-200"
+            className={`h-full border-r border-neutral-200 transition-all duration-100 ease-in-out ${navExpanded ? 'w-48' : 'w-20'}`}
+          ></div>
+          <div
+            className="titlebar-action-btn hover:bg-slate-200 border-l border-neutral-200 ml-2"
             style={{
               display: 'flex',
               alignItems: 'center',

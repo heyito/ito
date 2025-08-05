@@ -1,4 +1,4 @@
-name: Deployy Server Worfklow
+name: Deploy Server Worfklow
 
 on:
   workflow_call:
@@ -31,7 +31,7 @@ jobs:
 
   deploy-infra:
     needs: paths-check
-    if: ${{ needs.paths-check.outputs.infra_changed == 'true' }}
+    if: ${{ needs.paths-check.outputs.infra_changed == 'true' || needs.paths-check.outputs.server_changed == 'true'}}
     uses: ./.github/workflows/infra-deploy.yml
     with:
       environment: ${{ inputs.environment }}

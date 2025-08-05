@@ -1,4 +1,12 @@
-<!doctype html>
+interface CallbackPageParams {
+  code: string
+  state: string
+}
+
+export function renderCallbackPage(params: CallbackPageParams): string {
+  const authText = 'Log in successful'
+
+  return `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -99,37 +107,23 @@
         </svg>
       </div>
 
-      <div class="auth-text" id="authText">Log in successful</div>
+      <div class="auth-text" id="authText">${authText}</div>
 
       <button class="button" onclick="openApp()">Open Ito</button>
     </div>
 
     <script>
-      // Extract URL parameters
-      function getUrlParameter(name) {
-        const urlParams = new URLSearchParams(window.location.search)
-        return urlParams.get(name)
-      }
-
-      // Get auth parameters from URL
-      const authCode = getUrlParameter('code')
-      const state = getUrlParameter('state')
-      const userEmail = getUrlParameter('email')
-
-      // Update the auth text with user email if available
-      if (userEmail) {
-        document.getElementById('authText').textContent =
-          `Log in as ${userEmail}`
-      }
-
       function openApp() {
+        const authCode = '${params.code || ''}'
+        const state = '${params.state || ''}'
+        
         if (authCode && state) {
-          // Open the Ito app with a custom protocol
-          window.location.href = `ito://auth/callback?code=${authCode}&state=${state}`
+          window.location.href = \`ito://auth/callback?code=\${authCode}&state=\${state}\`
         } else {
           console.error('Missing required authentication parameters')
         }
       }
     </script>
   </body>
-</html>
+</html>`
+}

@@ -4,6 +4,7 @@ import {
   Note as NotePb,
   Interaction as InteractionPb,
   DictionaryItem as DictionaryItemPb,
+  AdvancedSettings as AdvancedSettingsPb,
   CreateNoteRequestSchema,
   UpdateNoteRequestSchema,
   DeleteNoteRequestSchema,
@@ -17,6 +18,8 @@ import {
   UpdateDictionaryItemRequestSchema,
   ListDictionaryItemsRequestSchema,
   DeleteUserDataRequestSchema,
+  GetAdvancedSettingsRequestSchema,
+  UpdateAdvancedSettingsRequestSchema,
 } from '@/app/generated/ito_pb'
 import { createClient } from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-node'
@@ -26,7 +29,7 @@ import { create } from '@bufbuild/protobuf'
 import { setFocusedText } from '../media/text-writer'
 import { Note, Interaction, DictionaryItem } from '../main/sqlite/models'
 import { DictionaryTable } from '../main/sqlite/repo'
-import { getCurrentUserId } from '../main/store'
+import { getAdvancedSettings, getCurrentUserId } from '../main/store'
 import { ensureValidTokens } from '../auth/events'
 import { Auth0Config } from '../auth/config'
 import { getActiveWindow } from '../media/active-application'
@@ -81,18 +84,24 @@ class GrpcClient {
       }
 
       // Fetch window context
-      const startTimer = performance.now()
       const windowContext = await getActiveWindow()
-      const endTimer = performance.now()
-      console.log(
-        `[gRPC Client] getActiveWindow took ${endTimer - startTimer} ms`,
-      )
       if (windowContext) {
         headers.set('window-title', windowContext.title)
         headers.set('app-name', windowContext.appName)
       }
+
+      // Add ASR model from advanced settings
+      const advancedSettings = getAdvancedSettings()
+      console.log(
+        '[gRPC Client] Using ASR model from advanced settings:',
+        advancedSettings,
+      )
+      headers.set('asr-model', advancedSettings.llm.asrModel)
     } catch (error) {
-      console.error('Failed to fetch vocabulary for transcription:', error)
+      console.error(
+        'Failed to fetch vocabulary/settings for transcription:',
+        error,
+      )
     }
 
     return headers
@@ -114,8 +123,6 @@ class GrpcClient {
   }
 
   private async handleAuthError(error: any): Promise<boolean> {
-    console.log('handleAuthError', error)
-
     // Check if this is an authentication error
     if (error instanceof ConnectError && error.code === Code.Unauthenticated) {
       console.log(
@@ -176,7 +183,7 @@ class GrpcClient {
       })
 
       // Type the transcribed text into the focused application
-      if (response.transcript) {
+      if (response.transcript && !response.error) {
         setFocusedText(response.transcript)
       }
 
@@ -366,6 +373,30 @@ class GrpcClient {
     return this.withRetry(async () => {
       const request = create(DeleteUserDataRequestSchema, {})
       return await this.client.deleteUserData(request, {
+        headers: this.getHeaders(),
+      })
+    })
+  }
+
+  async getAdvancedSettings(): Promise<AdvancedSettingsPb> {
+    return this.withRetry(async () => {
+      const request = create(GetAdvancedSettingsRequestSchema, {})
+      return await this.client.getAdvancedSettings(request, {
+        headers: this.getHeaders(),
+      })
+    })
+  }
+
+  async updateAdvancedSettings(settings: {
+    llm: { asrModel: string }
+  }): Promise<AdvancedSettingsPb> {
+    return this.withRetry(async () => {
+      const request = create(UpdateAdvancedSettingsRequestSchema, {
+        llm: {
+          asrModel: settings.llm.asrModel,
+        },
+      })
+      return await this.client.updateAdvancedSettings(request, {
         headers: this.getHeaders(),
       })
     })

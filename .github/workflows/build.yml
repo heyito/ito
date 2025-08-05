@@ -5,8 +5,8 @@ on:
     types: [published]
 
 permissions:
-  contents: read
-  id-token: write  # required for OIDC role assumption
+  contents: write
+  id-token: write # required for OIDC role assumption
 
 jobs:
   build:
@@ -34,10 +34,10 @@ jobs:
           echo "VITE_AUTH0_DOMAIN=\"${{ secrets.VITE_AUTH0_DOMAIN }}\"" >> .env
           echo "VITE_AUTH0_CLIENT_ID=\"${{ secrets.VITE_AUTH0_CLIENT_ID }}\"" >> .env
           echo "VITE_AUTH0_AUDIENCE=\"${{ secrets.VITE_AUTH0_AUDIENCE }}\"" >> .env
-          echo "VITE_AUTH0_REDIRECT_URI=\"${{ secrets.VITE_AUTH0_REDIRECT_URI }}\"" >> .env
           echo "VITE_AMPLITUDE_API_KEY=\"${{ secrets.VITE_AMPLITUDE_API_KEY }}\"" >> .env
           echo "VITE_GRPC_BASE_URL=\"${{ vars.VITE_GRPC_BASE_URL }}\"" >> .env
           echo "VITE_UPDATER_BUCKET=\"${{ vars.VITE_UPDATER_BUCKET }}\"" >> .env
+          echo "VITE_ITO_VERSION=\"${GITHUB_REF#refs/tags/v}\"" >> .env
           echo "APPLE_ID=\"${{ secrets.APPLE_ID }}\"" >> .env
           echo "APPLE_TEAM_ID=\"${{ secrets.APPLE_TEAM_ID }}\"" >> .env
           echo "APPLE_APP_SPECIFIC_PASSWORD=\"${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}\"" >> .env
@@ -45,7 +45,6 @@ jobs:
           echo "CSC_KEY_PASSWORD=\"${{ secrets.MACOS_CERT_PASSWORD }}\"" >> .env
           echo "GH_TOKEN=\"${{ secrets.GITHUB_TOKEN }}\"" >> .env
           echo "GRPC_BASE_URL=\"${{ vars.GRPC_BASE_URL }}\"" >> .env
-          echo "ITO_VERSION=\"${GITHUB_REF#refs/tags/v}\"" >> .env
           echo "Created .env file:"
           cat .env
 
@@ -73,8 +72,48 @@ jobs:
           echo "Deploying version ${{ github.ref_name }} to S3"
 
           BUILD_OUTPUT=dist
+          BUCKET=s3://${{ vars.AWS_STAGE }}-ito-releases/releases
 
-          aws s3 cp $BUILD_OUTPUT s3://${{ vars.AWS_STAGE }}-ito-releases/releases/${{ github.ref_name }}/ --recursive
+          echo "Listing existing files in root of releases/"
+          aws s3 ls "$BUCKET/" | grep -vE '/$' | awk '{print $4}' > existing_files.txt
 
-          # Upload same files to root of releases/ (acts as 'latest')
-          aws s3 cp $BUILD_OUTPUT s3://${{ vars.AWS_STAGE }}-ito-releases/releases/ --recursive
+          echo "Identifying which files to delete post-upload"
+
+          find $BUILD_OUTPUT -maxdepth 1 \( \
+            -name '*.yml' -o \
+            -name '*universal-mac.zip' -o \
+            -name '*universal-mac.zip.blockmap' -o \
+            -name '*.dmg' -o \
+            -name '*.dmg.blockmap' \
+          \) | xargs -I{} basename {} > uploaded_root_files.txt
+
+          echo "Uploading full dist to versioned folder: $BUCKET/${{ github.ref_name }}/"
+          aws s3 cp $BUILD_OUTPUT $BUCKET/${{ github.ref_name }}/ --recursive
+
+          echo "Uploading selected files to root of releases/"
+          for FILE in \
+            $(find $BUILD_OUTPUT -maxdepth 1 -name '*.yml') \
+            $(find $BUILD_OUTPUT -maxdepth 1 -name '*universal-mac.zip') \
+            $(find $BUILD_OUTPUT -maxdepth 1 -name '*universal-mac.zip.blockmap') \
+            $(find $BUILD_OUTPUT -maxdepth 1 -name '*.dmg') \
+            $(find $BUILD_OUTPUT -maxdepth 1 -name '*.dmg.blockmap')
+          do
+            aws s3 cp "$FILE" $BUCKET/
+          done
+
+          # Compare and find stale files (exist in bucket but not in upload list)
+          comm -23 <(sort existing_files.txt) <(sort uploaded_root_files.txt) > stale_files.txt
+
+          echo "Stale files identified for deletion:"
+          cat stale_files.txt
+
+          # Delete each stale file
+          while IFS= read -r file; do
+            echo "Deleting stale file: $file"
+            aws s3 rm "$BUCKET/$file"
+          done < stale_files.txt
+      - name: Upload DMG to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: dist/Ito-Installer.dmg

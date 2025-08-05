@@ -57,19 +57,26 @@ export class TranscriptionService {
             transcript: response.transcript,
             transcriptLength: response.transcript?.length || 0,
             hasTranscript: !!response.transcript,
+            hasError: !!response.error,
+            errorCode: response.error?.code,
+            errorType: response.error?.type,
+            errorProvider: response.error?.provider,
             interactionId: this.currentInteractionId,
           },
         )
-        // Create interaction when transcription completes successfully
-        this.createInteraction(response.transcript)
+
+        const errorMessage = response.error ? response.error.message : undefined
+        if (response.error && response.error.code == 'CLIENT_AUDIO_TOO_SHORT') {
+          log.info(
+            '[TranscriptionService] Audio too short, skipping interaction.',
+          )
+        } else {
+          this.createInteraction(response.transcript, errorMessage)
+        }
       })
       .catch(error => {
-        console.error(
-          '[TranscriptionService] Transcription error occurred:',
-          error,
-        )
         log.error(
-          '[gRPC Service] An unexpected error occurred during transcription:',
+          '[TranscriptionService] An unexpected error occurred during transcription:',
           error,
         )
         // Still create interaction even if transcription failed

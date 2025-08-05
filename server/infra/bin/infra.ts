@@ -47,7 +47,7 @@ export class AppStage extends Stage {
 
     new ObservabilityStack(this, `${ITO_PREFIX}Observability`, {
       env: props.env,
-      fargateService: service.fargateService,
+      albFargate: service.albFargate,
     })
   }
 }

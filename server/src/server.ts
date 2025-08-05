@@ -6,6 +6,8 @@ import itoServiceRoutes from './services/ito/itoService.js'
 import { kUser } from './auth/userContext.js'
 import { errorInterceptor } from './services/errorInterceptor.js'
 import { loggingInterceptor } from './services/loggingInterceptor.js'
+import { createValidationInterceptor } from './services/validationInterceptor.js'
+import { renderCallbackPage } from './utils/renderCallback.js'
 import dotenv from 'dotenv'
 
 dotenv.config()
@@ -47,8 +49,12 @@ export const startServer = async () => {
     // Register the Connect RPC plugin with our service routes and interceptors
     await fastify.register(fastifyConnectPlugin, {
       routes: itoServiceRoutes,
-      // Order matters: logging -> error handling
-      interceptors: [loggingInterceptor, errorInterceptor],
+      // Order matters: logging -> validation -> error handling
+      interceptors: [
+        loggingInterceptor,
+        createValidationInterceptor(),
+        errorInterceptor,
+      ],
       contextValues: request => {
         // Pass Auth0 user info from Fastify request to Connect RPC context
         if (REQUIRE_AUTH && request.user && request.user.sub) {
@@ -72,6 +78,19 @@ export const startServer = async () => {
   connectRpcServer.get('/', async (_, reply) => {
     reply.type('text/plain')
     reply.send('Welcome to the Ito Connect RPC server!')
+  })
+
+  // Callback endpoint (alternative route for same functionality)
+  connectRpcServer.get('/callback', async (request, reply) => {
+    const { code, state } = request.query as {
+      code: string
+      state: string
+    }
+
+    const html = renderCallbackPage({ code, state })
+
+    reply.type('text/html')
+    reply.send(html)
   })
 
   // Start the server

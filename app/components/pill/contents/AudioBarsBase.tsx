@@ -3,10 +3,12 @@ interface AudioBarsBaseProps {
   barColor: string
 }
 
+export const BAR_COUNT = 21
+
 export const AudioBarsBase = ({ heights, barColor }: AudioBarsBaseProps) => {
   const barStyle = (height: number): React.CSSProperties => {
     return {
-      width: '0.75px',
+      width: '2px',
       backgroundColor: barColor,
       borderRadius: '2.5px',
       margin: '0 0.25px',

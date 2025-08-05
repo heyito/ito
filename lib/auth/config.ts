@@ -3,7 +3,7 @@ export const Auth0Config = {
   domain: import.meta.env.VITE_AUTH0_DOMAIN,
   clientId: import.meta.env.VITE_AUTH0_CLIENT_ID,
   audience: import.meta.env.VITE_AUTH0_AUDIENCE,
-  redirectUri: import.meta.env.VITE_AUTH0_REDIRECT_URI,
+  redirectUri: `${import.meta.env.VITE_GRPC_BASE_URL}/callback`,
   scope: 'openid profile email offline_access',
   useRefreshTokens: true,
   cacheLocation: 'localstorage' as const,

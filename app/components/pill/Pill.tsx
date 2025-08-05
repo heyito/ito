@@ -27,7 +27,7 @@ const globalStyles = `
   }
 `
 
-const BAR_UPDATE_INTERVAL = 48
+const BAR_UPDATE_INTERVAL = 64
 
 const Pill = () => {
   // Get initial values from store using separate selectors to avoid infinite re-renders

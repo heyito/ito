@@ -1,8 +1,13 @@
 import { create } from 'zustand'
 import { STORE_KEYS } from '../../lib/constants/store-keys'
 
-type PageType = 'home' | 'dictionary' | 'notes' | 'settings'
-type SettingsPageType = 'general' | 'keyboard' | 'audio' | 'account'
+type PageType = 'home' | 'dictionary' | 'notes' | 'settings' | 'about'
+type SettingsPageType =
+  | 'general'
+  | 'keyboard'
+  | 'audio'
+  | 'account'
+  | 'advanced'
 
 interface MainStore {
   navExpanded: boolean

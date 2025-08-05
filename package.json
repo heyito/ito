@@ -1,6 +1,6 @@
 {
   "name": "ito",
-  "version": "0.0.0",
+  "version": "0.2.3",
   "description": "Ito, a smart voice assistant",
   "main": "./out/main/main.js",
   "license": "MIT",
@@ -34,7 +34,9 @@
     "format:app": "prettier app lib --check",
     "format": "prettier . --check",
     "start": "electron-vite preview",
+    "runAllTests": "bun runLibTests",
     "runLibTests": "find lib -name \"*.test.ts\" | xargs -I {} sh -c 'bun test --preload lib/__tests__/setup.ts {} || exit 255'",
+    "runServerTests": "find server/src -name \"*.test.ts\" | xargs -I {} sh -c 'bun test {} || exit 255'",
     "clean": "rm -rf node_modules dist .vite",
     "clean:ito-app-data": "rm -rf ~/Library/Application\\ Support/Ito",
     "postinstall": "bunx @electron/rebuild",

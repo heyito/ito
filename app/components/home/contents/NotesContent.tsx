@@ -300,7 +300,7 @@ export default function NotesContent() {
   return (
     <div
       ref={containerRef}
-      className="w-full max-w-6xl mx-auto px-4 h-200 overflow-y-auto relative px-36"
+      className="w-full max-w-6xl mx-auto px-4 h-200 overflow-y-auto relative px-24"
       style={{
         height: '640px',
         msOverflowStyle: 'none' /* Internet Explorer 10+ */,

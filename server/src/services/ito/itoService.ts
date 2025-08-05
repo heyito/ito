@@ -1,6 +1,5 @@
 import type { ConnectRouter } from '@connectrpc/connect'
 import {
-  TranscribeFileRequest,
   AudioChunk,
   TranscriptionResponseSchema,
   ItoService as ItoServiceDesc,
@@ -10,6 +9,9 @@ import {
   InteractionSchema,
   DictionaryItem,
   DictionaryItemSchema,
+  AdvancedSettings,
+  AdvancedSettingsSchema,
+  LlmSettingsSchema,
 } from '../../generated/ito_pb.js'
 import { create } from '@bufbuild/protobuf'
 import type { HandlerContext } from '@connectrpc/connect'
@@ -18,16 +20,21 @@ import {
   DictionaryRepository,
   InteractionsRepository,
   NotesRepository,
+  AdvancedSettingsRepository,
 } from '../../db/repo.js'
 import {
   Note as DbNote,
   Interaction as DbInteraction,
   DictionaryItem as DbDictionaryItem,
+  AdvancedSettings as DbAdvancedSettings,
 } from '../../db/models.js'
 import { ConnectError, Code } from '@connectrpc/connect'
 import { kUser } from '../../auth/userContext.js'
 import { ItoMode } from './constants.js'
 import { WindowContext } from './types.js'
+import { HeaderValidator } from '../../validation/HeaderValidator.js'
+import { errorToProtobuf } from '../../clients/errors.js'
+import { ClientProvider } from '../../clients/providers.js'
 
 /**
  * --- NEW: WAV Header Generation Function ---
@@ -119,19 +126,23 @@ function dbToDictionaryItemPb(
   })
 }
 
+function dbToAdvancedSettingsPb(
+  dbAdvancedSettings: DbAdvancedSettings,
+): AdvancedSettings {
+  return create(AdvancedSettingsSchema, {
+    id: dbAdvancedSettings.id,
+    userId: dbAdvancedSettings.user_id,
+    createdAt: dbAdvancedSettings.created_at.toISOString(),
+    updatedAt: dbAdvancedSettings.updated_at.toISOString(),
+    llm: create(LlmSettingsSchema, {
+      asrModel: dbAdvancedSettings.llm.asr_model,
+    }),
+  })
+}
+
 // Export the service implementation as a function that takes a ConnectRouter
 export default (router: ConnectRouter) => {
   router.service(ItoServiceDesc, {
-    async transcribeFile(request: TranscribeFileRequest) {
-      if (!request.audioData || request.audioData.length === 0) {
-        throw new Error('No audio data received')
-      }
-      const dummyTranscript = 'This is a transcript from the whole file.'
-      return create(TranscriptionResponseSchema, {
-        transcript: dummyTranscript,
-      })
-    },
-
     async transcribeStream(
       requests: AsyncIterable<AudioChunk>,
       context: HandlerContext,
@@ -171,16 +182,34 @@ export default (router: ConnectRouter) => {
         )
         const fullAudioWAV = Buffer.concat([wavHeader, fullAudio])
 
-        // 3. Extract vocabulary from gRPC metadata
+        // 3. Extract and validate vocabulary and ASR model from gRPC metadata
         const vocabularyHeader = context.requestHeader.get('vocabulary')
         const vocabulary = vocabularyHeader
-          ? vocabularyHeader.split(',')
-          : undefined
+          ? HeaderValidator.validateVocabulary(vocabularyHeader)
+          : []
 
-        // 4. Send the corrected WAV file.
+        const asrModelHeader = context.requestHeader.get('asr-model')
+        // Use header value if provided, otherwise fall back to environment variable for backwards compatibility
+        const asrModelToValidate =
+          asrModelHeader || process.env.GROQ_TRANSCRIPTION_MODEL
+
+        if (!asrModelToValidate) {
+          throw new ConnectError(
+            'ASR model must be provided either in header or GROQ_TRANSCRIPTION_MODEL environment variable',
+            Code.InvalidArgument,
+          )
+        }
+
+        const asrModel = HeaderValidator.validateAsrModel(asrModelToValidate)
+        console.log(
+          `[Transcription] Using validated ASR model: ${asrModel} (source: ${asrModelHeader ? 'header' : 'env'})`,
+        )
+
+        // 4. Send the corrected WAV file using the validated ASR model from headers.
         let transcript = await groqClient.transcribeAudio(
           fullAudioWAV,
           'wav',
+          asrModel,
           vocabulary,
         )
 
@@ -206,10 +235,17 @@ export default (router: ConnectRouter) => {
           transcript,
         })
       } catch (error: any) {
+        // Re-throw ConnectError validation errors - these should bubble up
+        if (error instanceof ConnectError) {
+          throw error
+        }
+
         console.error('Failed to process transcription via GroqClient:', error)
-        // return error response
+
+        // Return structured error response
         return create(TranscriptionResponseSchema, {
-          transcript: `Error processing transcription: ${error?.message}`,
+          transcript: '',
+          error: errorToProtobuf(error, ClientProvider.GROQ),
         })
       }
     },
@@ -365,6 +401,44 @@ export default (router: ConnectRouter) => {
       ])
       console.log(`Successfully deleted all data for user: ${userId}`)
       return {}
+    },
+
+    async getAdvancedSettings(_request, context: HandlerContext) {
+      const user = context.values.get(kUser)
+      const userId = user?.sub
+      if (!userId) {
+        throw new ConnectError('User not authenticated', Code.Unauthenticated)
+      }
+
+      const settings = await AdvancedSettingsRepository.findByUserId(userId)
+      if (!settings) {
+        // Return default settings if none exist
+        return create(AdvancedSettingsSchema, {
+          id: '',
+          userId: userId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          llm: create(LlmSettingsSchema, {
+            asrModel: 'whisper-large-v3',
+          }),
+        })
+      }
+
+      return dbToAdvancedSettingsPb(settings)
+    },
+
+    async updateAdvancedSettings(request, context: HandlerContext) {
+      const user = context.values.get(kUser)
+      const userId = user?.sub
+      if (!userId) {
+        throw new ConnectError('User not authenticated', Code.Unauthenticated)
+      }
+
+      const updatedSettings = await AdvancedSettingsRepository.upsert(
+        userId,
+        request,
+      )
+      return dbToAdvancedSettingsPb(updatedSettings)
     },
   })
 }

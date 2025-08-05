@@ -156,14 +156,14 @@ export const getTotalWordsLevel = (totalWords: number): number => {
   return 3
 }
 
-// Helper function to get a random message from a specific level
-export const getRandomMessage = (
+export const getActivityMessage = (
   category: ActivityMessageCategory,
   level: number,
 ): string => {
   const messages = category.levels[level]?.messages || []
   if (messages.length === 0) return 'You are off to great start'
 
-  const randomIndex = Math.floor(Math.random() * messages.length)
-  return messages[randomIndex].text
+  const hour = new Date().getHours()
+  const seed = hour % messages.length
+  return messages[seed].text
 }

@@ -20,7 +20,7 @@ import {
   getStreakLevel,
   getSpeedLevel,
   getTotalWordsLevel,
-  getRandomMessage,
+  getActivityMessage,
 } from './activityMessages'
 
 // Interface for interaction statistics
@@ -449,7 +449,7 @@ export default function HomeContent() {
             <StatCard
               title="Weekly Streak"
               value={formatStreakText(stats.streakDays)}
-              description={getRandomMessage(
+              description={getActivityMessage(
                 STREAK_MESSAGES,
                 getStreakLevel(stats.streakDays),
               )}
@@ -465,7 +465,7 @@ export default function HomeContent() {
             <StatCard
               title="Average Speed"
               value={`${stats.averageWPM} words / minute`}
-              description={getRandomMessage(
+              description={getActivityMessage(
                 SPEED_MESSAGES,
                 getSpeedLevel(stats.averageWPM),
               )}
@@ -478,7 +478,7 @@ export default function HomeContent() {
             <StatCard
               title="Total Words"
               value={`${stats.totalWords} ${stats.totalWords === 1 ? 'word' : 'words'}`}
-              description={getRandomMessage(
+              description={getActivityMessage(
                 TOTAL_WORDS_MESSAGES,
                 getTotalWordsLevel(stats.totalWords),
               )}

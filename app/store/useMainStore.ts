@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { STORE_KEYS } from '../../lib/constants/store-keys'
 
-type PageType = 'home' | 'dictionary' | 'notes' | 'settings'
+type PageType = 'home' | 'dictionary' | 'notes' | 'settings' | 'about'
 type SettingsPageType =
   | 'general'
   | 'keyboard'

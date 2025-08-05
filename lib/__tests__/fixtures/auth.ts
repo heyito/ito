@@ -117,14 +117,12 @@ export const VALID_ENV_VARS = {
   VITE_AUTH0_DOMAIN: 'test-domain.auth0.com',
   VITE_AUTH0_CLIENT_ID: 'test-client-id',
   VITE_AUTH0_AUDIENCE: 'https://api.test.com',
-  VITE_AUTH0_REDIRECT_URI: 'http://localhost:3000/callback',
 }
 
 export const INCOMPLETE_ENV_VARS = {
   VITE_AUTH0_DOMAIN: 'test-domain.auth0.com',
   VITE_AUTH0_CLIENT_ID: '', // Missing
   VITE_AUTH0_AUDIENCE: 'https://api.test.com',
-  VITE_AUTH0_REDIRECT_URI: '', // Missing
 }
 
 // Helper functions

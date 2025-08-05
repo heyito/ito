@@ -109,7 +109,7 @@ export default function SignInContent() {
   const { loadEntries } = useDictionaryStore()
   const { resetOnboarding } = useOnboardingStore()
   const [isServerHealthy, setIsServerHealthy] = useState(true)
-  const [healthCheckComplete, setHealthCheckComplete] = useState(false)
+  const [_healthCheckComplete, setHealthCheckComplete] = useState(false)
 
   const {
     user,

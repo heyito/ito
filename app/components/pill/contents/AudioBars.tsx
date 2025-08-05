@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { AudioBarsBase } from './AudioBarsBase'
+import { AudioBarsBase, BAR_COUNT } from './AudioBarsBase'
 
 // A new component to very basic audio visualization
 export const AudioBars = ({ volumeHistory }: { volumeHistory: number[] }) => {
   // Base heights for visual variety
-  const bars = Array(42).fill(1)
+  const bars = Array(BAR_COUNT).fill(1)
   const [activeBarIndex, setActiveBarIndex] = useState(0)
 
   useEffect(() => {

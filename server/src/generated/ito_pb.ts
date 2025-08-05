@@ -2,8 +2,8 @@
 // @generated from file ito.proto (package ito, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "./buf/validate/validate_pb.js";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file ito.proto.
  */
 export const file_ito: GenFile = /*@__PURE__*/
-  fileDesc("CglpdG8ucHJvdG8SA2l0byIHCgVFbXB0eSIrCgpBdWRpb0NodW5rEh0KCmF1ZGlvX2RhdGEYASABKAxCCbpIBnoEGICAQCIrChVUcmFuc2NyaXB0aW9uUmVzcG9uc2USEgoKdHJhbnNjcmlwdBgBIAEoCSKIAQoETm90ZRIKCgJpZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEhYKDmludGVyYWN0aW9uX2lkGAMgASgJEg8KB2NvbnRlbnQYBCABKAkSEgoKY3JlYXRlZF9hdBgFIAEoCRISCgp1cGRhdGVkX2F0GAYgASgJEhIKCmRlbGV0ZWRfYXQYByABKAkiSAoRQ3JlYXRlTm90ZVJlcXVlc3QSCgoCaWQYASABKAkSFgoOaW50ZXJhY3Rpb25faWQYAiABKAkSDwoHY29udGVudBgDIAEoCSIcCg5HZXROb3RlUmVxdWVzdBIKCgJpZBgBIAEoCSIrChBMaXN0Tm90ZXNSZXF1ZXN0EhcKD3NpbmNlX3RpbWVzdGFtcBgBIAEoCSItChFMaXN0Tm90ZXNSZXNwb25zZRIYCgVub3RlcxgBIAMoCzIJLml0by5Ob3RlIjAKEVVwZGF0ZU5vdGVSZXF1ZXN0EgoKAmlkGAEgASgJEg8KB2NvbnRlbnQYAiABKAkiHwoRRGVsZXRlTm90ZVJlcXVlc3QSCgoCaWQYASABKAki0QEKC0ludGVyYWN0aW9uEgoKAmlkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkSDQoFdGl0bGUYAyABKAkSEgoKYXNyX291dHB1dBgEIAEoCRISCgpsbG1fb3V0cHV0GAUgASgJEh0KCXJhd19hdWRpbxgGIAEoDEIKukgHegUYgMLXLxITCgtkdXJhdGlvbl9tcxgHIAEoBRISCgpjcmVhdGVkX2F0GAggASgJEhIKCnVwZGF0ZWRfYXQYCSABKAkSEgoKZGVsZXRlZF9hdBgKIAEoCSKRAQoYQ3JlYXRlSW50ZXJhY3Rpb25SZXF1ZXN0EgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEhIKCmFzcl9vdXRwdXQYAyABKAkSEgoKbGxtX291dHB1dBgEIAEoCRIdCglyYXdfYXVkaW8YBSABKAxCCrpIB3oFGIDC1y8SEwoLZHVyYXRpb25fbXMYBiABKAUiIwoVR2V0SW50ZXJhY3Rpb25SZXF1ZXN0EgoKAmlkGAEgASgJIjIKF0xpc3RJbnRlcmFjdGlvbnNSZXF1ZXN0EhcKD3NpbmNlX3RpbWVzdGFtcBgBIAEoCSJCChhMaXN0SW50ZXJhY3Rpb25zUmVzcG9uc2USJgoMaW50ZXJhY3Rpb25zGAEgAygLMhAuaXRvLkludGVyYWN0aW9uIjUKGFVwZGF0ZUludGVyYWN0aW9uUmVxdWVzdBIKCgJpZBgBIAEoCRINCgV0aXRsZRgCIAEoCSImChhEZWxldGVJbnRlcmFjdGlvblJlcXVlc3QSCgoCaWQYASABKAkijgEKDkRpY3Rpb25hcnlJdGVtEgoKAmlkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkSDAoEd29yZBgDIAEoCRIVCg1wcm9udW5jaWF0aW9uGAQgASgJEhIKCmNyZWF0ZWRfYXQYBSABKAkSEgoKdXBkYXRlZF9hdBgGIAEoCRISCgpkZWxldGVkX2F0GAcgASgJIk4KG0NyZWF0ZURpY3Rpb25hcnlJdGVtUmVxdWVzdBIKCgJpZBgBIAEoCRIMCgR3b3JkGAIgASgJEhUKDXByb251bmNpYXRpb24YAyABKAkiNQoaTGlzdERpY3Rpb25hcnlJdGVtc1JlcXVlc3QSFwoPc2luY2VfdGltZXN0YW1wGAEgASgJIkEKG0xpc3REaWN0aW9uYXJ5SXRlbXNSZXNwb25zZRIiCgVpdGVtcxgBIAMoCzITLml0by5EaWN0aW9uYXJ5SXRlbSJOChtVcGRhdGVEaWN0aW9uYXJ5SXRlbVJlcXVlc3QSCgoCaWQYASABKAkSDAoEd29yZBgCIAEoCRIVCg1wcm9udW5jaWF0aW9uGAMgASgJIikKG0RlbGV0ZURpY3Rpb25hcnlJdGVtUmVxdWVzdBIKCgJpZBgBIAEoCSIXChVEZWxldGVVc2VyRGF0YVJlcXVlc3QiIAoLTGxtU2V0dGluZ3MSEQoJYXNyX21vZGVsGAEgASgJInYKEEFkdmFuY2VkU2V0dGluZ3MSCgoCaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCRISCgpjcmVhdGVkX2F0GAMgASgJEhIKCnVwZGF0ZWRfYXQYBCABKAkSHQoDbGxtGAUgASgLMhAuaXRvLkxsbVNldHRpbmdzIhwKGkdldEFkdmFuY2VkU2V0dGluZ3NSZXF1ZXN0Ij4KHVVwZGF0ZUFkdmFuY2VkU2V0dGluZ3NSZXF1ZXN0Eh0KA2xsbRgBIAEoCzIQLml0by5MbG1TZXR0aW5nczLDCQoKSXRvU2VydmljZRJBChBUcmFuc2NyaWJlU3RyZWFtEg8uaXRvLkF1ZGlvQ2h1bmsaGi5pdG8uVHJhbnNjcmlwdGlvblJlc3BvbnNlKAESLwoKQ3JlYXRlTm90ZRIWLml0by5DcmVhdGVOb3RlUmVxdWVzdBoJLml0by5Ob3RlEikKB0dldE5vdGUSEy5pdG8uR2V0Tm90ZVJlcXVlc3QaCS5pdG8uTm90ZRI6CglMaXN0Tm90ZXMSFS5pdG8uTGlzdE5vdGVzUmVxdWVzdBoWLml0by5MaXN0Tm90ZXNSZXNwb25zZRIvCgpVcGRhdGVOb3RlEhYuaXRvLlVwZGF0ZU5vdGVSZXF1ZXN0GgkuaXRvLk5vdGUSMAoKRGVsZXRlTm90ZRIWLml0by5EZWxldGVOb3RlUmVxdWVzdBoKLml0by5FbXB0eRJEChFDcmVhdGVJbnRlcmFjdGlvbhIdLml0by5DcmVhdGVJbnRlcmFjdGlvblJlcXVlc3QaEC5pdG8uSW50ZXJhY3Rpb24SPgoOR2V0SW50ZXJhY3Rpb24SGi5pdG8uR2V0SW50ZXJhY3Rpb25SZXF1ZXN0GhAuaXRvLkludGVyYWN0aW9uEk8KEExpc3RJbnRlcmFjdGlvbnMSHC5pdG8uTGlzdEludGVyYWN0aW9uc1JlcXVlc3QaHS5pdG8uTGlzdEludGVyYWN0aW9uc1Jlc3BvbnNlEkQKEVVwZGF0ZUludGVyYWN0aW9uEh0uaXRvLlVwZGF0ZUludGVyYWN0aW9uUmVxdWVzdBoQLml0by5JbnRlcmFjdGlvbhI+ChFEZWxldGVJbnRlcmFjdGlvbhIdLml0by5EZWxldGVJbnRlcmFjdGlvblJlcXVlc3QaCi5pdG8uRW1wdHkSTQoUQ3JlYXRlRGljdGlvbmFyeUl0ZW0SIC5pdG8uQ3JlYXRlRGljdGlvbmFyeUl0ZW1SZXF1ZXN0GhMuaXRvLkRpY3Rpb25hcnlJdGVtElgKE0xpc3REaWN0aW9uYXJ5SXRlbXMSHy5pdG8uTGlzdERpY3Rpb25hcnlJdGVtc1JlcXVlc3QaIC5pdG8uTGlzdERpY3Rpb25hcnlJdGVtc1Jlc3BvbnNlEk0KFFVwZGF0ZURpY3Rpb25hcnlJdGVtEiAuaXRvLlVwZGF0ZURpY3Rpb25hcnlJdGVtUmVxdWVzdBoTLml0by5EaWN0aW9uYXJ5SXRlbRJEChREZWxldGVEaWN0aW9uYXJ5SXRlbRIgLml0by5EZWxldGVEaWN0aW9uYXJ5SXRlbVJlcXVlc3QaCi5pdG8uRW1wdHkSOAoORGVsZXRlVXNlckRhdGESGi5pdG8uRGVsZXRlVXNlckRhdGFSZXF1ZXN0GgouaXRvLkVtcHR5Ek0KE0dldEFkdmFuY2VkU2V0dGluZ3MSHy5pdG8uR2V0QWR2YW5jZWRTZXR0aW5nc1JlcXVlc3QaFS5pdG8uQWR2YW5jZWRTZXR0aW5ncxJTChZVcGRhdGVBZHZhbmNlZFNldHRpbmdzEiIuaXRvLlVwZGF0ZUFkdmFuY2VkU2V0dGluZ3NSZXF1ZXN0GhUuaXRvLkFkdmFuY2VkU2V0dGluZ3NiBnByb3RvMw", [file_buf_validate_validate]);
+  fileDesc("CglpdG8ucHJvdG8SA2l0byIHCgVFbXB0eSLRAQoLQ2xpZW50RXJyb3ISDAoEY29kZRgBIAEoCRIcCgR0eXBlGAIgASgOMg4uaXRvLkVycm9yVHlwZRIPCgdtZXNzYWdlGAMgASgJEiUKCHByb3ZpZGVyGAQgASgOMhMuaXRvLkNsaWVudFByb3ZpZGVyEi4KB2RldGFpbHMYBSADKAsyHS5pdG8uQ2xpZW50RXJyb3IuRGV0YWlsc0VudHJ5Gi4KDERldGFpbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIisKCkF1ZGlvQ2h1bmsSHQoKYXVkaW9fZGF0YRgBIAEoDEIJukgGegQYgIBAIkwKFVRyYW5zY3JpcHRpb25SZXNwb25zZRISCgp0cmFuc2NyaXB0GAEgASgJEh8KBWVycm9yGAIgASgLMhAuaXRvLkNsaWVudEVycm9yIogBCgROb3RlEgoKAmlkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkSFgoOaW50ZXJhY3Rpb25faWQYAyABKAkSDwoHY29udGVudBgEIAEoCRISCgpjcmVhdGVkX2F0GAUgASgJEhIKCnVwZGF0ZWRfYXQYBiABKAkSEgoKZGVsZXRlZF9hdBgHIAEoCSJIChFDcmVhdGVOb3RlUmVxdWVzdBIKCgJpZBgBIAEoCRIWCg5pbnRlcmFjdGlvbl9pZBgCIAEoCRIPCgdjb250ZW50GAMgASgJIhwKDkdldE5vdGVSZXF1ZXN0EgoKAmlkGAEgASgJIisKEExpc3ROb3Rlc1JlcXVlc3QSFwoPc2luY2VfdGltZXN0YW1wGAEgASgJIi0KEUxpc3ROb3Rlc1Jlc3BvbnNlEhgKBW5vdGVzGAEgAygLMgkuaXRvLk5vdGUiMAoRVXBkYXRlTm90ZVJlcXVlc3QSCgoCaWQYASABKAkSDwoHY29udGVudBgCIAEoCSIfChFEZWxldGVOb3RlUmVxdWVzdBIKCgJpZBgBIAEoCSLRAQoLSW50ZXJhY3Rpb24SCgoCaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCRINCgV0aXRsZRgDIAEoCRISCgphc3Jfb3V0cHV0GAQgASgJEhIKCmxsbV9vdXRwdXQYBSABKAkSHQoJcmF3X2F1ZGlvGAYgASgMQgq6SAd6BRiAwtcvEhMKC2R1cmF0aW9uX21zGAcgASgFEhIKCmNyZWF0ZWRfYXQYCCABKAkSEgoKdXBkYXRlZF9hdBgJIAEoCRISCgpkZWxldGVkX2F0GAogASgJIpEBChhDcmVhdGVJbnRlcmFjdGlvblJlcXVlc3QSCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSEgoKYXNyX291dHB1dBgDIAEoCRISCgpsbG1fb3V0cHV0GAQgASgJEh0KCXJhd19hdWRpbxgFIAEoDEIKukgHegUYgMLXLxITCgtkdXJhdGlvbl9tcxgGIAEoBSIjChVHZXRJbnRlcmFjdGlvblJlcXVlc3QSCgoCaWQYASABKAkiMgoXTGlzdEludGVyYWN0aW9uc1JlcXVlc3QSFwoPc2luY2VfdGltZXN0YW1wGAEgASgJIkIKGExpc3RJbnRlcmFjdGlvbnNSZXNwb25zZRImCgxpbnRlcmFjdGlvbnMYASADKAsyEC5pdG8uSW50ZXJhY3Rpb24iNQoYVXBkYXRlSW50ZXJhY3Rpb25SZXF1ZXN0EgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJIiYKGERlbGV0ZUludGVyYWN0aW9uUmVxdWVzdBIKCgJpZBgBIAEoCSKOAQoORGljdGlvbmFyeUl0ZW0SCgoCaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCRIMCgR3b3JkGAMgASgJEhUKDXByb251bmNpYXRpb24YBCABKAkSEgoKY3JlYXRlZF9hdBgFIAEoCRISCgp1cGRhdGVkX2F0GAYgASgJEhIKCmRlbGV0ZWRfYXQYByABKAkiTgobQ3JlYXRlRGljdGlvbmFyeUl0ZW1SZXF1ZXN0EgoKAmlkGAEgASgJEgwKBHdvcmQYAiABKAkSFQoNcHJvbnVuY2lhdGlvbhgDIAEoCSI1ChpMaXN0RGljdGlvbmFyeUl0ZW1zUmVxdWVzdBIXCg9zaW5jZV90aW1lc3RhbXAYASABKAkiQQobTGlzdERpY3Rpb25hcnlJdGVtc1Jlc3BvbnNlEiIKBWl0ZW1zGAEgAygLMhMuaXRvLkRpY3Rpb25hcnlJdGVtIk4KG1VwZGF0ZURpY3Rpb25hcnlJdGVtUmVxdWVzdBIKCgJpZBgBIAEoCRIMCgR3b3JkGAIgASgJEhUKDXByb251bmNpYXRpb24YAyABKAkiKQobRGVsZXRlRGljdGlvbmFyeUl0ZW1SZXF1ZXN0EgoKAmlkGAEgASgJIhcKFURlbGV0ZVVzZXJEYXRhUmVxdWVzdCIgCgtMbG1TZXR0aW5ncxIRCglhc3JfbW9kZWwYASABKAkidgoQQWR2YW5jZWRTZXR0aW5ncxIKCgJpZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEhIKCmNyZWF0ZWRfYXQYAyABKAkSEgoKdXBkYXRlZF9hdBgEIAEoCRIdCgNsbG0YBSABKAsyEC5pdG8uTGxtU2V0dGluZ3MiHAoaR2V0QWR2YW5jZWRTZXR0aW5nc1JlcXVlc3QiPgodVXBkYXRlQWR2YW5jZWRTZXR0aW5nc1JlcXVlc3QSHQoDbGxtGAEgASgLMhAuaXRvLkxsbVNldHRpbmdzKhoKDkNsaWVudFByb3ZpZGVyEggKBEdST1EQACpECglFcnJvclR5cGUSEQoNQ09ORklHVVJBVElPThAAEhAKDEFWQUlMQUJJTElUWRABEgkKBUFVRElPEAISBwoDQVBJEAMywwkKCkl0b1NlcnZpY2USQQoQVHJhbnNjcmliZVN0cmVhbRIPLml0by5BdWRpb0NodW5rGhouaXRvLlRyYW5zY3JpcHRpb25SZXNwb25zZSgBEi8KCkNyZWF0ZU5vdGUSFi5pdG8uQ3JlYXRlTm90ZVJlcXVlc3QaCS5pdG8uTm90ZRIpCgdHZXROb3RlEhMuaXRvLkdldE5vdGVSZXF1ZXN0GgkuaXRvLk5vdGUSOgoJTGlzdE5vdGVzEhUuaXRvLkxpc3ROb3Rlc1JlcXVlc3QaFi5pdG8uTGlzdE5vdGVzUmVzcG9uc2USLwoKVXBkYXRlTm90ZRIWLml0by5VcGRhdGVOb3RlUmVxdWVzdBoJLml0by5Ob3RlEjAKCkRlbGV0ZU5vdGUSFi5pdG8uRGVsZXRlTm90ZVJlcXVlc3QaCi5pdG8uRW1wdHkSRAoRQ3JlYXRlSW50ZXJhY3Rpb24SHS5pdG8uQ3JlYXRlSW50ZXJhY3Rpb25SZXF1ZXN0GhAuaXRvLkludGVyYWN0aW9uEj4KDkdldEludGVyYWN0aW9uEhouaXRvLkdldEludGVyYWN0aW9uUmVxdWVzdBoQLml0by5JbnRlcmFjdGlvbhJPChBMaXN0SW50ZXJhY3Rpb25zEhwuaXRvLkxpc3RJbnRlcmFjdGlvbnNSZXF1ZXN0Gh0uaXRvLkxpc3RJbnRlcmFjdGlvbnNSZXNwb25zZRJEChFVcGRhdGVJbnRlcmFjdGlvbhIdLml0by5VcGRhdGVJbnRlcmFjdGlvblJlcXVlc3QaEC5pdG8uSW50ZXJhY3Rpb24SPgoRRGVsZXRlSW50ZXJhY3Rpb24SHS5pdG8uRGVsZXRlSW50ZXJhY3Rpb25SZXF1ZXN0GgouaXRvLkVtcHR5Ek0KFENyZWF0ZURpY3Rpb25hcnlJdGVtEiAuaXRvLkNyZWF0ZURpY3Rpb25hcnlJdGVtUmVxdWVzdBoTLml0by5EaWN0aW9uYXJ5SXRlbRJYChNMaXN0RGljdGlvbmFyeUl0ZW1zEh8uaXRvLkxpc3REaWN0aW9uYXJ5SXRlbXNSZXF1ZXN0GiAuaXRvLkxpc3REaWN0aW9uYXJ5SXRlbXNSZXNwb25zZRJNChRVcGRhdGVEaWN0aW9uYXJ5SXRlbRIgLml0by5VcGRhdGVEaWN0aW9uYXJ5SXRlbVJlcXVlc3QaEy5pdG8uRGljdGlvbmFyeUl0ZW0SRAoURGVsZXRlRGljdGlvbmFyeUl0ZW0SIC5pdG8uRGVsZXRlRGljdGlvbmFyeUl0ZW1SZXF1ZXN0GgouaXRvLkVtcHR5EjgKDkRlbGV0ZVVzZXJEYXRhEhouaXRvLkRlbGV0ZVVzZXJEYXRhUmVxdWVzdBoKLml0by5FbXB0eRJNChNHZXRBZHZhbmNlZFNldHRpbmdzEh8uaXRvLkdldEFkdmFuY2VkU2V0dGluZ3NSZXF1ZXN0GhUuaXRvLkFkdmFuY2VkU2V0dGluZ3MSUwoWVXBkYXRlQWR2YW5jZWRTZXR0aW5ncxIiLml0by5VcGRhdGVBZHZhbmNlZFNldHRpbmdzUmVxdWVzdBoVLml0by5BZHZhbmNlZFNldHRpbmdzYgZwcm90bzM", [file_buf_validate_validate]);
 
 /**
  * General
@@ -28,6 +28,43 @@ export type Empty = Message<"ito.Empty"> & {
  */
 export const EmptySchema: GenMessage<Empty> = /*@__PURE__*/
   messageDesc(file_ito, 0);
+
+/**
+ * @generated from message ito.ClientError
+ */
+export type ClientError = Message<"ito.ClientError"> & {
+  /**
+   * @generated from field: string code = 1;
+   */
+  code: string;
+
+  /**
+   * @generated from field: ito.ErrorType type = 2;
+   */
+  type: ErrorType;
+
+  /**
+   * @generated from field: string message = 3;
+   */
+  message: string;
+
+  /**
+   * @generated from field: ito.ClientProvider provider = 4;
+   */
+  provider: ClientProvider;
+
+  /**
+   * @generated from field: map<string, string> details = 5;
+   */
+  details: { [key: string]: string };
+};
+
+/**
+ * Describes the message ito.ClientError.
+ * Use `create(ClientErrorSchema)` to create a new message.
+ */
+export const ClientErrorSchema: GenMessage<ClientError> = /*@__PURE__*/
+  messageDesc(file_ito, 1);
 
 /**
  * Transcription
@@ -50,7 +87,7 @@ export type AudioChunk = Message<"ito.AudioChunk"> & {
  * Use `create(AudioChunkSchema)` to create a new message.
  */
 export const AudioChunkSchema: GenMessage<AudioChunk> = /*@__PURE__*/
-  messageDesc(file_ito, 1);
+  messageDesc(file_ito, 2);
 
 /**
  * The response message containing the final transcript.
@@ -62,6 +99,13 @@ export type TranscriptionResponse = Message<"ito.TranscriptionResponse"> & {
    * @generated from field: string transcript = 1;
    */
   transcript: string;
+
+  /**
+   * Structured error instead of string
+   *
+   * @generated from field: ito.ClientError error = 2;
+   */
+  error?: ClientError;
 };
 
 /**
@@ -69,7 +113,7 @@ export type TranscriptionResponse = Message<"ito.TranscriptionResponse"> & {
  * Use `create(TranscriptionResponseSchema)` to create a new message.
  */
 export const TranscriptionResponseSchema: GenMessage<TranscriptionResponse> = /*@__PURE__*/
-  messageDesc(file_ito, 2);
+  messageDesc(file_ito, 3);
 
 /**
  * Notes
@@ -119,7 +163,7 @@ export type Note = Message<"ito.Note"> & {
  * Use `create(NoteSchema)` to create a new message.
  */
 export const NoteSchema: GenMessage<Note> = /*@__PURE__*/
-  messageDesc(file_ito, 3);
+  messageDesc(file_ito, 4);
 
 /**
  * @generated from message ito.CreateNoteRequest
@@ -146,7 +190,7 @@ export type CreateNoteRequest = Message<"ito.CreateNoteRequest"> & {
  * Use `create(CreateNoteRequestSchema)` to create a new message.
  */
 export const CreateNoteRequestSchema: GenMessage<CreateNoteRequest> = /*@__PURE__*/
-  messageDesc(file_ito, 4);
+  messageDesc(file_ito, 5);
 
 /**
  * @generated from message ito.GetNoteRequest
@@ -163,7 +207,7 @@ export type GetNoteRequest = Message<"ito.GetNoteRequest"> & {
  * Use `create(GetNoteRequestSchema)` to create a new message.
  */
 export const GetNoteRequestSchema: GenMessage<GetNoteRequest> = /*@__PURE__*/
-  messageDesc(file_ito, 5);
+  messageDesc(file_ito, 6);
 
 /**
  * @generated from message ito.ListNotesRequest
@@ -182,7 +226,7 @@ export type ListNotesRequest = Message<"ito.ListNotesRequest"> & {
  * Use `create(ListNotesRequestSchema)` to create a new message.
  */
 export const ListNotesRequestSchema: GenMessage<ListNotesRequest> = /*@__PURE__*/
-  messageDesc(file_ito, 6);
+  messageDesc(file_ito, 7);
 
 /**
  * @generated from message ito.ListNotesResponse
@@ -199,7 +243,7 @@ export type ListNotesResponse = Message<"ito.ListNotesResponse"> & {
  * Use `create(ListNotesResponseSchema)` to create a new message.
  */
 export const ListNotesResponseSchema: GenMessage<ListNotesResponse> = /*@__PURE__*/
-  messageDesc(file_ito, 7);
+  messageDesc(file_ito, 8);
 
 /**
  * @generated from message ito.UpdateNoteRequest
@@ -221,7 +265,7 @@ export type UpdateNoteRequest = Message<"ito.UpdateNoteRequest"> & {
  * Use `create(UpdateNoteRequestSchema)` to create a new message.
  */
 export const UpdateNoteRequestSchema: GenMessage<UpdateNoteRequest> = /*@__PURE__*/
-  messageDesc(file_ito, 8);
+  messageDesc(file_ito, 9);
 
 /**
  * @generated from message ito.DeleteNoteRequest
@@ -238,7 +282,7 @@ export type DeleteNoteRequest = Message<"ito.DeleteNoteRequest"> & {
  * Use `create(DeleteNoteRequestSchema)` to create a new message.
  */
 export const DeleteNoteRequestSchema: GenMessage<DeleteNoteRequest> = /*@__PURE__*/
-  messageDesc(file_ito, 9);
+  messageDesc(file_ito, 10);
 
 /**
  * Interactions
@@ -311,7 +355,7 @@ export type Interaction = Message<"ito.Interaction"> & {
  * Use `create(InteractionSchema)` to create a new message.
  */
 export const InteractionSchema: GenMessage<Interaction> = /*@__PURE__*/
-  messageDesc(file_ito, 10);
+  messageDesc(file_ito, 11);
 
 /**
  * @generated from message ito.CreateInteractionRequest
@@ -357,7 +401,7 @@ export type CreateInteractionRequest = Message<"ito.CreateInteractionRequest"> &
  * Use `create(CreateInteractionRequestSchema)` to create a new message.
  */
 export const CreateInteractionRequestSchema: GenMessage<CreateInteractionRequest> = /*@__PURE__*/
-  messageDesc(file_ito, 11);
+  messageDesc(file_ito, 12);
 
 /**
  * @generated from message ito.GetInteractionRequest
@@ -374,7 +418,7 @@ export type GetInteractionRequest = Message<"ito.GetInteractionRequest"> & {
  * Use `create(GetInteractionRequestSchema)` to create a new message.
  */
 export const GetInteractionRequestSchema: GenMessage<GetInteractionRequest> = /*@__PURE__*/
-  messageDesc(file_ito, 12);
+  messageDesc(file_ito, 13);
 
 /**
  * @generated from message ito.ListInteractionsRequest
@@ -393,7 +437,7 @@ export type ListInteractionsRequest = Message<"ito.ListInteractionsRequest"> & {
  * Use `create(ListInteractionsRequestSchema)` to create a new message.
  */
 export const ListInteractionsRequestSchema: GenMessage<ListInteractionsRequest> = /*@__PURE__*/
-  messageDesc(file_ito, 13);
+  messageDesc(file_ito, 14);
 
 /**
  * @generated from message ito.ListInteractionsResponse
@@ -410,7 +454,7 @@ export type ListInteractionsResponse = Message<"ito.ListInteractionsResponse"> &
  * Use `create(ListInteractionsResponseSchema)` to create a new message.
  */
 export const ListInteractionsResponseSchema: GenMessage<ListInteractionsResponse> = /*@__PURE__*/
-  messageDesc(file_ito, 14);
+  messageDesc(file_ito, 15);
 
 /**
  * @generated from message ito.UpdateInteractionRequest
@@ -432,7 +476,7 @@ export type UpdateInteractionRequest = Message<"ito.UpdateInteractionRequest"> &
  * Use `create(UpdateInteractionRequestSchema)` to create a new message.
  */
 export const UpdateInteractionRequestSchema: GenMessage<UpdateInteractionRequest> = /*@__PURE__*/
-  messageDesc(file_ito, 15);
+  messageDesc(file_ito, 16);
 
 /**
  * @generated from message ito.DeleteInteractionRequest
@@ -449,7 +493,7 @@ export type DeleteInteractionRequest = Message<"ito.DeleteInteractionRequest"> &
  * Use `create(DeleteInteractionRequestSchema)` to create a new message.
  */
 export const DeleteInteractionRequestSchema: GenMessage<DeleteInteractionRequest> = /*@__PURE__*/
-  messageDesc(file_ito, 16);
+  messageDesc(file_ito, 17);
 
 /**
  * Dictionary
@@ -499,7 +543,7 @@ export type DictionaryItem = Message<"ito.DictionaryItem"> & {
  * Use `create(DictionaryItemSchema)` to create a new message.
  */
 export const DictionaryItemSchema: GenMessage<DictionaryItem> = /*@__PURE__*/
-  messageDesc(file_ito, 17);
+  messageDesc(file_ito, 18);
 
 /**
  * @generated from message ito.CreateDictionaryItemRequest
@@ -526,7 +570,7 @@ export type CreateDictionaryItemRequest = Message<"ito.CreateDictionaryItemReque
  * Use `create(CreateDictionaryItemRequestSchema)` to create a new message.
  */
 export const CreateDictionaryItemRequestSchema: GenMessage<CreateDictionaryItemRequest> = /*@__PURE__*/
-  messageDesc(file_ito, 18);
+  messageDesc(file_ito, 19);
 
 /**
  * @generated from message ito.ListDictionaryItemsRequest
@@ -545,7 +589,7 @@ export type ListDictionaryItemsRequest = Message<"ito.ListDictionaryItemsRequest
  * Use `create(ListDictionaryItemsRequestSchema)` to create a new message.
  */
 export const ListDictionaryItemsRequestSchema: GenMessage<ListDictionaryItemsRequest> = /*@__PURE__*/
-  messageDesc(file_ito, 19);
+  messageDesc(file_ito, 20);
 
 /**
  * @generated from message ito.ListDictionaryItemsResponse
@@ -562,7 +606,7 @@ export type ListDictionaryItemsResponse = Message<"ito.ListDictionaryItemsRespon
  * Use `create(ListDictionaryItemsResponseSchema)` to create a new message.
  */
 export const ListDictionaryItemsResponseSchema: GenMessage<ListDictionaryItemsResponse> = /*@__PURE__*/
-  messageDesc(file_ito, 20);
+  messageDesc(file_ito, 21);
 
 /**
  * @generated from message ito.UpdateDictionaryItemRequest
@@ -589,7 +633,7 @@ export type UpdateDictionaryItemRequest = Message<"ito.UpdateDictionaryItemReque
  * Use `create(UpdateDictionaryItemRequestSchema)` to create a new message.
  */
 export const UpdateDictionaryItemRequestSchema: GenMessage<UpdateDictionaryItemRequest> = /*@__PURE__*/
-  messageDesc(file_ito, 21);
+  messageDesc(file_ito, 22);
 
 /**
  * @generated from message ito.DeleteDictionaryItemRequest
@@ -606,7 +650,7 @@ export type DeleteDictionaryItemRequest = Message<"ito.DeleteDictionaryItemReque
  * Use `create(DeleteDictionaryItemRequestSchema)` to create a new message.
  */
 export const DeleteDictionaryItemRequestSchema: GenMessage<DeleteDictionaryItemRequest> = /*@__PURE__*/
-  messageDesc(file_ito, 22);
+  messageDesc(file_ito, 23);
 
 /**
  * User Data
@@ -624,7 +668,7 @@ export type DeleteUserDataRequest = Message<"ito.DeleteUserDataRequest"> & {
  * Use `create(DeleteUserDataRequestSchema)` to create a new message.
  */
 export const DeleteUserDataRequestSchema: GenMessage<DeleteUserDataRequest> = /*@__PURE__*/
-  messageDesc(file_ito, 23);
+  messageDesc(file_ito, 24);
 
 /**
  * Advanced Settings
@@ -644,7 +688,7 @@ export type LlmSettings = Message<"ito.LlmSettings"> & {
  * Use `create(LlmSettingsSchema)` to create a new message.
  */
 export const LlmSettingsSchema: GenMessage<LlmSettings> = /*@__PURE__*/
-  messageDesc(file_ito, 24);
+  messageDesc(file_ito, 25);
 
 /**
  * @generated from message ito.AdvancedSettings
@@ -681,7 +725,7 @@ export type AdvancedSettings = Message<"ito.AdvancedSettings"> & {
  * Use `create(AdvancedSettingsSchema)` to create a new message.
  */
 export const AdvancedSettingsSchema: GenMessage<AdvancedSettings> = /*@__PURE__*/
-  messageDesc(file_ito, 25);
+  messageDesc(file_ito, 26);
 
 /**
  * Empty - user_id will be extracted from the authenticated user's token
@@ -696,7 +740,7 @@ export type GetAdvancedSettingsRequest = Message<"ito.GetAdvancedSettingsRequest
  * Use `create(GetAdvancedSettingsRequestSchema)` to create a new message.
  */
 export const GetAdvancedSettingsRequestSchema: GenMessage<GetAdvancedSettingsRequest> = /*@__PURE__*/
-  messageDesc(file_ito, 26);
+  messageDesc(file_ito, 27);
 
 /**
  * @generated from message ito.UpdateAdvancedSettingsRequest
@@ -713,7 +757,57 @@ export type UpdateAdvancedSettingsRequest = Message<"ito.UpdateAdvancedSettingsR
  * Use `create(UpdateAdvancedSettingsRequestSchema)` to create a new message.
  */
 export const UpdateAdvancedSettingsRequestSchema: GenMessage<UpdateAdvancedSettingsRequest> = /*@__PURE__*/
-  messageDesc(file_ito, 27);
+  messageDesc(file_ito, 28);
+
+/**
+ * Error Types
+ * -----------------------------------------------------------------
+ *
+ * @generated from enum ito.ClientProvider
+ */
+export enum ClientProvider {
+  /**
+   * @generated from enum value: GROQ = 0;
+   */
+  GROQ = 0,
+}
+
+/**
+ * Describes the enum ito.ClientProvider.
+ */
+export const ClientProviderSchema: GenEnum<ClientProvider> = /*@__PURE__*/
+  enumDesc(file_ito, 0);
+
+/**
+ * @generated from enum ito.ErrorType
+ */
+export enum ErrorType {
+  /**
+   * @generated from enum value: CONFIGURATION = 0;
+   */
+  CONFIGURATION = 0,
+
+  /**
+   * @generated from enum value: AVAILABILITY = 1;
+   */
+  AVAILABILITY = 1,
+
+  /**
+   * @generated from enum value: AUDIO = 2;
+   */
+  AUDIO = 2,
+
+  /**
+   * @generated from enum value: API = 3;
+   */
+  API = 3,
+}
+
+/**
+ * Describes the enum ito.ErrorType.
+ */
+export const ErrorTypeSchema: GenEnum<ErrorType> = /*@__PURE__*/
+  enumDesc(file_ito, 1);
 
 /**
  * @generated from service ito.ItoService

@@ -1,5 +1,8 @@
 # Dockerfile
-FROM oven/bun:1-alpine AS base
+# Bun 1.1.45 is the latest stable version that doesn't cause http connection issues
+# for uploads of large audio files. Change this carefully, and test uploads of
+# audio files > 1.5 MB to be sure there are no regressions.
+FROM oven/bun:1.1.45-alpine AS base
 
 WORKDIR /
 

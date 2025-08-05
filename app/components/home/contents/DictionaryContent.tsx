@@ -334,7 +334,7 @@ export default function DictionaryContent() {
   return (
     <div
       ref={containerRef}
-      className="w-full px-36 max-h-160 overflow-y-auto relative"
+      className="w-full px-24 max-h-160 overflow-y-auto relative"
       style={{
         msOverflowStyle: 'none',
         scrollbarWidth: 'none',
@@ -344,7 +344,7 @@ export default function DictionaryContent() {
         <h1 className="text-2xl font-medium">Dictionary</h1>
         <button
           onClick={handleAddNew}
-          className="bg-gray-900 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-800 cursor-pointer flex items-center gap-2"
+          className="bg-gray-900 text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-800 cursor-pointer flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
           Add new

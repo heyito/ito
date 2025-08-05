@@ -34,7 +34,6 @@ jobs:
           echo "VITE_AUTH0_DOMAIN=\"${{ secrets.VITE_AUTH0_DOMAIN }}\"" >> .env
           echo "VITE_AUTH0_CLIENT_ID=\"${{ secrets.VITE_AUTH0_CLIENT_ID }}\"" >> .env
           echo "VITE_AUTH0_AUDIENCE=\"${{ secrets.VITE_AUTH0_AUDIENCE }}\"" >> .env
-          echo "VITE_AUTH0_REDIRECT_URI=\"${{ secrets.VITE_AUTH0_REDIRECT_URI }}\"" >> .env
           echo "VITE_AMPLITUDE_API_KEY=\"${{ secrets.VITE_AMPLITUDE_API_KEY }}\"" >> .env
           echo "VITE_GRPC_BASE_URL=\"${{ vars.VITE_GRPC_BASE_URL }}\"" >> .env
           echo "VITE_UPDATER_BUCKET=\"${{ vars.VITE_UPDATER_BUCKET }}\"" >> .env

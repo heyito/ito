@@ -9,6 +9,7 @@ All notable changes to the electron-react-app (ERA) are listed here.
 - Enhance copy button tooltip to stay visible and show "Copied 🎉" feedback
 - Create about page
 - Update layout to new design
+- Self host auth0 callback page [(#58)](https://github.com/heyito/ito/pull/58)
 
 ### v0.2.2
 

@@ -10,83 +10,24 @@ import {
   InteractionSchema,
   DictionaryItem,
   DictionaryItemSchema,
-} from '../generated/ito_pb.js'
+} from '../../generated/ito_pb.js'
 import { create } from '@bufbuild/protobuf'
 import type { HandlerContext } from '@connectrpc/connect'
-import { groqClient } from '../clients/groqClient.js'
+import { groqClient } from '../../clients/groqClient.js'
 import {
   DictionaryRepository,
   InteractionsRepository,
   NotesRepository,
-} from '../db/repo.js'
+} from '../../db/repo.js'
 import {
   Note as DbNote,
   Interaction as DbInteraction,
   DictionaryItem as DbDictionaryItem,
-} from '../db/models.js'
+} from '../../db/models.js'
 import { ConnectError, Code } from '@connectrpc/connect'
-import { kUser } from '../auth/userContext.js'
-
-export enum ItoMode {
-  TRANSCRIBE,
-  EDIT,
-}
-
-export type WindowContext = {
-  windowTitle: string
-  appName: string
-}
-
-export const MODE_PROMPT: { [key in ItoMode]: string } = {
-  [ItoMode.TRANSCRIBE]: `
-  You are a real-time Transcript Polisher assistant. Your job is to take a raw speech transcript—complete with hesitations (“uh,” “um”), false starts, repetitions, and filler—and produce a concise, polished version suitable for pasting directly into the user's active document (email, report, chat, etc.).
-
-— Keep the user's meaning and tone intact: don't introduce ideas or change intent.
-— Remove disfluencies: delete “uh,” “um,” “you know,” repeated words, and false starts.
-— Resolve corrections smoothly: when the speaker self-corrects (“let's do next week… no, next month”), choose the final phrasing.
-— Preserve natural phrasing: maintain contractions and informal tone if present, unless clarity demands adjustment.
-— Maintain accuracy: do not invent or omit key details like dates, names, or numbers.
-— Produce clean prose: use complete sentences, correct punctuation, and paragraph breaks only where needed for readability.
-— Operate within a single reply: output only the cleaned text—no commentary, meta-notes, or apologies.
-
-Example
-Raw transcript:
-“Uhhh, so, I was thinking… maybe we could—uh—shoot for Thursday morning? No, actually, let's aim for the first week of May.”
-
-Cleaned output:
-“Let's schedule the meeting for the first week of May.”
-
-When you receive a transcript, immediately return the polished version following these rules.
-
-
-`,
-
-  [ItoMode.EDIT]: `
-  You are a Command-Interpreter assistant. Your job is to take a raw speech transcript—complete with hesitations, false starts, “umm”s and self-corrections—and treat it as the user issuing a high-level instruction. Instead of merely polishing their words, you must:
-	1.	Extract the intent: identify the action the user is asking for (e.g. “write me a GitHub issue,” “draft a sorry-I-missed-our-meeting email,” “produce a summary of X,” etc.).
-	2.	Ignore disfluencies: strip out “uh,” “um,” false starts and filler so you see only the core command.
-	3.	Map to a template: choose an appropriate standard format (GitHub issue markdown template, professional email, bullet-point agenda, etc.) that matches the intent.
-	4.	Generate the deliverable: produce a fully-formed document in that format, filling in placeholders sensibly from any details in the transcript.
-	5.	Do not add new intent: if the transcript doesn't specify something (e.g. title, recipients, date), use reasonable defaults (e.g. “Untitled Issue,” “To: [Recipient]”) or prompt the user for the missing piece.
-	6.	Produce only the final document: no commentary, apologies, or side-notes—just the completed issue/email/summary/etc.
-
-`,
-}
-
-export function addContextToPrompt(
-  prompt: string,
-  context?: WindowContext,
-): string {
-  if (context) {
-    const contextPrompt = `
-    To assist with this, you have been given the following context:
-    - ${context.windowTitle}: The title of the current window where the user is working.
-    - ${context.appName}: The name of the application where the user is issuing this command.
-    `
-    return prompt + contextPrompt
-  }
-  return prompt
-}
+import { kUser } from '../../auth/userContext.js'
+import { ItoMode } from './constants.js'
+import { WindowContext } from './types.js'
 
 /**
  * --- NEW: WAV Header Generation Function ---
@@ -195,6 +136,7 @@ export default (router: ConnectRouter) => {
       requests: AsyncIterable<AudioChunk>,
       context: HandlerContext,
     ) {
+      console.log('FOO BAR BAZ')
       const audioChunks: Uint8Array[] = []
 
       // Process each audio chunk from the stream

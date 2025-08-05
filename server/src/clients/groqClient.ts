@@ -1,12 +1,9 @@
 import Groq from 'groq-sdk'
 import { toFile } from 'groq-sdk/uploads'
 import * as dotenv from 'dotenv'
-import {
-  addContextToPrompt,
-  ItoMode,
-  MODE_PROMPT,
-  WindowContext,
-} from '../services/itoService.js'
+import { ITO_MODE_PROMPT, ItoMode } from '../services/ito/constants.js'
+import { addContextToPrompt } from '../services/ito/helpers.js'
+import { WindowContext } from '../services/ito/types.js'
 
 // Load environment variables from .env file
 dotenv.config()
@@ -66,13 +63,13 @@ class GroqClient {
           {
             role: 'system',
             content: addContextToPrompt(
-              MODE_PROMPT[mode] || defaultPrompt,
+              ITO_MODE_PROMPT[mode] || defaultPrompt,
               context,
             ),
           },
           {
             role: 'user',
-            content: transcript,
+            content: `The user's transcript: ${transcript}`,
           },
         ],
         model: 'llama-3.3-70b-versatile',

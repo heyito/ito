@@ -39,7 +39,7 @@ class GrpcClient {
 
   constructor() {
     const transport = createConnectTransport({
-      baseUrl: import.meta.env.VITE_GRPC_BASE_URL || 'http://localhost:3000',
+      baseUrl: import.meta.env.VITE_GRPC_BASE_URL,
       httpVersion: '1.1',
     })
     this.client = createClient(ItoService, transport)
@@ -81,7 +81,12 @@ class GrpcClient {
       }
 
       // Fetch window context
+      const startTimer = performance.now()
       const windowContext = await getActiveWindow()
+      const endTimer = performance.now()
+      console.log(
+        `[gRPC Client] getActiveWindow took ${endTimer - startTimer} ms`,
+      )
       if (windowContext) {
         headers.set('window-title', windowContext.title)
         headers.set('app-name', windowContext.appName)

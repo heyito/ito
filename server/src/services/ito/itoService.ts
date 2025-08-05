@@ -147,7 +147,6 @@ export default (router: ConnectRouter) => {
       requests: AsyncIterable<AudioChunk>,
       context: HandlerContext,
     ) {
-      console.log('FOO BAR BAZ')
       const audioChunks: Uint8Array[] = []
 
       // Process each audio chunk from the stream

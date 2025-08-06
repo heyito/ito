@@ -4,6 +4,9 @@ All notable changes to the electron-react-app (ERA) are listed here.
 
 <br>
 
+### v0.2.6
+- Improved pill styling [#84](https://github.com/heyito/ito/pull/84)
+
 ### v0.2.3
 - Update referral sources
 - Enhance copy button tooltip to stay visible and show "Copied 🎉" feedback

@@ -12,27 +12,29 @@ import {
   AdvancedSettings,
   AdvancedSettingsSchema,
   LlmSettingsSchema,
-} from '../generated/ito_pb.js'
+} from '../../generated/ito_pb.js'
 import { create } from '@bufbuild/protobuf'
 import type { HandlerContext } from '@connectrpc/connect'
-import { groqClient } from '../clients/groqClient.js'
+import { groqClient } from '../../clients/groqClient.js'
 import {
   DictionaryRepository,
   InteractionsRepository,
   NotesRepository,
   AdvancedSettingsRepository,
-} from '../db/repo.js'
+} from '../../db/repo.js'
 import {
   Note as DbNote,
   Interaction as DbInteraction,
   DictionaryItem as DbDictionaryItem,
   AdvancedSettings as DbAdvancedSettings,
-} from '../db/models.js'
+} from '../../db/models.js'
 import { ConnectError, Code } from '@connectrpc/connect'
-import { kUser } from '../auth/userContext.js'
-import { HeaderValidator } from '../validation/HeaderValidator.js'
-import { errorToProtobuf } from '../clients/errors.js'
-import { ClientProvider } from '../clients/providers.js'
+import { kUser } from '../../auth/userContext.js'
+import { ItoMode } from './constants.js'
+import { WindowContext } from './types.js'
+import { HeaderValidator } from '../../validation/HeaderValidator.js'
+import { errorToProtobuf } from '../../clients/errors.js'
+import { ClientProvider } from '../../clients/providers.js'
 
 /**
  * --- NEW: WAV Header Generation Function ---
@@ -214,10 +216,19 @@ export default (router: ConnectRouter) => {
         const words = transcript.trim().split(/\s+/)
         const firstFiveWords = words.slice(0, 5).join(' ').toLowerCase()
 
+        let mode = ItoMode.TRANSCRIBE
         if (firstFiveWords.includes('hey ito')) {
-          // Use thinking model to adjust the transcript
-          transcript = await groqClient.adjustTranscript(transcript)
+          mode = ItoMode.EDIT
         }
+
+        const windowTitle = context.requestHeader.get('window-title') || ''
+        const appName = context.requestHeader.get('app-name') || ''
+        const windowContext: WindowContext = { windowTitle, appName }
+        transcript = await groqClient.adjustTranscript(
+          transcript,
+          mode,
+          windowContext,
+        )
 
         return create(TranscriptionResponseSchema, {
           transcript,

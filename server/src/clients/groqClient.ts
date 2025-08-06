@@ -1,6 +1,9 @@
 import Groq from 'groq-sdk'
 import { toFile } from 'groq-sdk/uploads'
 import * as dotenv from 'dotenv'
+import { ITO_MODE_PROMPT, ItoMode } from '../services/ito/constants.js'
+import { addContextToPrompt } from '../services/ito/helpers.js'
+import { WindowContext } from '../services/ito/types.js'
 import { createTranscriptionPrompt } from '../prompts/transcription.js'
 import {
   ClientApiKeyError,
@@ -49,22 +52,29 @@ class GroqClient {
    * @param transcript The original transcript text.
    * @returns The adjusted transcript.
    */
-  public async adjustTranscript(transcript: string): Promise<string> {
+  public async adjustTranscript(
+    transcript: string,
+    mode: ItoMode,
+    context?: WindowContext,
+  ): Promise<string> {
     if (!this.isAvailable) {
       throw new ClientUnavailableError(ClientProvider.GROQ)
     }
-
+    const defaultPrompt =
+      'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.'
     try {
       const completion = await this._client.chat.completions.create({
         messages: [
           {
             role: 'system',
-            content:
-              'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
+            content: addContextToPrompt(
+              ITO_MODE_PROMPT[mode] || defaultPrompt,
+              context,
+            ),
           },
           {
             role: 'user',
-            content: `Please fulfill this request: "${transcript}"`,
+            content: `The user's transcript: ${transcript}`,
           },
         ],
         model: 'llama-3.3-70b-versatile',

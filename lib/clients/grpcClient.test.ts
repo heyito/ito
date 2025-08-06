@@ -1,4 +1,5 @@
-import { describe, test, expect, beforeEach, mock } from 'bun:test'
+import { describe, test, expect, beforeEach, mock, Mock } from 'bun:test'
+import { ActiveWindow } from '../media/active-application'
 
 // Mock external dependencies to focus on core grpcClient logic
 const mockElectronWindow = {
@@ -94,6 +95,19 @@ mock.module('../auth/config', () => ({
   Auth0Config: { domain: 'test.auth0.com' },
 }))
 
+const mockGetActiveWindow: Mock<() => Promise<ActiveWindow | null>> = mock(() =>
+  Promise.resolve({
+    title: 'Test App',
+    appName: 'TestApp',
+    windowId: 1,
+    processId: 1234,
+    positon: { x: 0, y: 0, width: 800, height: 600 },
+  }),
+)
+mock.module('../media/active-application', () => ({
+  getActiveWindow: mockGetActiveWindow,
+}))
+
 // Mock the entire gRPC stack to avoid network calls
 const mockGrpcClientMethods = {
   transcribeStream: mock(() =>
@@ -185,6 +199,7 @@ describe('GrpcClient Business Logic Tests', () => {
     mockGetCurrentUserId.mockClear()
     mockDictionaryTable.findAll.mockClear()
     mockEnsureValidTokens.mockClear()
+    mockGetActiveWindow.mockClear()
 
     // Reset default behaviors
     mockElectronWindow.isDestroyed.mockReturnValue(false)
@@ -225,7 +240,7 @@ describe('GrpcClient Business Logic Tests', () => {
       )
     })
 
-    test('should include vocabulary from local dictionary in transcription', async () => {
+    test('should include metadata in transcription', async () => {
       const { grpcClient } = await import('./grpcClient')
       grpcClient.setAuthToken('test-token')
 
@@ -237,6 +252,21 @@ describe('GrpcClient Business Logic Tests', () => {
 
       expect(mockDictionaryTable.findAll).toHaveBeenCalledWith('test-user-123')
       expect(mockGrpcClientMethods.transcribeStream).toHaveBeenCalled()
+      expect(mockGetActiveWindow).toHaveBeenCalled()
+    })
+
+    test('if window context fails to be retrieved, it should handle gracefully', async () => {
+      const { grpcClient } = await import('./grpcClient')
+      grpcClient.setAuthToken('test-token')
+
+      const audioStream = (async function* () {
+        yield { data: new Uint8Array([1, 2, 3]) } as any
+      })()
+
+      mockGetActiveWindow.mockResolvedValueOnce(null)
+
+      await grpcClient.transcribeStream(audioStream)
+      expect(mockGetActiveWindow).toHaveBeenCalled()
     })
 
     test('should handle transcription errors gracefully', async () => {

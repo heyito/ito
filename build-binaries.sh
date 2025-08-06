@@ -134,6 +134,7 @@ fi
 build_native_module "global-key-listener"
 build_native_module "audio-recorder"
 build_native_module "text-writer"
+build_native_module "active-application"
 
 
 print_status "All native module builds completed successfully!"

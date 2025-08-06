@@ -70,6 +70,16 @@ export class ServiceStack extends Stack {
       props.dbSecretArn,
     )
 
+    const zone = HostedZone.fromLookup(this, 'HostedZone', {
+      domainName: 'ito-api.com',
+    })
+
+    const domainName = `${stageName}.ito-api.com`
+    const cert = new Certificate(this, 'SiteCert', {
+      domainName,
+      validation: CertificateValidation.fromDns(zone),
+    })
+
     const groqApiKeyName = `${stageName}/ito/groq-api-key`
 
     const groqApiKeySecret = Secret.fromSecretNameV2(
@@ -124,19 +134,11 @@ export class ServiceStack extends Stack {
         REQUIRE_AUTH: 'true',
         AUTH0_DOMAIN: process.env.AUTH0_DOMAIN || '',
         AUTH0_AUDIENCE: process.env.AUTH0_AUDIENCE || '',
+        AUTH0_CLIENT_ID: process.env.AUTH0_CLIENT_ID || '',
+        AUTH0_CALLBACK_URL: `https://${domainName}/callback`,
         GROQ_TRANSCRIPTION_MODEL: 'whisper-large-v3',
       },
       logging: new AwsLogDriver({ streamPrefix: 'ito-server' }),
-    })
-
-    const zone = HostedZone.fromLookup(this, 'HostedZone', {
-      domainName: 'ito-api.com',
-    })
-
-    const domainName = `${stageName}.ito-api.com`
-    const cert = new Certificate(this, 'SiteCert', {
-      domainName,
-      validation: CertificateValidation.fromDns(zone),
     })
 
     const cluster = new Cluster(this, 'ItoEcsCluster', {

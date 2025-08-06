@@ -32,6 +32,7 @@ import { DictionaryTable } from '../main/sqlite/repo'
 import { getAdvancedSettings, getCurrentUserId } from '../main/store'
 import { ensureValidTokens } from '../auth/events'
 import { Auth0Config } from '../auth/config'
+import { getActiveWindow } from '../media/active-application'
 
 class GrpcClient {
   private client: ReturnType<typeof createClient<typeof ItoService>>
@@ -64,7 +65,7 @@ class GrpcClient {
     return new Headers({ Authorization: `Bearer ${this.authToken}` })
   }
 
-  private async getHeadersWithVocabulary() {
+  private async getHeadersWithMetadata() {
     const headers = this.getHeaders()
 
     try {
@@ -80,6 +81,13 @@ class GrpcClient {
       // Add vocabulary to headers if available
       if (vocabularyWords.length > 0) {
         headers.set('vocabulary', vocabularyWords.join(','))
+      }
+
+      // Fetch window context
+      const windowContext = await getActiveWindow()
+      if (windowContext) {
+        headers.set('window-title', windowContext.title)
+        headers.set('app-name', windowContext.appName)
       }
 
       // Add ASR model from advanced settings
@@ -171,7 +179,7 @@ class GrpcClient {
   async transcribeStream(stream: AsyncIterable<AudioChunk>) {
     return this.withRetry(async () => {
       const response = await this.client.transcribeStream(stream, {
-        headers: await this.getHeadersWithVocabulary(),
+        headers: await this.getHeadersWithMetadata(),
       })
 
       // Type the transcribed text into the focused application

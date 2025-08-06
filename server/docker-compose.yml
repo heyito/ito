@@ -15,20 +15,15 @@ services:
       - db
     environment:
       NODE_ENV: development
-      PORT: $PORT
-      DB_HOST: $DB_HOST
-      DB_PORT: $DB_PORT
-      DB_USER: $DB_USER
-      DB_PASS: $DB_PASS
-      DB_NAME: DB_NAME
+
   db:
     image: postgres:16
     container_name: ito-postgres
     restart: always
     environment:
-      POSTGRES_USER: $DB_USER
-      POSTGRES_PASSWORD: $DB_PASS
-      POSTGRES_DB: $DB_NAME
+      POSTGRES_USER: '$DB_USER'
+      POSTGRES_PASSWORD: '$DB_PASS'
+      POSTGRES_DB: '$DB_NAME'
     ports:
       - '$DB_PORT:$DB_PORT'
     volumes:

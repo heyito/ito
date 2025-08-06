@@ -24,6 +24,15 @@ const globalStyles = `
     justify-content: center;
 
     pointer-events: none;
+
+    font-family:
+      'Inter',
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      Roboto,
+      sans-serif;
   }
 `
 
@@ -309,6 +318,7 @@ const Pill = () => {
               padding: '6px 8px',
               fontSize: '14px',
               marginBottom: '6px',
+              borderRadius: '8px',
             }}
             className="border-none rounded-md"
           >

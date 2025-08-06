@@ -262,7 +262,6 @@ export class SyncService {
 
         // Update local store
         mainStore.set(STORE_KEYS.ADVANCED_SETTINGS, updatedLocalSettings)
-        console.log('Advanced settings synced from server to local store')
       }
       // Note: We don't push local changes to server in this implementation
       // since advanced settings are typically managed through the UI which

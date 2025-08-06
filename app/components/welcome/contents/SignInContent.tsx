@@ -109,7 +109,6 @@ export default function SignInContent() {
   const { loadEntries } = useDictionaryStore()
   const { resetOnboarding } = useOnboardingStore()
   const [isServerHealthy, setIsServerHealthy] = useState(true)
-  const [_healthCheckComplete, setHealthCheckComplete] = useState(false)
 
   const {
     user,
@@ -126,7 +125,6 @@ export default function SignInContent() {
     const checkHealth = async () => {
       const { isHealthy } = await checkLocalServerHealth()
       setIsServerHealthy(isHealthy)
-      setHealthCheckComplete(true)
     }
 
     // Initial check

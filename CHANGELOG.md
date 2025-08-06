@@ -4,7 +4,15 @@ All notable changes to the electron-react-app (ERA) are listed here.
 
 <br>
 
+### v0.2.4
+
+- Add OpenTelemetry trace logging for user interactions
+- Implement comprehensive interaction tracking across transcription pipeline
+- Add trace logging for gRPC stream operations, text insertion, and error handling
+- Add trace logger test suite with interaction management and cleanup validation
+
 ### v0.2.3
+
 - Update referral sources
 - Enhance copy button tooltip to stay visible and show "Copied 🎉" feedback
 - Create about page

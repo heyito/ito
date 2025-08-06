@@ -147,12 +147,21 @@ export default (router: ConnectRouter) => {
       requests: AsyncIterable<AudioChunk>,
       context: HandlerContext,
     ) {
+      const startTime = Date.now()
       const audioChunks: Uint8Array[] = []
+
+      console.log(
+        `📩 [${new Date().toISOString()}] Starting transcription stream`,
+      )
 
       // Process each audio chunk from the stream
       for await (const chunk of requests) {
         audioChunks.push(chunk.audioData)
       }
+
+      console.log(
+        `📊 [${new Date().toISOString()}] Processed ${audioChunks.length} audio chunks`,
+      )
 
       // Concatenate all audio chunks
       const totalLength = audioChunks.reduce(
@@ -165,6 +174,10 @@ export default (router: ConnectRouter) => {
         fullAudio.set(chunk, offset)
         offset += chunk.length
       }
+
+      console.log(
+        `🔧 [${new Date().toISOString()}] Concatenated audio: ${totalLength} bytes`,
+      )
 
       try {
         // 1. Set audio properties to match the new capture settings.
@@ -212,6 +225,10 @@ export default (router: ConnectRouter) => {
           vocabulary,
         )
 
+        console.log(
+          `📝 [${new Date().toISOString()}] Received transcript: "${transcript}"`,
+        )
+
         // 5. Check if transcript contains "Hey Ito" in the first 5 words
         const words = transcript.trim().split(/\s+/)
         const firstFiveWords = words.slice(0, 5).join(' ').toLowerCase()
@@ -221,6 +238,10 @@ export default (router: ConnectRouter) => {
           mode = ItoMode.EDIT
         }
 
+        console.log(
+          `🧠 [${new Date().toISOString()}] Detected "Hey Ito", adjusting transcript`,
+        )
+
         const windowTitle = context.requestHeader.get('window-title') || ''
         const appName = context.requestHeader.get('app-name') || ''
         const windowContext: WindowContext = { windowTitle, appName }
@@ -228,6 +249,14 @@ export default (router: ConnectRouter) => {
           transcript,
           mode,
           windowContext,
+        )
+        console.log(
+          `📝 [${new Date().toISOString()}] Adjusted transcript: "${transcript}"`,
+        )
+
+        const duration = Date.now() - startTime
+        console.log(
+          `✅ [${new Date().toISOString()}] Transcription completed in ${duration}ms`,
         )
 
         return create(TranscriptionResponseSchema, {

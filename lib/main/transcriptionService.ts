@@ -78,11 +78,15 @@ export class TranscriptionService {
         const errorMessage = response.error ? response.error.message : undefined
         if (response.error && response.error.code == 'CLIENT_AUDIO_TOO_SHORT') {
           if (globalInteractionId) {
-            traceLogger.logStep(globalInteractionId, 'TRANSCRIPTION_TOO_SHORT', {
-              transcript: response.transcript,
-              transcriptLength: response.transcript?.length || 0,
-              localInteractionId: this.currentInteractionId,
-            })
+            traceLogger.logStep(
+              globalInteractionId,
+              'TRANSCRIPTION_TOO_SHORT',
+              {
+                transcript: response.transcript,
+                transcriptLength: response.transcript?.length || 0,
+                localInteractionId: this.currentInteractionId,
+              },
+            )
           }
           log.info(
             '[TranscriptionService] Audio too short, skipping interaction.',

@@ -23,8 +23,6 @@ Cleaned output:
 “Let's schedule the meeting for the first week of May.”
 
 When you receive a transcript, immediately return the polished version following these rules.
-
-
 `,
 
   [ItoMode.EDIT]: `

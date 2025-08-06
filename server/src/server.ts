@@ -42,13 +42,23 @@ export const startServer = async () => {
       audience: AUTH0_AUDIENCE,
     })
 
-    connectRpcServer.get('/login', async (_, reply) => {
+    connectRpcServer.get('/login', async (request, reply) => {
+      const { state } = request.query as { state?: string }
+
+      if (!state || typeof state !== 'string') {
+        reply.status(400).send('Missing or invalid state parameter')
+        return
+      }
+
       const redirectUrl = new URL(`https://${AUTH0_DOMAIN}/authorize`)
       redirectUrl.searchParams.set('response_type', 'code')
       redirectUrl.searchParams.set('client_id', AUTH0_CLIENT_ID)
       redirectUrl.searchParams.set('redirect_uri', AUTH0_CALLBACK_URL)
-      redirectUrl.searchParams.set('scope', 'openid profile email')
-      redirectUrl.searchParams.set('state', crypto.randomUUID()) // TODO: We should store this state in a cache and verify
+      redirectUrl.searchParams.set(
+        'scope',
+        'openid profile email offline_access',
+      )
+      redirectUrl.searchParams.set('state', state)
 
       reply.redirect(redirectUrl.toString(), 302)
     })

@@ -8,6 +8,7 @@ All notable changes to the electron-react-app (ERA) are listed here.
 ### v0.2.6
 
 - Improved pill styling [#84](https://github.com/heyito/ito/pull/84)
+- Update llm model on Groq to openai/gpt-oss-120b
 
 ### v0.2.4
 

@@ -8,6 +8,7 @@ All notable changes to the electron-react-app (ERA) are listed here.
 ### v0.2.6
 
 - Improved pill styling [#84](https://github.com/heyito/ito/pull/84)
+- Added name to dictionary after onboarding [#87](https://github.com/heyito/ito/pull/87)
 
 ### v0.2.4
 

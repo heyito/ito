@@ -7,6 +7,7 @@ import { create } from '@bufbuild/protobuf'
 import { InteractionsTable } from './sqlite/repo'
 import { v4 as uuidv4 } from 'uuid'
 import { BrowserWindow } from 'electron'
+import { traceLogger } from './traceLogger'
 
 export class TranscriptionService {
   private isStreaming = false
@@ -47,6 +48,15 @@ export class TranscriptionService {
     this.interactionStartTime = Date.now() // Record start time
     log.info('[gRPC Service] Starting new transcription stream.')
 
+    // Get current interaction ID for trace logging
+    const globalInteractionId = (globalThis as any).currentInteractionId
+    if (globalInteractionId) {
+      traceLogger.logStep(globalInteractionId, 'TRANSCRIPTION_START', {
+        localInteractionId: this.currentInteractionId,
+        startTime: this.interactionStartTime,
+      })
+    }
+
     grpcClient
       .transcribeStream(this.streamAudioChunks())
       .then(response => {
@@ -67,11 +77,43 @@ export class TranscriptionService {
 
         const errorMessage = response.error ? response.error.message : undefined
         if (response.error && response.error.code == 'CLIENT_AUDIO_TOO_SHORT') {
+          if (globalInteractionId) {
+            traceLogger.logStep(
+              globalInteractionId,
+              'TRANSCRIPTION_TOO_SHORT',
+              {
+                transcript: response.transcript,
+                transcriptLength: response.transcript?.length || 0,
+                localInteractionId: this.currentInteractionId,
+              },
+            )
+          }
           log.info(
             '[TranscriptionService] Audio too short, skipping interaction.',
           )
         } else {
+          if (globalInteractionId) {
+            traceLogger.logStep(globalInteractionId, 'TRANSCRIPTION_SUCCESS', {
+              transcript: response.transcript,
+              transcriptLength: response.transcript?.length || 0,
+              localInteractionId: this.currentInteractionId,
+            })
+          }
           this.createInteraction(response.transcript, errorMessage)
+        }
+
+        // End the interaction after successful transcription
+        if (globalInteractionId) {
+          traceLogger.endInteraction(
+            globalInteractionId,
+            'TRANSCRIPTION_COMPLETED',
+            {
+              transcript: response.transcript,
+              transcriptLength: response.transcript?.length || 0,
+              localInteractionId: this.currentInteractionId,
+            },
+          )
+          ;(globalThis as any).currentInteractionId = null
         }
       })
       .catch(error => {
@@ -79,10 +121,51 @@ export class TranscriptionService {
           '[TranscriptionService] An unexpected error occurred during transcription:',
           error,
         )
+
+        // Log transcription error
+        if (globalInteractionId) {
+          traceLogger.logError(
+            globalInteractionId,
+            'TRANSCRIPTION_ERROR',
+            error.message,
+            {
+              localInteractionId: this.currentInteractionId,
+              error: error.message,
+            },
+          )
+        }
+
         // Still create interaction even if transcription failed
         this.createInteraction('', error.message)
+
+        // End the interaction after transcription error
+        if (globalInteractionId) {
+          traceLogger.endInteraction(
+            globalInteractionId,
+            'TRANSCRIPTION_FAILED',
+            {
+              error: error.message,
+              localInteractionId: this.currentInteractionId,
+            },
+          )
+          ;(globalThis as any).currentInteractionId = null
+        }
       })
       .finally(() => {
+        // Ensure interaction is ended if it hasn't been ended yet
+        const globalInteractionId = (globalThis as any).currentInteractionId
+        if (globalInteractionId) {
+          traceLogger.endInteraction(
+            globalInteractionId,
+            'TRANSCRIPTION_FINALLY',
+            {
+              localInteractionId: this.currentInteractionId,
+              reason: 'finally_block',
+            },
+          )
+          ;(globalThis as any).currentInteractionId = null
+        }
+
         this.isStreaming = false
         this.currentInteractionId = null
         this.audioChunksForInteraction = []
@@ -211,6 +294,22 @@ export class TranscriptionService {
   }
 
   public stopTranscription() {
+    // Get current interaction ID for trace logging
+    const globalInteractionId = (globalThis as any).currentInteractionId
+    if (globalInteractionId) {
+      traceLogger.logStep(globalInteractionId, 'TRANSCRIPTION_STOP', {
+        localInteractionId: this.currentInteractionId,
+        audioChunkCount: this.audioChunksForInteraction.length,
+        totalAudioBytes: this.audioChunksForInteraction.reduce(
+          (sum, chunk) => sum + chunk.length,
+          0,
+        ),
+      })
+
+      // Don't end the interaction here - let it end when transcription completes or fails
+      // The interaction will be ended in the .then() or .catch() blocks of the transcription promise
+    }
+
     return this.stopStreaming()
   }
 

@@ -8,6 +8,9 @@ All notable changes to the electron-react-app (ERA) are listed here.
 ### v0.2.6
 
 - Improved pill styling [#84](https://github.com/heyito/ito/pull/84)
+- Add stop button for audio playback with improved resource management
+- Fix memory leaks in audio playback by properly cleaning up blob URLs
+- Enhance tooltip behavior for better UX on copy and play buttons
 
 ### v0.2.4
 

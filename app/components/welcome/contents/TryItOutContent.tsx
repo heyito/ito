@@ -11,7 +11,7 @@ import { ArrowUp } from '@mynaui/icons-react'
 import React from 'react'
 
 export default function TryItOutContent() {
-  const { decrementOnboardingStep, setOnboardingCompleted } =
+  const { decrementOnboardingStep, incrementOnboardingStep } =
     useOnboardingStore()
   const { keyboardShortcut } = useSettingsStore()
   const [selectedApp, setSelectedApp] = useState<
@@ -229,7 +229,7 @@ export default function TryItOutContent() {
             </p>
           </div>
           <div className="flex flex-col items-start mb-8">
-            <Button className="w-24" onClick={setOnboardingCompleted}>
+            <Button className="w-24" onClick={incrementOnboardingStep}>
               Finish
             </Button>
           </div>

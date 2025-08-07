@@ -141,14 +141,6 @@ export const useOnboardingStore = create<OnboardingState>(set => {
       }),
     setOnboardingCompleted: () =>
       set(state => {
-        const step = state.totalOnboardingSteps - 1
-        analytics.trackOnboarding(ANALYTICS_EVENTS.ONBOARDING_STEP_COMPLETED, {
-          step: state.totalOnboardingSteps,
-          step_name: getStepName(step),
-          category: getOnboardingCategory(step),
-          total_steps: state.totalOnboardingSteps,
-        })
-
         analytics.trackOnboarding(ANALYTICS_EVENTS.ONBOARDING_COMPLETED, {
           step: state.totalOnboardingSteps,
           step_name: 'completed',

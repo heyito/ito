@@ -13,10 +13,13 @@ import './styles.css'
 import { usePermissionsStore } from '../../store/usePermissionsStore'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { useAuthStore } from '@/app/store/useAuthStore'
+import { useDictionaryStore } from '@/app/store/useDictionaryStore'
 
 export default function WelcomeKit() {
-  const { onboardingStep } = useOnboardingStore()
+  const { onboardingStep, totalOnboardingSteps, setOnboardingCompleted } =
+    useOnboardingStore()
   const { isAuthenticated, user } = useAuthStore()
+  const { addEntry } = useDictionaryStore()
 
   const { setAccessibilityEnabled, setMicrophoneEnabled } =
     usePermissionsStore()
@@ -34,6 +37,25 @@ export default function WelcomeKit() {
         setMicrophoneEnabled(enabled)
       })
   }, [setAccessibilityEnabled, setMicrophoneEnabled])
+
+  useEffect(() => {
+    if (onboardingStep >= totalOnboardingSteps) {
+      // Add user name to dictionary if available
+
+      if (user?.name) {
+        console.log('Adding user name to dictionary:', user.name)
+        addEntry(user.name)
+      }
+
+      setOnboardingCompleted()
+    }
+  }, [
+    onboardingStep,
+    totalOnboardingSteps,
+    addEntry,
+    user,
+    setOnboardingCompleted,
+  ])
 
   // Show signin/signup based on whether user has previous auth data
   if (!isAuthenticated) {

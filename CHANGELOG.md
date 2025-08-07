@@ -4,9 +4,9 @@ All notable changes to the electron-react-app (ERA) are listed here.
 
 <br>
 
-
 ### v0.2.6
 
+- Fix bug where keyboard shortcut keys get swallowed in other apps.
 - Improved pill styling [#84](https://github.com/heyito/ito/pull/84)
 
 ### v0.2.4

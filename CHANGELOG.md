@@ -4,6 +4,11 @@ All notable changes to the electron-react-app (ERA) are listed here.
 
 <br>
 
+
+### v0.2.6
+
+- Improved pill styling [#84](https://github.com/heyito/ito/pull/84)
+
 ### v0.2.4
 
 - Add OpenTelemetry trace logging for user interactions

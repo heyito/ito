@@ -42,13 +42,7 @@ export default function WelcomeKit() {
     if (onboardingStep >= totalOnboardingSteps) {
       setOnboardingCompleted()
     }
-  }, [
-    onboardingStep,
-    totalOnboardingSteps,
-    addEntry,
-    user,
-    setOnboardingCompleted,
-  ])
+  }, [onboardingStep, totalOnboardingSteps, setOnboardingCompleted])
 
   // Show signin/signup based on whether user has previous auth data
   if (!isAuthenticated) {

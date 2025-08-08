@@ -91,6 +91,76 @@ export const startServer = async () => {
         return createContextValues()
       },
     })
+
+    // Authenticated client log ingestion endpoint
+    // Accepts: { events: Array<LogEvent> }
+    type LogEvent = {
+      ts: number
+      level: 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal' | 'log'
+      message: string
+      fields?: Record<string, unknown>
+      interactionId?: string
+      traceId?: string
+      spanId?: string
+      appVersion?: string
+      platform?: string
+      source?: string
+    }
+
+    fastify.post('/logs', async (request, reply) => {
+      const body = request.body as { events?: LogEvent[] } | undefined
+
+      if (!body || !Array.isArray(body.events)) {
+        reply.code(400).send({ error: 'Invalid body: { events: LogEvent[] }' })
+        return
+      }
+
+      const events = body.events
+      const userSub = (REQUIRE_AUTH && (request as any).user?.sub) || undefined
+
+      const now = Date.now()
+      for (const e of events) {
+        // Basic sanitation
+        const ts = typeof e.ts === 'number' ? e.ts : now
+        const level =
+          e.level === 'trace' ||
+          e.level === 'debug' ||
+          e.level === 'info' ||
+          e.level === 'warn' ||
+          e.level === 'error' ||
+          e.level === 'fatal'
+            ? e.level
+            : 'info'
+
+        // Emit a structured JSON log line to stdout (picked up by CloudWatch)
+        // Deliberately use console.log to avoid pino formatting changes
+        const structured = {
+          source: e.source || 'client',
+          level,
+          ts,
+          message: e.message,
+          fields: e.fields || {},
+          interactionId: e.interactionId,
+          traceId: e.traceId,
+          spanId: e.spanId,
+          appVersion: e.appVersion,
+          platform: e.platform,
+          userSub,
+        }
+        try {
+          // Avoid using console.* within Fastify logger to keep it simple
+          process.stdout.write(`${JSON.stringify(structured)}\n`)
+        } catch (err) {
+          // Fallback to Fastify logger if needed
+          fastify.log.error(
+            { err },
+            'Failed to emit structured client log line',
+          )
+        }
+      }
+
+      reply.code(204).send()
+    })
   })
 
   // Error handling - this handles Fastify-level errors, not RPC errors

@@ -10,13 +10,11 @@ import { Auth0Provider } from '@/app/components/auth/Auth0Provider'
 import { useDeviceChangeListener } from './hooks/useDeviceChangeListener'
 import { verifyStoredMicrophone } from './media/microphone'
 import { useEffect } from 'react'
-import { useGlobalShortcut } from './hooks/useGlobalShortcut'
 
 const MainApp = () => {
   const { onboardingCompleted, onboardingStep } = useOnboardingStore()
   const { isAuthenticated } = useAuth()
   useDeviceChangeListener()
-  useGlobalShortcut()
 
   useEffect(() => {
     verifyStoredMicrophone()

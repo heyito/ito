@@ -129,6 +129,15 @@ function handleKeyEventInMain(event: KeyEvent) {
   const isShortcutHeld =
     keyboardShortcut && keyboardShortcut.every(key => pressedKeys.has(key))
 
+  // Only block keys when the complete shortcut is being held
+  if (isShortcutHeld) {
+    // Block all shortcut keys while the complete combination is pressed
+    blockKeys(getKeysToBlock())
+  } else {
+    // Unblock all keys when the complete combination is not pressed
+    blockKeys([])
+  }
+
   // Shortcut pressed
   if (isShortcutHeld && !isShortcutActive) {
     isShortcutActive = true
@@ -238,7 +247,6 @@ export const startKeyListener = () => {
       KeyListenerProcess = null
     })
 
-    blockKeys(getKeysToBlock())
     console.log('Key listener started successfully.')
   } catch (error) {
     console.error('Failed to start key listener:', error)
@@ -285,12 +293,12 @@ const reverseKeyNameMap: Record<string, string[]> = Object.entries(
 )
 
 const getKeysToBlock = (): string[] => {
+  const { keyboardShortcut } = store.get(STORE_KEYS.SETTINGS)
+
   // Use the reverse map to find all raw keys for the normalized shortcut keys.
-  const keys = Array.from(pressedKeys).flatMap(
+  const keys = keyboardShortcut.flatMap(
     normalizedKey => reverseKeyNameMap[normalizedKey] || [],
   )
-
-  const { keyboardShortcut } = store.get(STORE_KEYS.SETTINGS)
 
   // Also block the special "fast fn" key if fn is part of the shortcut.
   if (keyboardShortcut.includes('fn')) {

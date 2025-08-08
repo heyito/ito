@@ -806,15 +806,70 @@ describe('Keyboard Module', () => {
       expect(mockChildProcess.stdin.write).not.toHaveBeenCalled()
     })
 
-    test('should automatically block keys on startup', async () => {
-      const { startKeyListener } = await import('./keyboard')
+    test('should only block keys when complete shortcut is pressed', async () => {
+      mockMainStore.get.mockReturnValue({
+        keyboardShortcut: ['control', 'z'],
+        isShortcutGloballyEnabled: true,
+      })
 
+      const { startKeyListener } = await import('./keyboard')
       startKeyListener()
 
-      // Should call blockKeys with getKeysToBlock() result
+      // Should not block keys initially
+      expect(mockChildProcess.stdin.write).not.toHaveBeenCalled()
+
+      // Press only control (partial shortcut) - should not block
+      const controlDown = {
+        type: 'keydown',
+        key: 'ControlLeft',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 17,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(controlDown) + '\n'),
+      )
+
+      // Should unblock keys since complete shortcut is not pressed
+      expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
+        JSON.stringify({ command: 'block', keys: [] }) + '\n',
+      )
+
+      // Press z key to complete shortcut
+      const zDown = {
+        type: 'keydown',
+        key: 'KeyZ',
+        timestamp: '2024-01-01T00:00:00.001Z',
+        raw_code: 90,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(zDown) + '\n'),
+      )
+
+      // Now should block keys since complete shortcut is pressed
       expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
         expect.stringContaining('"command":"block"'),
       )
+      expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
+        expect.stringContaining('ControlLeft'),
+      )
+      expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
+        expect.stringContaining('KeyZ'),
+      )
+    })
+
+    test('should not block keys when shortcut is disabled', async () => {
+      mockMainStore.get.mockReturnValue({
+        keyboardShortcut: ['control', 'z'],
+        isShortcutGloballyEnabled: false,
+      })
+
+      const { startKeyListener } = await import('./keyboard')
+      startKeyListener()
+
+      // Should not block any keys if shortcut is disabled
+      expect(mockChildProcess.stdin.write).not.toHaveBeenCalled()
     })
   })
 

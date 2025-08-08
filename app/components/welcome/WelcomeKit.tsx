@@ -40,13 +40,6 @@ export default function WelcomeKit() {
 
   useEffect(() => {
     if (onboardingStep >= totalOnboardingSteps) {
-      // Add user name to dictionary if available
-
-      if (user?.name) {
-        console.log('Adding user name to dictionary:', user.name)
-        addEntry(user.name)
-      }
-
       setOnboardingCompleted()
     }
   }, [

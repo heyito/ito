@@ -13,6 +13,7 @@ import MicrosoftIcon from '../../icons/MicrosoftIcon'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../auth/useAuth'
 import { checkLocalServerHealth } from '@/app/utils/healthCheck'
+import { useDictionaryStore } from '@/app/store/useDictionaryStore'
 
 export default function CreateAccountContent() {
   const { incrementOnboardingStep, initializeOnboarding } = useOnboardingStore()
@@ -28,12 +29,18 @@ export default function CreateAccountContent() {
     loginWithSelfHosted,
   } = useAuth()
 
+  const { addEntry } = useDictionaryStore()
+
   // If user is authenticated, proceed to next step
   useEffect(() => {
     if (isAuthenticated && user) {
+      if (user?.name) {
+        console.log('Adding user name to dictionary:', user.name)
+        addEntry(user.name)
+      }
       incrementOnboardingStep()
     }
-  }, [isAuthenticated, user, incrementOnboardingStep])
+  }, [isAuthenticated, user, incrementOnboardingStep, addEntry])
 
   useEffect(() => {
     initializeOnboarding()

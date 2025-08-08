@@ -5,6 +5,7 @@
   "type": "module",
   "license": "GPL-3.0-only",
   "dependencies": {
+    "@aws-sdk/client-cloudwatch-logs": "^3.723.0",
     "@auth0/auth0-fastify-api": "^1.0.2",
     "@bufbuild/buf": "^1.55.1",
     "@bufbuild/protobuf": "^2.5.2",

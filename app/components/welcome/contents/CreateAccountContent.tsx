@@ -38,7 +38,7 @@ export default function CreateAccountContent() {
     if (isAuthenticated && user) {
       incrementOnboardingStep()
     }
-  }, [isAuthenticated, user, incrementOnboardingStep, addEntry])
+  }, [isAuthenticated, user, incrementOnboardingStep])
 
   useEffect(() => {
     if (userName && !isDictInitialized.current) {

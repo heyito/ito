@@ -10,7 +10,7 @@ import GoogleIcon from '../../icons/GoogleIcon'
 import AppleIcon from '../../icons/AppleIcon'
 import GitHubIcon from '../../icons/GitHubIcon'
 import MicrosoftIcon from '../../icons/MicrosoftIcon'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../auth/useAuth'
 import { checkLocalServerHealth } from '@/app/utils/healthCheck'
 import { useDictionaryStore } from '@/app/store/useDictionaryStore'
@@ -18,6 +18,7 @@ import { useDictionaryStore } from '@/app/store/useDictionaryStore'
 export default function CreateAccountContent() {
   const { incrementOnboardingStep, initializeOnboarding } = useOnboardingStore()
   const [isServerHealthy, setIsServerHealthy] = useState(true)
+  const isDictInitialized = useRef(false)
 
   const {
     user,
@@ -28,19 +29,24 @@ export default function CreateAccountContent() {
     loginWithGitHub,
     loginWithSelfHosted,
   } = useAuth()
+  const userName = user?.name
 
-  const { addEntry } = useDictionaryStore()
+  const addEntry = useDictionaryStore(state => state.addEntry)
 
   // If user is authenticated, proceed to next step
   useEffect(() => {
     if (isAuthenticated && user) {
-      if (user?.name) {
-        console.log('Adding user name to dictionary:', user.name)
-        addEntry(user.name)
-      }
       incrementOnboardingStep()
     }
   }, [isAuthenticated, user, incrementOnboardingStep, addEntry])
+
+  useEffect(() => {
+    if (userName && !isDictInitialized.current) {
+      console.log('Adding user name to dictionary:', userName)
+      addEntry(userName)
+      isDictInitialized.current = true
+    }
+  }, [userName, isDictInitialized, addEntry])
 
   useEffect(() => {
     initializeOnboarding()

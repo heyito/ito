@@ -15,7 +15,6 @@ module.exports = {
     '!.prettierignore',
     '!.prettierrc.yaml',
     '!dev-app-update.yml',
-    '!CHANGELOG.md',
     '!README.md',
     '!.env',
     '!.env.*',

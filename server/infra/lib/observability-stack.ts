@@ -56,6 +56,9 @@ export class ObservabilityStack extends Stack {
       alarmName: `${stageName}-ito-unhealthy-tasks`,
     }).addAlarmAction(snsAction)
 
+    // All client logs are ingested via the server and written to stdout,
+    // which flows into the existing CloudWatch Log Group for the service.
+
     Tags.of(this).add('Project', 'Ito')
   }
 }

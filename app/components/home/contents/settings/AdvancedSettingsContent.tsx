@@ -1,15 +1,70 @@
-import { useAdvancedSettingsStore } from '@/app/store/useAdvancedSettingsStore'
+import {
+  LlmSettings,
+  useAdvancedSettingsStore,
+} from '@/app/store/useAdvancedSettingsStore'
+
+type LlmSettingConfig = {
+  name: keyof LlmSettings
+  label: string
+  placeholder: string
+  description: string
+  maxLength: number
+  resize?: boolean
+}
+
+const llmSettingsConfig: LlmSettingConfig[] = [
+  {
+    name: 'asrModel',
+    label: 'ASR Model',
+    placeholder: 'Enter ASR model name',
+    description: 'The Groq model used for speech-to-text transcription',
+    maxLength: 30,
+  },
+  {
+    name: 'llmModel',
+    label: 'LLM Model',
+    placeholder: 'Enter LLM model name',
+    description: 'The Groq model used for text generation tasks',
+    maxLength: 30,
+  },
+  {
+    name: 'llmTemperature',
+    label: 'LLM Temperature',
+    placeholder: 'Enter LLM temperature (e.g., 0.7)',
+    description:
+      'Controls the randomness of the LLM output. Higher values produce more diverse results.',
+    maxLength: 5,
+  },
+  {
+    name: 'transcriptionPrompt',
+    label: 'Transcription Prompt',
+    placeholder: 'Enter custom transcription prompt',
+    description:
+      'A custom prompt to guide the transcription process for better accuracy. (Leave empty for default)',
+    maxLength: 500,
+    resize: true,
+  },
+  {
+    name: 'editingPrompt',
+    label: 'Editing Prompt',
+    placeholder: 'Enter custom editing prompt',
+    description:
+      'A custom prompt to guide the editing process for improved text quality. (Leave empty for default)',
+    maxLength: 500,
+    resize: true,
+  },
+]
 
 export default function AdvancedSettingsContent() {
   const { llm, setLlmSettings } = useAdvancedSettingsStore()
 
   return (
-    <div className="space-y-6">
+    <div className="max-h-[70vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-500 scrollbar-track-transparent">
       <div>
-        <h3 className="text-lg font-semibold text-slate-900 mb-2">
+        <h2 className="text-lg font-semibold text-slate-900">
           Advanced Settings
-        </h3>
-        <p className="text-slate-600">
+        </h2>
+        <p className="text-slate-600 mb-3">
           Configure advanced options and experimental features.
         </p>
       </div>
@@ -17,29 +72,36 @@ export default function AdvancedSettingsContent() {
       {/* LLM Settings Section */}
       <div className="space-y-4">
         <div>
-          <h4 className="text-md font-medium text-slate-900 mb-3">
+          <h3 className="text-md font-medium text-slate-900 mb-3">
             LLM Settings
-          </h4>
+          </h3>
           <div className="space-y-3">
-            <div>
-              <label
-                htmlFor="asr-model"
-                className="block text-sm font-medium text-slate-700 mb-1"
-              >
-                ASR Model
-              </label>
-              <input
-                id="asr-model"
-                type="text"
-                value={llm.asrModel}
-                onChange={e => setLlmSettings({ asrModel: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter ASR model name"
-              />
-              <p className="text-xs text-slate-500 mt-1">
-                The Groq model used for speech-to-text transcription
-              </p>
-            </div>
+            {llmSettingsConfig.map(config => (
+              <div key={config.name} className="mb-5">
+                <label
+                  htmlFor={config.name}
+                  className="block text-sm font-medium text-slate-700 mb-1"
+                >
+                  {config.label}
+                </label>
+                <textarea
+                  id={config.name}
+                  // type="text"
+                  value={llm[config.name as keyof typeof llm]}
+                  onChange={e =>
+                    setLlmSettings({ [config.name]: e.target.value })
+                  }
+                  className={
+                    'w-3/4 px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                  }
+                  placeholder={config.placeholder}
+                  maxLength={config.maxLength}
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  {config.description}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </div>

@@ -257,6 +257,10 @@ export class SyncService {
         const updatedLocalSettings: AdvancedSettings = {
           llm: {
             asrModel: remoteSettings.llm?.asrModel || 'whisper-large-v3',
+            llmModel: remoteSettings.llm?.llmModel || 'lama-3.3-70b-versatile',
+            llmTemperature: remoteSettings.llm?.llmTemperature || '0.1',
+            transcriptionPrompt: remoteSettings.llm?.transcriptionPrompt || '',
+            editingPrompt: remoteSettings.llm?.editingPrompt || '',
           },
         }
 

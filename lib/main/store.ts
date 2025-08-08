@@ -61,6 +61,10 @@ export interface AuthStore {
 export interface AdvancedSettings {
   llm: {
     asrModel: string
+    llmModel: string
+    llmTemperature: string
+    transcriptionPrompt: string
+    editingPrompt: string
   }
 }
 
@@ -132,6 +136,10 @@ const defaultValues: AppStore = {
   advancedSettings: {
     llm: {
       asrModel: 'whisper-large-v3',
+      llmTemperature: '0.1',
+      llmModel: 'lama-3.3-70b-versatile',
+      transcriptionPrompt: '',
+      editingPrompt: '',
     },
   },
   openMic: false,

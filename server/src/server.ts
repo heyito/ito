@@ -24,8 +24,15 @@ export const startServer = async () => {
   if (REQUIRE_AUTH) {
     const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN
     const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE
+    const AUTH0_CLIENT_ID = process.env.AUTH0_CLIENT_ID
+    const AUTH0_CALLBACK_URL = process.env.AUTH0_CALLBACK_URL
 
-    if (!AUTH0_DOMAIN || !AUTH0_AUDIENCE) {
+    if (
+      !AUTH0_DOMAIN ||
+      !AUTH0_AUDIENCE ||
+      !AUTH0_CLIENT_ID ||
+      !AUTH0_CALLBACK_URL
+    ) {
       connectRpcServer.log.error('Auth0 configuration missing in .env file')
       process.exit(1)
     }
@@ -33,6 +40,27 @@ export const startServer = async () => {
     await connectRpcServer.register(Auth0, {
       domain: AUTH0_DOMAIN,
       audience: AUTH0_AUDIENCE,
+    })
+
+    connectRpcServer.get('/login', async (request, reply) => {
+      const { state } = request.query as { state?: string }
+
+      if (!state || typeof state !== 'string') {
+        reply.status(400).send('Missing or invalid state parameter')
+        return
+      }
+
+      const redirectUrl = new URL(`https://${AUTH0_DOMAIN}/authorize`)
+      redirectUrl.searchParams.set('response_type', 'code')
+      redirectUrl.searchParams.set('client_id', AUTH0_CLIENT_ID)
+      redirectUrl.searchParams.set('redirect_uri', AUTH0_CALLBACK_URL)
+      redirectUrl.searchParams.set(
+        'scope',
+        'openid profile email offline_access',
+      )
+      redirectUrl.searchParams.set('state', state)
+
+      reply.redirect(redirectUrl.toString(), 302)
     })
   }
 

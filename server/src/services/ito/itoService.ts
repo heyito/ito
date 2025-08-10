@@ -245,11 +245,14 @@ export default (router: ConnectRouter) => {
         const windowTitle = context.requestHeader.get('window-title') || ''
         const appName = context.requestHeader.get('app-name') || ''
         const windowContext: WindowContext = { windowTitle, appName }
-        transcript = await groqClient.adjustTranscript(
-          transcript,
-          mode,
-          windowContext,
-        )
+        if (mode === ItoMode.EDIT) {
+          transcript = await groqClient.adjustTranscript(
+            transcript,
+            mode,
+            windowContext,
+          )
+        }
+
         console.log(
           `📝 [${new Date().toISOString()}] Adjusted transcript: "${transcript}"`,
         )

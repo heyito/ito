@@ -59,4 +59,5 @@ jobs:
         env:
           AUTH0_DOMAIN: '${{ secrets.VITE_AUTH0_DOMAIN }}'
           AUTH0_AUDIENCE: '${{ secrets.VITE_AUTH0_AUDIENCE }}'
+          AUTH0_CLIENT_ID: '${{ secrets.VITE_AUTH0_CLIENT_ID }}'
         run: npx cdk deploy "Ito-${{ vars.AWS_STAGE }}/*" --require-approval never

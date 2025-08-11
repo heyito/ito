@@ -1,6 +1,7 @@
 import Store from 'electron-store'
 import crypto from 'crypto'
 import { STORE_KEYS } from '../constants/store-keys'
+import { LlmSettings } from '@/app/store/useAdvancedSettingsStore'
 
 interface MainStore {
   navExpanded: boolean
@@ -59,13 +60,7 @@ export interface AuthStore {
 }
 
 export interface AdvancedSettings {
-  llm: {
-    asrModel: string
-    llmModel: string
-    llmTemperature: string
-    transcriptionPrompt: string
-    editingPrompt: string
-  }
+  llm: LlmSettings
 }
 
 interface AppStore {
@@ -135,11 +130,16 @@ const defaultValues: AppStore = {
   },
   advancedSettings: {
     llm: {
+      asrProvider: 'groq',
       asrModel: 'whisper-large-v3',
-      llmTemperature: '0.1',
-      llmModel: 'lama-3.3-70b-versatile',
+      asrPrompt: '',
+      llmProvider: 'groq',
+      llmTemperature: 0.1,
+      llmModel: 'lama-3.3-70b-versatile', // TODO: likely update
       transcriptionPrompt: '',
       editingPrompt: '',
+      noSpeechThreshold: 0.35,
+      lowQualityThreshold: -0.55,
     },
   },
   openMic: false,

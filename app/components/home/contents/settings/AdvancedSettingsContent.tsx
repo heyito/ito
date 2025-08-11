@@ -10,15 +10,41 @@ type LlmSettingConfig = {
   description: string
   maxLength: number
   resize?: boolean
+  readOnly?: boolean
 }
 
 const llmSettingsConfig: LlmSettingConfig[] = [
+  {
+    name: 'asrProvider',
+    label: 'ASR Provider',
+    placeholder: 'Enter ASR provider name',
+    description: '',
+    maxLength: 0,
+    readOnly: true,
+  },
   {
     name: 'asrModel',
     label: 'ASR Model',
     placeholder: 'Enter ASR model name',
     description: 'The Groq model used for speech-to-text transcription',
     maxLength: 30,
+  },
+  {
+    name: 'asrPrompt',
+    label: 'ASR Prompt',
+    placeholder: 'Enter custom ASR prompt',
+    description:
+      'A custom prompt to guide the ASR transcription process for better accuracy. Dictionary will be appended. (Leave empty for default)',
+    maxLength: 100,
+    resize: true,
+  },
+  {
+    name: 'llmProvider',
+    label: 'LLM Provider',
+    placeholder: 'Enter LLM provider name',
+    description: 'LLM provider (currently only Groq is supported)',
+    maxLength: 20,
+    readOnly: true,
   },
   {
     name: 'llmModel',
@@ -53,6 +79,20 @@ const llmSettingsConfig: LlmSettingConfig[] = [
     maxLength: 500,
     resize: true,
   },
+  {
+    name: 'noSpeechThreshold',
+    label: 'No Speech Threshold',
+    placeholder: 'e.g., 0.6',
+    description: 'Threshold for detecting no speech segments in audio.',
+    maxLength: 5,
+  },
+  {
+    name: 'lowQualityThreshold',
+    label: 'Low Quality Threshold',
+    placeholder: 'e.g., 0.3',
+    description: 'Threshold for identifying low-quality audio segments.',
+    maxLength: 5,
+  },
 ]
 
 export default function AdvancedSettingsContent() {
@@ -84,10 +124,10 @@ export default function AdvancedSettingsContent() {
                 >
                   {config.label}
                 </label>
-                <textarea
+                <input
                   id={config.name}
                   // type="text"
-                  value={llm[config.name as keyof typeof llm]}
+                  value={llm[config.name as string]}
                   onChange={e =>
                     setLlmSettings({ [config.name]: e.target.value })
                   }
@@ -96,6 +136,7 @@ export default function AdvancedSettingsContent() {
                   }
                   placeholder={config.placeholder}
                   maxLength={config.maxLength}
+                  readOnly={config.readOnly}
                 />
                 <p className="text-xs text-slate-500 mt-1">
                   {config.description}

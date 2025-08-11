@@ -32,7 +32,6 @@ DB_NAME=ito_db
 
 # GROQ API Configuration (Required)
 GROQ_API_KEY=your_groq_api_key_here
-GROQ_TRANSCRIPTION_MODEL=whisper-large-v3
 
 # Authentication (Optional - set to false for local development)
 REQUIRE_AUTH=false

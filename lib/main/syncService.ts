@@ -256,11 +256,17 @@ export class SyncService {
       if (remoteUpdatedAt > lastSyncTime) {
         const updatedLocalSettings: AdvancedSettings = {
           llm: {
+            asrProvider: remoteSettings.llm?.asrProvider || 'groq',
             asrModel: remoteSettings.llm?.asrModel || 'whisper-large-v3',
+            asrPrompt: remoteSettings.llm?.asrPrompt || '',
+            llmProvider: remoteSettings.llm?.llmProvider || 'groq',
             llmModel: remoteSettings.llm?.llmModel || 'lama-3.3-70b-versatile',
-            llmTemperature: remoteSettings.llm?.llmTemperature || '0.1',
+            llmTemperature: remoteSettings.llm?.llmTemperature || 0.1,
             transcriptionPrompt: remoteSettings.llm?.transcriptionPrompt || '',
             editingPrompt: remoteSettings.llm?.editingPrompt || '',
+            noSpeechThreshold: remoteSettings.llm?.noSpeechThreshold || 0.35,
+            lowQualityThreshold:
+              remoteSettings.llm?.lowQualityThreshold || -0.55,
           },
         }
 

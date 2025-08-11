@@ -31,20 +31,30 @@ export interface DictionaryItem {
   deleted_at: Date | null
 }
 
-export interface LlmSettings {
-  id: string
-  user_id: string
+interface LlmSettingsBase {
   asr_model: string
+  asr_provider: string
+  asr_prompt: string
+  llm_provider: string
+  llm_model: string
+  llm_temperature: number
+  transcription_prompt: string
+  editing_prompt: string
+  no_speech_threshold: number
+  low_quality_threshold: number
+}
+
+export interface LlmSettings extends LlmSettingsBase {
+  id: string
   created_at: Date
   updated_at: Date
+  user_id: string
 }
 
 export interface AdvancedSettings {
   id: string
   user_id: string
-  llm: {
-    asr_model: string
-  }
+  llm: LlmSettingsBase
   created_at: Date
   updated_at: Date
 }

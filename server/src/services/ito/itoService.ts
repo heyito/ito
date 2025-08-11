@@ -35,6 +35,13 @@ import { WindowContext } from './types.js'
 import { HeaderValidator } from '../../validation/HeaderValidator.js'
 import { errorToProtobuf } from '../../clients/errors.js'
 import { ClientProvider } from '../../clients/providers.js'
+import {
+  addContextToPrompt,
+  getAdvancedSettingsHeaders,
+  detectItoMode,
+  getPromptForMode,
+} from './helpers.js'
+import { no } from 'zod/v4/locales'
 
 /**
  * --- NEW: WAV Header Generation Function ---
@@ -140,6 +147,50 @@ function dbToAdvancedSettingsPb(
   })
 }
 
+async function transcribeWithGroq(
+  fullAudioWAV: Buffer<ArrayBufferLike>,
+  advancedSettingsHeaders: ReturnType<typeof getAdvancedSettingsHeaders>,
+  vocabulary: string[] | undefined,
+) {
+  const transcript = await groqClient.transcribeAudio(
+    fullAudioWAV,
+    'wav',
+    advancedSettingsHeaders.asrModel,
+    advancedSettingsHeaders.noSpeechThreshold,
+    advancedSettingsHeaders.lowQualityThreshold,
+    advancedSettingsHeaders.asrPrompt,
+    vocabulary,
+  )
+  console.log(
+    `📝 [${new Date().toISOString()}] Received transcript: "${transcript}"`,
+  )
+  return transcript
+}
+
+async function adjustTranscriptWithGroq(
+  transcript: string,
+  systemPrompt: string,
+  startTime: number,
+  advancedSettingsHeaders: ReturnType<typeof getAdvancedSettingsHeaders>,
+) {
+  const result = await groqClient.adjustTranscript(
+    transcript,
+    advancedSettingsHeaders.llmTemperature,
+    advancedSettingsHeaders.llmModel,
+    systemPrompt,
+  )
+  console.log(
+    `📝 [${new Date().toISOString()}] Adjusted transcript: "${transcript}"`,
+  )
+
+  const duration = Date.now() - startTime
+  console.log(
+    `✅ [${new Date().toISOString()}] Transcription completed in ${duration}ms`,
+  )
+
+  return result
+}
+
 // Export the service implementation as a function that takes a ConnectRouter
 export default (router: ConnectRouter) => {
   router.service(ItoServiceDesc, {
@@ -200,64 +251,66 @@ export default (router: ConnectRouter) => {
           ? HeaderValidator.validateVocabulary(vocabularyHeader)
           : []
 
-        const asrModelHeader = context.requestHeader.get('asr-model')
-        // Use header value if provided, otherwise fall back to environment variable for backwards compatibility
-        const asrModelToValidate =
-          asrModelHeader || process.env.GROQ_TRANSCRIPTION_MODEL
-
-        if (!asrModelToValidate) {
-          throw new ConnectError(
-            'ASR model must be provided either in header or GROQ_TRANSCRIPTION_MODEL environment variable',
-            Code.InvalidArgument,
-          )
-        }
-
-        const asrModel = HeaderValidator.validateAsrModel(asrModelToValidate)
-        console.log(
-          `[Transcription] Using validated ASR model: ${asrModel} (source: ${asrModelHeader ? 'header' : 'env'})`,
+        const advancedSettingsHeaders = getAdvancedSettingsHeaders(
+          context.requestHeader,
         )
 
         // 4. Send the corrected WAV file using the validated ASR model from headers.
-        let transcript = await groqClient.transcribeAudio(
-          fullAudioWAV,
-          'wav',
-          asrModel,
-          vocabulary,
-        )
-
-        console.log(
-          `📝 [${new Date().toISOString()}] Received transcript: "${transcript}"`,
-        )
-
-        // 5. Check if transcript contains "Hey Ito" in the first 5 words
-        const words = transcript.trim().split(/\s+/)
-        const firstFiveWords = words.slice(0, 5).join(' ').toLowerCase()
-
-        let mode = ItoMode.TRANSCRIBE
-        if (firstFiveWords.includes('hey ito')) {
-          mode = ItoMode.EDIT
+        let transcript
+        switch (advancedSettingsHeaders.asrProvider) {
+          case 'groq':
+            console.log('Transcribing with Groq ASR provider')
+            transcript = await transcribeWithGroq(
+              fullAudioWAV,
+              advancedSettingsHeaders,
+              vocabulary,
+            )
+            break
+          default:
+            console.log('No provider matched, using Groq by default')
+            transcript = await transcribeWithGroq(
+              fullAudioWAV,
+              advancedSettingsHeaders,
+              vocabulary,
+            )
+            break
         }
-
-        console.log(
-          `🧠 [${new Date().toISOString()}] Detected "Hey Ito", adjusting transcript`,
-        )
 
         const windowTitle = context.requestHeader.get('window-title') || ''
         const appName = context.requestHeader.get('app-name') || ''
         const windowContext: WindowContext = { windowTitle, appName }
-        transcript = await groqClient.adjustTranscript(
-          transcript,
-          mode,
-          windowContext,
+
+        const detectedMode = detectItoMode(transcript)
+        const preContextPrompt = getPromptForMode(
+          detectedMode,
+          advancedSettingsHeaders,
         )
+        const systemPrompt = addContextToPrompt(preContextPrompt, windowContext)
+
         console.log(
-          `📝 [${new Date().toISOString()}] Adjusted transcript: "${transcript}"`,
+          `🧠 [${new Date().toISOString()}] Detected mode: ${detectedMode === ItoMode.EDIT ? 'EDIT' : 'TRANSCRIBE'}, adjusting transcript`,
         )
 
-        const duration = Date.now() - startTime
-        console.log(
-          `✅ [${new Date().toISOString()}] Transcription completed in ${duration}ms`,
-        )
+        switch (advancedSettingsHeaders.llmProvider) {
+          case 'groq':
+            console.log('Using Groq LLM provider for transcript adjustment')
+            transcript = await adjustTranscriptWithGroq(
+              transcript,
+              systemPrompt,
+              startTime,
+              advancedSettingsHeaders,
+            )
+            break
+          default:
+            console.log('No LLM provider matched, using Groq by default')
+            transcript = await adjustTranscriptWithGroq(
+              transcript,
+              systemPrompt,
+              startTime,
+              advancedSettingsHeaders,
+            )
+            break
+        }
 
         return create(TranscriptionResponseSchema, {
           transcript,

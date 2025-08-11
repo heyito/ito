@@ -2,6 +2,7 @@ import {
   LlmSettings,
   useAdvancedSettingsStore,
 } from '@/app/store/useAdvancedSettingsStore'
+import { ChangeEvent, useEffect, useRef } from 'react'
 
 type LlmSettingConfig = {
   name: keyof LlmSettings
@@ -97,6 +98,35 @@ const llmSettingsConfig: LlmSettingConfig[] = [
 
 export default function AdvancedSettingsContent() {
   const { llm, setLlmSettings } = useAdvancedSettingsStore()
+  const debounceRef = useRef<NodeJS.Timeout>(null)
+
+  console.log({ llm })
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
+      }
+    }
+  }, [])
+
+  function handleInputChange(
+    e: ChangeEvent<HTMLInputElement>,
+    config: LlmSettingConfig,
+  ) {
+    const newValue = e.target.value
+    setLlmSettings({ [config.name]: newValue })
+
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      await window.api.updateAdvancedSettings({
+        llm: { ...llm, [config.name]: newValue },
+      })
+    }, 1000)
+  }
 
   return (
     <div className="max-h-[70vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-500 scrollbar-track-transparent">
@@ -128,9 +158,7 @@ export default function AdvancedSettingsContent() {
                   id={config.name}
                   // type="text"
                   value={llm[config.name as string]}
-                  onChange={e =>
-                    setLlmSettings({ [config.name]: e.target.value })
-                  }
+                  onChange={e => handleInputChange(e, config)}
                   className={
                     'w-3/4 px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                   }

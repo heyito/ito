@@ -142,6 +142,15 @@ function dbToAdvancedSettingsPb(
     updatedAt: dbAdvancedSettings.updated_at.toISOString(),
     llm: create(LlmSettingsSchema, {
       asrModel: dbAdvancedSettings.llm.asr_model,
+      asrPrompt: dbAdvancedSettings.llm.asr_prompt,
+      asrProvider: dbAdvancedSettings.llm.asr_provider,
+      llmProvider: dbAdvancedSettings.llm.llm_provider,
+      llmTemperature: dbAdvancedSettings.llm.llm_temperature,
+      llmModel: dbAdvancedSettings.llm.llm_model,
+      transcriptionPrompt: dbAdvancedSettings.llm.transcription_prompt,
+      editingPrompt: dbAdvancedSettings.llm.editing_prompt,
+      noSpeechThreshold: dbAdvancedSettings.llm.no_speech_threshold,
+      lowQualityThreshold: dbAdvancedSettings.llm.low_quality_threshold,
     }),
   })
 }
@@ -513,6 +522,8 @@ export default (router: ConnectRouter) => {
       if (!userId) {
         throw new ConnectError('User not authenticated', Code.Unauthenticated)
       }
+
+      console.log({ request })
 
       const updatedSettings = await AdvancedSettingsRepository.upsert(
         userId,

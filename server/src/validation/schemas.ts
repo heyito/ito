@@ -30,7 +30,7 @@ export const LlmModelSchema = z
   .refine(val => val.length > 0, 'LLM model cannot be empty')
   .refine(val => val.length <= 100, 'LLM model too long')
   .refine(
-    val => /^[a-zA-Z0-9\-_.]+$/.test(val),
+    val => /^[a-zA-Z0-9\-_./]+$/.test(val),
     'LLM model contains invalid characters',
   )
 

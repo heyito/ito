@@ -243,10 +243,19 @@ export class SyncService {
     }
   }
 
+  private normalizeNumber(
+    value: number | undefined,
+    defaultValue: number,
+  ): number {
+    const decimalPrecision = 2
+    return value ? Number(value.toFixed(decimalPrecision)) : defaultValue
+  }
+
   private async syncAdvancedSettings(lastSyncedAt?: string) {
     try {
       // Get remote advanced settings
       const remoteSettings = await grpcClient.getAdvancedSettings()
+      console.log('Remote advanced settings:', remoteSettings)
 
       // Compare timestamps to determine sync direction
       const remoteUpdatedAt = new Date(remoteSettings.updatedAt)
@@ -260,13 +269,21 @@ export class SyncService {
             asrModel: remoteSettings.llm?.asrModel || 'whisper-large-v3',
             asrPrompt: remoteSettings.llm?.asrPrompt || '',
             llmProvider: remoteSettings.llm?.llmProvider || 'groq',
-            llmModel: remoteSettings.llm?.llmModel || 'lama-3.3-70b-versatile',
-            llmTemperature: remoteSettings.llm?.llmTemperature || 0.1,
+            llmModel: remoteSettings.llm?.llmModel || 'openai/gpt-oss-120b',
+            llmTemperature: this.normalizeNumber(
+              remoteSettings.llm?.llmTemperature,
+              0.1,
+            ),
             transcriptionPrompt: remoteSettings.llm?.transcriptionPrompt || '',
             editingPrompt: remoteSettings.llm?.editingPrompt || '',
-            noSpeechThreshold: remoteSettings.llm?.noSpeechThreshold || 0.35,
-            lowQualityThreshold:
-              remoteSettings.llm?.lowQualityThreshold || -0.55,
+            noSpeechThreshold: this.normalizeNumber(
+              remoteSettings.llm?.noSpeechThreshold,
+              0.35,
+            ),
+            lowQualityThreshold: this.normalizeNumber(
+              remoteSettings.llm?.lowQualityThreshold,
+              -0.55,
+            ),
           },
         }
 

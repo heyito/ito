@@ -163,10 +163,10 @@ describe('IPC Events Critical Business Logic Tests', () => {
       mockElectronLog.error = originalError
     })
 
-    // TODO: Something is wrong with this test
     test('update-advanced-settings should call the correct service', async () => {
+      const mockUpdateAdvancedSettings = mock(async (settings: any) => settings)
       const grpcClient = {
-        updateAdvancedSettings: async (settings: any) => settings,
+        updateAdvancedSettings: mockUpdateAdvancedSettings,
       }
 
       mock.module('../clients/grpcClient', () => ({
@@ -180,9 +180,7 @@ describe('IPC Events Critical Business Logic Tests', () => {
       const result = await handler!({}, mockSettings)
 
       expect(result).toEqual(mockSettings)
-      expect(grpcClient.updateAdvancedSettings).toHaveBeenCalledWith(
-        mockSettings,
-      )
+      expect(mockUpdateAdvancedSettings).toHaveBeenCalledWith(mockSettings)
     })
   })
 })

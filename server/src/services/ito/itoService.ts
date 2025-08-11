@@ -41,7 +41,6 @@ import {
   detectItoMode,
   getPromptForMode,
 } from './helpers.js'
-import { no } from 'zod/v4/locales'
 
 /**
  * --- NEW: WAV Header Generation Function ---

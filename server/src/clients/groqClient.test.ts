@@ -1,4 +1,5 @@
 import { describe, it, expect, mock, beforeEach, afterAll } from 'bun:test'
+import { ItoMode } from '../services/ito/constants.js'
 
 // Mock environment variables before any imports
 const originalEnv = process.env
@@ -254,7 +255,10 @@ describe('GroqClient', () => {
       mockGroqClient.chat.completions.create.mockResolvedValue(mockCompletion)
 
       const originalTranscript = 'Original transcript'
-      const result = await groqClient.adjustTranscript(originalTranscript)
+      const result = await groqClient.adjustTranscript(
+        originalTranscript,
+        ItoMode.EDIT,
+      )
 
       expect(result).toBe('Adjusted transcript content')
       expect(mockGroqClient.chat.completions.create).toHaveBeenCalledWith({
@@ -279,7 +283,10 @@ describe('GroqClient', () => {
       mockGroqClient.chat.completions.create.mockRejectedValue(mockError)
 
       const originalTranscript = 'Original transcript'
-      const result = await groqClient.adjustTranscript(originalTranscript)
+      const result = await groqClient.adjustTranscript(
+        originalTranscript,
+        ItoMode.EDIT,
+      )
 
       expect(result).toBe(originalTranscript)
     })
@@ -297,7 +304,10 @@ describe('GroqClient', () => {
       mockGroqClient.chat.completions.create.mockResolvedValue(mockCompletion)
 
       const originalTranscript = 'Original transcript'
-      const result = await groqClient.adjustTranscript(originalTranscript)
+      const result = await groqClient.adjustTranscript(
+        originalTranscript,
+        ItoMode.EDIT,
+      )
 
       expect(result).toBe(originalTranscript)
     })

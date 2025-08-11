@@ -1,3 +1,4 @@
+import './sentry'
 import { app, protocol, systemPreferences } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
@@ -39,6 +40,7 @@ protocol.registerSchemesAsPrivileged([
 app.whenReady().then(async () => {
   // Initialize logging as the first step
   initializeLogging()
+  // process.crash()
 
   // Initialize the database
   try {

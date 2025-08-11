@@ -1,0 +1,48 @@
+name: Auto-link PR to Issue
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  autolink:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract issue number from branch name
+        id: extract_issue
+        run: |
+          BRANCH_NAME="${{ github.head_ref }}"
+          echo "Branch name: $BRANCH_NAME"
+
+          # Extract issue number from branch name pattern ito-XXX
+          if [[ $BRANCH_NAME =~ ^ito-([0-9]+) ]]; then
+            ISSUE_NUMBER="${BASH_REMATCH[1]}"
+            echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+            echo "Found issue number: $ISSUE_NUMBER"
+          else
+            echo "No issue number found in branch name"
+            echo "issue_number=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Link PR to Issue
+        if: steps.extract_issue.outputs.issue_number != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ steps.extract_issue.outputs.issue_number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Check if issue exists
+          ISSUE_EXISTS=$(gh api repos/heyito/ito/issues/$ISSUE_NUMBER --jq '.number' 2>/dev/null || echo "")
+
+          if [ -n "$ISSUE_EXISTS" ]; then
+            echo "Linking PR #$PR_NUMBER to issue #$ISSUE_NUMBER"
+            
+            # Add comment to PR mentioning the issue (creates automatic link)
+            gh api repos/heyito/ito/issues/$PR_NUMBER/comments \
+              --method POST \
+              --field body="Resolves #$ISSUE_NUMBER"
+            
+            echo "Successfully linked PR #$PR_NUMBER to issue #$ISSUE_NUMBER"
+          else
+            echo "Issue #$ISSUE_NUMBER does not exist, skipping autolink"
+          fi

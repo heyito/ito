@@ -55,4 +55,17 @@ export const up = pgm => {
  * @param run {() => void | undefined}
  * @returns {Promise<void> | void}
  */
-export const down = pgm => {}
+export const down = pgm => {
+  // Remove columns from llm_settings table
+  pgm.dropColumns('llm_settings', [
+    'asr_provider',
+    'asr_prompt',
+    'llm_provider',
+    'llm_model',
+    'llm_temperature',
+    'transcription_prompt',
+    'editing_prompt',
+    'no_speech_threshold',
+    'low_quality_threshold',
+  ])
+}

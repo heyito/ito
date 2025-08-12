@@ -2,6 +2,7 @@ import Store from 'electron-store'
 import crypto from 'crypto'
 import { STORE_KEYS } from '../constants/store-keys'
 import { LlmSettings } from '@/app/store/useAdvancedSettingsStore'
+import { DEFAULT_ADVANCED_SETTINGS } from '../constants/generated-defaults.js'
 
 interface MainStore {
   navExpanded: boolean
@@ -130,16 +131,16 @@ const defaultValues: AppStore = {
   },
   advancedSettings: {
     llm: {
-      asrProvider: 'groq',
-      asrModel: 'whisper-large-v3',
-      asrPrompt: '',
-      llmProvider: 'groq',
-      llmTemperature: 0.1,
-      llmModel: 'openai/gpt-oss-120b',
-      transcriptionPrompt: '',
-      editingPrompt: '',
-      noSpeechThreshold: 0.35,
-      lowQualityThreshold: -0.55,
+      asrProvider: DEFAULT_ADVANCED_SETTINGS.asrProvider,
+      asrModel: DEFAULT_ADVANCED_SETTINGS.asrModel,
+      asrPrompt: DEFAULT_ADVANCED_SETTINGS.asrPrompt,
+      llmProvider: DEFAULT_ADVANCED_SETTINGS.llmProvider,
+      llmTemperature: DEFAULT_ADVANCED_SETTINGS.llmTemperature,
+      llmModel: DEFAULT_ADVANCED_SETTINGS.llmModel,
+      transcriptionPrompt: DEFAULT_ADVANCED_SETTINGS.transcriptionPrompt,
+      editingPrompt: DEFAULT_ADVANCED_SETTINGS.editingPrompt,
+      noSpeechThreshold: DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold,
+      lowQualityThreshold: DEFAULT_ADVANCED_SETTINGS.lowQualityThreshold,
     },
   },
   openMic: false,

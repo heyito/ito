@@ -1,6 +1,7 @@
 import { HeaderValidator } from '../../validation/HeaderValidator.js'
 import { WindowContext } from './types.js'
 import { ItoMode, ITO_MODE_PROMPT } from './constants.js'
+import { DEFAULT_ADVANCED_SETTINGS } from '../../constants/generated-defaults.js'
 
 export function addContextToPrompt(
   prompt: string,
@@ -40,7 +41,7 @@ export function getAdvancedSettingsHeaders(headers: Headers) {
   const asrModel = validateAndTransformHeaderValue(
     headers,
     'asr-model',
-    'whisper-large-v3',
+    DEFAULT_ADVANCED_SETTINGS.asrModel,
     HeaderValidator.validateAsrModel,
     'ASR model',
   )
@@ -48,7 +49,7 @@ export function getAdvancedSettingsHeaders(headers: Headers) {
   const asrProvider = validateAndTransformHeaderValue(
     headers,
     'asr-provider',
-    'groq',
+    DEFAULT_ADVANCED_SETTINGS.asrProvider,
     HeaderValidator.validateAsrProvider,
     'ASR Provider',
   )
@@ -56,7 +57,7 @@ export function getAdvancedSettingsHeaders(headers: Headers) {
   const asrPrompt = validateAndTransformHeaderValue(
     headers,
     'asr-prompt',
-    '',
+    DEFAULT_ADVANCED_SETTINGS.asrPrompt,
     HeaderValidator.validateAsrPrompt,
     'ASR prompt',
   )
@@ -64,7 +65,7 @@ export function getAdvancedSettingsHeaders(headers: Headers) {
   const llmProvider = validateAndTransformHeaderValue(
     headers,
     'llm-provider',
-    'groq',
+    DEFAULT_ADVANCED_SETTINGS.llmProvider,
     HeaderValidator.validateLlmProvider,
     'LLM Provider',
   )
@@ -72,7 +73,7 @@ export function getAdvancedSettingsHeaders(headers: Headers) {
   const llmModel = validateAndTransformHeaderValue(
     headers,
     'llm-model',
-    'openai/gpt-oss-120b',
+    DEFAULT_ADVANCED_SETTINGS.llmModel,
     HeaderValidator.validateLlmModel,
     'LLM model',
   )
@@ -80,7 +81,7 @@ export function getAdvancedSettingsHeaders(headers: Headers) {
   const llmTemperature = validateAndTransformHeaderValue(
     headers,
     'llm-temperature',
-    0.1,
+    DEFAULT_ADVANCED_SETTINGS.llmTemperature,
     HeaderValidator.validateLlmTemperature,
     'LLM temperature',
   )
@@ -88,7 +89,7 @@ export function getAdvancedSettingsHeaders(headers: Headers) {
   const transcriptionPrompt = validateAndTransformHeaderValue(
     headers,
     'transcription-prompt',
-    '',
+    DEFAULT_ADVANCED_SETTINGS.transcriptionPrompt,
     HeaderValidator.validateTranscriptionPrompt,
     'Transcription prompt',
   )
@@ -96,7 +97,7 @@ export function getAdvancedSettingsHeaders(headers: Headers) {
   const editingPrompt = validateAndTransformHeaderValue(
     headers,
     'editing-prompt',
-    '',
+    DEFAULT_ADVANCED_SETTINGS.editingPrompt,
     HeaderValidator.validateEditingPrompt,
     'Editing prompt',
   )
@@ -104,7 +105,7 @@ export function getAdvancedSettingsHeaders(headers: Headers) {
   const noSpeechThreshold = validateAndTransformHeaderValue(
     headers,
     'no-speech-threshold',
-    0.35,
+    DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold,
     HeaderValidator.validateNoSpeechThreshold,
     'No speech threshold',
   )
@@ -112,7 +113,7 @@ export function getAdvancedSettingsHeaders(headers: Headers) {
   const lowQualityThreshold = validateAndTransformHeaderValue(
     headers,
     'low-quality-threshold',
-    -0.55,
+    DEFAULT_ADVANCED_SETTINGS.lowQualityThreshold,
     HeaderValidator.validateLowQualityThreshold,
     'Low quality threshold',
   )

@@ -22,7 +22,8 @@
     ]
   },
   "scripts": {
-    "dev": "electron-vite dev -w",
+    "generate:constants": "bun scripts/generate-constants.js",
+    "dev": "bun run generate:constants && electron-vite dev -w",
     "dev:rust": "bun build:rust:mac && bun dev",
     "format:fix:app": "prettier --write app lib",
     "format:fix": "prettier --write .",

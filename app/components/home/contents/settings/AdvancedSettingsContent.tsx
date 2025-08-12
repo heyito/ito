@@ -176,8 +176,6 @@ export default function AdvancedSettingsContent() {
   const { llm, setLlmSettings } = useAdvancedSettingsStore()
   const debounceRef = useRef<NodeJS.Timeout>(null)
 
-  console.log({ llm })
-
   useEffect(() => {
     return () => {
       if (debounceRef.current) {

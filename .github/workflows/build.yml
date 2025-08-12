@@ -112,6 +112,20 @@ jobs:
             echo "Deleting stale file: $file"
             aws s3 rm "$BUCKET/$file"
           done < stale_files.txt
+
+      - name: Invalidate CDN Cache for DMG
+        run: |
+          DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
+            --stack-name ItoGitHubOidc \
+            --query "Stacks[0].Outputs[?OutputKey=='${{ vars.AWS_STAGE }}-ReleasesCDNId'].OutputValue" \
+            --output text)
+
+          echo "Invalidating cache for Ito-Installer.dmg on distribution: $DISTRIBUTION_ID. Updated dmg should be availabe within 15 minutes."
+
+          aws cloudfront create-invalidation \
+            --distribution-id "$DISTRIBUTION_ID" \
+            --paths "/Ito-Installer.dmg"
+
       - name: Upload DMG to GitHub Release
         uses: softprops/action-gh-release@v1
         with:

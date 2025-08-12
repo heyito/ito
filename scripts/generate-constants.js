@@ -61,4 +61,17 @@ targets.forEach(target => {
   console.log(`✅ Generated: ${target}`)
 })
 
+// Format the generated files using prettier
+console.log('🎨 Formatting generated files...')
+const { execSync } = require('child_process')
+
+targets.forEach(target => {
+  try {
+    execSync(`bunx prettier --write "${target}"`, { stdio: 'inherit' })
+    console.log(`✅ Formatted: ${target}`)
+  } catch (error) {
+    console.warn(`⚠️  Could not format ${target}:`, error.message)
+  }
+})
+
 console.log('🎉 Constants generation complete!')

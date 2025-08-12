@@ -22,7 +22,6 @@
     ]
   },
   "scripts": {
-    "generate:constants": "bun scripts/generate-constants.js",
     "dev": "bun run generate:constants && electron-vite dev -w",
     "dev:rust": "bun build:rust:mac && bun dev",
     "format:fix:app": "prettier --write app lib",
@@ -53,7 +52,8 @@
     "build:mac": "electron-vite build && electron-builder --mac --universal",
     "build:app": "./build-app.sh",
     "build:app:skip-binaries": "./build-app.sh --skip-binaries",
-    "prepare": "husky"
+    "prepare": "husky",
+    "generate:constants": "bun scripts/generate-constants.js"
   },
   "repository": {
     "type": "git",

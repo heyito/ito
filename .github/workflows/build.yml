@@ -113,18 +113,13 @@ jobs:
             aws s3 rm "$BUCKET/$file"
           done < stale_files.txt
 
-      - name: Invalidate CDN Cache for DMG
+      - name: Invalidate CDN Cache for Release Files
         run: |
-          DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
-            --stack-name ItoGitHubOidc \
-            --query "Stacks[0].Outputs[?OutputKey=='${{ vars.AWS_STAGE }}-ReleasesCDNId'].OutputValue" \
-            --output text)
-
-          echo "Invalidating cache for Ito-Installer.dmg on distribution: $DISTRIBUTION_ID. Updated dmg should be availabe within 15 minutes."
+          echo "Invalidating cache for release files on distribution: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}. Updated files should be available within 15 minutes."
 
           aws cloudfront create-invalidation \
-            --distribution-id "$DISTRIBUTION_ID" \
-            --paths "/Ito-Installer.dmg"
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/*.yml" "/*.dmg" "/*.zip" "/*.blockmap"
 
       - name: Upload DMG to GitHub Release
         uses: softprops/action-gh-release@v1

@@ -243,14 +243,6 @@ export class SyncService {
     }
   }
 
-  private normalizeNumber(
-    value: number | undefined,
-    defaultValue: number,
-  ): number {
-    const decimalPrecision = 2
-    return value ? Number(value.toFixed(decimalPrecision)) : defaultValue
-  }
-
   private async syncAdvancedSettings(lastSyncedAt?: string) {
     try {
       // Get remote advanced settings
@@ -270,20 +262,12 @@ export class SyncService {
             asrPrompt: remoteSettings.llm?.asrPrompt || '',
             llmProvider: remoteSettings.llm?.llmProvider || 'groq',
             llmModel: remoteSettings.llm?.llmModel || 'openai/gpt-oss-120b',
-            llmTemperature: this.normalizeNumber(
-              remoteSettings.llm?.llmTemperature,
-              0.1,
-            ),
+            llmTemperature: remoteSettings.llm?.llmTemperature || 0.1,
             transcriptionPrompt: remoteSettings.llm?.transcriptionPrompt || '',
             editingPrompt: remoteSettings.llm?.editingPrompt || '',
-            noSpeechThreshold: this.normalizeNumber(
-              remoteSettings.llm?.noSpeechThreshold,
-              0.35,
-            ),
-            lowQualityThreshold: this.normalizeNumber(
-              remoteSettings.llm?.lowQualityThreshold,
-              -0.55,
-            ),
+            noSpeechThreshold: remoteSettings.llm?.noSpeechThreshold || 0.35,
+            lowQualityThreshold:
+              remoteSettings.llm?.lowQualityThreshold || -0.55,
           },
         }
 

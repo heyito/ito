@@ -60,10 +60,6 @@ export class HeaderValidator {
     }
   }
 
-  /**
-   * Validates LLM model from header value
-   * @throws ConnectError if validation fails
-   */
   static validateLlmModel(headerValue: string): string {
     try {
       return LlmModelSchema.parse(headerValue)

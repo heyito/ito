@@ -167,7 +167,6 @@ bun run test-client      # Run gRPC client tests
 | `DB_PASS`                  | Yes      | -                  | Database password                           |
 | `DB_NAME`                  | Yes      | -                  | Database name                               |
 | `GROQ_API_KEY`             | Yes      | -                  | GROQ API key for transcription              |
-| `GROQ_TRANSCRIPTION_MODEL` | Yes      | `whisper-large-v3` | Transcription model                         |
 | `REQUIRE_AUTH`             | No       | `false`            | Enable Auth0 authentication                 |
 | `AUTH0_DOMAIN`             | No\*     | -                  | Auth0 domain (\*required if auth enabled)   |
 | `AUTH0_AUDIENCE`           | No\*     | -                  | Auth0 audience (\*required if auth enabled) |

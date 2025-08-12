@@ -135,7 +135,7 @@ const defaultValues: AppStore = {
       asrPrompt: '',
       llmProvider: 'groq',
       llmTemperature: 0.1,
-      llmModel: 'openai/gpt-oss-120b', // TODO: likely update
+      llmModel: 'openai/gpt-oss-120b',
       transcriptionPrompt: '',
       editingPrompt: '',
       noSpeechThreshold: 0.35,

@@ -29,6 +29,8 @@ interface SettingsState {
   setMuteAudioWhenDictating: (enabled: boolean) => void
   setMicrophoneDeviceId: (deviceId: string, name: string) => void
   setKeyboardShortcut: (shortcut: string[]) => void
+  addKeyboardShortcut: (shortcut: string[], mode: KeyboardShortcutMode) => void
+  removeKeyboardShortcut: (shortcutId: string) => void
 }
 
 type SettingCategory = 'general' | 'audio&mic' | 'keyboard' | 'account'

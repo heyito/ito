@@ -9,6 +9,7 @@ import { Note, Interaction, DictionaryItem } from './sqlite/models'
 import mainStore from './store'
 import { STORE_KEYS } from '../constants/store-keys'
 import type { AdvancedSettings } from './store'
+import { DEFAULT_ADVANCED_SETTINGS } from '../constants/generated-defaults.js'
 
 const LAST_SYNCED_AT_KEY = 'lastSyncedAt'
 
@@ -256,7 +257,36 @@ export class SyncService {
       if (remoteUpdatedAt > lastSyncTime) {
         const updatedLocalSettings: AdvancedSettings = {
           llm: {
-            asrModel: remoteSettings.llm?.asrModel || 'whisper-large-v3',
+            asrProvider:
+              remoteSettings.llm?.asrProvider ||
+              DEFAULT_ADVANCED_SETTINGS.asrProvider,
+            asrModel:
+              remoteSettings.llm?.asrModel ||
+              DEFAULT_ADVANCED_SETTINGS.asrModel,
+            asrPrompt:
+              remoteSettings.llm?.asrPrompt ||
+              DEFAULT_ADVANCED_SETTINGS.asrPrompt,
+            llmProvider:
+              remoteSettings.llm?.llmProvider ||
+              DEFAULT_ADVANCED_SETTINGS.llmProvider,
+            llmModel:
+              remoteSettings.llm?.llmModel ||
+              DEFAULT_ADVANCED_SETTINGS.llmModel,
+            llmTemperature:
+              remoteSettings.llm?.llmTemperature ||
+              DEFAULT_ADVANCED_SETTINGS.llmTemperature,
+            transcriptionPrompt:
+              remoteSettings.llm?.transcriptionPrompt ||
+              DEFAULT_ADVANCED_SETTINGS.transcriptionPrompt,
+            editingPrompt:
+              remoteSettings.llm?.editingPrompt ||
+              DEFAULT_ADVANCED_SETTINGS.editingPrompt,
+            noSpeechThreshold:
+              remoteSettings.llm?.noSpeechThreshold ||
+              DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold,
+            lowQualityThreshold:
+              remoteSettings.llm?.lowQualityThreshold ||
+              DEFAULT_ADVANCED_SETTINGS.lowQualityThreshold,
           },
         }
 

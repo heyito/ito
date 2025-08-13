@@ -29,7 +29,11 @@ import { create } from '@bufbuild/protobuf'
 import { setFocusedText } from '../media/text-writer'
 import { Note, Interaction, DictionaryItem } from '../main/sqlite/models'
 import { DictionaryTable } from '../main/sqlite/repo'
-import { getAdvancedSettings, getCurrentUserId } from '../main/store'
+import {
+  AdvancedSettings,
+  getAdvancedSettings,
+  getCurrentUserId,
+} from '../main/store'
 import { ensureValidTokens } from '../auth/events'
 import { Auth0Config } from '../auth/config'
 import { getActiveWindow } from '../media/active-application'
@@ -98,6 +102,27 @@ class GrpcClient {
         advancedSettings,
       )
       headers.set('asr-model', advancedSettings.llm.asrModel)
+      headers.set('asr-provider', advancedSettings.llm.asrProvider)
+      headers.set('asr-prompt', advancedSettings.llm.asrPrompt)
+      headers.set('llm-provider', advancedSettings.llm.llmProvider)
+      headers.set('llm-model', advancedSettings.llm.llmModel)
+      headers.set(
+        'llm-temperature',
+        advancedSettings.llm.llmTemperature.toString(),
+      )
+      headers.set(
+        'transcription-prompt',
+        advancedSettings.llm.transcriptionPrompt,
+      )
+      headers.set('editing-prompt', advancedSettings.llm.editingPrompt)
+      headers.set(
+        'no-speech-threshold',
+        advancedSettings.llm.noSpeechThreshold.toString(),
+      )
+      headers.set(
+        'low-quality-threshold',
+        advancedSettings.llm.lowQualityThreshold.toString(),
+      )
     } catch (error) {
       console.error(
         'Failed to fetch vocabulary/settings for transcription:',
@@ -426,13 +451,22 @@ class GrpcClient {
     })
   }
 
-  async updateAdvancedSettings(settings: {
-    llm: { asrModel: string }
-  }): Promise<AdvancedSettingsPb> {
+  async updateAdvancedSettings(
+    settings: AdvancedSettings,
+  ): Promise<AdvancedSettingsPb> {
     return this.withRetry(async () => {
       const request = create(UpdateAdvancedSettingsRequestSchema, {
         llm: {
           asrModel: settings.llm.asrModel,
+          asrProvider: settings.llm.asrProvider,
+          asrPrompt: settings.llm.asrPrompt,
+          llmProvider: settings.llm.llmProvider,
+          llmModel: settings.llm.llmModel,
+          llmTemperature: settings.llm.llmTemperature,
+          transcriptionPrompt: settings.llm.transcriptionPrompt,
+          editingPrompt: settings.llm.editingPrompt,
+          noSpeechThreshold: settings.llm.noSpeechThreshold,
+          lowQualityThreshold: settings.llm.lowQualityThreshold,
         },
       })
       return await this.client.updateAdvancedSettings(request, {

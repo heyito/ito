@@ -309,7 +309,7 @@ describe('HeaderValidator', () => {
     })
 
     it('should throw ConnectError for prompts that are too long', () => {
-      const longPrompt = 'a'.repeat(501)
+      const longPrompt = 'a'.repeat(1501)
       expect(() =>
         HeaderValidator.validateTranscriptionPrompt(longPrompt),
       ).toThrow(ConnectError)
@@ -343,7 +343,7 @@ describe('HeaderValidator', () => {
     })
 
     it('should throw ConnectError for prompts that are too long', () => {
-      const longPrompt = 'a'.repeat(501)
+      const longPrompt = 'a'.repeat(1501)
       expect(() => HeaderValidator.validateEditingPrompt(longPrompt)).toThrow(
         ConnectError,
       )

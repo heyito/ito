@@ -29,7 +29,11 @@ import { create } from '@bufbuild/protobuf'
 import { setFocusedText } from '../media/text-writer'
 import { Note, Interaction, DictionaryItem } from '../main/sqlite/models'
 import { DictionaryTable } from '../main/sqlite/repo'
-import { getAdvancedSettings, getCurrentUserId } from '../main/store'
+import {
+  getAdvancedSettings,
+  getCurrentUserId,
+  KeyboardShortcutMode,
+} from '../main/store'
 import { ensureValidTokens } from '../auth/events'
 import { Auth0Config } from '../auth/config'
 import { getActiveWindow } from '../media/active-application'
@@ -66,7 +70,7 @@ class GrpcClient {
     return new Headers({ Authorization: `Bearer ${this.authToken}` })
   }
 
-  private async getHeadersWithMetadata() {
+  private async getHeadersWithMetadata(mode: KeyboardShortcutMode) {
     const headers = this.getHeaders()
 
     try {
@@ -98,6 +102,8 @@ class GrpcClient {
         advancedSettings,
       )
       headers.set('asr-model', advancedSettings.llm.asrModel)
+
+      headers.set('mode', mode)
     } catch (error) {
       console.error(
         'Failed to fetch vocabulary/settings for transcription:',
@@ -177,7 +183,10 @@ class GrpcClient {
     return false
   }
 
-  async transcribeStream(stream: AsyncIterable<AudioChunk>) {
+  async transcribeStream(
+    stream: AsyncIterable<AudioChunk>,
+    mode: KeyboardShortcutMode,
+  ) {
     return this.withRetry(async () => {
       // Get current interaction ID for trace logging
       const interactionId = (globalThis as any).currentInteractionId
@@ -188,7 +197,7 @@ class GrpcClient {
       }
 
       const response = await this.client.transcribeStream(stream, {
-        headers: await this.getHeadersWithMetadata(),
+        headers: await this.getHeadersWithMetadata(mode),
       })
 
       // Log successful transcription response

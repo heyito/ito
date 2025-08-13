@@ -1,13 +1,13 @@
 import { audioRecorderService } from '../media/audio'
 import { muteSystemAudio, unmuteSystemAudio } from '../media/systemAudio'
 import { getPillWindow, mainWindow } from './app'
-import store from './store'
+import store, { KeyboardShortcutMode } from './store'
 import { STORE_KEYS } from '../constants/store-keys'
 import { transcriptionService } from './transcriptionService'
 import { traceLogger } from './traceLogger'
 
 export class VoiceInputService {
-  public startSTTService = (sendToServer: boolean = true) => {
+  public startSTTService = (mode: KeyboardShortcutMode) => {
     console.info('[Audio] Starting STT service')
     const deviceId = store.get(STORE_KEYS.SETTINGS).microphoneDeviceId
 
@@ -22,14 +22,11 @@ export class VoiceInputService {
     if (interactionId) {
       traceLogger.logStep(interactionId, 'VOICE_INPUT_START', {
         deviceId,
-        sendToServer,
         muteAudioWhenDictating: settings?.muteAudioWhenDictating,
       })
     }
 
-    if (sendToServer) {
-      transcriptionService.startTranscription()
-    }
+    transcriptionService.startTranscription(mode)
     audioRecorderService.startRecording(deviceId)
 
     getPillWindow()?.webContents.send('recording-state-update', {

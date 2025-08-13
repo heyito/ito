@@ -133,24 +133,6 @@ describe('VoiceInputService Integration Tests', () => {
       expect(mockMuteSystemAudio).not.toHaveBeenCalled()
     })
 
-    test('should start STT service without server transcription', () => {
-      voiceInputService.startSTTService(false)
-
-      // Transcription service should not be started
-      expect(mockTranscriptionService.startTranscription).not.toHaveBeenCalled()
-
-      // Audio recorder should still start
-      expect(mockAudioRecorderService.startRecording).toHaveBeenCalled()
-
-      // Pill window should still be notified
-      expect(mockPillWindow.webContents.send).toHaveBeenCalledWith(
-        'recording-state-update',
-        expect.objectContaining({
-          isRecording: true,
-        }),
-      )
-    })
-
     test('should mute system audio when configured', () => {
       mockStore.get.mockReturnValue({
         microphoneDeviceId: 'test-device',

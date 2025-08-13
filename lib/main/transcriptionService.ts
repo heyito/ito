@@ -1,5 +1,5 @@
 import { grpcClient } from '../clients/grpcClient'
-import mainStore from './store'
+import mainStore, { KeyboardShortcutMode } from './store'
 import { STORE_KEYS } from '../constants/store-keys'
 import log from 'electron-log'
 import { AudioChunkSchema } from '@/app/generated/ito_pb'
@@ -35,7 +35,7 @@ export class TranscriptionService {
     }
   }
 
-  public startStreaming() {
+  public startStreaming(mode: KeyboardShortcutMode) {
     if (this.isStreaming) {
       log.warn('[TranscriptionService] Stream already in progress.')
       return
@@ -58,7 +58,7 @@ export class TranscriptionService {
     }
 
     grpcClient
-      .transcribeStream(this.streamAudioChunks())
+      .transcribeStream(this.streamAudioChunks(), mode)
       .then(response => {
         // Add debugging to see what we received
         console.log(
@@ -289,8 +289,8 @@ export class TranscriptionService {
   }
 
   // Backward compatibility aliases for the old method names
-  public startTranscription() {
-    return this.startStreaming()
+  public startTranscription(mode: KeyboardShortcutMode) {
+    return this.startStreaming(mode)
   }
 
   public stopTranscription() {

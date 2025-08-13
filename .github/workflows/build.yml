@@ -118,6 +118,15 @@ jobs:
             echo "Deleting stale file: $file"
             aws s3 rm "$BUCKET/$file"
           done < stale_files.txt
+
+      - name: Invalidate CDN Cache for Release Files
+        run: |
+          echo "Invalidating cache for release files on distribution: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}. Updated files should be available within 15 minutes."
+
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/*.yml" "/*.dmg" "/*.zip" "/*.blockmap"
+
       - name: Upload DMG to GitHub Release
         uses: softprops/action-gh-release@v1
         with:

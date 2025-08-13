@@ -22,7 +22,7 @@ export const DEFAULT_ADVANCED_SETTINGS = {
   // ASR (Automatic Speech Recognition) settings
   asrProvider: '${DEFAULT_ADVANCED_SETTINGS.asrProvider}',
   asrModel: '${DEFAULT_ADVANCED_SETTINGS.asrModel}',
-  asrPrompt: '${DEFAULT_ADVANCED_SETTINGS.asrPrompt}',
+  asrPrompt: \`${DEFAULT_ADVANCED_SETTINGS.asrPrompt}\`,
   
   // LLM (Large Language Model) settings
   llmProvider: '${DEFAULT_ADVANCED_SETTINGS.llmProvider}',
@@ -30,8 +30,8 @@ export const DEFAULT_ADVANCED_SETTINGS = {
   llmTemperature: ${DEFAULT_ADVANCED_SETTINGS.llmTemperature},
   
   // Prompt settings
-  transcriptionPrompt: '${DEFAULT_ADVANCED_SETTINGS.transcriptionPrompt}',
-  editingPrompt: '${DEFAULT_ADVANCED_SETTINGS.editingPrompt}',
+  transcriptionPrompt: \`${DEFAULT_ADVANCED_SETTINGS.transcriptionPrompt.replace(/`/g, '\\`')}\`,
+  editingPrompt: \`${DEFAULT_ADVANCED_SETTINGS.editingPrompt.replace(/`/g, '\\`')}\`,
   
   // Audio quality thresholds
   noSpeechThreshold: ${DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold},

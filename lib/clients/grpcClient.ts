@@ -96,6 +96,13 @@ class GrpcClient {
         headers.set('app-name', windowContext.appName)
       }
 
+      function flattenHeaderValue(value: string) {
+        return value
+          .replace(/[\r\n]+/g, ' ')
+          .replace(/\s{2,}/g, ' ')
+          .trim()
+      }
+
       // Add ASR model from advanced settings
       const advancedSettings = getAdvancedSettings()
       console.log(
@@ -104,7 +111,10 @@ class GrpcClient {
       )
       headers.set('asr-model', advancedSettings.llm.asrModel)
       headers.set('asr-provider', advancedSettings.llm.asrProvider)
-      headers.set('asr-prompt', advancedSettings.llm.asrPrompt)
+      headers.set(
+        'asr-prompt',
+        flattenHeaderValue(advancedSettings.llm.asrPrompt),
+      )
       headers.set('llm-provider', advancedSettings.llm.llmProvider)
       headers.set('llm-model', advancedSettings.llm.llmModel)
       headers.set(
@@ -113,9 +123,12 @@ class GrpcClient {
       )
       headers.set(
         'transcription-prompt',
-        advancedSettings.llm.transcriptionPrompt,
+        flattenHeaderValue(advancedSettings.llm.transcriptionPrompt),
       )
-      headers.set('editing-prompt', advancedSettings.llm.editingPrompt)
+      headers.set(
+        'editing-prompt',
+        flattenHeaderValue(advancedSettings.llm.editingPrompt),
+      )
       headers.set(
         'no-speech-threshold',
         advancedSettings.llm.noSpeechThreshold.toString(),

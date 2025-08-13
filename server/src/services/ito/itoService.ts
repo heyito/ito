@@ -35,6 +35,12 @@ import { WindowContext } from './types.js'
 import { HeaderValidator } from '../../validation/HeaderValidator.js'
 import { errorToProtobuf } from '../../clients/errors.js'
 import { ClientProvider } from '../../clients/providers.js'
+import {
+  addContextToPrompt,
+  getAdvancedSettingsHeaders,
+  detectItoMode,
+  getPromptForMode,
+} from './helpers.js'
 
 /**
  * --- NEW: WAV Header Generation Function ---
@@ -136,6 +142,15 @@ function dbToAdvancedSettingsPb(
     updatedAt: dbAdvancedSettings.updated_at.toISOString(),
     llm: create(LlmSettingsSchema, {
       asrModel: dbAdvancedSettings.llm.asr_model,
+      asrPrompt: dbAdvancedSettings.llm.asr_prompt,
+      asrProvider: dbAdvancedSettings.llm.asr_provider,
+      llmProvider: dbAdvancedSettings.llm.llm_provider,
+      llmTemperature: dbAdvancedSettings.llm.llm_temperature,
+      llmModel: dbAdvancedSettings.llm.llm_model,
+      transcriptionPrompt: dbAdvancedSettings.llm.transcription_prompt,
+      editingPrompt: dbAdvancedSettings.llm.editing_prompt,
+      noSpeechThreshold: dbAdvancedSettings.llm.no_speech_threshold,
+      lowQualityThreshold: dbAdvancedSettings.llm.low_quality_threshold,
     }),
   })
 }
@@ -200,59 +215,45 @@ export default (router: ConnectRouter) => {
           ? HeaderValidator.validateVocabulary(vocabularyHeader)
           : []
 
-        const asrModelHeader = context.requestHeader.get('asr-model')
-        // Use header value if provided, otherwise fall back to environment variable for backwards compatibility
-        const asrModelToValidate =
-          asrModelHeader || process.env.GROQ_TRANSCRIPTION_MODEL
-
-        if (!asrModelToValidate) {
-          throw new ConnectError(
-            'ASR model must be provided either in header or GROQ_TRANSCRIPTION_MODEL environment variable',
-            Code.InvalidArgument,
-          )
-        }
-
-        const asrModel = HeaderValidator.validateAsrModel(asrModelToValidate)
-        console.log(
-          `[Transcription] Using validated ASR model: ${asrModel} (source: ${asrModelHeader ? 'header' : 'env'})`,
+        const advancedSettingsHeaders = getAdvancedSettingsHeaders(
+          context.requestHeader,
         )
 
         // 4. Send the corrected WAV file using the validated ASR model from headers.
         let transcript = await groqClient.transcribeAudio(
           fullAudioWAV,
           'wav',
-          asrModel,
+          advancedSettingsHeaders.asrModel,
+          advancedSettingsHeaders.noSpeechThreshold,
+          advancedSettingsHeaders.lowQualityThreshold,
+          advancedSettingsHeaders.asrPrompt,
           vocabulary,
         )
-
         console.log(
           `📝 [${new Date().toISOString()}] Received transcript: "${transcript}"`,
-        )
-
-        // 5. Check if transcript contains "Hey Ito" in the first 5 words
-        const words = transcript.trim().split(/\s+/)
-        const firstFiveWords = words.slice(0, 5).join(' ').toLowerCase()
-
-        let mode = ItoMode.TRANSCRIBE
-        if (firstFiveWords.includes('hey ito')) {
-          mode = ItoMode.EDIT
-        }
-
-        console.log(
-          `🧠 [${new Date().toISOString()}] Detected "Hey Ito", adjusting transcript`,
         )
 
         const windowTitle = context.requestHeader.get('window-title') || ''
         const appName = context.requestHeader.get('app-name') || ''
         const windowContext: WindowContext = { windowTitle, appName }
-        if (mode === ItoMode.EDIT) {
-          transcript = await groqClient.adjustTranscript(
-            transcript,
-            mode,
-            windowContext,
-          )
-        }
 
+        const detectedMode = detectItoMode(transcript)
+        const preContextPrompt = getPromptForMode(
+          detectedMode,
+          advancedSettingsHeaders,
+        )
+        const systemPrompt = addContextToPrompt(preContextPrompt, windowContext)
+
+        console.log(
+          `🧠 [${new Date().toISOString()}] Detected mode: ${detectedMode === ItoMode.EDIT ? 'EDIT' : 'TRANSCRIBE'}, adjusting transcript`,
+        )
+
+        transcript = await groqClient.adjustTranscript(
+          transcript,
+          advancedSettingsHeaders.llmTemperature,
+          advancedSettingsHeaders.llmModel,
+          systemPrompt,
+        )
         console.log(
           `📝 [${new Date().toISOString()}] Adjusted transcript: "${transcript}"`,
         )

@@ -136,7 +136,6 @@ export class ServiceStack extends Stack {
         AUTH0_AUDIENCE: process.env.AUTH0_AUDIENCE || '',
         AUTH0_CLIENT_ID: process.env.AUTH0_CLIENT_ID || '',
         AUTH0_CALLBACK_URL: `https://${domainName}/callback`,
-        GROQ_TRANSCRIPTION_MODEL: 'whisper-large-v3',
       },
       logging: new AwsLogDriver({ streamPrefix: 'ito-server' }),
     })

@@ -253,6 +253,15 @@ export class AdvancedSettingsRepository {
       user_id: llmSettings.user_id,
       llm: {
         asr_model: llmSettings.asr_model,
+        asr_provider: llmSettings.asr_provider,
+        asr_prompt: llmSettings.asr_prompt,
+        llm_provider: llmSettings.llm_provider,
+        llm_model: llmSettings.llm_model,
+        llm_temperature: llmSettings.llm_temperature,
+        transcription_prompt: llmSettings.transcription_prompt,
+        editing_prompt: llmSettings.editing_prompt,
+        no_speech_threshold: llmSettings.no_speech_threshold,
+        low_quality_threshold: llmSettings.low_quality_threshold,
       },
       created_at: llmSettings.created_at,
       updated_at: llmSettings.updated_at,
@@ -264,22 +273,57 @@ export class AdvancedSettingsRepository {
     settingsData: UpdateAdvancedSettingsRequest,
   ): Promise<AdvancedSettings> {
     const res = await pool.query<LlmSettings>(
-      `INSERT INTO llm_settings (user_id, asr_model, updated_at)
-       VALUES ($1, $2, current_timestamp)
+      `INSERT INTO llm_settings (
+         user_id, asr_model, asr_provider, asr_prompt, llm_provider, llm_model, 
+         llm_temperature, transcription_prompt, editing_prompt, no_speech_threshold, 
+         low_quality_threshold, updated_at
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, current_timestamp)
        ON CONFLICT (user_id)
        DO UPDATE SET
          asr_model = EXCLUDED.asr_model,
+         asr_provider = EXCLUDED.asr_provider,
+         asr_prompt = EXCLUDED.asr_prompt,
+         llm_provider = EXCLUDED.llm_provider,
+         llm_model = EXCLUDED.llm_model,
+         llm_temperature = EXCLUDED.llm_temperature,
+         transcription_prompt = EXCLUDED.transcription_prompt,
+         editing_prompt = EXCLUDED.editing_prompt,
+         no_speech_threshold = EXCLUDED.no_speech_threshold,
+         low_quality_threshold = EXCLUDED.low_quality_threshold,
          updated_at = current_timestamp
        RETURNING *`,
-      [userId, settingsData.llm?.asrModel || 'whisper-large-v3'],
+      [
+        userId,
+        settingsData.llm?.asrModel || 'whisper-large-v3',
+        settingsData.llm?.asrProvider || '',
+        settingsData.llm?.asrPrompt || '',
+        settingsData.llm?.llmProvider || '',
+        settingsData.llm?.llmModel || '',
+        settingsData.llm?.llmTemperature || 0.0,
+        settingsData.llm?.transcriptionPrompt || '',
+        settingsData.llm?.editingPrompt || '',
+        settingsData.llm?.noSpeechThreshold || 0.0,
+        settingsData.llm?.lowQualityThreshold || 0.0,
+      ],
     )
 
     const llmSettings = res.rows[0]
+    console.log('Upserted advanced settings:', llmSettings)
     return {
       id: llmSettings.id,
       user_id: llmSettings.user_id,
       llm: {
         asr_model: llmSettings.asr_model,
+        asr_provider: llmSettings.asr_provider,
+        asr_prompt: llmSettings.asr_prompt,
+        llm_provider: llmSettings.llm_provider,
+        llm_model: llmSettings.llm_model,
+        llm_temperature: llmSettings.llm_temperature,
+        transcription_prompt: llmSettings.transcription_prompt,
+        editing_prompt: llmSettings.editing_prompt,
+        no_speech_threshold: llmSettings.no_speech_threshold,
+        low_quality_threshold: llmSettings.low_quality_threshold,
       },
       created_at: llmSettings.created_at,
       updated_at: llmSettings.updated_at,

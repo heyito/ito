@@ -1,4 +1,5 @@
 import { IpcRendererEvent, ipcRenderer } from 'electron'
+import { AdvancedSettings } from '../main/store'
 
 const api = {
   /**
@@ -147,6 +148,10 @@ const api = {
   // Delete user data from both local and server databases
   deleteUserData: () => {
     return ipcRenderer.invoke('delete-user-data')
+  },
+
+  updateAdvancedSettings: (advancedSettings: AdvancedSettings) => {
+    return ipcRenderer.invoke('update-advanced-settings', advancedSettings)
   },
 
   // Check if the local server is healthy and accessible

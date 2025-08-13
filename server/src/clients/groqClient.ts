@@ -20,8 +20,6 @@ import { ClientProvider } from './providers.js'
 // Load environment variables from .env file
 dotenv.config()
 export const itoVocabulary = ['Ito', 'Hey Ito']
-export const NO_SPEECH_THRESHOLD = 0.35
-export const LOW_QUALITY_THRESHOLD = -0.55
 
 /**
  * A TypeScript client for interacting with the Groq API, inspired by your Python implementation.
@@ -54,31 +52,28 @@ class GroqClient {
    */
   public async adjustTranscript(
     transcript: string,
-    mode: ItoMode,
-    context?: WindowContext,
+    temperature: number,
+    model: string,
+    systemPrompt: string,
   ): Promise<string> {
     if (!this.isAvailable) {
       throw new ClientUnavailableError(ClientProvider.GROQ)
     }
-    const defaultPrompt =
-      'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.'
+
     try {
       const completion = await this._client.chat.completions.create({
         messages: [
           {
             role: 'system',
-            content: addContextToPrompt(
-              ITO_MODE_PROMPT[mode] || defaultPrompt,
-              context,
-            ),
+            content: systemPrompt,
           },
           {
             role: 'user',
             content: `The user's transcript: ${transcript}`,
           },
         ],
-        model: 'openai/gpt-oss-120b',
-        temperature: 0.1,
+        model,
+        temperature,
       })
 
       return completion.choices[0]?.message?.content?.trim() || transcript
@@ -100,6 +95,9 @@ class GroqClient {
     audioBuffer: Buffer,
     fileType: string = 'webm',
     asrModel: string,
+    noSpeechThreshold: number,
+    lowQualityThreshold: number,
+    userTranscriptionPrompt?: string,
     vocabulary?: string[],
   ): Promise<string> {
     const file = await toFile(audioBuffer, `audio.${fileType}`)
@@ -118,7 +116,8 @@ class GroqClient {
       const fullVocabulary = [...itoVocabulary, ...(vocabulary || [])]
 
       // Create a concise but effective transcription prompt
-      const transcriptionPrompt = createTranscriptionPrompt(fullVocabulary)
+      const transcriptionPrompt =
+        userTranscriptionPrompt || createTranscriptionPrompt(fullVocabulary)
 
       const transcription = await this._client.audio.transcriptions.create({
         // The toFile helper correctly handles buffers for multipart/form-data uploads.
@@ -132,12 +131,12 @@ class GroqClient {
       const segments = (transcription as any).segments
       if (segments && segments.length > 0) {
         const segment = segments[0]
-        if (segment.no_speech_prob > NO_SPEECH_THRESHOLD) {
+        if (segment.no_speech_prob > noSpeechThreshold) {
           throw new ClientNoSpeechError(
             ClientProvider.GROQ,
             segment.no_speech_prob,
           )
-        } else if (segment.avg_logprob < LOW_QUALITY_THRESHOLD) {
+        } else if (segment.avg_logprob < lowQualityThreshold) {
           throw new ClientTranscriptionQualityError(
             ClientProvider.GROQ,
             segment.avg_logprob,

@@ -52,7 +52,8 @@
     "build:mac": "electron-vite build && electron-builder --mac --universal",
     "build:app": "./build-app.sh",
     "build:app:skip-binaries": "./build-app.sh --skip-binaries",
-    "prepare": "husky"
+    "prepare": "husky",
+    "generate:constants": "bun scripts/generate-constants.js"
   },
   "repository": {
     "type": "git",
@@ -79,14 +80,16 @@
     "@mui/material": "^7.1.1",
     "@mynaui/icons-react": "^0.3.8",
     "@opentelemetry/api": "^1.9.0",
-    "@opentelemetry/sdk-node": "^0.54.0",
     "@opentelemetry/resources": "^1.25.0",
+    "@opentelemetry/sdk-node": "^0.54.0",
     "@opentelemetry/semantic-conventions": "^1.25.0",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-dropdown-menu": "^2.1.15",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.2.5",
     "@radix-ui/react-tooltip": "^1.2.7",
+    "@sentry/electron": "^6.9.0",
+    "@sentry/vite-plugin": "^4.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.0.1",

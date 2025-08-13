@@ -1,3 +1,4 @@
+import './sentry'
 import { app, protocol, systemPreferences } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import { electronApp, optimizer } from '@electron-toolkit/utils'

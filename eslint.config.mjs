@@ -21,6 +21,7 @@ export default [
       'tailwind.config.js',
       'server/infra/jest.config.js',
       '**/generated/**',
+      'shared-constants.js',
     ],
   },
   eslint.configs.recommended,

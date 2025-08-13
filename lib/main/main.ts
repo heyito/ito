@@ -40,7 +40,6 @@ protocol.registerSchemesAsPrivileged([
 app.whenReady().then(async () => {
   // Initialize logging as the first step
   initializeLogging()
-  // process.crash()
 
   // Initialize the database
   try {

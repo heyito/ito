@@ -83,8 +83,25 @@ export class GitHubOidcStack extends Stack {
         },
       })
 
+      // Grant CloudFront invalidation permissions
+      ciCdRole.addToPolicy(
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'cloudfront:CreateInvalidation',
+            'cloudfront:GetInvalidation',
+            'cloudfront:ListInvalidations',
+          ],
+          resources: [distribution.distributionArn],
+        }),
+      )
+
       new CfnOutput(this, `${stage}-ReleasesCDNUrl`, {
         value: `https://${distribution.domainName}`,
+      })
+
+      new CfnOutput(this, `${stage}-ReleasesCDNId`, {
+        value: distribution.distributionId,
       })
     })
 

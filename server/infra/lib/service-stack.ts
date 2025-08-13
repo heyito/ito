@@ -46,6 +46,7 @@ import {
   ServicePrincipal,
 } from 'aws-cdk-lib/aws-iam'
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
+import { LogGroup } from 'aws-cdk-lib/aws-logs'
 
 export interface ServiceStackProps extends StackProps {
   dbSecretArn: string
@@ -118,6 +119,10 @@ export class ServiceStack extends Stack {
         executionRole: taskExecutionRole,
       },
     )
+    // Dedicated CloudWatch Log Group for client logs
+    const clientLogGroup = new LogGroup(this, 'ItoClientLogsGroup', {
+      logGroupName: `/ito/${stageName}/client`,
+    })
     const containerName = 'ItoServerContainer'
     taskDefinition.addContainer(containerName, {
       image: ContainerImage.fromEcrRepository(props.serviceRepo, 'latest'),
@@ -136,6 +141,8 @@ export class ServiceStack extends Stack {
         AUTH0_AUDIENCE: process.env.AUTH0_AUDIENCE || '',
         AUTH0_CLIENT_ID: process.env.AUTH0_CLIENT_ID || '',
         AUTH0_CALLBACK_URL: `https://${domainName}/callback`,
+        GROQ_TRANSCRIPTION_MODEL: 'whisper-large-v3',
+        CLIENT_LOG_GROUP_NAME: clientLogGroup.logGroupName,
       },
       logging: new AwsLogDriver({ streamPrefix: 'ito-server' }),
     })
@@ -242,6 +249,9 @@ export class ServiceStack extends Stack {
     this.fargateService = fargateService.service
     this.albFargate = fargateService
     this.migrationLambda = migrationLambda
+
+    // IAM permissions for task to write to client log group
+    clientLogGroup.grantWrite(fargateTaskRole)
 
     new CfnOutput(this, 'ServiceURL', {
       value: fargateService.loadBalancer.loadBalancerDnsName,

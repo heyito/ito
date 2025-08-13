@@ -159,17 +159,17 @@ bun run test-client      # Run gRPC client tests
 
 ### Environment Variables
 
-| Variable                   | Required | Default            | Description                                 |
-| -------------------------- | -------- | ------------------ | ------------------------------------------- |
-| `DB_HOST`                  | Yes      | `localhost`        | PostgreSQL host                             |
-| `DB_PORT`                  | Yes      | `5432`             | PostgreSQL port                             |
-| `DB_USER`                  | Yes      | -                  | Database username                           |
-| `DB_PASS`                  | Yes      | -                  | Database password                           |
-| `DB_NAME`                  | Yes      | -                  | Database name                               |
-| `GROQ_API_KEY`             | Yes      | -                  | GROQ API key for transcription              |
-| `REQUIRE_AUTH`             | No       | `false`            | Enable Auth0 authentication                 |
-| `AUTH0_DOMAIN`             | No\*     | -                  | Auth0 domain (\*required if auth enabled)   |
-| `AUTH0_AUDIENCE`           | No\*     | -                  | Auth0 audience (\*required if auth enabled) |
+| Variable         | Required | Default     | Description                                 |
+| ---------------- | -------- | ----------- | ------------------------------------------- |
+| `DB_HOST`        | Yes      | `localhost` | PostgreSQL host                             |
+| `DB_PORT`        | Yes      | `5432`      | PostgreSQL port                             |
+| `DB_USER`        | Yes      | -           | Database username                           |
+| `DB_PASS`        | Yes      | -           | Database password                           |
+| `DB_NAME`        | Yes      | -           | Database name                               |
+| `GROQ_API_KEY`   | Yes      | -           | GROQ API key for transcription              |
+| `REQUIRE_AUTH`   | No       | `false`     | Enable Auth0 authentication                 |
+| `AUTH0_DOMAIN`   | No\*     | -           | Auth0 domain (\*required if auth enabled)   |
+| `AUTH0_AUDIENCE` | No\*     | -           | Auth0 audience (\*required if auth enabled) |
 
 ### Database Configuration
 

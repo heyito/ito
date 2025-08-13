@@ -30,15 +30,10 @@ import { setFocusedText } from '../media/text-writer'
 import { Note, Interaction, DictionaryItem } from '../main/sqlite/models'
 import { DictionaryTable } from '../main/sqlite/repo'
 import {
-<<<<<<< HEAD
-  getAdvancedSettings,
-  getCurrentUserId,
   KeyboardShortcutMode,
-=======
   AdvancedSettings,
   getAdvancedSettings,
   getCurrentUserId,
->>>>>>> dev
 } from '../main/store'
 import { ensureValidTokens } from '../auth/events'
 import { Auth0Config } from '../auth/config'

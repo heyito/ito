@@ -135,19 +135,24 @@ export function getAdvancedSettingsHeaders(headers: Headers) {
 export function detectItoMode(transcript: string): ItoMode {
   const words = transcript.trim().split(/\s+/)
   const firstFiveWords = words.slice(0, 5).join(' ').toLowerCase()
-  
+
   return firstFiveWords.includes('hey ito') ? ItoMode.EDIT : ItoMode.TRANSCRIBE
 }
 
 export function getPromptForMode(
   mode: ItoMode,
-  advancedSettingsHeaders: ReturnType<typeof getAdvancedSettingsHeaders>
+  advancedSettingsHeaders: ReturnType<typeof getAdvancedSettingsHeaders>,
 ): string {
   switch (mode) {
     case ItoMode.EDIT:
-      return advancedSettingsHeaders.editingPrompt || ITO_MODE_PROMPT[ItoMode.EDIT]
+      return (
+        advancedSettingsHeaders.editingPrompt || ITO_MODE_PROMPT[ItoMode.EDIT]
+      )
     case ItoMode.TRANSCRIBE:
-      return advancedSettingsHeaders.transcriptionPrompt || ITO_MODE_PROMPT[ItoMode.TRANSCRIBE]
+      return (
+        advancedSettingsHeaders.transcriptionPrompt ||
+        ITO_MODE_PROMPT[ItoMode.TRANSCRIBE]
+      )
     default:
       return ITO_MODE_PROMPT[ItoMode.TRANSCRIBE]
   }

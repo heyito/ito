@@ -9,12 +9,7 @@ import { loggingInterceptor } from './services/loggingInterceptor.js'
 import { createValidationInterceptor } from './services/validationInterceptor.js'
 import { renderCallbackPage } from './utils/renderCallback.js'
 import dotenv from 'dotenv'
-import {
-  CloudWatchLogsClient,
-  CreateLogStreamCommand,
-  PutLogEventsCommand,
-  DescribeLogStreamsCommand,
-} from '@aws-sdk/client-cloudwatch-logs'
+import { registerLoggingRoutes } from './services/logging.js'
 
 dotenv.config()
 
@@ -99,146 +94,9 @@ export const startServer = async () => {
       },
     })
 
-    // Authenticated client log ingestion endpoint
-    // Accepts: { events: Array<LogEvent> }
-    type LogEvent = {
-      ts: number
-      level: 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal' | 'log'
-      message: string
-      fields?: Record<string, unknown>
-      interactionId?: string
-      traceId?: string
-      spanId?: string
-      appVersion?: string
-      platform?: string
-      source?: string
-    }
-
-    // CloudWatch Logs setup for client logs
-    const logsClient = CLIENT_LOG_GROUP_NAME
-      ? new CloudWatchLogsClient({})
-      : null
-    const logStreamName = CLIENT_LOG_GROUP_NAME
-      ? `${new Date().toISOString().slice(0, 10)}`
-      : null // rotate by day
-    let nextSequenceToken: string | undefined
-
-    const ensureStream = async () => {
-      if (!logsClient || !CLIENT_LOG_GROUP_NAME || !logStreamName) return
-      try {
-        await logsClient.send(
-          new CreateLogStreamCommand({
-            logGroupName: CLIENT_LOG_GROUP_NAME,
-            logStreamName,
-          }),
-        )
-      } catch (err: any) {
-        if (err?.name !== 'ResourceAlreadyExistsException') {
-          throw err
-        }
-      }
-      // Fetch current sequence token
-      const desc = await logsClient.send(
-        new DescribeLogStreamsCommand({
-          logGroupName: CLIENT_LOG_GROUP_NAME,
-          logStreamNamePrefix: logStreamName,
-          limit: 1,
-        }),
-      )
-      const stream = desc.logStreams?.[0]
-      nextSequenceToken = stream?.uploadSequenceToken
-    }
-
-    await ensureStream()
-
-    fastify.post('/logs', async (request, reply) => {
-      const body = request.body as { events?: LogEvent[] } | undefined
-
-      if (!body || !Array.isArray(body.events)) {
-        reply.code(400).send({ error: 'Invalid body: { events: LogEvent[] }' })
-        return
-      }
-
-      const events = body.events
-      const userSub = (REQUIRE_AUTH && (request as any).user?.sub) || undefined
-
-      const now = Date.now()
-      // Sanitize and map to CloudWatch events
-      const entries = events.map(e => {
-        const ts = typeof e.ts === 'number' ? e.ts : now
-        const level =
-          e.level === 'trace' ||
-          e.level === 'debug' ||
-          e.level === 'info' ||
-          e.level === 'warn' ||
-          e.level === 'error' ||
-          e.level === 'fatal' ||
-          e.level === 'log'
-            ? e.level
-            : 'info'
-        const structured = {
-          source: e.source || 'client',
-          level,
-          ts,
-          message: e.message,
-          fields: e.fields || {},
-          interactionId: e.interactionId,
-          traceId: e.traceId,
-          spanId: e.spanId,
-          appVersion: e.appVersion,
-          platform: e.platform,
-          userSub,
-        }
-        return {
-          timestamp: ts,
-          message: JSON.stringify(structured),
-        }
-      })
-
-      // If no log group configured, fall back to stdout (keeps behavior in local/dev)
-      if (!logsClient || !CLIENT_LOG_GROUP_NAME || !logStreamName) {
-        for (const e of entries) {
-          try {
-            process.stdout.write(`${e.message}\n`)
-          } catch (err) {
-            fastify.log.error({ err }, 'Failed to write client log to stdout')
-          }
-        }
-        reply.code(204).send()
-        return
-      }
-
-      // Ensure stream and send to CloudWatch Logs
-      try {
-        // Sort by timestamp as required by CloudWatch Logs
-        entries.sort((a, b) => a.timestamp - b.timestamp)
-        const params = {
-          logGroupName: CLIENT_LOG_GROUP_NAME,
-          logStreamName,
-          logEvents: entries,
-          sequenceToken: nextSequenceToken,
-        }
-        const res = await logsClient.send(new PutLogEventsCommand(params))
-        nextSequenceToken = res.nextSequenceToken
-      } catch (err: any) {
-        // Handle invalid sequence token by refreshing and retrying once
-        if (err?.name === 'InvalidSequenceTokenException') {
-          await ensureStream()
-          const res = await logsClient.send(
-            new PutLogEventsCommand({
-              logGroupName: CLIENT_LOG_GROUP_NAME,
-              logStreamName,
-              logEvents: entries,
-              sequenceToken: nextSequenceToken,
-            }),
-          )
-          nextSequenceToken = res.nextSequenceToken
-        } else {
-          fastify.log.error({ err }, 'Failed to put client logs to CloudWatch')
-        }
-      }
-
-      reply.code(204).send()
+    await registerLoggingRoutes(fastify, {
+      requireAuth: REQUIRE_AUTH,
+      clientLogGroupName: CLIENT_LOG_GROUP_NAME,
     })
   })
 

@@ -102,9 +102,6 @@ function normalizeKey(rawKey: string): string {
 // This set will track the state of all currently pressed keys.
 const pressedKeys = new Set<string>()
 
-// Track which shortcut is currently active (if any)
-let activeShortcut: KeyboardShortcutConfig | null = null
-
 function handleKeyEventInMain(event: KeyEvent) {
   const { isShortcutGloballyEnabled } = store.get(STORE_KEYS.SETTINGS)
   const keyboardShortcuts = getActiveShortcuts()
@@ -131,10 +128,13 @@ function handleKeyEventInMain(event: KeyEvent) {
     pressedKeys.delete(normalizedKey)
   }
 
-  // Check if any of the configured shortcuts are currently held
+  // Check if any of the configured shortcuts are currently held\
+  console.log('keyboardShortcuts', keyboardShortcuts)
   const currentlyHeldShortcut = keyboardShortcuts.find(shortcut =>
     shortcut.keys.every(key => pressedKeys.has(key)),
   )
+
+  console.log('currentlyHeldShortcut', currentlyHeldShortcut)
 
   // Only block keys when a complete shortcut is being held
   if (currentlyHeldShortcut) {
@@ -148,7 +148,6 @@ function handleKeyEventInMain(event: KeyEvent) {
   // Shortcut pressed
   if (currentlyHeldShortcut && !isShortcutActive) {
     isShortcutActive = true
-    activeShortcut = currentlyHeldShortcut
     console.info('lib Shortcut ACTIVATED, starting recording...')
 
     // Start trace logging for new interaction
@@ -176,8 +175,6 @@ function handleKeyEventInMain(event: KeyEvent) {
     // Don't end the interaction yet - let the transcription service handle it
     // The interaction will be ended when transcription completes or fails
     voiceInputService.stopSTTService()
-
-    activeShortcut = null
   }
 }
 

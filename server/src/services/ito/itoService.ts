@@ -235,9 +235,11 @@ export default (router: ConnectRouter) => {
 
         const windowTitle = context.requestHeader.get('window-title') || ''
         const appName = context.requestHeader.get('app-name') || ''
+        const mode = context.requestHeader.get('mode') as ItoMode
+
         const windowContext: WindowContext = { windowTitle, appName }
 
-        const detectedMode = detectItoMode(transcript)
+        const detectedMode = mode || detectItoMode(transcript)
         const preContextPrompt = getPromptForMode(
           detectedMode,
           advancedSettingsHeaders,
@@ -245,7 +247,7 @@ export default (router: ConnectRouter) => {
         const systemPrompt = addContextToPrompt(preContextPrompt, windowContext)
 
         console.log(
-          `🧠 [${new Date().toISOString()}] Detected mode: ${detectedMode === ItoMode.EDIT ? 'EDIT' : 'TRANSCRIBE'}, adjusting transcript`,
+          `[${new Date().toISOString()}] Detected mode: ${detectedMode}, adjusting transcript`,
         )
 
         transcript = await groqClient.adjustTranscript(

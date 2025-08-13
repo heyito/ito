@@ -36,7 +36,7 @@ mock.module('child_process', () => ({
 const mockGetActiveShortcuts = mock(() => [
   {
     keys: ['command', 'space'],
-    mode: KeyboardShortcutMode.DICTATION,
+    mode: KeyboardShortcutMode.TRANSCRIBE,
   },
 ])
 
@@ -141,7 +141,7 @@ describe('Keyboard Module', () => {
     mockGetActiveShortcuts.mockReturnValue([
       {
         keys: ['command', 'space'],
-        mode: KeyboardShortcutMode.DICTATION,
+        mode: KeyboardShortcutMode.TRANSCRIBE,
       },
     ])
     mockGetNativeBinaryPath.mockReturnValue('/path/to/global-key-listener')
@@ -362,7 +362,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['command', 'space'],
-          mode: KeyboardShortcutMode.DICTATION,
+          mode: KeyboardShortcutMode.TRANSCRIBE,
         },
       ])
 
@@ -406,7 +406,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['command', 'space'],
-          mode: KeyboardShortcutMode.DICTATION,
+          mode: KeyboardShortcutMode.TRANSCRIBE,
         },
       ])
 
@@ -460,7 +460,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['command', 'space'],
-          mode: KeyboardShortcutMode.DICTATION,
+          mode: KeyboardShortcutMode.TRANSCRIBE,
         },
       ])
 
@@ -499,7 +499,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['command', 'space'],
-          mode: KeyboardShortcutMode.DICTATION,
+          mode: KeyboardShortcutMode.TRANSCRIBE,
         },
       ])
 
@@ -599,7 +599,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['control', 'shift', 'f'],
-          mode: KeyboardShortcutMode.DICTATION,
+          mode: KeyboardShortcutMode.TRANSCRIBE,
         },
       ])
 
@@ -649,7 +649,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['command', 'shift', 'a'],
-          mode: KeyboardShortcutMode.DICTATION,
+          mode: KeyboardShortcutMode.TRANSCRIBE,
         },
       ])
 
@@ -692,7 +692,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['command'],
-          mode: KeyboardShortcutMode.DICTATION,
+          mode: KeyboardShortcutMode.TRANSCRIBE,
         },
       ])
 
@@ -747,7 +747,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['a'],
-          mode: KeyboardShortcutMode.DICTATION,
+          mode: KeyboardShortcutMode.TRANSCRIBE,
         },
       ])
 
@@ -775,7 +775,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['1'],
-          mode: KeyboardShortcutMode.DICTATION,
+          mode: KeyboardShortcutMode.TRANSCRIBE,
         },
       ])
 
@@ -803,7 +803,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['unknownkey'],
-          mode: KeyboardShortcutMode.DICTATION,
+          mode: KeyboardShortcutMode.TRANSCRIBE,
         },
       ])
 
@@ -878,7 +878,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['control', 'z'],
-          mode: KeyboardShortcutMode.DICTATION,
+          mode: KeyboardShortcutMode.TRANSCRIBE,
         },
       ])
 
@@ -936,7 +936,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['control', 'z'],
-          mode: KeyboardShortcutMode.DICTATION,
+          mode: KeyboardShortcutMode.TRANSCRIBE,
         },
       ])
 
@@ -988,7 +988,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['a', 'b'],
-          mode: KeyboardShortcutMode.DICTATION,
+          mode: KeyboardShortcutMode.TRANSCRIBE,
         },
       ])
 

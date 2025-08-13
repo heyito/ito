@@ -14,8 +14,8 @@ interface OnboardingStore {
 }
 
 export enum KeyboardShortcutMode {
-  DICTATION = 'dictation',
-  INTELLIGENT = 'intelligent',
+  TRANSCRIBE = 'transcribe',
+  EDIT = 'edit',
 }
 
 export interface KeyboardShortcutConfig {
@@ -104,8 +104,10 @@ export const getAdvancedSettings = (): AdvancedSettings => {
 export const getActiveShortcuts = (): KeyboardShortcutConfig[] => {
   const settings = store.get(STORE_KEYS.SETTINGS) as SettingsStore
 
+  console.log('settings.keyboardShortcuts', settings.keyboardShortcuts)
+
   // If new format exists, use it
-  if (settings.keyboardShortcuts) {
+  if (settings.keyboardShortcuts && settings.keyboardShortcuts.length > 0) {
     return settings.keyboardShortcuts
   }
 
@@ -114,7 +116,7 @@ export const getActiveShortcuts = (): KeyboardShortcutConfig[] => {
     return [
       {
         keys: settings.keyboardShortcut,
-        mode: KeyboardShortcutMode.DICTATION,
+        mode: KeyboardShortcutMode.TRANSCRIBE,
       },
     ]
   }

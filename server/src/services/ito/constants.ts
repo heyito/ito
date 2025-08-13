@@ -1,8 +1,8 @@
 import { DEFAULT_ADVANCED_SETTINGS } from '../../constants/generated-defaults.js'
 
 export enum ItoMode {
-  TRANSCRIBE,
-  EDIT,
+  TRANSCRIBE = 'transcribe',
+  EDIT = 'edit',
 }
 
 export const ITO_MODE_PROMPT: { [key in ItoMode]: string } = {

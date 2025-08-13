@@ -19,6 +19,7 @@ export enum KeyboardShortcutMode {
 }
 
 export interface KeyboardShortcutConfig {
+  id: string
   keys: string[]
   mode: KeyboardShortcutMode
 }
@@ -32,7 +33,7 @@ export interface SettingsStore {
   muteAudioWhenDictating: boolean
   microphoneDeviceId: string
   microphoneName: string
-  keyboardShortcut: string[]
+  keyboardShortcut: string[] // Deprecated, use keyboardShortcuts
   isShortcutGloballyEnabled: boolean
   keyboardShortcuts?: KeyboardShortcutConfig[]
   firstName: string
@@ -113,6 +114,7 @@ export const getActiveShortcuts = (): KeyboardShortcutConfig[] => {
   if (settings.keyboardShortcut?.length > 0) {
     return [
       {
+        id: 'legacy-shortcut',
         keys: settings.keyboardShortcut,
         mode: KeyboardShortcutMode.TRANSCRIBE,
       },

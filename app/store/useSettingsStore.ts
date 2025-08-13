@@ -5,6 +5,10 @@ import {
   updateAnalyticsFromSettings,
 } from '@/app/components/analytics'
 import { STORE_KEYS } from '../../lib/constants/store-keys'
+import type {
+  KeyboardShortcutConfig,
+  KeyboardShortcutMode,
+} from '@/lib/main/store'
 
 interface SettingsState {
   shareAnalytics: boolean
@@ -16,6 +20,7 @@ interface SettingsState {
   microphoneDeviceId: string
   microphoneName: string
   keyboardShortcut: string[]
+  keyboardShortcuts: KeyboardShortcutConfig[]
   setShareAnalytics: (share: boolean) => void
   setLaunchAtLogin: (launch: boolean) => void
   setShowItoBarAlways: (show: boolean) => void
@@ -42,6 +47,9 @@ const getInitialState = () => {
     microphoneDeviceId: storedSettings?.microphoneDeviceId ?? 'default',
     microphoneName: storedSettings?.microphoneName ?? 'Default Microphone',
     keyboardShortcut: storedSettings?.keyboardShortcut ?? ['fn'], // This fallback is key
+    keyboardShortcuts: storedSettings?.keyboardShortcuts ?? [
+      { keys: ['fn'], mode: 'transcribe' },
+    ],
     firstName: storedSettings?.firstName ?? '',
     lastName: storedSettings?.lastName ?? '',
     email: storedSettings?.email ?? '',
@@ -168,6 +176,60 @@ export const useSettingsStore = create<SettingsState>(set => {
       // Update user properties
       analytics.updateUserProperties({
         keyboard_shortcut: shortcut,
+      })
+      set(partialState)
+      syncToStore(partialState)
+    },
+    addKeyboardShortcut: (shortcut: string[], mode: KeyboardShortcutMode) => {
+      const currentShortcuts = useSettingsStore.getState().keyboardShortcuts
+      const newShortcuts = [
+        ...currentShortcuts,
+        { keys: shortcut, mode, id: crypto.randomUUID() },
+      ]
+      const partialState = {
+        keyboardShortcuts: newShortcuts,
+      }
+      // Track keyboard shortcut change
+      analytics.trackSettings(ANALYTICS_EVENTS.KEYBOARD_SHORTCUTS_CHANGED, {
+        setting_name: 'keyboardShortcuts',
+        old_value: currentShortcuts,
+        new_value: newShortcuts,
+        setting_category: 'input',
+      })
+
+      // Update user properties
+      analytics.updateUserProperties({
+        keyboard_shortcuts: newShortcuts.map(ks => JSON.stringify(ks)),
+      })
+      set(partialState)
+      syncToStore(partialState)
+    },
+    removeKeyboardShortcut: (shortcutId: string) => {
+      // If the shortcut is the legacy one, handle it from the old state variable
+      if (shortcutId === 'legacy-shortcut') {
+        const partialState = { keyboardShortcut: [] }
+        set(partialState)
+        syncToStore(partialState)
+
+        return
+      }
+
+      const currentShortcuts = useSettingsStore.getState().keyboardShortcuts
+      const newShortcuts = currentShortcuts.filter(ks => ks.id !== shortcutId)
+      const partialState = {
+        keyboardShortcuts: newShortcuts,
+      }
+      // Track keyboard shortcut change
+      analytics.trackSettings(ANALYTICS_EVENTS.KEYBOARD_SHORTCUTS_CHANGED, {
+        setting_name: 'keyboardShortcuts',
+        old_value: currentShortcuts,
+        new_value: newShortcuts,
+        setting_category: 'input',
+      })
+
+      // Update user properties
+      analytics.updateUserProperties({
+        keyboard_shortcuts: newShortcuts.map(ks => JSON.stringify(ks)),
       })
       set(partialState)
       syncToStore(partialState)

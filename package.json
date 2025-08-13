@@ -34,7 +34,7 @@
     "format:app": "prettier app lib --check",
     "format": "prettier . --check",
     "start": "electron-vite preview",
-    "runAllTests": "bun runLibTests",
+    "runAllTests": "bun runLibTests && bun runServerTests",
     "runLibTests": "find lib -name \"*.test.ts\" | xargs -I {} sh -c 'bun test --preload lib/__tests__/setup.ts {} || exit 255'",
     "runServerTests": "find server/src -name \"*.test.ts\" | xargs -I {} sh -c 'bun test {} || exit 255'",
     "clean": "rm -rf node_modules dist .vite",

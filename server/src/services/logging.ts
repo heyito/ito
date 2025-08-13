@@ -27,7 +27,7 @@ export const registerLoggingRoutes = async (
 
   const logsClient = clientLogGroupName ? new CloudWatchLogsClient({}) : null
   const logStreamName = clientLogGroupName
-    ? `${new Date().toLocaleDateString('en-US')}`
+    ? `${new Date().toISOString().slice(0, 10)}`
     : null
   let nextSequenceToken: string | undefined
 

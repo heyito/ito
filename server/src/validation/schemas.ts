@@ -39,10 +39,7 @@ export const LLMTemperatureSchema = z
   .min(0, 'Temperature must be at least 0')
   .max(2, 'Temperature cannot exceed 2')
 
-export const LlmPromptSchema = z
-  .string()
-  .trim()
-  .max(1500, 'LLM prompt too long')
+export const LlmPromptSchema = z.string().trim().max(500, 'LLM prompt too long')
 
 export const NoSpeechThresholdSchema = z
   .number()

@@ -129,12 +129,9 @@ function handleKeyEventInMain(event: KeyEvent) {
   }
 
   // Check if any of the configured shortcuts are currently held\
-  console.log('keyboardShortcuts', keyboardShortcuts)
   const currentlyHeldShortcut = keyboardShortcuts.find(shortcut =>
     shortcut.keys.every(key => pressedKeys.has(key)),
   )
-
-  console.log('currentlyHeldShortcut', currentlyHeldShortcut)
 
   // Only block keys when a complete shortcut is being held
   if (currentlyHeldShortcut) {

@@ -104,8 +104,6 @@ export const getAdvancedSettings = (): AdvancedSettings => {
 export const getActiveShortcuts = (): KeyboardShortcutConfig[] => {
   const settings = store.get(STORE_KEYS.SETTINGS) as SettingsStore
 
-  console.log('settings.keyboardShortcuts', settings.keyboardShortcuts)
-
   // If new format exists, use it
   if (settings.keyboardShortcuts && settings.keyboardShortcuts.length > 0) {
     return settings.keyboardShortcuts

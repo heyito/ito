@@ -50,7 +50,8 @@ const getInitialState = () => {
     microphoneName: storedSettings?.microphoneName ?? 'Default Microphone',
     keyboardShortcut: storedSettings?.keyboardShortcut ?? ['fn'], // This fallback is key
     keyboardShortcuts: storedSettings?.keyboardShortcuts ?? [
-      { keys: ['fn'], mode: 'transcribe' },
+      { keys: ['command'], mode: 'edit', id: 'default-edit' },
+      { keys: ['fn'], mode: 'transcribe', id: 'default-transcribe' },
     ],
     firstName: storedSettings?.firstName ?? '',
     lastName: storedSettings?.lastName ?? '',

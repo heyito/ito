@@ -2,10 +2,12 @@ import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { useSettingsStore } from '@/app/store/useSettingsStore'
 import KeyboardShortcutEditor from '../../ui/keyboard-shortcut-editor'
 
-export default function KeyboardTestContent() {
+export default function DictationTestContent() {
   const { incrementOnboardingStep, decrementOnboardingStep } =
     useOnboardingStore()
-  const { keyboardShortcut, addKeyboardShortcut } = useSettingsStore()
+  const { keyboardShortcuts, addKeyboardShortcut } = useSettingsStore()
+  const keyboardShortcut = keyboardShortcuts.find(k => k.mode === 'transcribe')
+    ?.keys || ['fn']
 
   return (
     <div className="flex flex-row h-full w-full bg-background">
@@ -20,7 +22,7 @@ export default function KeyboardTestContent() {
               &lt; Back
             </button>
             <h1 className="text-3xl mb-4 mt-12">
-              Press the keyboard shortcut to test it out.
+              Set the Hotkey for Dictate Mode
             </h1>
             <div className="text-base text-muted-foreground mb-8 max-w-md">
               We recommend the{''}

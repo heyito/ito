@@ -345,7 +345,7 @@ export class ServiceStack extends Stack {
     serverProcessor.grantInvoke(firehoseRole)
 
     // Client logs Firehose → OpenSearch (index client-logs with daily rotation)
-    const clientDelivery = new CfnDeliveryStream(this, 'ItoClientLogsToOs', {
+    const clientDelivery = new CfnDeliveryStream(this, 'ItoClientLogsToOs-client', {
       deliveryStreamName: `${stageName}-ito-client-logs`,
       amazonopensearchserviceDestinationConfiguration: {
         domainArn: props.opensearchDomain.domainArn,
@@ -384,7 +384,7 @@ export class ServiceStack extends Stack {
     })
 
     // Server logs Firehose → OpenSearch (index server-logs with daily rotation)
-    const serverDelivery = new CfnDeliveryStream(this, 'ItoServerLogsToOs', {
+    const serverDelivery = new CfnDeliveryStream(this, 'ItoServerLogsToOs-server', {
       deliveryStreamName: `${stageName}-ito-server-logs`,
       amazonopensearchserviceDestinationConfiguration: {
         domainArn: props.opensearchDomain.domainArn,

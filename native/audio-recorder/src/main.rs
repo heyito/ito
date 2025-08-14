@@ -104,8 +104,10 @@ impl CommandProcessor {
         
         if let Ok(stream) = start_capture(device_name, Arc::clone(&self.stdout)) {
             if stream.play().is_ok() {
-                self.active_stream = Some(stream);
+                self.active_stream = Some(stream)
             }
+        } else {
+            eprintln!("[audio-recorder] CRITICAL: Failed to create audio stream");
         }
     }
 
@@ -160,6 +162,7 @@ fn write_audio_chunk(data: &[f32], stdout: &Arc<Mutex<io::Stdout>>) {
     for s in data {
         buffer.extend_from_slice(&((s.clamp(-1.0, 1.0) * 32767.0) as i16).to_le_bytes());
     }
+    
     if let Err(e) = write_framed_message(&mut *writer, MSG_TYPE_AUDIO, &buffer) {
         eprintln!("[audio-recorder] CRITICAL: Failed to write to stdout: {}", e);
     }
@@ -170,10 +173,28 @@ fn start_capture(device_name: Option<String>, stdout: Arc<Mutex<io::Stdout>>) ->
     const TARGET_SAMPLE_RATE: u32 = 16000;
     const RESAMPLER_CHUNK_SIZE: usize = 1024;
     
-    let host = cpal::default_host();
+    // On Windows, try to get available hosts
+    let host = if cfg!(windows) {
+        // Try WASAPI first, then DirectSound, then default
+        cpal::available_hosts()
+            .into_iter()
+            .find_map(|id| {
+                eprintln!("[audio-recorder] Trying host: {:?}", id);
+                cpal::host_from_id(id).ok()
+            })
+            .unwrap_or_else(|| {
+                eprintln!("[audio-recorder] All hosts failed, using default");
+                cpal::default_host()
+            })
+    } else {
+        cpal::default_host()
+    };
     let device = if let Some(name) = device_name {
-        if name.to_lowercase() == "default" || name.is_empty() { host.default_input_device() } 
-        else { host.input_devices()?.find(|d| d.name().unwrap_or_default() == name) }
+        if name.to_lowercase() == "default" || name.is_empty() { 
+            host.default_input_device() 
+        } else { 
+            host.input_devices()?.find(|d| d.name().unwrap_or_default() == name) 
+        }
     } else {
         host.default_input_device()
     }.ok_or_else(|| anyhow!("[audio-recorder] Failed to find input device"))?;
@@ -213,6 +234,9 @@ fn start_capture(device_name: Option<String>, stdout: Arc<Mutex<io::Stdout>>) ->
             process_and_write_data(data, &mut resampler, &mut audio_buffer, &stdout, RESAMPLER_CHUNK_SIZE)
         }, err_fn, None)?,
         SampleFormat::U16 => device.build_input_stream(&stream_config, move |data: &[u16], _| {
+            process_and_write_data(data, &mut resampler, &mut audio_buffer, &stdout, RESAMPLER_CHUNK_SIZE)
+        }, err_fn, None)?,
+        SampleFormat::U8 => device.build_input_stream(&stream_config, move |data: &[u8], _| {
             process_and_write_data(data, &mut resampler, &mut audio_buffer, &stdout, RESAMPLER_CHUNK_SIZE)
         }, err_fn, None)?,
         format => return Err(anyhow!("[audio-recorder] Unsupported sample format {}", format))

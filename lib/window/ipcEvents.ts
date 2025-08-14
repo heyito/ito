@@ -2,13 +2,16 @@ import {
   BrowserWindow,
   ipcMain,
   shell,
-  systemPreferences,
   app,
   autoUpdater,
 } from 'electron'
 import log from 'electron-log'
 import os from 'os'
 import store, { getCurrentUserId } from '../main/store'
+import {
+  checkAccessibilityPermission,
+  checkMicrophonePermission,
+} from '../utils/crossPlatform'
 
 import {
   startKeyListener,
@@ -143,13 +146,12 @@ export function registerIPC() {
 
   // Permissions
   handleIPC('check-accessibility-permission', (_e, prompt: boolean = false) =>
-    systemPreferences.isTrustedAccessibilityClient(prompt),
+    checkAccessibilityPermission(prompt),
   )
   handleIPC(
     'check-microphone-permission',
     async (_e, prompt: boolean = false) => {
-      if (prompt) return systemPreferences.askForMediaAccess('microphone')
-      return systemPreferences.getMediaAccessStatus('microphone') === 'granted'
+      return checkMicrophonePermission(prompt)
     },
   )
 
@@ -456,21 +458,18 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
   handleIPC(
     `check-accessibility-permission-${mainWindow.id}`,
     (_event, prompt: boolean = false) => {
-      return systemPreferences.isTrustedAccessibilityClient(prompt)
+      return checkAccessibilityPermission(prompt)
     },
   )
 
   // Microphone permission check
   handleIPC(
     `check-microphone-permission-${mainWindow.id}`,
-    (_event, prompt: boolean = false) => {
+    async (_event, prompt: boolean = false) => {
       log.info('check-microphone-permission prompt', prompt)
-      if (prompt) {
-        const res = systemPreferences.askForMediaAccess('microphone')
-        log.info('check-microphone-permission askForMediaAccess', res)
-        return res
-      }
-      return systemPreferences.getMediaAccessStatus('microphone') === 'granted'
+      const res = await checkMicrophonePermission(prompt)
+      log.info('check-microphone-permission result', res)
+      return res
     },
   )
 

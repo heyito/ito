@@ -79,6 +79,15 @@ build_native_module() {
     # --- Windows Build ---
     if [ "$BUILD_WINDOWS" = true ]; then
         print_info "Building Windows binary for $module_name..."
+        
+        # Configure Rust to use GNU linker for Windows target
+        if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
+            export CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc
+        elif command -v gcc &> /dev/null && [[ "$PATH" == *"msys64"* ]]; then
+            export CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=gcc
+        fi
+        
+        # Use GNU target consistently for all platforms
         cargo build --release --target x86_64-pc-windows-gnu
     fi
 
@@ -126,7 +135,31 @@ if [ "$BUILD_MAC" = true ]; then
 fi
 if [ "$BUILD_WINDOWS" = true ]; then
     print_status "Adding Windows target..."
+    
+    # For simplicity and consistency, always use GNU target
+    # This works on both Windows (with MinGW) and Unix (cross-compilation)
     rustup target add x86_64-pc-windows-gnu
+    
+    # Check if MinGW is available
+    if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ "$OS" == "Windows_NT" ]]; then
+        # On Windows, check for available MinGW toolchains
+        if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
+            print_info "Found standard MinGW-w64 toolchain"
+        elif command -v gcc &> /dev/null && [[ "$PATH" == *"msys64"* ]]; then
+            print_info "Found MSYS2 toolchain (UCRT64 or MinGW64)"
+        else
+            print_error "MinGW-w64 not found. Please install MinGW-w64 for Windows cross-compilation."
+            exit 1
+        fi
+    else
+        # On Unix hosts, check for MinGW cross-compilation tools
+        if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
+            print_info "Found MinGW-w64 cross-compilation toolchain"
+        else
+            print_error "MinGW-w64 not found. Please install MinGW-w64 for Windows cross-compilation."
+            exit 1
+        fi
+    fi
 fi
 
 

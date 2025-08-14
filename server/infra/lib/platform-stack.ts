@@ -111,12 +111,13 @@ export class PlatformStack extends Stack {
       encryptionAtRest: { enabled: true },
       ebs: { enabled: true, volumeSize: isDev(stageName) ? 20 : 50 },
       capacity: {
-        dataNodes: isDev(stageName) ? 1 : 3,
+        dataNodes: isDev(stageName) ? 1 : 2,
         dataNodeInstanceType: 'm6g.large.search',
+        multiAzWithStandbyEnabled: false,
       },
       zoneAwareness: isDev(stageName)
         ? { enabled: false }
-        : { enabled: true, availabilityZoneCount: 3 },
+        : { enabled: true, availabilityZoneCount: 2 },
       tlsSecurityPolicy: TLSSecurityPolicy.TLS_1_2,
     })
     domain.applyRemovalPolicy(

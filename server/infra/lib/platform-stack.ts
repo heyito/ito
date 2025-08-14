@@ -21,6 +21,11 @@ import { DB_NAME, SERVER_NAME } from './constants'
 import { Repository } from 'aws-cdk-lib/aws-ecr'
 import { AppStage } from '../bin/infra'
 import { isDev } from './helpers'
+import {
+  Domain,
+  EngineVersion,
+  TLSSecurityPolicy,
+} from 'aws-cdk-lib/aws-opensearchservice'
 
 export interface PlatformStackProps extends StackProps {
   vpc: Vpc
@@ -31,6 +36,7 @@ export class PlatformStack extends Stack {
   public readonly dbEndpoint: string
   public readonly dbSecurityGroupId: string
   public readonly serviceRepo: Repository
+  public readonly opensearchDomain: Domain
 
   constructor(scope: Construct, id: string, props: PlatformStackProps) {
     super(scope, id, props)
@@ -94,6 +100,30 @@ export class PlatformStack extends Stack {
         ? RemovalPolicy.DESTROY
         : RemovalPolicy.RETAIN,
       lifecycleRules: [{ maxImageCount: 20 }],
+    })
+
+    // OpenSearch domain for logs (one per stage)
+    const domain = new Domain(this, 'ItoLogsDomain', {
+      domainName: `${stageName}-ito-logs`,
+      version: EngineVersion.OPENSEARCH_2_13,
+      enforceHttps: true,
+      nodeToNodeEncryption: true,
+      encryptionAtRest: { enabled: true },
+      ebs: { enabled: true, volumeSize: isDev(stageName) ? 20 : 50 },
+      capacity: {
+        dataNodes: isDev(stageName) ? 1 : 2,
+        dataNodeInstanceType: 'm6g.large.search',
+      },
+      zoneAwareness: { enabled: false },
+      tlsSecurityPolicy: TLSSecurityPolicy.TLS_1_2,
+    })
+    domain.applyRemovalPolicy(
+      isDev(stageName) ? RemovalPolicy.DESTROY : RemovalPolicy.RETAIN,
+    )
+    this.opensearchDomain = domain
+
+    new CfnOutput(this, 'OpenSearchEndpoint', {
+      value: domain.domainEndpoint,
     })
 
     Tags.of(this).add('Project', 'Ito')

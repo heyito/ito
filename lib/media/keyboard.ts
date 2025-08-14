@@ -1,7 +1,6 @@
 import { spawn } from 'child_process'
 import store, {
   getActiveShortcuts,
-  KeyboardShortcutMode,
   KeyboardShortcutConfig,
 } from '../main/store'
 import { STORE_KEYS } from '../constants/store-keys'

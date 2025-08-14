@@ -13,10 +13,7 @@ interface OnboardingStore {
   onboardingCompleted: boolean
 }
 
-export enum KeyboardShortcutMode {
-  TRANSCRIBE = 'transcribe',
-  EDIT = 'edit',
-}
+export type KeyboardShortcutMode = 'transcribe' | 'edit'
 
 export interface KeyboardShortcutConfig {
   id: string
@@ -116,7 +113,7 @@ export const getActiveShortcuts = (): KeyboardShortcutConfig[] => {
       {
         id: 'legacy-shortcut',
         keys: settings.keyboardShortcut,
-        mode: KeyboardShortcutMode.TRANSCRIBE,
+        mode: 'transcribe',
       },
     ]
   }

@@ -3,10 +3,11 @@ import { Button } from '@/app/components/ui/button'
 import KeyboardKey from '@/app/components/ui/keyboard-key'
 import { KeyState, normalizeKeyEvent } from '@/app/utils/keyboard'
 import { useAudioStore } from '@/app/store/useAudioStore'
+import type { KeyboardShortcutMode } from '@/lib/main/store'
 
 interface KeyboardShortcutEditorProps {
   shortcut: string[]
-  onShortcutChange: (newShortcut: string[]) => void
+  onShortcutChange: (newShortcut: string[], mode: KeyboardShortcutMode) => void
   hideTitle?: boolean
   className?: string
   keySize?: number
@@ -19,6 +20,7 @@ interface KeyboardShortcutEditorProps {
   minHeight?: number
   editButtonClassName?: string
   confirmButtonClassName?: string
+  mode?: KeyboardShortcutMode
 }
 
 export default function KeyboardShortcutEditor({
@@ -36,6 +38,7 @@ export default function KeyboardShortcutEditor({
   minHeight = 84,
   editButtonClassName = '',
   confirmButtonClassName = '',
+  mode = 'transcribe',
 }: KeyboardShortcutEditorProps) {
   const cleanupRef = useRef<(() => void) | null>(null)
   const keyStateRef = useRef<KeyState>(new KeyState(shortcut))
@@ -133,7 +136,7 @@ export default function KeyboardShortcutEditor({
       return
     }
     keyStateRef.current.updateShortcut(newShortcut)
-    onShortcutChange(newShortcut)
+    onShortcutChange(newShortcut, mode)
     setIsEditing(false)
     setIsShortcutEnabled(true)
     window.api.send(

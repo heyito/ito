@@ -5,7 +5,7 @@ import KeyboardShortcutEditor from '../../ui/keyboard-shortcut-editor'
 export default function KeyboardTestContent() {
   const { incrementOnboardingStep, decrementOnboardingStep } =
     useOnboardingStore()
-  const { keyboardShortcut, setKeyboardShortcut } = useSettingsStore()
+  const { keyboardShortcut, addKeyboardShortcut } = useSettingsStore()
 
   return (
     <div className="flex flex-row h-full w-full bg-background">
@@ -35,7 +35,7 @@ export default function KeyboardTestContent() {
       <div className="flex w-[55%] items-center justify-center bg-gradient-to-b from-purple-50/10 to-purple-100 border-l-2 border-purple-100">
         <KeyboardShortcutEditor
           shortcut={keyboardShortcut}
-          onShortcutChange={setKeyboardShortcut}
+          onShortcutChange={addKeyboardShortcut}
           keySize={80}
           editButtonText="No, change shortcut"
           confirmButtonText="Yes"
@@ -47,6 +47,7 @@ export default function KeyboardTestContent() {
           editButtonClassName="w-44"
           confirmButtonClassName="w-16"
           className="rounded-xl shadow-lg p-6 flex flex-col items-center min-w-[500px] max-h-[280px]"
+          mode="transcribe"
         />
       </div>
     </div>

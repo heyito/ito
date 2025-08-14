@@ -36,7 +36,7 @@ mock.module('child_process', () => ({
 const mockGetActiveShortcuts = mock(() => [
   {
     keys: ['command', 'space'],
-    mode: KeyboardShortcutMode.TRANSCRIBE,
+    mode: 'transcribe',
   },
 ])
 
@@ -44,7 +44,6 @@ const mockMainStore = {
   get: mock(() => ({
     isShortcutGloballyEnabled: true,
   })),
-  KeyboardShortcutMode: KeyboardShortcutMode,
 }
 mock.module('../main/store', () => ({
   default: mockMainStore,
@@ -141,7 +140,7 @@ describe('Keyboard Module', () => {
     mockGetActiveShortcuts.mockReturnValue([
       {
         keys: ['command', 'space'],
-        mode: KeyboardShortcutMode.TRANSCRIBE,
+        mode: 'transcribe',
       },
     ])
     mockGetNativeBinaryPath.mockReturnValue('/path/to/global-key-listener')
@@ -362,7 +361,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['command', 'space'],
-          mode: KeyboardShortcutMode.TRANSCRIBE,
+          mode: 'transcribe',
         },
       ])
 
@@ -406,7 +405,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['command', 'space'],
-          mode: KeyboardShortcutMode.TRANSCRIBE,
+          mode: 'transcribe',
         },
       ])
 
@@ -460,7 +459,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['command', 'space'],
-          mode: KeyboardShortcutMode.TRANSCRIBE,
+          mode: 'transcribe',
         },
       ])
 
@@ -499,7 +498,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['command', 'space'],
-          mode: KeyboardShortcutMode.TRANSCRIBE,
+          mode: 'transcribe',
         },
       ])
 
@@ -599,7 +598,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['control', 'shift', 'f'],
-          mode: KeyboardShortcutMode.TRANSCRIBE,
+          mode: 'transcribe',
         },
       ])
 
@@ -649,7 +648,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['command', 'shift', 'a'],
-          mode: KeyboardShortcutMode.TRANSCRIBE,
+          mode: 'transcribe',
         },
       ])
 
@@ -692,7 +691,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['command'],
-          mode: KeyboardShortcutMode.TRANSCRIBE,
+          mode: 'transcribe',
         },
       ])
 
@@ -747,7 +746,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['a'],
-          mode: KeyboardShortcutMode.TRANSCRIBE,
+          mode: 'transcribe',
         },
       ])
 
@@ -775,7 +774,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['1'],
-          mode: KeyboardShortcutMode.TRANSCRIBE,
+          mode: 'transcribe',
         },
       ])
 
@@ -803,7 +802,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['unknownkey'],
-          mode: KeyboardShortcutMode.TRANSCRIBE,
+          mode: 'transcribe',
         },
       ])
 
@@ -878,7 +877,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['control', 'z'],
-          mode: KeyboardShortcutMode.TRANSCRIBE,
+          mode: 'transcribe',
         },
       ])
 
@@ -936,7 +935,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['control', 'z'],
-          mode: KeyboardShortcutMode.TRANSCRIBE,
+          mode: 'transcribe',
         },
       ])
 
@@ -988,7 +987,7 @@ describe('Keyboard Module', () => {
       mockGetActiveShortcuts.mockReturnValue([
         {
           keys: ['a', 'b'],
-          mode: KeyboardShortcutMode.TRANSCRIBE,
+          mode: 'transcribe',
         },
       ])
 

@@ -120,12 +120,15 @@ bun run dev
 ### Build Requirements
 
 #### All Platforms
+
 - **Rust**: Install via [rustup.rs](https://rustup.rs/)
 
 #### macOS
+
 - **Xcode Command Line Tools**: `xcode-select --install`
 
 #### Windows
+
 - **Visual Studio Build Tools**: Install [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with "C++ build tools" workload
 - **MSYS2**: Install from [msys2.org](https://www.msys2.org/) for MinGW-w64 toolchain
   - After installation, run: `pacman -S --needed base-devel mingw-w64-ucrt-x86_64-toolchain`

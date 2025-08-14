@@ -1,10 +1,4 @@
-import {
-  BrowserWindow,
-  ipcMain,
-  shell,
-  app,
-  autoUpdater,
-} from 'electron'
+import { BrowserWindow, ipcMain, shell, app, autoUpdater } from 'electron'
 import log from 'electron-log'
 import os from 'os'
 import store, { getCurrentUserId } from '../main/store'

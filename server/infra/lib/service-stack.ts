@@ -345,82 +345,90 @@ export class ServiceStack extends Stack {
     serverProcessor.grantInvoke(firehoseRole)
 
     // Client logs Firehose → OpenSearch (index client-logs with daily rotation)
-    const clientDelivery = new CfnDeliveryStream(this, 'ItoClientLogsToOs-client', {
-      deliveryStreamName: `${stageName}-ito-client-logs`,
-      amazonopensearchserviceDestinationConfiguration: {
-        domainArn: props.opensearchDomain.domainArn,
-        indexName: 'client-logs',
-        indexRotationPeriod: 'OneDay',
-        roleArn: firehoseRole.roleArn,
-        bufferingHints: { intervalInSeconds: 60, sizeInMBs: 5 },
-        s3BackupMode: 'AllDocuments',
-        s3Configuration: {
-          bucketArn: firehoseBackupBucket.bucketArn,
+    const clientDelivery = new CfnDeliveryStream(
+      this,
+      'ItoClientLogsToOs-client',
+      {
+        deliveryStreamName: `${stageName}-ito-client-logs`,
+        amazonopensearchserviceDestinationConfiguration: {
+          domainArn: props.opensearchDomain.domainArn,
+          indexName: 'client-logs',
+          indexRotationPeriod: 'OneDay',
           roleArn: firehoseRole.roleArn,
           bufferingHints: { intervalInSeconds: 60, sizeInMBs: 5 },
-          compressionFormat: 'GZIP',
-        },
-        processingConfiguration: {
-          enabled: true,
-          processors: [
-            {
-              type: 'Lambda',
-              parameters: [
-                {
-                  parameterName: 'LambdaArn',
-                  parameterValue: clientProcessor.functionArn,
-                },
-                { parameterName: 'NumberOfRetries', parameterValue: '3' },
-                {
-                  parameterName: 'BufferIntervalInSeconds',
-                  parameterValue: '60',
-                },
-                { parameterName: 'BufferSizeInMBs', parameterValue: '3' },
-              ],
-            },
-          ],
+          s3BackupMode: 'AllDocuments',
+          s3Configuration: {
+            bucketArn: firehoseBackupBucket.bucketArn,
+            roleArn: firehoseRole.roleArn,
+            bufferingHints: { intervalInSeconds: 60, sizeInMBs: 5 },
+            compressionFormat: 'GZIP',
+          },
+          processingConfiguration: {
+            enabled: true,
+            processors: [
+              {
+                type: 'Lambda',
+                parameters: [
+                  {
+                    parameterName: 'LambdaArn',
+                    parameterValue: clientProcessor.functionArn,
+                  },
+                  { parameterName: 'NumberOfRetries', parameterValue: '3' },
+                  {
+                    parameterName: 'BufferIntervalInSeconds',
+                    parameterValue: '60',
+                  },
+                  { parameterName: 'BufferSizeInMBs', parameterValue: '3' },
+                ],
+              },
+            ],
+          },
         },
       },
-    })
+    )
 
     // Server logs Firehose → OpenSearch (index server-logs with daily rotation)
-    const serverDelivery = new CfnDeliveryStream(this, 'ItoServerLogsToOs-server', {
-      deliveryStreamName: `${stageName}-ito-server-logs`,
-      amazonopensearchserviceDestinationConfiguration: {
-        domainArn: props.opensearchDomain.domainArn,
-        indexName: 'server-logs',
-        indexRotationPeriod: 'OneDay',
-        roleArn: firehoseRole.roleArn,
-        bufferingHints: { intervalInSeconds: 60, sizeInMBs: 5 },
-        s3BackupMode: 'AllDocuments',
-        s3Configuration: {
-          bucketArn: firehoseBackupBucket.bucketArn,
+    const serverDelivery = new CfnDeliveryStream(
+      this,
+      'ItoServerLogsToOs-server',
+      {
+        deliveryStreamName: `${stageName}-ito-server-logs`,
+        amazonopensearchserviceDestinationConfiguration: {
+          domainArn: props.opensearchDomain.domainArn,
+          indexName: 'server-logs',
+          indexRotationPeriod: 'OneDay',
           roleArn: firehoseRole.roleArn,
           bufferingHints: { intervalInSeconds: 60, sizeInMBs: 5 },
-          compressionFormat: 'GZIP',
-        },
-        processingConfiguration: {
-          enabled: true,
-          processors: [
-            {
-              type: 'Lambda',
-              parameters: [
-                {
-                  parameterName: 'LambdaArn',
-                  parameterValue: serverProcessor.functionArn,
-                },
-                { parameterName: 'NumberOfRetries', parameterValue: '3' },
-                {
-                  parameterName: 'BufferIntervalInSeconds',
-                  parameterValue: '60',
-                },
-                { parameterName: 'BufferSizeInMBs', parameterValue: '3' },
-              ],
-            },
-          ],
+          s3BackupMode: 'AllDocuments',
+          s3Configuration: {
+            bucketArn: firehoseBackupBucket.bucketArn,
+            roleArn: firehoseRole.roleArn,
+            bufferingHints: { intervalInSeconds: 60, sizeInMBs: 5 },
+            compressionFormat: 'GZIP',
+          },
+          processingConfiguration: {
+            enabled: true,
+            processors: [
+              {
+                type: 'Lambda',
+                parameters: [
+                  {
+                    parameterName: 'LambdaArn',
+                    parameterValue: serverProcessor.functionArn,
+                  },
+                  { parameterName: 'NumberOfRetries', parameterValue: '3' },
+                  {
+                    parameterName: 'BufferIntervalInSeconds',
+                    parameterValue: '60',
+                  },
+                  { parameterName: 'BufferSizeInMBs', parameterValue: '3' },
+                ],
+              },
+            ],
+          },
         },
       },
-    })
+    )
 
     // Role for CloudWatch Logs to put data into Firehose
     const logsToFirehoseRole = new IamRole(this, 'ItoLogsToFirehoseRole', {

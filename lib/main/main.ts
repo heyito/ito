@@ -1,5 +1,5 @@
 import './sentry'
-import { app, protocol, systemPreferences } from 'electron'
+import { app, protocol } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import {
@@ -19,6 +19,7 @@ import { startKeyListener, stopKeyListener } from '../media/keyboard'
 import { grpcClient } from '../clients/grpcClient'
 import { allowAppNap, preventAppNap } from './appNap'
 import { syncService } from './syncService'
+import { checkAccessibilityPermission } from '../utils/crossPlatform'
 import mainStore from './store'
 import { STORE_KEYS } from '../constants/store-keys'
 import { audioRecorderService } from '../media/audio'
@@ -102,7 +103,7 @@ app.whenReady().then(async () => {
     grpcClient.setMainWindow(mainWindow)
   }
 
-  if (systemPreferences.isTrustedAccessibilityClient(false)) {
+  if (checkAccessibilityPermission(false)) {
     console.log('Accessibility permissions found, starting key listener.')
     startKeyListener()
   }

@@ -219,6 +219,7 @@ class AudioRecorderService extends EventEmitter {
       }
     } else if (message.type === 'audio') {
       const volume = this.#calculateVolume(message.payload)
+
       this.emit('volume-update', volume)
       this.emit('audio-chunk', message.payload)
     }

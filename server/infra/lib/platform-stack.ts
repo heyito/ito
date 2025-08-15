@@ -66,6 +66,7 @@ export class PlatformStack extends Stack {
       engine: DatabaseClusterEngine.auroraPostgres({
         version: AuroraPostgresEngineVersion.VER_16_2,
       }),
+      enablePerformanceInsights: true,
       vpc: props.vpc,
       securityGroups: [dbSecurityGroup],
       credentials: Credentials.fromSecret(dbCredentialsSecret),
@@ -77,8 +78,8 @@ export class PlatformStack extends Stack {
           scaleWithWriter: true,
         }),
       ],
-      serverlessV2MinCapacity: 0.5,
-      serverlessV2MaxCapacity: 4,
+      serverlessV2MinCapacity: 2,
+      serverlessV2MaxCapacity: 10,
       backup: {
         retention: Duration.days(7),
       },

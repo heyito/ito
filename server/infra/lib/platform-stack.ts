@@ -26,6 +26,7 @@ import {
   EngineVersion,
   TLSSecurityPolicy,
 } from 'aws-cdk-lib/aws-opensearchservice'
+import { Effect, PolicyStatement, ServicePrincipal } from 'aws-cdk-lib/aws-iam'
 
 export interface PlatformStackProps extends StackProps {
   vpc: Vpc
@@ -66,6 +67,7 @@ export class PlatformStack extends Stack {
       engine: DatabaseClusterEngine.auroraPostgres({
         version: AuroraPostgresEngineVersion.VER_16_2,
       }),
+      enablePerformanceInsights: true,
       vpc: props.vpc,
       securityGroups: [dbSecurityGroup],
       credentials: Credentials.fromSecret(dbCredentialsSecret),
@@ -77,8 +79,8 @@ export class PlatformStack extends Stack {
           scaleWithWriter: true,
         }),
       ],
-      serverlessV2MinCapacity: 0.5,
-      serverlessV2MaxCapacity: 4,
+      serverlessV2MinCapacity: isDev(stageName) ? 0.5 : 2,
+      serverlessV2MaxCapacity: isDev(stageName) ? 4 : 10,
       backup: {
         retention: Duration.days(7),
       },
@@ -124,6 +126,31 @@ export class PlatformStack extends Stack {
       isDev(stageName) ? RemovalPolicy.DESTROY : RemovalPolicy.RETAIN,
     )
     this.opensearchDomain = domain
+
+    // Allow Firehose in this account to write documents to this domain
+    domain.addAccessPolicies(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        principals: [new ServicePrincipal('firehose.amazonaws.com')],
+        actions: [
+          'es:ESHttpGet',
+          'es:ESHttpHead',
+          'es:ESHttpPost',
+          'es:ESHttpPut',
+          'es:ESHttpDelete',
+        ],
+        resources: [domain.domainArn, `${domain.domainArn}/*`],
+        conditions: {
+          StringEquals: { 'aws:SourceAccount': this.account },
+          ArnLike: {
+            'aws:SourceArn': [
+              `arn:aws:firehose:${this.region}:${this.account}:deliverystream/${stageName}-ito-client-logs`,
+              `arn:aws:firehose:${this.region}:${this.account}:deliverystream/${stageName}-ito-server-logs`,
+            ],
+          },
+        },
+      }),
+    )
 
     new CfnOutput(this, 'OpenSearchEndpoint', {
       value: domain.domainEndpoint,

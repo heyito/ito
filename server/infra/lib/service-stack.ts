@@ -44,6 +44,7 @@ import {
   ManagedPolicy,
   PolicyStatement,
   ServicePrincipal,
+  ArnPrincipal,
 } from 'aws-cdk-lib/aws-iam'
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
 import { LogGroup, CfnSubscriptionFilter } from 'aws-cdk-lib/aws-logs'
@@ -115,8 +116,8 @@ export class ServiceStack extends Stack {
       'ItoTaskDefinition',
       {
         taskRole: fargateTaskRole,
-        cpu: 1024,
-        memoryLimitMiB: 2048,
+        cpu: isDev(stageName) ? 1024 : 4096,
+        memoryLimitMiB: isDev(stageName) ? 2048 : 8192,
         runtimePlatform: {
           operatingSystemFamily: OperatingSystemFamily.LINUX,
           cpuArchitecture: CpuArchitecture.ARM64,
@@ -194,7 +195,7 @@ export class ServiceStack extends Stack {
       {
         cluster,
         serviceName: `${stageName}-${SERVICE_NAME}`,
-        desiredCount: 1,
+        desiredCount: isDev(stageName) ? 1 : 2,
         publicLoadBalancer: true,
         taskDefinition: taskDefinition,
         protocol: ApplicationProtocol.HTTPS,
@@ -466,6 +467,8 @@ export class ServiceStack extends Stack {
     )
     serverSubscription.addDependency(serverDelivery)
 
+    // (moved) Add domain access policy after osBootstrap is created
+
     // OpenSearch index templates and ISM policy bootstrap (retain forever)
     const osBootstrap = new NodejsFunction(this, 'ItoOpenSearchBootstrap', {
       entry: 'lambdas/opensearch-bootstrap.ts',
@@ -498,6 +501,27 @@ export class ServiceStack extends Stack {
         stage: stageName,
       },
     })
+
+    // Allow Firehose role and bootstrap Lambda role to talk to OpenSearch domain (resource policy)
+    props.opensearchDomain.addAccessPolicies(
+      new PolicyStatement({
+        actions: [
+          'es:ESHttpGet',
+          'es:ESHttpHead',
+          'es:ESHttpPost',
+          'es:ESHttpPut',
+          'es:ESHttpDelete',
+        ],
+        resources: [
+          props.opensearchDomain.domainArn,
+          `${props.opensearchDomain.domainArn}/*`,
+        ],
+        principals: [
+          new ArnPrincipal(firehoseRole.roleArn),
+          new ArnPrincipal(osBootstrap.role!.roleArn),
+        ],
+      }),
+    )
 
     new CfnOutput(this, 'ServiceURL', {
       value: fargateService.loadBalancer.loadBalancerDnsName,

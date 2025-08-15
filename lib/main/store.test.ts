@@ -155,7 +155,7 @@ describe('Store Management', () => {
           return { shareAnalytics: false } // Partial settings
         }
         if (key === 'main') {
-          return { navExpanded: false } // Partial main  
+          return { navExpanded: false } // Partial main
         }
         if (key === 'onboarding') {
           return { onboardingCompleted: true } // Partial onboarding
@@ -171,11 +171,11 @@ describe('Store Management', () => {
       // Should set missing properties from defaults
       expect(mockStoreInstance.set).toHaveBeenCalledWith(
         'settings.launchAtLogin',
-        true
+        true,
       )
       expect(mockStoreInstance.set).toHaveBeenCalledWith(
-        'onboarding.onboardingStep', 
-        0
+        'onboarding.onboardingStep',
+        0,
       )
     })
   })

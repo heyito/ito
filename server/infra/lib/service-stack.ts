@@ -502,27 +502,6 @@ export class ServiceStack extends Stack {
       },
     })
 
-    // Allow Firehose role and bootstrap Lambda role to talk to OpenSearch domain (resource policy)
-    props.opensearchDomain.addAccessPolicies(
-      new PolicyStatement({
-        actions: [
-          'es:ESHttpGet',
-          'es:ESHttpHead',
-          'es:ESHttpPost',
-          'es:ESHttpPut',
-          'es:ESHttpDelete',
-        ],
-        resources: [
-          props.opensearchDomain.domainArn,
-          `${props.opensearchDomain.domainArn}/*`,
-        ],
-        principals: [
-          new ArnPrincipal(firehoseRole.roleArn),
-          new ArnPrincipal(osBootstrap.role!.roleArn),
-        ],
-      }),
-    )
-
     new CfnOutput(this, 'ServiceURL', {
       value: fargateService.loadBalancer.loadBalancerDnsName,
     })

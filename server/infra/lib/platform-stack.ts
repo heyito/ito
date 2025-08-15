@@ -26,7 +26,11 @@ import {
   EngineVersion,
   TLSSecurityPolicy,
 } from 'aws-cdk-lib/aws-opensearchservice'
-import { Effect, PolicyStatement, ServicePrincipal } from 'aws-cdk-lib/aws-iam'
+import {
+  AccountRootPrincipal,
+  Effect,
+  PolicyStatement,
+} from 'aws-cdk-lib/aws-iam'
 
 export interface PlatformStackProps extends StackProps {
   vpc: Vpc
@@ -127,11 +131,12 @@ export class PlatformStack extends Stack {
     )
     this.opensearchDomain = domain
 
-    // Allow Firehose in this account to write documents to this domain
+    // Allow any principal in this account (root) to interact with the domain over HTTP.
+    // This avoids cross-stack references that would create cycles while still restricting to this account.
     domain.addAccessPolicies(
       new PolicyStatement({
         effect: Effect.ALLOW,
-        principals: [new ServicePrincipal('firehose.amazonaws.com')],
+        principals: [new AccountRootPrincipal()],
         actions: [
           'es:ESHttpGet',
           'es:ESHttpHead',
@@ -140,15 +145,6 @@ export class PlatformStack extends Stack {
           'es:ESHttpDelete',
         ],
         resources: [domain.domainArn, `${domain.domainArn}/*`],
-        conditions: {
-          StringEquals: { 'aws:SourceAccount': this.account },
-          ArnLike: {
-            'aws:SourceArn': [
-              `arn:aws:firehose:${this.region}:${this.account}:deliverystream/${stageName}-ito-client-logs`,
-              `arn:aws:firehose:${this.region}:${this.account}:deliverystream/${stageName}-ito-server-logs`,
-            ],
-          },
-        },
       }),
     )
 

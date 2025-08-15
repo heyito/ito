@@ -13,7 +13,8 @@ import React from 'react'
 export default function TryItOutContent() {
   const { decrementOnboardingStep, setOnboardingCompleted } =
     useOnboardingStore()
-  const { keyboardShortcut } = useSettingsStore()
+  const { getTranscribeShortcut } = useSettingsStore()
+  const keyboardShortcut = getTranscribeShortcut()
   const [selectedApp, setSelectedApp] = useState<
     'slack' | 'gmail' | 'cursor' | 'chatgpt' | 'notion'
   >('slack')

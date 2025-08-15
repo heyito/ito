@@ -29,6 +29,7 @@ interface SettingsState {
   setMicrophoneDeviceId: (deviceId: string, name: string) => void
   addKeyboardShortcut: (shortcut: string[], mode: KeyboardShortcutMode) => void
   removeKeyboardShortcut: (shortcutId: string) => void
+  getTranscribeShortcut: () => string[]
 }
 
 type SettingCategory = 'general' | 'audio&mic' | 'keyboard' | 'account'
@@ -205,6 +206,12 @@ export const useSettingsStore = create<SettingsState>(set => {
       })
       set(partialState)
       syncToStore(partialState)
+    },
+    getTranscribeShortcut: () => {
+      const { keyboardShortcuts } = useSettingsStore.getState()
+      return (
+        keyboardShortcuts.find(ks => ks.mode === 'transcribe')?.keys || ['fn']
+      )
     },
   }
 })

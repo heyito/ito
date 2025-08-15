@@ -5,10 +5,8 @@ import KeyboardShortcutEditor from '../../ui/keyboard-shortcut-editor'
 export default function KeyboardTestContent() {
   const { incrementOnboardingStep, decrementOnboardingStep } =
     useOnboardingStore()
-  const { keyboardShortcuts, addKeyboardShortcut } = useSettingsStore()
-  const keyboardShortcut = keyboardShortcuts.find(
-    ks => ks.mode === 'transcribe',
-  )?.keys || ['fn']
+  const { getTranscribeShortcut, addKeyboardShortcut } = useSettingsStore()
+  const keyboardShortcut = getTranscribeShortcut()
 
   return (
     <div className="flex flex-row h-full w-full bg-background">

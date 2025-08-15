@@ -211,14 +211,37 @@ export function getKeyboardShortcutsSafe(): KeyboardShortcutConfig[] {
   return fallback
 }
 
-function ensureDefaults(s: Store<AppStore>) {
-  for (const [key, value] of Object.entries(defaultValues.settings)) {
-    const path = `settings.${key}`
-    if (s.get(path) === undefined) {
-      s.set(path, value)
+function ensureDefaultsDeep<T = unknown>(
+  s: Store<any>,
+  defaults: T,
+  basePath = '',
+  exclude: Set<string> = new Set(['appliedMigrations']), // skip internal/meta keys
+) {
+  const isObj = (v: any) =>
+    v !== null && typeof v === 'object' && !Array.isArray(v)
+
+  for (const [key, defaultValue] of Object.entries(defaults as any)) {
+    if (exclude.has(key)) continue
+
+    const path = basePath ? `${basePath}.${key}` : key
+    const currentValue = s.get(path)
+
+    // Primitives or arrays: set only if truly missing/undefined
+    if (!isObj(defaultValue)) {
+      if (currentValue === undefined) s.set(path, defaultValue)
+      continue
+    }
+
+    // Objects:
+    if (currentValue === undefined || !isObj(currentValue)) {
+      // If missing or wrong shape, seed the whole object from defaults
+      s.set(path, defaultValue)
+    } else {
+      // Recurse to fill only missing leaves
+      ensureDefaultsDeep(s, defaultValue, path, exclude)
     }
   }
 }
-ensureDefaults(store)
+ensureDefaultsDeep(store, defaultValues)
 
 export default store

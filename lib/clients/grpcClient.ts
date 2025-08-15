@@ -107,7 +107,7 @@ class GrpcClient {
       const advancedSettings = getAdvancedSettings()
       console.log(
         '[gRPC Client] Using ASR model from advanced settings:',
-        advancedSettings,
+        advancedSettings.llm.asrModel,
       )
       headers.set('asr-model', advancedSettings.llm.asrModel)
       headers.set('asr-provider', advancedSettings.llm.asrProvider)

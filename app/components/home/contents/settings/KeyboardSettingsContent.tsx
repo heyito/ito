@@ -2,10 +2,8 @@ import { useSettingsStore } from '@/app/store/useSettingsStore'
 import KeyboardShortcutEditor from '@/app/components/ui/keyboard-shortcut-editor'
 
 export default function KeyboardSettingsContent() {
-  const { keyboardShortcuts, addKeyboardShortcut } = useSettingsStore()
-  const keyboardShortcut = keyboardShortcuts.find(
-    ks => ks.mode === 'transcribe',
-  )?.keys || ['fn']
+  const { getTranscribeShortcut, addKeyboardShortcut } = useSettingsStore()
+  const keyboardShortcut = getTranscribeShortcut
 
   return (
     <div className="space-y-8">

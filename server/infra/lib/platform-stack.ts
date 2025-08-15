@@ -78,8 +78,8 @@ export class PlatformStack extends Stack {
           scaleWithWriter: true,
         }),
       ],
-      serverlessV2MinCapacity: 2,
-      serverlessV2MaxCapacity: 10,
+      serverlessV2MinCapacity: isDev(stageName) ? 0.5 : 2,
+      serverlessV2MaxCapacity: isDev(stageName) ? 4 : 10,
       backup: {
         retention: Duration.days(7),
       },

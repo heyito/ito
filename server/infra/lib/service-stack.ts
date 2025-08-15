@@ -115,8 +115,8 @@ export class ServiceStack extends Stack {
       'ItoTaskDefinition',
       {
         taskRole: fargateTaskRole,
-        cpu: 4096,
-        memoryLimitMiB: 8192,
+        cpu: isDev(stageName) ? 1024 : 4096,
+        memoryLimitMiB: isDev(stageName) ? 2048 : 8192,
         runtimePlatform: {
           operatingSystemFamily: OperatingSystemFamily.LINUX,
           cpuArchitecture: CpuArchitecture.ARM64,
@@ -194,7 +194,7 @@ export class ServiceStack extends Stack {
       {
         cluster,
         serviceName: `${stageName}-${SERVICE_NAME}`,
-        desiredCount: 2,
+        desiredCount: isDev(stageName) ? 1 : 2,
         publicLoadBalancer: true,
         taskDefinition: taskDefinition,
         protocol: ApplicationProtocol.HTTPS,

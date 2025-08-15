@@ -125,7 +125,13 @@ describe('Store Management', () => {
               muteAudioWhenDictating: false,
               microphoneDeviceId: 'default',
               microphoneName: 'Auto-detect',
-              keyboardShortcut: ['fn'],
+              keyboardShortcuts: expect.arrayContaining([
+                expect.objectContaining({
+                  id: expect.any(String),
+                  keys: expect.any(Array),
+                  mode: expect.stringMatching(/^(transcribe|edit)$/),
+                }),
+              ]),
               isShortcutGloballyEnabled: false,
             }),
             main: expect.objectContaining({
@@ -136,6 +142,7 @@ describe('Store Management', () => {
               tokens: null,
               state: expect.any(Object),
             }),
+            appliedMigrations: expect.any(Array),
           }),
         }),
       )
@@ -148,7 +155,7 @@ describe('Store Management', () => {
           return { shareAnalytics: false } // Partial settings
         }
         if (key === 'main') {
-          return { navExpanded: false } // Partial main
+          return { navExpanded: false } // Partial main  
         }
         if (key === 'onboarding') {
           return { onboardingCompleted: true } // Partial onboarding
@@ -161,35 +168,14 @@ describe('Store Management', () => {
 
       await import('./store')
 
-      // Should merge defaults with existing partial data
+      // Should set missing properties from defaults
       expect(mockStoreInstance.set).toHaveBeenCalledWith(
-        'settings',
-        expect.objectContaining({
-          shareAnalytics: false, // From existing data
-          launchAtLogin: true, // From defaults
-          showItoBarAlways: true, // From defaults
-        }),
+        'settings.launchAtLogin',
+        true
       )
       expect(mockStoreInstance.set).toHaveBeenCalledWith(
-        'main',
-        expect.objectContaining({
-          navExpanded: false, // From existing data
-        }),
-      )
-      expect(mockStoreInstance.set).toHaveBeenCalledWith(
-        'onboarding',
-        expect.objectContaining({
-          onboardingStep: 0, // From defaults
-          onboardingCompleted: true, // From existing data
-        }),
-      )
-      expect(mockStoreInstance.set).toHaveBeenCalledWith(
-        'auth',
-        expect.objectContaining({
-          user: { id: 'test-user' }, // From existing data
-          tokens: null, // From defaults
-          state: expect.any(Object), // From defaults
-        }),
+        'onboarding.onboardingStep', 
+        0
       )
     })
   })

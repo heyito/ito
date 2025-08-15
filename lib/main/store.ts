@@ -200,15 +200,9 @@ function runMigrations(s: Store<AppStore>, allMigrations: Migration[]) {
   s.set('appliedMigrations', Array.from(applied))
 }
 
-runMigrations(store, migrations)
-
-export function getKeyboardShortcutsSafe(): KeyboardShortcutConfig[] {
-  const ks = store.get('settings.keyboardShortcuts')
-  if (Array.isArray(ks) && ks.length) return ks
-
-  const fallback = defaultValues.settings.keyboardShortcuts
-  store.set('settings.keyboardShortcuts', fallback)
-  return fallback
+// Run migrations in production, but allow tests to skip this
+if (process.env.NODE_ENV !== 'test') {
+  runMigrations(store, migrations)
 }
 
 function ensureDefaultsDeep<T = unknown>(

@@ -19,7 +19,6 @@ interface SettingsState {
   muteAudioWhenDictating: boolean
   microphoneDeviceId: string
   microphoneName: string
-  keyboardShortcut: string[]
   keyboardShortcuts: KeyboardShortcutConfig[]
   setShareAnalytics: (share: boolean) => void
   setLaunchAtLogin: (launch: boolean) => void
@@ -28,7 +27,6 @@ interface SettingsState {
   setInteractionSounds: (enabled: boolean) => void
   setMuteAudioWhenDictating: (enabled: boolean) => void
   setMicrophoneDeviceId: (deviceId: string, name: string) => void
-  setKeyboardShortcut: (shortcut: string[]) => void
   addKeyboardShortcut: (shortcut: string[], mode: KeyboardShortcutMode) => void
   removeKeyboardShortcut: (shortcutId: string) => void
 }
@@ -48,7 +46,6 @@ const getInitialState = () => {
     muteAudioWhenDictating: storedSettings?.muteAudioWhenDictating ?? false,
     microphoneDeviceId: storedSettings?.microphoneDeviceId ?? 'default',
     microphoneName: storedSettings?.microphoneName ?? 'Default Microphone',
-    keyboardShortcut: storedSettings?.keyboardShortcut ?? ['fn'], // This fallback is key
     keyboardShortcuts: storedSettings?.keyboardShortcuts ?? [
       { keys: ['fn'], mode: 'transcribe' },
     ],
@@ -164,24 +161,6 @@ export const useSettingsStore = create<SettingsState>(set => {
       set(partialState)
       syncToStore(partialState)
     },
-    setKeyboardShortcut: (shortcut: string[]) => {
-      const currentShortcut = useSettingsStore.getState().keyboardShortcut
-      const partialState = { keyboardShortcut: [...shortcut].sort() }
-      // Track keyboard shortcut change
-      analytics.trackSettings(ANALYTICS_EVENTS.KEYBOARD_SHORTCUT_CHANGED, {
-        setting_name: 'keyboardShortcut',
-        old_value: currentShortcut,
-        new_value: shortcut,
-        setting_category: 'input',
-      })
-
-      // Update user properties
-      analytics.updateUserProperties({
-        keyboard_shortcut: shortcut,
-      })
-      set(partialState)
-      syncToStore(partialState)
-    },
     addKeyboardShortcut: (shortcut: string[], mode: KeyboardShortcutMode) => {
       const currentShortcuts = useSettingsStore.getState().keyboardShortcuts
       const newShortcuts = [
@@ -207,15 +186,6 @@ export const useSettingsStore = create<SettingsState>(set => {
       syncToStore(partialState)
     },
     removeKeyboardShortcut: (shortcutId: string) => {
-      // If the shortcut is the legacy one, handle it from the old state variable
-      if (shortcutId === 'legacy-shortcut') {
-        const partialState = { keyboardShortcut: [] }
-        set(partialState)
-        syncToStore(partialState)
-
-        return
-      }
-
       const currentShortcuts = useSettingsStore.getState().keyboardShortcuts
       const newShortcuts = currentShortcuts.filter(ks => ks.id !== shortcutId)
       const partialState = {

@@ -56,7 +56,10 @@ const StatCard = ({
 }
 
 export default function HomeContent() {
-  const { keyboardShortcut } = useSettingsStore()
+  const { keyboardShortcuts } = useSettingsStore()
+  const keyboardShortcut = keyboardShortcuts.find(
+    ks => ks.mode === 'transcribe',
+  )?.keys || ['fn']
   const { user } = useAuthStore()
   const firstName = user?.name?.split(' ')[0]
   const [interactions, setInteractions] = useState<Interaction[]>([])

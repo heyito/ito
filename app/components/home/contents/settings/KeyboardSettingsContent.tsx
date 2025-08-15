@@ -2,7 +2,10 @@ import { useSettingsStore } from '@/app/store/useSettingsStore'
 import KeyboardShortcutEditor from '@/app/components/ui/keyboard-shortcut-editor'
 
 export default function KeyboardSettingsContent() {
-  const { keyboardShortcut, setKeyboardShortcut } = useSettingsStore()
+  const { keyboardShortcuts, addKeyboardShortcut } = useSettingsStore()
+  const keyboardShortcut = keyboardShortcuts.find(
+    ks => ks.mode === 'transcribe',
+  )?.keys || ['fn']
 
   return (
     <div className="space-y-8">
@@ -18,7 +21,7 @@ export default function KeyboardSettingsContent() {
             </div>
             <KeyboardShortcutEditor
               shortcut={keyboardShortcut}
-              onShortcutChange={setKeyboardShortcut}
+              onShortcutChange={addKeyboardShortcut}
               hideTitle={true}
               className="w-1/2"
             />

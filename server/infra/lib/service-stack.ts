@@ -285,6 +285,7 @@ export class ServiceStack extends Stack {
     // Firehose role to write to S3 and OpenSearch
     const firehoseRole = new IamRole(this, 'ItoFirehoseRole', {
       assumedBy: new ServicePrincipal('firehose.amazonaws.com'),
+      roleName: `${stageName}-ItoFirehoseRole`,
     })
 
     firehoseRole.addToPolicy(

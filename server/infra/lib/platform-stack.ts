@@ -31,6 +31,7 @@ import {
   Effect,
   PolicyStatement,
   ServicePrincipal,
+  ArnPrincipal,
 } from 'aws-cdk-lib/aws-iam'
 
 export interface PlatformStackProps extends StackProps {
@@ -168,6 +169,26 @@ export class PlatformStack extends Stack {
             'aws:SourceArn': `arn:aws:firehose:${this.region}:${this.account}:deliverystream/${stageName}-ito-*-logs`,
           },
         },
+      }),
+    )
+
+    // Explicitly allow the Firehose delivery role to access the domain
+    domain.addAccessPolicies(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        principals: [
+          new ArnPrincipal(
+            `arn:aws:iam::${this.account}:role/${stageName}-ItoFirehoseRole`,
+          ),
+        ],
+        actions: [
+          'es:ESHttpGet',
+          'es:ESHttpHead',
+          'es:ESHttpPost',
+          'es:ESHttpPut',
+          'es:ESHttpDelete',
+        ],
+        resources: [domain.domainArn, `${domain.domainArn}/*`],
       }),
     )
 

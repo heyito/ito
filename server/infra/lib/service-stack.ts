@@ -277,6 +277,10 @@ export class ServiceStack extends Stack {
 
     // IAM permissions for task to write to client log group
     clientLogGroup.grantWrite(fargateTaskRole)
+    // Allow reads like logs:DescribeLogStreams for client logs
+    clientLogGroup.grantRead(fargateTaskRole)
+    // Allow reads on server log group as well (used by log driver/diagnostics)
+    serverLogGroup.grantRead(fargateTaskRole)
 
     // Firehose role to write to S3 and OpenSearch
     const firehoseRole = new IamRole(this, 'ItoFirehoseRole', {

@@ -30,6 +30,7 @@ import {
   AccountRootPrincipal,
   Effect,
   PolicyStatement,
+  ServicePrincipal,
 } from 'aws-cdk-lib/aws-iam'
 
 export interface PlatformStackProps extends StackProps {
@@ -145,6 +146,28 @@ export class PlatformStack extends Stack {
           'es:ESHttpDelete',
         ],
         resources: [domain.domainArn, `${domain.domainArn}/*`],
+      }),
+    )
+
+    // Allow Firehose to write to the domain (scoped to this account and stage streams)
+    domain.addAccessPolicies(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        principals: [new ServicePrincipal('firehose.amazonaws.com')],
+        actions: [
+          'es:ESHttpGet',
+          'es:ESHttpHead',
+          'es:ESHttpPost',
+          'es:ESHttpPut',
+          'es:ESHttpDelete',
+        ],
+        resources: [domain.domainArn, `${domain.domainArn}/*`],
+        conditions: {
+          StringEquals: { 'aws:SourceAccount': this.account },
+          ArnLike: {
+            'aws:SourceArn': `arn:aws:firehose:${this.region}:${this.account}:deliverystream/${stageName}-ito-*-logs`,
+          },
+        },
       }),
     )
 

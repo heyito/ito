@@ -323,6 +323,18 @@ export class ServiceStack extends Stack {
       }),
     )
 
+    // Some es:Describe* actions are not resource-scoped; allow on all resources
+    firehoseRole.addToPolicy(
+      new PolicyStatement({
+        actions: [
+          'es:DescribeElasticsearchDomain',
+          'es:DescribeElasticsearchDomains',
+          'es:DescribeElasticsearchDomainConfig',
+        ],
+        resources: ['*'],
+      }),
+    )
+
     // Lambda processors to normalize into ECS-like fields
     const clientProcessor = new NodejsFunction(
       this,

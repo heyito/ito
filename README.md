@@ -122,6 +122,8 @@ bun run dev
 #### All Platforms
 
 - **Rust**: Install via [rustup.rs](https://rustup.rs/)
+  - **Windows users**: See Windows-specific instructions below for GNU toolchain setup
+  - **macOS/Linux users**: Default installation is sufficient
 
 #### macOS
 
@@ -129,14 +131,25 @@ bun run dev
 
 #### Windows
 
-- **Visual Studio Build Tools**: Install [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with "C++ build tools" workload
-- **MSYS2**: Install from [msys2.org](https://www.msys2.org/) for MinGW-w64 toolchain
-  - After installation, run: `pacman -S --needed base-devel mingw-w64-ucrt-x86_64-toolchain`
-- **Git Bash or PowerShell**: For running build scripts
-- **Environment Setup**: Add to your PATH (in Git Bash):
-  ```bash
-  export PATH="$HOME/.cargo/bin:/c/msys64/ucrt64/bin:$PATH"
-  ```
+**Required Setup:**
+1. **Install Rust with GNU toolchain**:
+   ```bash
+   # Install rustup (Rust installer)
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   
+   # Install the GNU toolchain (required for native components)
+   rustup toolchain install stable-x86_64-pc-windows-gnu
+   rustup target add x86_64-pc-windows-gnu
+   ```
+
+2. **Install 7-Zip**: `winget install 7zip.7zip`
+
+3. **Download and install GCC & MinGW-w64 and add to path**:
+   https://winlibs.com/
+
+4. **Restart your terminal** to pick up PATH changes
+
+> **Note**: The build process automatically uses the GNU toolchain for Windows builds to ensure compatibility with MinGW-w64.
 
 ### Project Structure
 

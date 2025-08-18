@@ -5,10 +5,8 @@ import {
   updateAnalyticsFromSettings,
 } from '@/app/components/analytics'
 import { STORE_KEYS } from '../../lib/constants/store-keys'
-import type {
-  KeyboardShortcutConfig,
-  KeyboardShortcutMode,
-} from '@/lib/main/store'
+import type { KeyboardShortcutConfig } from '@/lib/main/store'
+import { ItoMode } from '../generated/ito_pb'
 
 interface SettingsState {
   shareAnalytics: boolean
@@ -27,7 +25,7 @@ interface SettingsState {
   setInteractionSounds: (enabled: boolean) => void
   setMuteAudioWhenDictating: (enabled: boolean) => void
   setMicrophoneDeviceId: (deviceId: string, name: string) => void
-  addKeyboardShortcut: (shortcut: string[], mode: KeyboardShortcutMode) => void
+  addKeyboardShortcut: (shortcut: string[], mode: ItoMode) => void
   removeKeyboardShortcut: (shortcutId: string) => void
   getTranscribeShortcut: () => string[]
 }
@@ -162,7 +160,7 @@ export const useSettingsStore = create<SettingsState>(set => {
       set(partialState)
       syncToStore(partialState)
     },
-    addKeyboardShortcut: (shortcut: string[], mode: KeyboardShortcutMode) => {
+    addKeyboardShortcut: (shortcut: string[], mode: ItoMode) => {
       const currentShortcuts = useSettingsStore.getState().keyboardShortcuts
       const newShortcuts = [
         ...currentShortcuts,

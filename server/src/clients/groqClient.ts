@@ -1,9 +1,6 @@
 import Groq from 'groq-sdk'
 import { toFile } from 'groq-sdk/uploads'
 import * as dotenv from 'dotenv'
-import { ITO_MODE_PROMPT, ItoMode } from '../services/ito/constants.js'
-import { addContextToPrompt } from '../services/ito/helpers.js'
-import { WindowContext } from '../services/ito/types.js'
 import { createTranscriptionPrompt } from '../prompts/transcription.js'
 import {
   ClientApiKeyError,

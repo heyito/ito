@@ -1,8 +1,8 @@
 import { grpcClient } from '../clients/grpcClient'
-import mainStore, { KeyboardShortcutMode } from './store'
+import mainStore from './store'
 import { STORE_KEYS } from '../constants/store-keys'
 import log from 'electron-log'
-import { AudioChunkSchema } from '@/app/generated/ito_pb'
+import { AudioChunkSchema, ItoMode } from '@/app/generated/ito_pb'
 import { create } from '@bufbuild/protobuf'
 import { InteractionsTable } from './sqlite/repo'
 import { v4 as uuidv4 } from 'uuid'
@@ -35,7 +35,7 @@ export class TranscriptionService {
     }
   }
 
-  public startStreaming(mode: KeyboardShortcutMode) {
+  public startStreaming(mode: ItoMode) {
     if (this.isStreaming) {
       log.warn('[TranscriptionService] Stream already in progress.')
       return
@@ -289,7 +289,7 @@ export class TranscriptionService {
   }
 
   // Backward compatibility aliases for the old method names
-  public startTranscription(mode: KeyboardShortcutMode) {
+  public startTranscription(mode: ItoMode) {
     return this.startStreaming(mode)
   }
 

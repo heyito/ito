@@ -1,7 +1,8 @@
 import { HeaderValidator } from '../../validation/HeaderValidator.js'
 import { WindowContext } from './types.js'
-import { ItoMode, ITO_MODE_PROMPT } from './constants.js'
+import { ITO_MODE_PROMPT } from './constants.js'
 import { DEFAULT_ADVANCED_SETTINGS } from '../../constants/generated-defaults.js'
+import { ItoMode } from '../../generated/ito_pb.js'
 
 export function addContextToPrompt(
   prompt: string,
@@ -132,22 +133,41 @@ export function getAdvancedSettingsHeaders(headers: Headers) {
   }
 }
 
+export function getItoMode(input: unknown): ItoMode | undefined {
+  try {
+    const inputNumber = Number(input)
+    if (isNaN(inputNumber) || !Number.isFinite(inputNumber)) {
+      return undefined
+    }
+
+    return inputNumber as ItoMode
+  } catch (error) {
+    console.error('Error parsing Ito mode:', error)
+    return undefined
+  }
+}
+
 export function detectItoMode(transcript: string): ItoMode {
   const words = transcript.trim().split(/\s+/)
   const firstFiveWords = words.slice(0, 5).join(' ').toLowerCase()
-  
+
   return firstFiveWords.includes('hey ito') ? ItoMode.EDIT : ItoMode.TRANSCRIBE
 }
 
 export function getPromptForMode(
   mode: ItoMode,
-  advancedSettingsHeaders: ReturnType<typeof getAdvancedSettingsHeaders>
+  advancedSettingsHeaders: ReturnType<typeof getAdvancedSettingsHeaders>,
 ): string {
   switch (mode) {
     case ItoMode.EDIT:
-      return advancedSettingsHeaders.editingPrompt || ITO_MODE_PROMPT[ItoMode.EDIT]
+      return (
+        advancedSettingsHeaders.editingPrompt || ITO_MODE_PROMPT[ItoMode.EDIT]
+      )
     case ItoMode.TRANSCRIBE:
-      return advancedSettingsHeaders.transcriptionPrompt || ITO_MODE_PROMPT[ItoMode.TRANSCRIBE]
+      return (
+        advancedSettingsHeaders.transcriptionPrompt ||
+        ITO_MODE_PROMPT[ItoMode.TRANSCRIBE]
+      )
     default:
       return ITO_MODE_PROMPT[ItoMode.TRANSCRIBE]
   }

@@ -129,7 +129,7 @@ describe('Store Management', () => {
                 expect.objectContaining({
                   id: expect.any(String),
                   keys: expect.any(Array),
-                  mode: expect.stringMatching(/^(transcribe|edit)$/),
+                  mode: expect.any(Number),
                 }),
               ]),
               isShortcutGloballyEnabled: false,

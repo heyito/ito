@@ -28,6 +28,7 @@ import {
 } from '../main/sqlite/repo'
 import { audioRecorderService } from '../media/audio'
 import { voiceInputService } from '../main/voiceInputService'
+import { ItoMode } from '@/app/generated/ito_pb'
 
 const handleIPC = (channel: string, handler: (...args: any[]) => any) => {
   ipcMain.handle(channel, handler)
@@ -114,7 +115,7 @@ export function registerIPC() {
   })
   handleIPC('stop-key-listener', () => stopKeyListener())
   handleIPC('start-native-recording-service', () =>
-    voiceInputService.startSTTService(),
+    voiceInputService.startSTTService(ItoMode.TRANSCRIBE),
   )
   handleIPC('stop-native-recording-service', () =>
     voiceInputService.stopSTTService(),

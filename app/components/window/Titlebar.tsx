@@ -116,14 +116,6 @@ export const Titlebar = () => {
           </div>
         </div>
       )}
-      {wcontext?.platform === 'win32' && (
-        <div
-          className="window-titlebar-icon"
-          style={onboardingCompleted ? { left: 36 } : {}}
-        >
-          <img src={icon} />
-        </div>
-      )}
 
       {showOnboarding && <OnboardingTitlebar />}
       {wcontext?.platform === 'win32' && <TitlebarControls />}

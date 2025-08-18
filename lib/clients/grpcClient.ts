@@ -20,6 +20,7 @@ import {
   DeleteUserDataRequestSchema,
   GetAdvancedSettingsRequestSchema,
   UpdateAdvancedSettingsRequestSchema,
+  ItoMode,
 } from '@/app/generated/ito_pb'
 import { createClient } from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-node'
@@ -30,7 +31,6 @@ import { setFocusedText } from '../media/text-writer'
 import { Note, Interaction, DictionaryItem } from '../main/sqlite/models'
 import { DictionaryTable } from '../main/sqlite/repo'
 import {
-  KeyboardShortcutMode,
   AdvancedSettings,
   getAdvancedSettings,
   getCurrentUserId,
@@ -71,7 +71,7 @@ class GrpcClient {
     return new Headers({ Authorization: `Bearer ${this.authToken}` })
   }
 
-  private async getHeadersWithMetadata(mode: KeyboardShortcutMode) {
+  private async getHeadersWithMetadata(mode: ItoMode) {
     const headers = this.getHeaders()
 
     try {
@@ -218,10 +218,7 @@ class GrpcClient {
     return false
   }
 
-  async transcribeStream(
-    stream: AsyncIterable<AudioChunk>,
-    mode: KeyboardShortcutMode,
-  ) {
+  async transcribeStream(stream: AsyncIterable<AudioChunk>, mode: ItoMode) {
     return this.withRetry(async () => {
       // Get current interaction ID for trace logging
       const interactionId = (globalThis as any).currentInteractionId

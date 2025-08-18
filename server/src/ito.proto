@@ -45,6 +45,11 @@ service ItoService {
 // -----------------------------------------------------------------
 message Empty {}
 
+enum ItoMode {
+  TRANSCRIBE = 0;
+  EDIT = 1;
+}
+
 // Error Types
 // -----------------------------------------------------------------
 enum ClientProvider {

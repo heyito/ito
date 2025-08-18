@@ -3,13 +3,12 @@ import crypto from 'crypto'
 import { DEFAULT_ADVANCED_SETTINGS } from '../constants/generated-defaults.js'
 import { STORE_KEYS } from '../constants/store-keys'
 import type { LlmSettings } from '@/app/store/useAdvancedSettingsStore'
-
-export type KeyboardShortcutMode = 'transcribe' | 'edit'
+import { ItoMode } from '@/app/generated/ito_pb.js'
 
 export interface KeyboardShortcutConfig {
   id: string
   keys: string[]
-  mode: KeyboardShortcutMode
+  mode: ItoMode
 }
 
 interface MainStore {
@@ -117,8 +116,8 @@ export const defaultValues: AppStore = {
     microphoneName: 'Auto-detect',
     isShortcutGloballyEnabled: false,
     keyboardShortcuts: [
-      { id: crypto.randomUUID(), keys: ['fn'], mode: 'transcribe' },
-      { id: crypto.randomUUID(), keys: ['command'], mode: 'edit' },
+      { id: crypto.randomUUID(), keys: ['fn'], mode: ItoMode.TRANSCRIBE },
+      { id: crypto.randomUUID(), keys: ['command'], mode: ItoMode.EDIT },
     ],
     firstName: '',
     lastName: '',

@@ -3,7 +3,6 @@ import { Button } from '@/app/components/ui/button'
 import KeyboardKey from '@/app/components/ui/keyboard-key'
 import { KeyState, normalizeKeyEvent } from '@/app/utils/keyboard'
 import { useAudioStore } from '@/app/store/useAudioStore'
-import type { KeyboardShortcutMode } from '@/lib/main/store'
 
 interface KeyboardShortcutEditorProps {
   shortcut: string[]

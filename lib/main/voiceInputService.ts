@@ -1,13 +1,14 @@
 import { audioRecorderService } from '../media/audio'
 import { muteSystemAudio, unmuteSystemAudio } from '../media/systemAudio'
 import { getPillWindow, mainWindow } from './app'
-import store, { KeyboardShortcutMode } from './store'
+import store from './store'
 import { STORE_KEYS } from '../constants/store-keys'
 import { transcriptionService } from './transcriptionService'
 import { traceLogger } from './traceLogger'
+import { ItoMode } from '@/app/generated/ito_pb'
 
 export class VoiceInputService {
-  public startSTTService = (mode: KeyboardShortcutMode) => {
+  public startSTTService = (mode: ItoMode) => {
     console.info('[Audio] Starting STT service')
     const deviceId = store.get(STORE_KEYS.SETTINGS).microphoneDeviceId
 

@@ -1,6 +1,6 @@
+import { ItoMode } from '@/app/generated/ito_pb'
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 import { EventEmitter } from 'events'
-import { KeyboardShortcutMode } from '../main/store'
 
 // Mock all external dependencies
 const mockChildProcess = {
@@ -40,7 +40,7 @@ const mockMainStore = {
       {
         id: 'mock-shortcut-1',
         keys: ['command', 'space'],
-        mode: 'transcribe',
+        mode: ItoMode.TRANSCRIBE,
       },
     ],
   })),
@@ -138,7 +138,7 @@ describe('Keyboard Module', () => {
         {
           id: 'mock-shortcut-1',
           keys: ['command', 'space'],
-          mode: 'transcribe',
+          mode: ItoMode.TRANSCRIBE,
         },
       ],
     })
@@ -360,7 +360,7 @@ describe('Keyboard Module', () => {
           {
             id: 'test-shortcut-1',
             keys: ['command', 'space'],
-            mode: 'transcribe',
+            mode: ItoMode.TRANSCRIBE,
           },
         ],
       })
@@ -405,7 +405,7 @@ describe('Keyboard Module', () => {
           {
             id: 'test-shortcut',
             keys: ['command', 'space'],
-            mode: 'transcribe',
+            mode: ItoMode.TRANSCRIBE,
           },
         ],
       })
@@ -460,7 +460,7 @@ describe('Keyboard Module', () => {
           {
             id: 'test-shortcut',
             keys: ['command', 'space'],
-            mode: 'transcribe',
+            mode: ItoMode.TRANSCRIBE,
           },
         ],
       })
@@ -500,7 +500,7 @@ describe('Keyboard Module', () => {
           {
             id: 'disable-test',
             keys: ['command', 'space'],
-            mode: 'transcribe',
+            mode: ItoMode.TRANSCRIBE,
           },
         ],
       }))
@@ -601,7 +601,7 @@ describe('Keyboard Module', () => {
           {
             id: 'complex-shortcut',
             keys: ['control', 'shift', 'f'],
-            mode: 'transcribe',
+            mode: ItoMode.TRANSCRIBE,
           },
         ],
       })
@@ -652,7 +652,7 @@ describe('Keyboard Module', () => {
           {
             id: 'partial-test',
             keys: ['command', 'shift', 'a'],
-            mode: 'transcribe',
+            mode: ItoMode.TRANSCRIBE,
           },
         ],
       })
@@ -696,7 +696,7 @@ describe('Keyboard Module', () => {
           {
             id: 'command-test',
             keys: ['command'],
-            mode: 'transcribe',
+            mode: ItoMode.TRANSCRIBE,
           },
         ],
       })
@@ -752,7 +752,7 @@ describe('Keyboard Module', () => {
           {
             id: 'letter-test',
             keys: ['a'],
-            mode: 'transcribe',
+            mode: ItoMode.TRANSCRIBE,
           },
         ],
       })
@@ -781,7 +781,7 @@ describe('Keyboard Module', () => {
           {
             id: 'number-test',
             keys: ['1'],
-            mode: 'transcribe',
+            mode: ItoMode.TRANSCRIBE,
           },
         ],
       })
@@ -810,7 +810,7 @@ describe('Keyboard Module', () => {
           {
             id: 'unknown-test',
             keys: ['unknownkey'],
-            mode: 'transcribe',
+            mode: ItoMode.TRANSCRIBE,
           },
         ],
       })
@@ -886,7 +886,7 @@ describe('Keyboard Module', () => {
           {
             id: 'block-test',
             keys: ['control', 'z'],
-            mode: 'transcribe',
+            mode: ItoMode.TRANSCRIBE,
           },
         ],
       })
@@ -945,7 +945,7 @@ describe('Keyboard Module', () => {
           {
             id: 'disabled-block-test',
             keys: ['control', 'z'],
-            mode: 'transcribe',
+            mode: ItoMode.TRANSCRIBE,
           },
         ],
       })
@@ -998,7 +998,7 @@ describe('Keyboard Module', () => {
           {
             id: 'memory-test',
             keys: ['a', 'b'],
-            mode: 'transcribe',
+            mode: ItoMode.TRANSCRIBE,
           },
         ],
       })

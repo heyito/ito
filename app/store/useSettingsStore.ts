@@ -46,8 +46,8 @@ const getInitialState = () => {
     microphoneDeviceId: storedSettings?.microphoneDeviceId ?? 'default',
     microphoneName: storedSettings?.microphoneName ?? 'Default Microphone',
     keyboardShortcuts: storedSettings?.keyboardShortcuts ?? [
-      { keys: ['command'], mode: 'edit', id: 'default-edit' },
-      { keys: ['fn'], mode: 'transcribe', id: 'default-transcribe' },
+      { keys: ['control'], mode: 'edit', id: 'default-edit' },
+      { keys: ['fn'], mode: ItoMode.TRANSCRIBE, id: 'default-transcribe' },
     ],
     firstName: storedSettings?.firstName ?? '',
     lastName: storedSettings?.lastName ?? '',
@@ -209,7 +209,9 @@ export const useSettingsStore = create<SettingsState>(set => {
     getTranscribeShortcut: () => {
       const { keyboardShortcuts } = useSettingsStore.getState()
       return (
-        keyboardShortcuts.find(ks => ks.mode === 'transcribe')?.keys || ['fn']
+        keyboardShortcuts.find(ks => ks.mode === ItoMode.TRANSCRIBE)?.keys || [
+          'fn',
+        ]
       )
     },
   }

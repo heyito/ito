@@ -3,10 +3,11 @@ import { Button } from '@/app/components/ui/button'
 import KeyboardKey from '@/app/components/ui/keyboard-key'
 import { KeyState, normalizeKeyEvent } from '@/app/utils/keyboard'
 import { useAudioStore } from '@/app/store/useAudioStore'
+import { ItoMode } from '@/app/generated/ito_pb'
 
 interface KeyboardShortcutEditorProps {
   shortcut: string[]
-  onShortcutChange: (newShortcut: string[], mode: KeyboardShortcutMode) => void
+  onShortcutChange: (newShortcut: string[], mode: ItoMode) => void
   hideTitle?: boolean
   className?: string
   keySize?: number
@@ -19,7 +20,7 @@ interface KeyboardShortcutEditorProps {
   minHeight?: number
   editButtonClassName?: string
   confirmButtonClassName?: string
-  mode?: KeyboardShortcutMode
+  mode?: ItoMode
 }
 
 export default function KeyboardShortcutEditor({
@@ -37,7 +38,7 @@ export default function KeyboardShortcutEditor({
   minHeight = 84,
   editButtonClassName = '',
   confirmButtonClassName = '',
-  mode = 'transcribe',
+  mode = ItoMode.TRANSCRIBE,
 }: KeyboardShortcutEditorProps) {
   const cleanupRef = useRef<(() => void) | null>(null)
   const keyStateRef = useRef<KeyState>(new KeyState(shortcut))

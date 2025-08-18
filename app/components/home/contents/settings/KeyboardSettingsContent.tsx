@@ -3,7 +3,7 @@ import KeyboardShortcutEditor from '@/app/components/ui/keyboard-shortcut-editor
 
 export default function KeyboardSettingsContent() {
   const { getTranscribeShortcut, addKeyboardShortcut } = useSettingsStore()
-  const keyboardShortcut = getTranscribeShortcut
+  const keyboardShortcut = getTranscribeShortcut()
 
   return (
     <div className="space-y-8">

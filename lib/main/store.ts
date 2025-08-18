@@ -1,13 +1,19 @@
 import Store from 'electron-store'
 import crypto from 'crypto'
-import { STORE_KEYS } from '../constants/store-keys'
-import { LlmSettings } from '@/app/store/useAdvancedSettingsStore'
 import { DEFAULT_ADVANCED_SETTINGS } from '../constants/generated-defaults.js'
+import { STORE_KEYS } from '../constants/store-keys'
+import type { LlmSettings } from '@/app/store/useAdvancedSettingsStore'
+import { ItoMode } from '@/app/generated/ito_pb.js'
+
+export interface KeyboardShortcutConfig {
+  id: string
+  keys: string[]
+  mode: ItoMode
+}
 
 interface MainStore {
   navExpanded: boolean
 }
-
 interface OnboardingStore {
   onboardingStep: number
   onboardingCompleted: boolean
@@ -22,8 +28,8 @@ export interface SettingsStore {
   muteAudioWhenDictating: boolean
   microphoneDeviceId: string
   microphoneName: string
-  keyboardShortcut: string[]
   isShortcutGloballyEnabled: boolean
+  keyboardShortcuts: KeyboardShortcutConfig[]
   firstName: string
   lastName: string
   email: string
@@ -44,7 +50,6 @@ export interface AuthUser {
   provider?: string
   lastSignInAt?: string
 }
-
 export interface AuthTokens {
   access_token?: string
   refresh_token?: string
@@ -76,20 +81,9 @@ interface AppStore {
   userProfile: any | null
   idToken: string | null
   accessToken: string | null
+  appliedMigrations: string[]
 }
 
-// Helper function to get current user ID
-export const getCurrentUserId = (): string | undefined => {
-  const user = store.get(STORE_KEYS.USER_PROFILE) as any
-  return user?.id
-}
-
-// Helper function to get advanced settings
-export const getAdvancedSettings = (): AdvancedSettings => {
-  return store.get(STORE_KEYS.ADVANCED_SETTINGS) as AdvancedSettings
-}
-
-// Generate new auth state with crypto
 export const createNewAuthState = (): AuthState => {
   const codeVerifier = crypto.randomBytes(32).toString('base64url')
   const codeChallenge = crypto
@@ -101,11 +95,16 @@ export const createNewAuthState = (): AuthState => {
   return { id, codeVerifier, codeChallenge, state }
 }
 
-const defaultValues: AppStore = {
-  onboarding: {
-    onboardingStep: 0,
-    onboardingCompleted: false,
-  },
+export const getCurrentUserId = (): string | undefined => {
+  const user = store.get(STORE_KEYS.USER_PROFILE) as any
+  return user?.id
+}
+export const getAdvancedSettings = (): AdvancedSettings => {
+  return store.get(STORE_KEYS.ADVANCED_SETTINGS) as AdvancedSettings
+}
+
+export const defaultValues: AppStore = {
+  onboarding: { onboardingStep: 0, onboardingCompleted: false },
   settings: {
     shareAnalytics: true,
     launchAtLogin: true,
@@ -115,20 +114,17 @@ const defaultValues: AppStore = {
     muteAudioWhenDictating: false,
     microphoneDeviceId: 'default',
     microphoneName: 'Auto-detect',
-    keyboardShortcut: ['fn'],
     isShortcutGloballyEnabled: false,
+    keyboardShortcuts: [
+      { id: crypto.randomUUID(), keys: ['fn'], mode: ItoMode.TRANSCRIBE },
+      { id: crypto.randomUUID(), keys: ['command'], mode: ItoMode.EDIT },
+    ],
     firstName: '',
     lastName: '',
     email: '',
   },
-  main: {
-    navExpanded: true,
-  },
-  auth: {
-    user: null,
-    tokens: null,
-    state: createNewAuthState(),
-  },
+  main: { navExpanded: true },
+  auth: { user: null, tokens: null, state: createNewAuthState() },
   advancedSettings: {
     llm: {
       asrProvider: DEFAULT_ADVANCED_SETTINGS.asrProvider,
@@ -149,35 +145,96 @@ const defaultValues: AppStore = {
   userProfile: null,
   idToken: null,
   accessToken: null,
+  appliedMigrations: [],
 }
 
-const store = new Store<AppStore>({
+export const store = new Store<AppStore>({
   defaults: defaultValues,
 })
 
-// electron quirk -- default values are only used if the entire object is missing.
-// We need to manually merge defaults for nested objects to ensure all keys exist.
-const currentSettings = store.get(STORE_KEYS.SETTINGS)
-const completeSettings = { ...defaultValues.settings, ...currentSettings }
-store.set(STORE_KEYS.SETTINGS, completeSettings)
+type Migration = { id: string; run: (s: Store<AppStore>) => void }
 
-const currentMain = store.get(STORE_KEYS.MAIN)
-const completeMain = { ...defaultValues.main, ...currentMain }
-store.set(STORE_KEYS.MAIN, completeMain)
+const migrations: Migration[] = [
+  {
+    id: '2025-08-15-keyboard-shortcut-rename',
+    run: s => {
+      const settings: any = s.get('settings') || {}
+      const legacy = settings.keyboardShortcut
+      const hasLegacy = Array.isArray(legacy) && legacy.length > 0
+      const hasNew =
+        Array.isArray(settings.keyboardShortcuts) &&
+        settings.keyboardShortcuts.length > 0
 
-const currentOnboarding = store.get(STORE_KEYS.ONBOARDING)
-const completeOnboarding = { ...defaultValues.onboarding, ...currentOnboarding }
-store.set(STORE_KEYS.ONBOARDING, completeOnboarding)
+      if (!hasNew && hasLegacy) {
+        s.set('settings.keyboardShortcuts', [
+          {
+            id: crypto.randomUUID(),
+            keys: legacy,
+            mode: 'transcribe',
+          },
+        ])
+      }
+      if ('keyboardShortcut' in settings) {
+        delete settings.keyboardShortcut
+        s.set('settings', settings)
+      }
+    },
+  },
+]
 
-const currentAuth = store.get(STORE_KEYS.AUTH)
-const completeAuth = { ...defaultValues.auth, ...currentAuth }
-store.set(STORE_KEYS.AUTH, completeAuth)
-
-const currentAdvancedSettings = store.get(STORE_KEYS.ADVANCED_SETTINGS)
-const completeAdvancedSettings = {
-  ...defaultValues.advancedSettings,
-  ...currentAdvancedSettings,
+// ---------- Migration runner ----------
+function runMigrations(s: Store<AppStore>, allMigrations: Migration[]) {
+  const applied = new Set(s.get('appliedMigrations') || [])
+  for (const m of allMigrations) {
+    if (!applied.has(m.id)) {
+      console.log(`[migrations] Running: ${m.id}`)
+      try {
+        m.run(s)
+        applied.add(m.id)
+      } catch (err) {
+        console.error(`[migrations] Failed: ${m.id}`, err)
+      }
+    }
+  }
+  s.set('appliedMigrations', Array.from(applied))
 }
-store.set(STORE_KEYS.ADVANCED_SETTINGS, completeAdvancedSettings)
+
+// Run migrations in production, but allow tests to skip this
+if (process.env.NODE_ENV !== 'test') {
+  runMigrations(store, migrations)
+}
+
+function ensureDefaultsDeep<T = unknown>(
+  s: Store<any>,
+  defaults: T,
+  basePath = '',
+  exclude: Set<string> = new Set(['appliedMigrations']), // skip internal/meta keys
+) {
+  const isObj = (v: any) =>
+    v !== null && typeof v === 'object' && !Array.isArray(v)
+
+  for (const [key, defaultValue] of Object.entries(defaults as any)) {
+    if (exclude.has(key)) continue
+
+    const path = basePath ? `${basePath}.${key}` : key
+    const currentValue = s.get(path)
+
+    // Primitives or arrays: set only if truly missing/undefined
+    if (!isObj(defaultValue)) {
+      if (currentValue === undefined) s.set(path, defaultValue)
+      continue
+    }
+
+    // Objects:
+    if (currentValue === undefined || !isObj(currentValue)) {
+      // If missing or wrong shape, seed the whole object from defaults
+      s.set(path, defaultValue)
+    } else {
+      // Recurse to fill only missing leaves
+      ensureDefaultsDeep(s, defaultValue, path, exclude)
+    }
+  }
+}
+ensureDefaultsDeep(store, defaultValues)
 
 export default store

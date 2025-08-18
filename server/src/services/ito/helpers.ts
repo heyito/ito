@@ -1,7 +1,8 @@
 import { HeaderValidator } from '../../validation/HeaderValidator.js'
 import { WindowContext } from './types.js'
-import { ItoMode, ITO_MODE_PROMPT } from './constants.js'
+import { ITO_MODE_PROMPT } from './constants.js'
 import { DEFAULT_ADVANCED_SETTINGS } from '../../constants/generated-defaults.js'
+import { ItoMode } from '../../generated/ito_pb.js'
 
 export function addContextToPrompt(
   prompt: string,
@@ -129,6 +130,20 @@ export function getAdvancedSettingsHeaders(headers: Headers) {
     editingPrompt,
     noSpeechThreshold,
     lowQualityThreshold,
+  }
+}
+
+export function getItoMode(input: unknown): ItoMode | undefined {
+  try {
+    const inputNumber = Number(input)
+    if (isNaN(inputNumber) || !Number.isFinite(inputNumber)) {
+      return undefined
+    }
+
+    return inputNumber as ItoMode
+  } catch (error) {
+    console.error('Error parsing Ito mode:', error)
+    return undefined
   }
 }
 

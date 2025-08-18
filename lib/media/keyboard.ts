@@ -1,5 +1,5 @@
 import { spawn } from 'child_process'
-import store from '../main/store' // Import the main process store
+import store, { KeyboardShortcutConfig } from '../main/store'
 import { STORE_KEYS } from '../constants/store-keys'
 import { getNativeBinaryPath } from './native-interface'
 import { BrowserWindow } from 'electron'
@@ -99,7 +99,7 @@ function normalizeKey(rawKey: string): string {
 const pressedKeys = new Set<string>()
 
 function handleKeyEventInMain(event: KeyEvent) {
-  const { keyboardShortcut, isShortcutGloballyEnabled } = store.get(
+  const { isShortcutGloballyEnabled, keyboardShortcuts } = store.get(
     STORE_KEYS.SETTINGS,
   )
 
@@ -125,27 +125,29 @@ function handleKeyEventInMain(event: KeyEvent) {
     pressedKeys.delete(normalizedKey)
   }
 
-  // Check if every key required by the shortcut is in our set of pressed keys.
-  const isShortcutHeld =
-    keyboardShortcut && keyboardShortcut.every(key => pressedKeys.has(key))
+  // Check if any of the configured shortcuts are currently held\
+  const currentlyHeldShortcut = keyboardShortcuts.find(shortcut =>
+    shortcut.keys.every(key => pressedKeys.has(key)),
+  )
 
-  // Only block keys when the complete shortcut is being held
-  if (isShortcutHeld) {
-    // Block all shortcut keys while the complete combination is pressed
-    blockKeys(getKeysToBlock())
+  // Only block keys when a complete shortcut is being held
+  if (currentlyHeldShortcut) {
+    // Block all keys for the currently held shortcut
+    blockKeys(getKeysToBlock(currentlyHeldShortcut))
   } else {
-    // Unblock all keys when the complete combination is not pressed
+    // Unblock all keys when no complete shortcut is pressed
     blockKeys([])
   }
 
   // Shortcut pressed
-  if (isShortcutHeld && !isShortcutActive) {
+  if (currentlyHeldShortcut && !isShortcutActive) {
     isShortcutActive = true
     console.info('lib Shortcut ACTIVATED, starting recording...')
 
     // Start trace logging for new interaction
     const interactionId = traceLogger.startInteraction('HOTKEY_ACTIVATED', {
-      shortcut: keyboardShortcut,
+      shortcut: currentlyHeldShortcut.keys,
+      mode: currentlyHeldShortcut.mode,
       pressedKeys: Array.from(pressedKeys),
       event: {
         type: event.type,
@@ -158,8 +160,8 @@ function handleKeyEventInMain(event: KeyEvent) {
     // Store interaction ID for later use
     ;(globalThis as any).currentInteractionId = interactionId
 
-    voiceInputService.startSTTService()
-  } else if (!isShortcutHeld && isShortcutActive) {
+    voiceInputService.startSTTService(currentlyHeldShortcut.mode)
+  } else if (!currentlyHeldShortcut && isShortcutActive) {
     // Shortcut released
     isShortcutActive = false
     console.info('lib Shortcut DEACTIVATED, stopping recording...')
@@ -292,16 +294,18 @@ const reverseKeyNameMap: Record<string, string[]> = Object.entries(
   {} as Record<string, string[]>,
 )
 
-const getKeysToBlock = (): string[] => {
-  const { keyboardShortcut } = store.get(STORE_KEYS.SETTINGS)
+const getKeysToBlock = (shortcut?: KeyboardShortcutConfig): string[] => {
+  if (!shortcut) {
+    return []
+  }
 
   // Use the reverse map to find all raw keys for the normalized shortcut keys.
-  const keys = keyboardShortcut.flatMap(
+  const keys = shortcut.keys.flatMap(
     normalizedKey => reverseKeyNameMap[normalizedKey] || [],
   )
 
   // Also block the special "fast fn" key if fn is part of the shortcut.
-  if (keyboardShortcut.includes('fn')) {
+  if (shortcut.keys.includes('fn')) {
     keys.push('Unknown(179)')
   }
 

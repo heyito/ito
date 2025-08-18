@@ -2,7 +2,7 @@ import { grpcClient } from '../clients/grpcClient'
 import mainStore from './store'
 import { STORE_KEYS } from '../constants/store-keys'
 import log from 'electron-log'
-import { AudioChunkSchema } from '@/app/generated/ito_pb'
+import { AudioChunkSchema, ItoMode } from '@/app/generated/ito_pb'
 import { create } from '@bufbuild/protobuf'
 import { InteractionsTable } from './sqlite/repo'
 import { v4 as uuidv4 } from 'uuid'
@@ -35,7 +35,7 @@ export class TranscriptionService {
     }
   }
 
-  public startStreaming() {
+  public startStreaming(mode: ItoMode) {
     if (this.isStreaming) {
       log.warn('[TranscriptionService] Stream already in progress.')
       return
@@ -58,7 +58,7 @@ export class TranscriptionService {
     }
 
     grpcClient
-      .transcribeStream(this.streamAudioChunks())
+      .transcribeStream(this.streamAudioChunks(), mode)
       .then(response => {
         // Add debugging to see what we received
         console.log(
@@ -289,8 +289,8 @@ export class TranscriptionService {
   }
 
   // Backward compatibility aliases for the old method names
-  public startTranscription() {
-    return this.startStreaming()
+  public startTranscription(mode: ItoMode) {
+    return this.startStreaming(mode)
   }
 
   public stopTranscription() {

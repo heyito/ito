@@ -12,6 +12,7 @@ import {
   AdvancedSettings,
   AdvancedSettingsSchema,
   LlmSettingsSchema,
+  ItoMode,
 } from '../../generated/ito_pb.js'
 import { create } from '@bufbuild/protobuf'
 import type { HandlerContext } from '@connectrpc/connect'
@@ -30,7 +31,6 @@ import {
 } from '../../db/models.js'
 import { ConnectError, Code } from '@connectrpc/connect'
 import { kUser } from '../../auth/userContext.js'
-import { ItoMode } from './constants.js'
 import { WindowContext } from './types.js'
 import { HeaderValidator } from '../../validation/HeaderValidator.js'
 import { errorToProtobuf } from '../../clients/errors.js'
@@ -40,6 +40,7 @@ import {
   getAdvancedSettingsHeaders,
   detectItoMode,
   getPromptForMode,
+  getItoMode,
 } from './helpers.js'
 import { de } from 'zod/v4/locales'
 
@@ -236,9 +237,11 @@ export default (router: ConnectRouter) => {
 
         const windowTitle = context.requestHeader.get('window-title') || ''
         const appName = context.requestHeader.get('app-name') || ''
+        const mode = getItoMode(context.requestHeader.get('mode'))
+
         const windowContext: WindowContext = { windowTitle, appName }
 
-        const detectedMode = detectItoMode(transcript)
+        const detectedMode = mode || detectItoMode(transcript)
         const preContextPrompt = getPromptForMode(
           detectedMode,
           advancedSettingsHeaders,
@@ -246,7 +249,7 @@ export default (router: ConnectRouter) => {
         const systemPrompt = addContextToPrompt(preContextPrompt, windowContext)
 
         console.log(
-          `🧠 [${new Date().toISOString()}] Detected mode: ${detectedMode === ItoMode.EDIT ? 'EDIT' : 'TRANSCRIBE'}, adjusting transcript`,
+          `[${new Date().toISOString()}] Detected mode: ${detectedMode}, adjusting transcript`,
         )
 
         if (detectedMode === ItoMode.EDIT) {

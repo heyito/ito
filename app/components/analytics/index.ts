@@ -97,7 +97,7 @@ export interface UserProperties {
   last_active?: string
   onboarding_completed?: boolean
   referral_source?: string
-  keyboard_shortcut?: string[]
+  keyboard_shortcuts?: string[]
 }
 
 // Event constants
@@ -130,7 +130,7 @@ export const ANALYTICS_EVENTS = {
   // Settings events
   SETTING_CHANGED: 'setting_changed',
   MICROPHONE_CHANGED: 'microphone_changed',
-  KEYBOARD_SHORTCUT_CHANGED: 'keyboard_shortcut_changed',
+  KEYBOARD_SHORTCUTS_CHANGED: 'keyboard_shortcuts_changed',
 } as const
 
 export type AnalyticsEvent =
@@ -338,6 +338,7 @@ class AnalyticsService {
       | 'microphone_changed'
       | 'keyboard_shortcut_changed'
       | 'privacy_mode_toggled'
+      | 'keyboard_shortcuts_changed'
     >,
     properties: SettingsEventProperties,
   ) {

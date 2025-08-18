@@ -1,3 +1,4 @@
+import { ItoMode } from '@/app/generated/ito_pb'
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 import { EventEmitter } from 'events'
 
@@ -34,8 +35,14 @@ mock.module('child_process', () => ({
 
 const mockMainStore = {
   get: mock(() => ({
-    keyboardShortcut: ['command', 'space'],
     isShortcutGloballyEnabled: true,
+    keyboardShortcuts: [
+      {
+        id: 'mock-shortcut-1',
+        keys: ['command', 'space'],
+        mode: ItoMode.TRANSCRIBE,
+      },
+    ],
   })),
 }
 mock.module('../main/store', () => ({
@@ -126,8 +133,14 @@ describe('Keyboard Module', () => {
 
     // Set default mock return values
     mockMainStore.get.mockReturnValue({
-      keyboardShortcut: ['command', 'space'],
       isShortcutGloballyEnabled: true,
+      keyboardShortcuts: [
+        {
+          id: 'mock-shortcut-1',
+          keys: ['command', 'space'],
+          mode: ItoMode.TRANSCRIBE,
+        },
+      ],
     })
     mockGetNativeBinaryPath.mockReturnValue('/path/to/global-key-listener')
   })
@@ -342,8 +355,14 @@ describe('Keyboard Module', () => {
   describe('Shortcut Detection Business Logic', () => {
     test('should activate shortcut when keys match', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['command', 'space'],
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'test-shortcut-1',
+            keys: ['command', 'space'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
@@ -381,8 +400,14 @@ describe('Keyboard Module', () => {
 
     test('should deactivate shortcut when keys are released', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['command', 'space'],
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'test-shortcut',
+            keys: ['command', 'space'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
@@ -430,8 +455,14 @@ describe('Keyboard Module', () => {
 
     test('should not activate shortcut when globally disabled', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['command', 'space'],
         isShortcutGloballyEnabled: false,
+        keyboardShortcuts: [
+          {
+            id: 'test-shortcut',
+            keys: ['command', 'space'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
@@ -464,8 +495,14 @@ describe('Keyboard Module', () => {
     test('should stop active recording when shortcut is disabled', async () => {
       let isShortcutGloballyEnabled = true
       mockMainStore.get.mockImplementation(() => ({
-        keyboardShortcut: ['command', 'space'],
         isShortcutGloballyEnabled,
+        keyboardShortcuts: [
+          {
+            id: 'disable-test',
+            keys: ['command', 'space'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       }))
 
       const { startKeyListener } = await import('./keyboard')
@@ -559,8 +596,14 @@ describe('Keyboard Module', () => {
 
     test('should handle complex multi-key shortcuts', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['control', 'shift', 'f'],
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'complex-shortcut',
+            keys: ['control', 'shift', 'f'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
@@ -604,8 +647,14 @@ describe('Keyboard Module', () => {
 
     test('should handle partial shortcut matches correctly', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['command', 'shift', 'a'],
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'partial-test',
+            keys: ['command', 'shift', 'a'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
@@ -642,8 +691,14 @@ describe('Keyboard Module', () => {
   describe('Key Normalization Business Logic', () => {
     test('should normalize modifier keys correctly', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['command'],
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'command-test',
+            keys: ['command'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
@@ -692,8 +747,14 @@ describe('Keyboard Module', () => {
 
     test('should normalize letter keys correctly', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['a'],
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'letter-test',
+            keys: ['a'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
@@ -715,8 +776,14 @@ describe('Keyboard Module', () => {
 
     test('should normalize number keys correctly', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['1'],
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'number-test',
+            keys: ['1'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
@@ -738,8 +805,14 @@ describe('Keyboard Module', () => {
 
     test('should handle unknown keys by lowercasing them', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['unknownkey'],
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'unknown-test',
+            keys: ['unknownkey'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
@@ -808,8 +881,14 @@ describe('Keyboard Module', () => {
 
     test('should only block keys when complete shortcut is pressed', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['control', 'z'],
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'block-test',
+            keys: ['control', 'z'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
@@ -861,8 +940,14 @@ describe('Keyboard Module', () => {
 
     test('should not block keys when shortcut is disabled', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['control', 'z'],
         isShortcutGloballyEnabled: false,
+        keyboardShortcuts: [
+          {
+            id: 'disabled-block-test',
+            keys: ['control', 'z'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
@@ -908,8 +993,14 @@ describe('Keyboard Module', () => {
 
       // The shortcut that required both A and B should not be active
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['a', 'b'],
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'memory-test',
+            keys: ['a', 'b'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       // Only press A again - should not trigger shortcut since B was cleared

@@ -17,7 +17,8 @@ import { Button } from '../../ui/button'
 
 export default function NotesContent() {
   const { notes, loadNotes, addNote, deleteNote, updateNote } = useNotesStore()
-  const { keyboardShortcut } = useSettingsStore()
+  const { getTranscribeShortcut } = useSettingsStore()
+  const keyboardShortcut = getTranscribeShortcut()
   const [creatingNote, setCreatingNote] = useState(false)
   const [showAddNoteButton, setShowAddNoteButton] = useState(false)
   const [noteContent, setNoteContent] = useState('')

@@ -20,6 +20,7 @@ import {
   DeleteUserDataRequestSchema,
   GetAdvancedSettingsRequestSchema,
   UpdateAdvancedSettingsRequestSchema,
+  ItoMode,
 } from '@/app/generated/ito_pb'
 import { createClient } from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-node'
@@ -70,7 +71,7 @@ class GrpcClient {
     return new Headers({ Authorization: `Bearer ${this.authToken}` })
   }
 
-  private async getHeadersWithMetadata() {
+  private async getHeadersWithMetadata(mode: ItoMode) {
     const headers = this.getHeaders()
 
     try {
@@ -106,7 +107,7 @@ class GrpcClient {
       const advancedSettings = getAdvancedSettings()
       console.log(
         '[gRPC Client] Using ASR model from advanced settings:',
-        advancedSettings,
+        advancedSettings.llm.asrModel,
       )
       headers.set('asr-model', advancedSettings.llm.asrModel)
       headers.set('asr-provider', advancedSettings.llm.asrProvider)
@@ -136,6 +137,8 @@ class GrpcClient {
         'low-quality-threshold',
         advancedSettings.llm.lowQualityThreshold.toString(),
       )
+
+      headers.set('mode', mode)
     } catch (error) {
       console.error(
         'Failed to fetch vocabulary/settings for transcription:',
@@ -215,7 +218,7 @@ class GrpcClient {
     return false
   }
 
-  async transcribeStream(stream: AsyncIterable<AudioChunk>) {
+  async transcribeStream(stream: AsyncIterable<AudioChunk>, mode: ItoMode) {
     return this.withRetry(async () => {
       // Get current interaction ID for trace logging
       const interactionId = (globalThis as any).currentInteractionId
@@ -226,7 +229,7 @@ class GrpcClient {
       }
 
       const response = await this.client.transcribeStream(stream, {
-        headers: await this.getHeadersWithMetadata(),
+        headers: await this.getHeadersWithMetadata(mode),
       })
 
       // Log successful transcription response

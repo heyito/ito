@@ -5,6 +5,8 @@ import {
   updateAnalyticsFromSettings,
 } from '@/app/components/analytics'
 import { STORE_KEYS } from '../../lib/constants/store-keys'
+import type { KeyboardShortcutConfig } from '@/lib/main/store'
+import { ItoMode } from '../generated/ito_pb'
 
 interface SettingsState {
   shareAnalytics: boolean
@@ -15,7 +17,7 @@ interface SettingsState {
   muteAudioWhenDictating: boolean
   microphoneDeviceId: string
   microphoneName: string
-  keyboardShortcut: string[]
+  keyboardShortcuts: KeyboardShortcutConfig[]
   setShareAnalytics: (share: boolean) => void
   setLaunchAtLogin: (launch: boolean) => void
   setShowItoBarAlways: (show: boolean) => void
@@ -23,7 +25,9 @@ interface SettingsState {
   setInteractionSounds: (enabled: boolean) => void
   setMuteAudioWhenDictating: (enabled: boolean) => void
   setMicrophoneDeviceId: (deviceId: string, name: string) => void
-  setKeyboardShortcut: (shortcut: string[]) => void
+  addKeyboardShortcut: (shortcut: string[], mode: ItoMode) => void
+  removeKeyboardShortcut: (shortcutId: string) => void
+  getTranscribeShortcut: () => string[]
 }
 
 type SettingCategory = 'general' | 'audio&mic' | 'keyboard' | 'account'
@@ -41,7 +45,9 @@ const getInitialState = () => {
     muteAudioWhenDictating: storedSettings?.muteAudioWhenDictating ?? false,
     microphoneDeviceId: storedSettings?.microphoneDeviceId ?? 'default',
     microphoneName: storedSettings?.microphoneName ?? 'Default Microphone',
-    keyboardShortcut: storedSettings?.keyboardShortcut ?? ['fn'], // This fallback is key
+    keyboardShortcuts: storedSettings?.keyboardShortcuts ?? [
+      { keys: ['fn'], mode: 'transcribe' },
+    ],
     firstName: storedSettings?.firstName ?? '',
     lastName: storedSettings?.lastName ?? '',
     email: storedSettings?.email ?? '',
@@ -154,23 +160,56 @@ export const useSettingsStore = create<SettingsState>(set => {
       set(partialState)
       syncToStore(partialState)
     },
-    setKeyboardShortcut: (shortcut: string[]) => {
-      const currentShortcut = useSettingsStore.getState().keyboardShortcut
-      const partialState = { keyboardShortcut: [...shortcut].sort() }
+    addKeyboardShortcut: (shortcut: string[], mode: ItoMode) => {
+      const currentShortcuts = useSettingsStore.getState().keyboardShortcuts
+      const newShortcuts = [
+        ...currentShortcuts,
+        { keys: shortcut, mode, id: crypto.randomUUID() },
+      ]
+      const partialState = {
+        keyboardShortcuts: newShortcuts,
+      }
       // Track keyboard shortcut change
-      analytics.trackSettings(ANALYTICS_EVENTS.KEYBOARD_SHORTCUT_CHANGED, {
-        setting_name: 'keyboardShortcut',
-        old_value: currentShortcut,
-        new_value: shortcut,
+      analytics.trackSettings(ANALYTICS_EVENTS.KEYBOARD_SHORTCUTS_CHANGED, {
+        setting_name: 'keyboardShortcuts',
+        old_value: currentShortcuts,
+        new_value: newShortcuts,
         setting_category: 'input',
       })
 
       // Update user properties
       analytics.updateUserProperties({
-        keyboard_shortcut: shortcut,
+        keyboard_shortcuts: newShortcuts.map(ks => JSON.stringify(ks)),
       })
       set(partialState)
       syncToStore(partialState)
+    },
+    removeKeyboardShortcut: (shortcutId: string) => {
+      const currentShortcuts = useSettingsStore.getState().keyboardShortcuts
+      const newShortcuts = currentShortcuts.filter(ks => ks.id !== shortcutId)
+      const partialState = {
+        keyboardShortcuts: newShortcuts,
+      }
+      // Track keyboard shortcut change
+      analytics.trackSettings(ANALYTICS_EVENTS.KEYBOARD_SHORTCUTS_CHANGED, {
+        setting_name: 'keyboardShortcuts',
+        old_value: currentShortcuts,
+        new_value: newShortcuts,
+        setting_category: 'input',
+      })
+
+      // Update user properties
+      analytics.updateUserProperties({
+        keyboard_shortcuts: newShortcuts.map(ks => JSON.stringify(ks)),
+      })
+      set(partialState)
+      syncToStore(partialState)
+    },
+    getTranscribeShortcut: () => {
+      const { keyboardShortcuts } = useSettingsStore.getState()
+      return (
+        keyboardShortcuts.find(ks => ks.mode === 'transcribe')?.keys || ['fn']
+      )
     },
   }
 })

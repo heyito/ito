@@ -5,9 +5,10 @@ import store from './store'
 import { STORE_KEYS } from '../constants/store-keys'
 import { transcriptionService } from './transcriptionService'
 import { traceLogger } from './traceLogger'
+import { ItoMode } from '@/app/generated/ito_pb'
 
 export class VoiceInputService {
-  public startSTTService = (sendToServer: boolean = true) => {
+  public startSTTService = (mode: ItoMode) => {
     console.info('[Audio] Starting STT service')
     const deviceId = store.get(STORE_KEYS.SETTINGS).microphoneDeviceId
 
@@ -22,14 +23,11 @@ export class VoiceInputService {
     if (interactionId) {
       traceLogger.logStep(interactionId, 'VOICE_INPUT_START', {
         deviceId,
-        sendToServer,
         muteAudioWhenDictating: settings?.muteAudioWhenDictating,
       })
     }
 
-    if (sendToServer) {
-      transcriptionService.startTranscription()
-    }
+    transcriptionService.startTranscription(mode)
     audioRecorderService.startRecording(deviceId)
 
     getPillWindow()?.webContents.send('recording-state-update', {

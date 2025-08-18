@@ -33,21 +33,20 @@ mock.module('child_process', () => ({
   spawn: mockSpawn,
 }))
 
-const mockGetActiveShortcuts = mock(() => [
-  {
-    keys: ['command', 'space'],
-    mode: 'transcribe',
-  },
-])
-
 const mockMainStore = {
   get: mock(() => ({
     isShortcutGloballyEnabled: true,
+    keyboardShortcuts: [
+      {
+        id: 'mock-shortcut-1',
+        keys: ['command', 'space'],
+        mode: 'transcribe',
+      },
+    ],
   })),
 }
 mock.module('../main/store', () => ({
   default: mockMainStore,
-  getActiveShortcuts: mockGetActiveShortcuts,
 }))
 
 mock.module('../constants/store-keys', () => ({
@@ -108,7 +107,6 @@ describe('Keyboard Module', () => {
     mockChildProcess.kill.mockClear()
     mockChildProcess.unref.mockClear()
     mockMainStore.get.mockClear()
-    mockGetActiveShortcuts.mockClear()
     mockGetNativeBinaryPath.mockClear()
     mockBrowserWindow.getAllWindows.mockClear()
     mockWindow.webContents.send.mockClear()
@@ -136,13 +134,14 @@ describe('Keyboard Module', () => {
     // Set default mock return values
     mockMainStore.get.mockReturnValue({
       isShortcutGloballyEnabled: true,
+      keyboardShortcuts: [
+        {
+          id: 'mock-shortcut-1',
+          keys: ['command', 'space'],
+          mode: 'transcribe',
+        },
+      ],
     })
-    mockGetActiveShortcuts.mockReturnValue([
-      {
-        keys: ['command', 'space'],
-        mode: 'transcribe',
-      },
-    ])
     mockGetNativeBinaryPath.mockReturnValue('/path/to/global-key-listener')
   })
 
@@ -357,13 +356,14 @@ describe('Keyboard Module', () => {
     test('should activate shortcut when keys match', async () => {
       mockMainStore.get.mockReturnValue({
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'test-shortcut-1',
+            keys: ['command', 'space'],
+            mode: 'transcribe',
+          },
+        ],
       })
-      mockGetActiveShortcuts.mockReturnValue([
-        {
-          keys: ['command', 'space'],
-          mode: 'transcribe',
-        },
-      ])
 
       const { startKeyListener } = await import('./keyboard')
       startKeyListener()
@@ -401,13 +401,14 @@ describe('Keyboard Module', () => {
     test('should deactivate shortcut when keys are released', async () => {
       mockMainStore.get.mockReturnValue({
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'test-shortcut',
+            keys: ['command', 'space'],
+            mode: 'transcribe',
+          },
+        ],
       })
-      mockGetActiveShortcuts.mockReturnValue([
-        {
-          keys: ['command', 'space'],
-          mode: 'transcribe',
-        },
-      ])
 
       const { startKeyListener } = await import('./keyboard')
       startKeyListener()
@@ -455,13 +456,14 @@ describe('Keyboard Module', () => {
     test('should not activate shortcut when globally disabled', async () => {
       mockMainStore.get.mockReturnValue({
         isShortcutGloballyEnabled: false,
+        keyboardShortcuts: [
+          {
+            id: 'test-shortcut',
+            keys: ['command', 'space'],
+            mode: 'transcribe',
+          },
+        ],
       })
-      mockGetActiveShortcuts.mockReturnValue([
-        {
-          keys: ['command', 'space'],
-          mode: 'transcribe',
-        },
-      ])
 
       const { startKeyListener } = await import('./keyboard')
       startKeyListener()
@@ -494,13 +496,14 @@ describe('Keyboard Module', () => {
       let isShortcutGloballyEnabled = true
       mockMainStore.get.mockImplementation(() => ({
         isShortcutGloballyEnabled,
+        keyboardShortcuts: [
+          {
+            id: 'disable-test',
+            keys: ['command', 'space'],
+            mode: 'transcribe',
+          },
+        ],
       }))
-      mockGetActiveShortcuts.mockReturnValue([
-        {
-          keys: ['command', 'space'],
-          mode: 'transcribe',
-        },
-      ])
 
       const { startKeyListener } = await import('./keyboard')
       startKeyListener()
@@ -594,13 +597,14 @@ describe('Keyboard Module', () => {
     test('should handle complex multi-key shortcuts', async () => {
       mockMainStore.get.mockReturnValue({
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'complex-shortcut',
+            keys: ['control', 'shift', 'f'],
+            mode: 'transcribe',
+          },
+        ],
       })
-      mockGetActiveShortcuts.mockReturnValue([
-        {
-          keys: ['control', 'shift', 'f'],
-          mode: 'transcribe',
-        },
-      ])
 
       const { startKeyListener } = await import('./keyboard')
       startKeyListener()
@@ -644,13 +648,14 @@ describe('Keyboard Module', () => {
     test('should handle partial shortcut matches correctly', async () => {
       mockMainStore.get.mockReturnValue({
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'partial-test',
+            keys: ['command', 'shift', 'a'],
+            mode: 'transcribe',
+          },
+        ],
       })
-      mockGetActiveShortcuts.mockReturnValue([
-        {
-          keys: ['command', 'shift', 'a'],
-          mode: 'transcribe',
-        },
-      ])
 
       const { startKeyListener } = await import('./keyboard')
       startKeyListener()
@@ -687,13 +692,14 @@ describe('Keyboard Module', () => {
     test('should normalize modifier keys correctly', async () => {
       mockMainStore.get.mockReturnValue({
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'command-test',
+            keys: ['command'],
+            mode: 'transcribe',
+          },
+        ],
       })
-      mockGetActiveShortcuts.mockReturnValue([
-        {
-          keys: ['command'],
-          mode: 'transcribe',
-        },
-      ])
 
       const { startKeyListener } = await import('./keyboard')
       startKeyListener()
@@ -742,13 +748,14 @@ describe('Keyboard Module', () => {
     test('should normalize letter keys correctly', async () => {
       mockMainStore.get.mockReturnValue({
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'letter-test',
+            keys: ['a'],
+            mode: 'transcribe',
+          },
+        ],
       })
-      mockGetActiveShortcuts.mockReturnValue([
-        {
-          keys: ['a'],
-          mode: 'transcribe',
-        },
-      ])
 
       const { startKeyListener } = await import('./keyboard')
       startKeyListener()
@@ -770,13 +777,14 @@ describe('Keyboard Module', () => {
     test('should normalize number keys correctly', async () => {
       mockMainStore.get.mockReturnValue({
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'number-test',
+            keys: ['1'],
+            mode: 'transcribe',
+          },
+        ],
       })
-      mockGetActiveShortcuts.mockReturnValue([
-        {
-          keys: ['1'],
-          mode: 'transcribe',
-        },
-      ])
 
       const { startKeyListener } = await import('./keyboard')
       startKeyListener()
@@ -798,13 +806,14 @@ describe('Keyboard Module', () => {
     test('should handle unknown keys by lowercasing them', async () => {
       mockMainStore.get.mockReturnValue({
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'unknown-test',
+            keys: ['unknownkey'],
+            mode: 'transcribe',
+          },
+        ],
       })
-      mockGetActiveShortcuts.mockReturnValue([
-        {
-          keys: ['unknownkey'],
-          mode: 'transcribe',
-        },
-      ])
 
       const { startKeyListener } = await import('./keyboard')
       startKeyListener()
@@ -873,13 +882,14 @@ describe('Keyboard Module', () => {
     test('should only block keys when complete shortcut is pressed', async () => {
       mockMainStore.get.mockReturnValue({
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'block-test',
+            keys: ['control', 'z'],
+            mode: 'transcribe',
+          },
+        ],
       })
-      mockGetActiveShortcuts.mockReturnValue([
-        {
-          keys: ['control', 'z'],
-          mode: 'transcribe',
-        },
-      ])
 
       const { startKeyListener } = await import('./keyboard')
       startKeyListener()
@@ -931,13 +941,14 @@ describe('Keyboard Module', () => {
     test('should not block keys when shortcut is disabled', async () => {
       mockMainStore.get.mockReturnValue({
         isShortcutGloballyEnabled: false,
+        keyboardShortcuts: [
+          {
+            id: 'disabled-block-test',
+            keys: ['control', 'z'],
+            mode: 'transcribe',
+          },
+        ],
       })
-      mockGetActiveShortcuts.mockReturnValue([
-        {
-          keys: ['control', 'z'],
-          mode: 'transcribe',
-        },
-      ])
 
       const { startKeyListener } = await import('./keyboard')
       startKeyListener()
@@ -983,13 +994,14 @@ describe('Keyboard Module', () => {
       // The shortcut that required both A and B should not be active
       mockMainStore.get.mockReturnValue({
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'memory-test',
+            keys: ['a', 'b'],
+            mode: 'transcribe',
+          },
+        ],
       })
-      mockGetActiveShortcuts.mockReturnValue([
-        {
-          keys: ['a', 'b'],
-          mode: 'transcribe',
-        },
-      ])
 
       // Only press A again - should not trigger shortcut since B was cleared
       mockChildProcess.stdout.emit(

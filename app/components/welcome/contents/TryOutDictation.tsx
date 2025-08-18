@@ -13,7 +13,8 @@ import React from 'react'
 export default function TryOutDictation() {
   const { decrementOnboardingStep, incrementOnboardingStep } =
     useOnboardingStore()
-  const { keyboardShortcut } = useSettingsStore()
+  const { getTranscribeShortcut } = useSettingsStore()
+  const keyboardShortcut = getTranscribeShortcut()
   const [selectedApp, setSelectedApp] = useState<
     'slack' | 'gmail' | 'cursor' | 'chatgpt' | 'notion'
   >('slack')

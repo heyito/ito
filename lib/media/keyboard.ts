@@ -1,8 +1,5 @@
 import { spawn } from 'child_process'
-import store, {
-  getActiveShortcuts,
-  KeyboardShortcutConfig,
-} from '../main/store'
+import store, { KeyboardShortcutConfig } from '../main/store'
 import { STORE_KEYS } from '../constants/store-keys'
 import { getNativeBinaryPath } from './native-interface'
 import { BrowserWindow } from 'electron'
@@ -102,8 +99,9 @@ function normalizeKey(rawKey: string): string {
 const pressedKeys = new Set<string>()
 
 function handleKeyEventInMain(event: KeyEvent) {
-  const { isShortcutGloballyEnabled } = store.get(STORE_KEYS.SETTINGS)
-  const keyboardShortcuts = getActiveShortcuts()
+  const { isShortcutGloballyEnabled, keyboardShortcuts } = store.get(
+    STORE_KEYS.SETTINGS,
+  )
 
   if (!isShortcutGloballyEnabled) {
     // check to see if we should stop an in-progress recording

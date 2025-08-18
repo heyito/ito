@@ -11,6 +11,7 @@
 
   <p>
     <img alt="macOS" src="https://img.shields.io/badge/macOS-supported-blue?logo=apple&logoColor=white">
+    <img alt="Windows" src="https://img.shields.io/badge/Windows-supported-blue?logo=windows&logoColor=white">
     <img alt="Version" src="https://img.shields.io/badge/version-0.2.0-green">
     <img alt="License" src="https://img.shields.io/badge/license-GPL-blue">
   </p>
@@ -54,7 +55,7 @@
 
 ### Prerequisites
 
-- **macOS 10.15+**
+- **macOS 10.15+** or **Windows 10+**
 - **Node.js 20+** and **Bun** (for development)
 - **Rust toolchain** (for building native components)
 - **Microphone access** and **Accessibility permissions**
@@ -118,8 +119,24 @@ bun run dev
 
 ### Build Requirements
 
+#### All Platforms
+
 - **Rust**: Install via [rustup.rs](https://rustup.rs/)
-- **macOS**: Xcode Command Line Tools
+
+#### macOS
+
+- **Xcode Command Line Tools**: `xcode-select --install`
+
+#### Windows
+
+- **Visual Studio Build Tools**: Install [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with "C++ build tools" workload
+- **MSYS2**: Install from [msys2.org](https://www.msys2.org/) for MinGW-w64 toolchain
+  - After installation, run: `pacman -S --needed base-devel mingw-w64-ucrt-x86_64-toolchain`
+- **Git Bash or PowerShell**: For running build scripts
+- **Environment Setup**: Add to your PATH (in Git Bash):
+  ```bash
+  export PATH="$HOME/.cargo/bin:/c/msys64/ucrt64/bin:$PATH"
+  ```
 
 ### Project Structure
 
@@ -151,8 +168,14 @@ ito/
 bun run dev                 # Start with hot reload
 bun run dev:rust           # Build Rust components and start dev
 
-# Building
+# Building Native Components
+bun run build:rust         # Build for current platform
+bun run build:rust:mac     # Build for macOS (with universal binary)
+bun run build:rust:win     # Build for Windows
+
+# Building Application
 bun run build:mac          # Build for macOS
+bun run build:win          # Build for Windows
 bun run build:unpack       # Build unpacked for testing
 
 # Code Quality

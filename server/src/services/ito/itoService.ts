@@ -42,6 +42,7 @@ import {
   getPromptForMode,
   getItoMode,
 } from './helpers.js'
+import { de } from 'zod/v4/locales'
 
 /**
  * --- NEW: WAV Header Generation Function ---
@@ -251,15 +252,17 @@ export default (router: ConnectRouter) => {
           `[${new Date().toISOString()}] Detected mode: ${detectedMode}, adjusting transcript`,
         )
 
-        transcript = await groqClient.adjustTranscript(
-          transcript,
-          advancedSettingsHeaders.llmTemperature,
-          advancedSettingsHeaders.llmModel,
-          systemPrompt,
-        )
-        console.log(
-          `📝 [${new Date().toISOString()}] Adjusted transcript: "${transcript}"`,
-        )
+        if (detectedMode === ItoMode.EDIT) {
+          transcript = await groqClient.adjustTranscript(
+            transcript,
+            advancedSettingsHeaders.llmTemperature,
+            advancedSettingsHeaders.llmModel,
+            systemPrompt,
+          )
+          console.log(
+            `📝 [${new Date().toISOString()}] Adjusted transcript: "${transcript}"`,
+          )
+        }
 
         const duration = Date.now() - startTime
         console.log(

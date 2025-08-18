@@ -44,14 +44,21 @@ import {
   ManagedPolicy,
   PolicyStatement,
   ServicePrincipal,
+  ArnPrincipal,
 } from 'aws-cdk-lib/aws-iam'
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
+import { LogGroup, CfnSubscriptionFilter } from 'aws-cdk-lib/aws-logs'
+import { Domain } from 'aws-cdk-lib/aws-opensearchservice'
+import { CfnDeliveryStream } from 'aws-cdk-lib/aws-kinesisfirehose'
+import * as cr from 'aws-cdk-lib/custom-resources'
+import { CustomResource } from 'aws-cdk-lib'
 
 export interface ServiceStackProps extends StackProps {
   dbSecretArn: string
   dbEndpoint: string
   serviceRepo: Repository
   vpc: Vpc
+  opensearchDomain: Domain
 }
 
 export class ServiceStack extends Stack {
@@ -109,8 +116,8 @@ export class ServiceStack extends Stack {
       'ItoTaskDefinition',
       {
         taskRole: fargateTaskRole,
-        cpu: 1024,
-        memoryLimitMiB: 2048,
+        cpu: isDev(stageName) ? 1024 : 4096,
+        memoryLimitMiB: isDev(stageName) ? 2048 : 8192,
         runtimePlatform: {
           operatingSystemFamily: OperatingSystemFamily.LINUX,
           cpuArchitecture: CpuArchitecture.ARM64,
@@ -118,6 +125,15 @@ export class ServiceStack extends Stack {
         executionRole: taskExecutionRole,
       },
     )
+    // Dedicated CloudWatch Log Group for client logs
+    const clientLogGroup = new LogGroup(this, 'ItoClientLogsGroup', {
+      logGroupName: `/ito/${stageName}/client`,
+      retention: Infinity as any,
+    })
+    const serverLogGroup = new LogGroup(this, 'ItoServerLogsGroup', {
+      logGroupName: `/ito/${stageName}/server`,
+      retention: Infinity as any,
+    })
     const containerName = 'ItoServerContainer'
     taskDefinition.addContainer(containerName, {
       image: ContainerImage.fromEcrRepository(props.serviceRepo, 'latest'),
@@ -136,8 +152,13 @@ export class ServiceStack extends Stack {
         AUTH0_AUDIENCE: process.env.AUTH0_AUDIENCE || '',
         AUTH0_CLIENT_ID: process.env.AUTH0_CLIENT_ID || '',
         AUTH0_CALLBACK_URL: `https://${domainName}/callback`,
+        GROQ_TRANSCRIPTION_MODEL: 'whisper-large-v3',
+        CLIENT_LOG_GROUP_NAME: clientLogGroup.logGroupName,
       },
-      logging: new AwsLogDriver({ streamPrefix: 'ito-server' }),
+      logging: new AwsLogDriver({
+        streamPrefix: 'ito-server',
+        logGroup: serverLogGroup,
+      }),
     })
 
     const cluster = new Cluster(this, 'ItoEcsCluster', {
@@ -155,6 +176,17 @@ export class ServiceStack extends Stack {
       versioned: true,
     })
 
+    // Firehose backup bucket
+    const firehoseBackupBucket = new Bucket(this, 'ItoFirehoseBackupBucket', {
+      bucketName: `${stageName}-ito-firehose-bucket`,
+      removalPolicy: isDev(stageName)
+        ? RemovalPolicy.DESTROY
+        : RemovalPolicy.RETAIN,
+      blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
+      enforceSSL: true,
+      versioned: true,
+    })
+
     // FIX: Create the ApplicationLoadBalancedFargateService using the taskDefinition
     // you built above. We remove the `taskImageOptions` and other related properties.
     const fargateService = new ApplicationLoadBalancedFargateService(
@@ -163,7 +195,7 @@ export class ServiceStack extends Stack {
       {
         cluster,
         serviceName: `${stageName}-${SERVICE_NAME}`,
-        desiredCount: 1,
+        desiredCount: isDev(stageName) ? 1 : 2,
         publicLoadBalancer: true,
         taskDefinition: taskDefinition,
         protocol: ApplicationProtocol.HTTPS,
@@ -242,6 +274,250 @@ export class ServiceStack extends Stack {
     this.fargateService = fargateService.service
     this.albFargate = fargateService
     this.migrationLambda = migrationLambda
+
+    // IAM permissions for task to write to client log group
+    clientLogGroup.grantWrite(fargateTaskRole)
+    // Allow reads like logs:DescribeLogStreams for client logs
+    clientLogGroup.grantRead(fargateTaskRole)
+    // Allow reads on server log group as well (used by log driver/diagnostics)
+    serverLogGroup.grantRead(fargateTaskRole)
+
+    // Firehose role to write to S3 and OpenSearch
+    const firehoseRole = new IamRole(this, 'ItoFirehoseRole', {
+      assumedBy: new ServicePrincipal('firehose.amazonaws.com'),
+      roleName: `${stageName}-ItoFirehoseRole`,
+    })
+
+    firehoseRole.addToPolicy(
+      new PolicyStatement({
+        actions: [
+          's3:AbortMultipartUpload',
+          's3:GetBucketLocation',
+          's3:GetObject',
+          's3:ListBucket',
+          's3:ListBucketMultipartUploads',
+          's3:PutObject',
+        ],
+        resources: [
+          firehoseBackupBucket.bucketArn,
+          `${firehoseBackupBucket.bucketArn}/*`,
+        ],
+      }),
+    )
+
+    firehoseRole.addToPolicy(
+      new PolicyStatement({
+        actions: [
+          'es:DescribeElasticsearchDomain',
+          'es:DescribeElasticsearchDomains',
+          'es:DescribeElasticsearchDomainConfig',
+          'es:ESHttpGet',
+          'es:ESHttpHead',
+          'es:ESHttpPost',
+          'es:ESHttpPut',
+          'es:ESHttpDelete',
+        ],
+        resources: [
+          props.opensearchDomain.domainArn,
+          `${props.opensearchDomain.domainArn}/*`,
+        ],
+      }),
+    )
+
+    // Some es:Describe* actions are not resource-scoped; allow on all resources
+    firehoseRole.addToPolicy(
+      new PolicyStatement({
+        actions: [
+          'es:DescribeElasticsearchDomain',
+          'es:DescribeElasticsearchDomains',
+          'es:DescribeElasticsearchDomainConfig',
+        ],
+        resources: ['*'],
+      }),
+    )
+
+    // Lambda processors to normalize into ECS-like fields
+    const clientProcessor = new NodejsFunction(
+      this,
+      'ItoClientFirehoseProcessor',
+      {
+        entry: 'lambdas/firehose-transform.ts',
+        handler: 'handler',
+        environment: { DATASET: 'client', STAGE: stageName },
+        timeout: Duration.seconds(30),
+      },
+    )
+    const serverProcessor = new NodejsFunction(
+      this,
+      'ItoServerFirehoseProcessor',
+      {
+        entry: 'lambdas/firehose-transform.ts',
+        handler: 'handler',
+        environment: { DATASET: 'server', STAGE: stageName },
+        timeout: Duration.seconds(30),
+      },
+    )
+
+    // Firehose needs permission to invoke the processors
+    clientProcessor.grantInvoke(firehoseRole)
+    serverProcessor.grantInvoke(firehoseRole)
+
+    // Client logs Firehose → OpenSearch (index client-logs with daily rotation)
+    const clientDelivery = new CfnDeliveryStream(
+      this,
+      'ItoClientLogsToOs-client',
+      {
+        deliveryStreamName: `${stageName}-ito-client-logs`,
+        amazonopensearchserviceDestinationConfiguration: {
+          domainArn: props.opensearchDomain.domainArn,
+          indexName: 'client-logs',
+          indexRotationPeriod: 'OneDay',
+          roleArn: firehoseRole.roleArn,
+          bufferingHints: { intervalInSeconds: 60, sizeInMBs: 5 },
+          s3BackupMode: 'AllDocuments',
+          s3Configuration: {
+            bucketArn: firehoseBackupBucket.bucketArn,
+            roleArn: firehoseRole.roleArn,
+            bufferingHints: { intervalInSeconds: 60, sizeInMBs: 5 },
+            compressionFormat: 'GZIP',
+          },
+          processingConfiguration: {
+            enabled: true,
+            processors: [
+              {
+                type: 'Lambda',
+                parameters: [
+                  {
+                    parameterName: 'LambdaArn',
+                    parameterValue: clientProcessor.functionArn,
+                  },
+                  { parameterName: 'NumberOfRetries', parameterValue: '3' },
+                  {
+                    parameterName: 'BufferIntervalInSeconds',
+                    parameterValue: '60',
+                  },
+                  { parameterName: 'BufferSizeInMBs', parameterValue: '3' },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    )
+
+    // Server logs Firehose → OpenSearch (index server-logs with daily rotation)
+    const serverDelivery = new CfnDeliveryStream(
+      this,
+      'ItoServerLogsToOs-server',
+      {
+        deliveryStreamName: `${stageName}-ito-server-logs`,
+        amazonopensearchserviceDestinationConfiguration: {
+          domainArn: props.opensearchDomain.domainArn,
+          indexName: 'server-logs',
+          indexRotationPeriod: 'OneDay',
+          roleArn: firehoseRole.roleArn,
+          bufferingHints: { intervalInSeconds: 60, sizeInMBs: 5 },
+          s3BackupMode: 'AllDocuments',
+          s3Configuration: {
+            bucketArn: firehoseBackupBucket.bucketArn,
+            roleArn: firehoseRole.roleArn,
+            bufferingHints: { intervalInSeconds: 60, sizeInMBs: 5 },
+            compressionFormat: 'GZIP',
+          },
+          processingConfiguration: {
+            enabled: true,
+            processors: [
+              {
+                type: 'Lambda',
+                parameters: [
+                  {
+                    parameterName: 'LambdaArn',
+                    parameterValue: serverProcessor.functionArn,
+                  },
+                  { parameterName: 'NumberOfRetries', parameterValue: '3' },
+                  {
+                    parameterName: 'BufferIntervalInSeconds',
+                    parameterValue: '60',
+                  },
+                  { parameterName: 'BufferSizeInMBs', parameterValue: '3' },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    )
+
+    // Role for CloudWatch Logs to put data into Firehose
+    const logsToFirehoseRole = new IamRole(this, 'ItoLogsToFirehoseRole', {
+      assumedBy: new ServicePrincipal('logs.amazonaws.com'),
+    })
+    logsToFirehoseRole.addToPolicy(
+      new PolicyStatement({
+        actions: ['firehose:PutRecord', 'firehose:PutRecordBatch'],
+        resources: [clientDelivery.attrArn, serverDelivery.attrArn],
+      }),
+    )
+
+    // Subscription filter to pipe client CW logs to Firehose
+    const clientSubscription = new CfnSubscriptionFilter(
+      this,
+      'ItoClientLogsSubscription',
+      {
+        logGroupName: clientLogGroup.logGroupName,
+        destinationArn: clientDelivery.attrArn,
+        filterPattern: '',
+        roleArn: logsToFirehoseRole.roleArn,
+      },
+    )
+    clientSubscription.addDependency(clientDelivery)
+
+    const serverSubscription = new CfnSubscriptionFilter(
+      this,
+      'ItoServerLogsSubscription',
+      {
+        logGroupName: serverLogGroup.logGroupName,
+        destinationArn: serverDelivery.attrArn,
+        filterPattern: '',
+        roleArn: logsToFirehoseRole.roleArn,
+      },
+    )
+    serverSubscription.addDependency(serverDelivery)
+
+    // (moved) Add domain access policy after osBootstrap is created
+
+    // OpenSearch index templates and ISM policy bootstrap (retain forever)
+    const osBootstrap = new NodejsFunction(this, 'ItoOpenSearchBootstrap', {
+      entry: 'lambdas/opensearch-bootstrap.ts',
+      handler: 'handler',
+      environment: {
+        DOMAIN_ENDPOINT: props.opensearchDomain.domainEndpoint,
+        REGION: this.region,
+        STAGE: stageName,
+      },
+      timeout: Duration.minutes(2),
+    })
+    // Allow bootstrap to configure the domain via HTTP
+    osBootstrap.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['es:ESHttpGet', 'es:ESHttpPut'],
+        resources: [
+          props.opensearchDomain.domainArn,
+          `${props.opensearchDomain.domainArn}/*`,
+        ],
+      }),
+    )
+
+    const osProvider = new cr.Provider(this, 'ItoOpenSearchBootstrapProvider', {
+      onEventHandler: osBootstrap,
+    })
+    new CustomResource(this, 'ItoOpenSearchBootstrapResource', {
+      serviceToken: osProvider.serviceToken,
+      properties: {
+        domain: props.opensearchDomain.domainEndpoint,
+        stage: stageName,
+      },
+    })
 
     new CfnOutput(this, 'ServiceURL', {
       value: fargateService.loadBalancer.loadBalancerDnsName,

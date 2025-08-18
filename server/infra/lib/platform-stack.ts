@@ -21,6 +21,18 @@ import { DB_NAME, SERVER_NAME } from './constants'
 import { Repository } from 'aws-cdk-lib/aws-ecr'
 import { AppStage } from '../bin/infra'
 import { isDev } from './helpers'
+import {
+  Domain,
+  EngineVersion,
+  TLSSecurityPolicy,
+} from 'aws-cdk-lib/aws-opensearchservice'
+import {
+  AccountRootPrincipal,
+  Effect,
+  PolicyStatement,
+  ServicePrincipal,
+  ArnPrincipal,
+} from 'aws-cdk-lib/aws-iam'
 
 export interface PlatformStackProps extends StackProps {
   vpc: Vpc
@@ -31,6 +43,7 @@ export class PlatformStack extends Stack {
   public readonly dbEndpoint: string
   public readonly dbSecurityGroupId: string
   public readonly serviceRepo: Repository
+  public readonly opensearchDomain: Domain
 
   constructor(scope: Construct, id: string, props: PlatformStackProps) {
     super(scope, id, props)
@@ -60,6 +73,7 @@ export class PlatformStack extends Stack {
       engine: DatabaseClusterEngine.auroraPostgres({
         version: AuroraPostgresEngineVersion.VER_16_2,
       }),
+      enablePerformanceInsights: true,
       vpc: props.vpc,
       securityGroups: [dbSecurityGroup],
       credentials: Credentials.fromSecret(dbCredentialsSecret),
@@ -71,8 +85,8 @@ export class PlatformStack extends Stack {
           scaleWithWriter: true,
         }),
       ],
-      serverlessV2MinCapacity: 0.5,
-      serverlessV2MaxCapacity: 4,
+      serverlessV2MinCapacity: isDev(stageName) ? 0.5 : 2,
+      serverlessV2MaxCapacity: isDev(stageName) ? 4 : 10,
       backup: {
         retention: Duration.days(7),
       },
@@ -94,6 +108,70 @@ export class PlatformStack extends Stack {
         ? RemovalPolicy.DESTROY
         : RemovalPolicy.RETAIN,
       lifecycleRules: [{ maxImageCount: 20 }],
+    })
+
+    // OpenSearch domain for logs (one per stage)
+    const domain = new Domain(this, 'ItoLogsDomain', {
+      domainName: `${stageName}-ito-logs`,
+      version: EngineVersion.OPENSEARCH_2_13,
+      enforceHttps: true,
+      nodeToNodeEncryption: true,
+      encryptionAtRest: { enabled: true },
+      ebs: { enabled: true, volumeSize: isDev(stageName) ? 20 : 50 },
+      capacity: {
+        dataNodes: isDev(stageName) ? 1 : 2,
+        dataNodeInstanceType: 'm6g.large.search',
+        multiAzWithStandbyEnabled: false,
+      },
+      zoneAwareness: isDev(stageName)
+        ? { enabled: false }
+        : { enabled: true, availabilityZoneCount: 2 },
+      tlsSecurityPolicy: TLSSecurityPolicy.TLS_1_2,
+    })
+    domain.applyRemovalPolicy(
+      isDev(stageName) ? RemovalPolicy.DESTROY : RemovalPolicy.RETAIN,
+    )
+    this.opensearchDomain = domain
+
+    // Allow any principal in this account (root) to interact with the domain over HTTP.
+    // This avoids cross-stack references that would create cycles while still restricting to this account.
+    domain.addAccessPolicies(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        principals: [new AccountRootPrincipal()],
+        actions: [
+          'es:ESHttpGet',
+          'es:ESHttpHead',
+          'es:ESHttpPost',
+          'es:ESHttpPut',
+          'es:ESHttpDelete',
+        ],
+        resources: [domain.domainArn, `${domain.domainArn}/*`],
+      }),
+    )
+
+    // Explicitly allow the Firehose delivery role to access the domain
+    domain.addAccessPolicies(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        principals: [
+          new ArnPrincipal(
+            `arn:aws:iam::${this.account}:role/${stageName}-ItoFirehoseRole`,
+          ),
+        ],
+        actions: [
+          'es:ESHttpGet',
+          'es:ESHttpHead',
+          'es:ESHttpPost',
+          'es:ESHttpPut',
+          'es:ESHttpDelete',
+        ],
+        resources: [domain.domainArn, `${domain.domainArn}/*`],
+      }),
+    )
+
+    new CfnOutput(this, 'OpenSearchEndpoint', {
+      value: domain.domainEndpoint,
     })
 
     Tags.of(this).add('Project', 'Ito')

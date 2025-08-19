@@ -4,17 +4,16 @@ import ReferralContent from './contents/ReferralContent'
 import DataControlContent from './contents/DataControlContent'
 import PermissionsContent from './contents/PermissionsContent'
 import MicrophoneTestContent from './contents/MicrophoneTestContent'
-import DictationTestContent from './contents/DictationTestContent'
+import KeyboardTestContext from './contents/KeyboardTestContext'
 import GoodToGoContent from './contents/GoodToGoContent'
 import AnyAppContent from './contents/AnyAppContent'
-import TryOutDictation from './contents/TryOutDictation'
+import TryItOutContent from './contents/TryItOutContent'
 import { useEffect } from 'react'
 import './styles.css'
 import { usePermissionsStore } from '../../store/usePermissionsStore'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { useAuthStore } from '@/app/store/useAuthStore'
-import IntelligentModeTestContent from './contents/IntelligentModeTestContent'
-import TryOutIntelligentModeContent from './contents/TryOutIntelligentModeContent'
+import IntroducingIntelligentModeContent from './contents/IntroducingIntelligentModeContent'
 
 export default function WelcomeKit() {
   const { onboardingStep } = useOnboardingStore()
@@ -26,12 +25,11 @@ export default function WelcomeKit() {
     DataControlContent,
     PermissionsContent,
     MicrophoneTestContent,
-    DictationTestContent,
-    IntelligentModeTestContent,
+    KeyboardTestContext,
     GoodToGoContent,
+    IntroducingIntelligentModeContent,
     AnyAppContent,
-    TryOutDictation,
-    TryOutIntelligentModeContent,
+    TryItOutContent,
   ]
 
   const { setAccessibilityEnabled, setMicrophoneEnabled } =

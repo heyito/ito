@@ -9,12 +9,13 @@ import CursorIcon from '../../icons/CursorIcon'
 import { useState } from 'react'
 import { ArrowUp } from '@mynaui/icons-react'
 import React from 'react'
+import { ItoMode } from '@/app/generated/ito_pb'
 
-export default function TryOutDictation() {
-  const { decrementOnboardingStep, incrementOnboardingStep } =
+export default function TryItOut() {
+  const { decrementOnboardingStep, setOnboardingCompleted } =
     useOnboardingStore()
-  const { getTranscribeShortcut } = useSettingsStore()
-  const keyboardShortcut = getTranscribeShortcut()
+  const { getItoModeShortcut } = useSettingsStore()
+  const keyboardShortcut = getItoModeShortcut(ItoMode.TRANSCRIBE)
   const [selectedApp, setSelectedApp] = useState<
     'slack' | 'gmail' | 'cursor' | 'chatgpt' | 'notion'
   >('slack')
@@ -230,7 +231,7 @@ export default function TryOutDictation() {
             </p>
           </div>
           <div className="flex flex-col items-start mb-8">
-            <Button className="w-24" onClick={incrementOnboardingStep}>
+            <Button className="w-24" onClick={setOnboardingCompleted}>
               Finish
             </Button>
           </div>

@@ -8,6 +8,11 @@ import { STORE_KEYS } from '../../lib/constants/store-keys'
 import type { KeyboardShortcutConfig } from '@/lib/main/store'
 import { ItoMode } from '../generated/ito_pb'
 
+const shortcutDefaults = {
+  [ItoMode.TRANSCRIBE]: ['fn'],
+  [ItoMode.EDIT]: ['control'],
+}
+
 interface SettingsState {
   shareAnalytics: boolean
   launchAtLogin: boolean
@@ -27,7 +32,7 @@ interface SettingsState {
   setMicrophoneDeviceId: (deviceId: string, name: string) => void
   addKeyboardShortcut: (shortcut: string[], mode: ItoMode) => void
   removeKeyboardShortcut: (shortcutId: string) => void
-  getTranscribeShortcut: () => string[]
+  getItoModeShortcut: (mode: ItoMode) => string[]
 }
 
 type SettingCategory = 'general' | 'audio&mic' | 'keyboard' | 'account'
@@ -46,8 +51,16 @@ const getInitialState = () => {
     microphoneDeviceId: storedSettings?.microphoneDeviceId ?? 'default',
     microphoneName: storedSettings?.microphoneName ?? 'Default Microphone',
     keyboardShortcuts: storedSettings?.keyboardShortcuts ?? [
-      { keys: ['control'], mode: 'edit', id: 'default-edit' },
-      { keys: ['fn'], mode: ItoMode.TRANSCRIBE, id: 'default-transcribe' },
+      {
+        keys: [shortcutDefaults[ItoMode.EDIT]],
+        mode: ItoMode.EDIT,
+        id: 'default-edit',
+      },
+      {
+        keys: [shortcutDefaults[ItoMode.TRANSCRIBE]],
+        mode: ItoMode.TRANSCRIBE,
+        id: 'default-transcribe',
+      },
     ],
     firstName: storedSettings?.firstName ?? '',
     lastName: storedSettings?.lastName ?? '',
@@ -206,12 +219,11 @@ export const useSettingsStore = create<SettingsState>(set => {
       set(partialState)
       syncToStore(partialState)
     },
-    getTranscribeShortcut: () => {
+    getItoModeShortcut: (mode: ItoMode) => {
       const { keyboardShortcuts } = useSettingsStore.getState()
       return (
-        keyboardShortcuts.find(ks => ks.mode === ItoMode.TRANSCRIBE)?.keys || [
-          'fn',
-        ]
+        keyboardShortcuts.find(ks => ks.mode === mode)?.keys ||
+        shortcutDefaults[mode]
       )
     },
   }

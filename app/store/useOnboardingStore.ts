@@ -24,8 +24,7 @@ const STEP_NAMES = [
   'data_control',
   'permissions',
   'microphone_test',
-  'dictation_test',
-  'intelligent_mode_test',
+  'keyboard_test',
   'good_to_go',
   'any_app',
   'try_it_out',
@@ -34,7 +33,7 @@ const STEP_NAMES = [
 const getOnboardingCategory = (onboardingStep: number): OnboardingCategory => {
   if (onboardingStep < 3) return 'sign-up'
   if (onboardingStep < 4) return 'permissions'
-  if (onboardingStep < 8) return 'set-up'
+  if (onboardingStep < 7) return 'set-up'
   return 'try-it'
 }
 

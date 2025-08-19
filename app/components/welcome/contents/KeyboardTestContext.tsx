@@ -1,13 +1,13 @@
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { useSettingsStore } from '@/app/store/useSettingsStore'
 import KeyboardShortcutEditor from '../../ui/keyboard-shortcut-editor'
+import { ItoMode } from '@/app/generated/ito_pb'
 
-export default function InteliigentModeTestContent() {
+export default function KeyboardTestContent() {
   const { incrementOnboardingStep, decrementOnboardingStep } =
     useOnboardingStore()
-  const { keyboardShortcuts, addKeyboardShortcut } = useSettingsStore()
-  const keyboardShortcut = keyboardShortcuts.find(k => k.mode === 'edit')
-    ?.keys || ['command']
+  const { getItoModeShortcut, addKeyboardShortcut } = useSettingsStore()
+  const keyboardShortcut = getItoModeShortcut(ItoMode.TRANSCRIBE)
 
   return (
     <div className="flex flex-row h-full w-full bg-background">
@@ -22,12 +22,12 @@ export default function InteliigentModeTestContent() {
               &lt; Back
             </button>
             <h1 className="text-3xl mb-4 mt-12">
-              Set the Hotkey for Intelligent Mode
+              Press the keyboard shortcut to test it out.
             </h1>
             <div className="text-base text-muted-foreground mb-8 max-w-md">
               We recommend the{''}
               <span className="inline-flex items-center px-2 py-0.5 bg-neutral-100 border rounded text-xs font-mono ml-1">
-                cmd
+                fn
               </span>{' '}
               key at the bottom left of the keyboard
             </div>
@@ -49,7 +49,7 @@ export default function InteliigentModeTestContent() {
           editButtonClassName="w-44"
           confirmButtonClassName="w-16"
           className="rounded-xl shadow-lg p-6 flex flex-col items-center min-w-[500px] max-h-[280px]"
-          mode="edit"
+          mode={ItoMode.TRANSCRIBE}
         />
       </div>
     </div>

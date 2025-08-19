@@ -45,6 +45,7 @@ import {
   PolicyStatement,
   ServicePrincipal,
   ArnPrincipal,
+  Policy,
 } from 'aws-cdk-lib/aws-iam'
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
 import { LogGroup, CfnSubscriptionFilter } from 'aws-cdk-lib/aws-logs'
@@ -125,15 +126,17 @@ export class ServiceStack extends Stack {
         executionRole: taskExecutionRole,
       },
     )
-    // Dedicated CloudWatch Log Group for client logs
-    const clientLogGroup = new LogGroup(this, 'ItoClientLogsGroup', {
-      logGroupName: `/ito/${stageName}/client`,
-      retention: Infinity as any,
-    })
-    const serverLogGroup = new LogGroup(this, 'ItoServerLogsGroup', {
-      logGroupName: `/ito/${stageName}/server`,
-      retention: Infinity as any,
-    })
+    // Import existing CloudWatch Log Groups or create new ones
+    const clientLogGroup = LogGroup.fromLogGroupName(
+      this,
+      'ItoClientLogsGroup',
+      `/ito/${stageName}/client`,
+    )
+    const serverLogGroup = LogGroup.fromLogGroupName(
+      this,
+      'ItoServerLogsGroup',
+      `/ito/${stageName}/server`,
+    )
     const containerName = 'ItoServerContainer'
     taskDefinition.addContainer(containerName, {
       image: ContainerImage.fromEcrRepository(props.serviceRepo, 'latest'),
@@ -271,24 +274,45 @@ export class ServiceStack extends Stack {
     const alb = fargateService.loadBalancer
     alb.logAccessLogs(logBucket, 'ito-alb-access-logs')
 
+    // IAM permissions for task to access log groups
+    // Since we're importing log groups, we need to add explicit permissions
+    const taskLogsPolicy = new Policy(this, 'ItoTaskLogsPolicy', {
+      statements: [
+        new PolicyStatement({
+          actions: [
+            'logs:CreateLogGroup',
+            'logs:CreateLogStream',
+            'logs:PutLogEvents',
+            'logs:DescribeLogStreams',
+            'logs:DescribeLogGroups',
+          ],
+          resources: [
+            `arn:aws:logs:${this.region}:${this.account}:log-group:/ito/${stageName}/client`,
+            `arn:aws:logs:${this.region}:${this.account}:log-group:/ito/${stageName}/client:log-stream:*`,
+            `arn:aws:logs:${this.region}:${this.account}:log-group:/ito/${stageName}/server`,
+            `arn:aws:logs:${this.region}:${this.account}:log-group:/ito/${stageName}/server:log-stream:*`,
+          ],
+        }),
+      ],
+    })
+    fargateTaskRole.attachInlinePolicy(taskLogsPolicy)
+
+    // Ensure ECS Service waits for inline policy attachment to the task role
+    fargateService.service.node.addDependency(taskLogsPolicy)
+
     this.fargateService = fargateService.service
     this.albFargate = fargateService
     this.migrationLambda = migrationLambda
 
-    // IAM permissions for task to write to client log group
-    clientLogGroup.grantWrite(fargateTaskRole)
-    // Allow reads like logs:DescribeLogStreams for client logs
-    clientLogGroup.grantRead(fargateTaskRole)
-    // Allow reads on server log group as well (used by log driver/diagnostics)
-    serverLogGroup.grantRead(fargateTaskRole)
+    // Import Firehose role created in platform stack so domain policy can reference it
+    const firehoseRole = IamRole.fromRoleArn(
+      this,
+      'ItoFirehoseRoleImported',
+      `arn:aws:iam::${this.account}:role/${stageName}-ItoFirehoseRole`,
+      { mutable: true },
+    )
 
-    // Firehose role to write to S3 and OpenSearch
-    const firehoseRole = new IamRole(this, 'ItoFirehoseRole', {
-      assumedBy: new ServicePrincipal('firehose.amazonaws.com'),
-      roleName: `${stageName}-ItoFirehoseRole`,
-    })
-
-    firehoseRole.addToPolicy(
+    firehoseRole.addToPrincipalPolicy(
       new PolicyStatement({
         actions: [
           's3:AbortMultipartUpload',
@@ -305,18 +329,9 @@ export class ServiceStack extends Stack {
       }),
     )
 
-    firehoseRole.addToPolicy(
+    firehoseRole.addToPrincipalPolicy(
       new PolicyStatement({
-        actions: [
-          'es:DescribeElasticsearchDomain',
-          'es:DescribeElasticsearchDomains',
-          'es:DescribeElasticsearchDomainConfig',
-          'es:ESHttpGet',
-          'es:ESHttpHead',
-          'es:ESHttpPost',
-          'es:ESHttpPut',
-          'es:ESHttpDelete',
-        ],
+        actions: ['es:*'],
         resources: [
           props.opensearchDomain.domainArn,
           `${props.opensearchDomain.domainArn}/*`,
@@ -325,12 +340,15 @@ export class ServiceStack extends Stack {
     )
 
     // Some es:Describe* actions are not resource-scoped; allow on all resources
-    firehoseRole.addToPolicy(
+    firehoseRole.addToPrincipalPolicy(
       new PolicyStatement({
         actions: [
           'es:DescribeElasticsearchDomain',
           'es:DescribeElasticsearchDomains',
           'es:DescribeElasticsearchDomainConfig',
+          'es:DescribeDomain',
+          'es:DescribeDomains',
+          'es:DescribeDomainConfig',
         ],
         resources: ['*'],
       }),
@@ -359,8 +377,8 @@ export class ServiceStack extends Stack {
     )
 
     // Firehose needs permission to invoke the processors
-    clientProcessor.grantInvoke(firehoseRole)
-    serverProcessor.grantInvoke(firehoseRole)
+    const clientInvokeGrant = clientProcessor.grantInvoke(firehoseRole)
+    const serverInvokeGrant = serverProcessor.grantInvoke(firehoseRole)
 
     // Client logs Firehose → OpenSearch (index client-logs with daily rotation)
     const clientDelivery = new CfnDeliveryStream(
@@ -404,6 +422,54 @@ export class ServiceStack extends Stack {
         },
       },
     )
+    // Ensure DeliveryStream waits for IAM policies and lambda grants
+    const clientS3PolicyAttach = firehoseRole.addToPrincipalPolicy(
+      new PolicyStatement({
+        actions: [
+          's3:AbortMultipartUpload',
+          's3:GetBucketLocation',
+          's3:GetObject',
+          's3:ListBucket',
+          's3:ListBucketMultipartUploads',
+          's3:PutObject',
+        ],
+        resources: [
+          firehoseBackupBucket.bucketArn,
+          `${firehoseBackupBucket.bucketArn}/*`,
+        ],
+      }),
+    )
+    const clientEsPolicyAttach = firehoseRole.addToPrincipalPolicy(
+      new PolicyStatement({
+        actions: ['es:*'],
+        resources: [
+          props.opensearchDomain.domainArn,
+          `${props.opensearchDomain.domainArn}/*`,
+        ],
+      }),
+    )
+    const clientEsDescribePolicyAttach = firehoseRole.addToPrincipalPolicy(
+      new PolicyStatement({
+        actions: [
+          'es:DescribeElasticsearchDomain',
+          'es:DescribeElasticsearchDomains',
+          'es:DescribeElasticsearchDomainConfig',
+          'es:DescribeDomain',
+          'es:DescribeDomains',
+          'es:DescribeDomainConfig',
+        ],
+        resources: ['*'],
+      }),
+    )
+    if (clientS3PolicyAttach.policyDependable)
+      clientDelivery.node.addDependency(clientS3PolicyAttach.policyDependable)
+    if (clientEsPolicyAttach.policyDependable)
+      clientDelivery.node.addDependency(clientEsPolicyAttach.policyDependable)
+    if (clientEsDescribePolicyAttach.policyDependable)
+      clientDelivery.node.addDependency(
+        clientEsDescribePolicyAttach.policyDependable,
+      )
+    clientInvokeGrant.applyBefore(clientDelivery)
 
     // Server logs Firehose → OpenSearch (index server-logs with daily rotation)
     const serverDelivery = new CfnDeliveryStream(
@@ -447,17 +513,72 @@ export class ServiceStack extends Stack {
         },
       },
     )
+    // Ensure DeliveryStream waits for IAM policies and lambda grants
+    const serverS3PolicyAttach = firehoseRole.addToPrincipalPolicy(
+      new PolicyStatement({
+        actions: [
+          's3:AbortMultipartUpload',
+          's3:GetBucketLocation',
+          's3:GetObject',
+          's3:ListBucket',
+          's3:ListBucketMultipartUploads',
+          's3:PutObject',
+        ],
+        resources: [
+          firehoseBackupBucket.bucketArn,
+          `${firehoseBackupBucket.bucketArn}/*`,
+        ],
+      }),
+    )
+    const serverEsPolicyAttach = firehoseRole.addToPrincipalPolicy(
+      new PolicyStatement({
+        actions: ['es:*'],
+        resources: [
+          props.opensearchDomain.domainArn,
+          `${props.opensearchDomain.domainArn}/*`,
+        ],
+      }),
+    )
+    const serverEsDescribePolicyAttach = firehoseRole.addToPrincipalPolicy(
+      new PolicyStatement({
+        actions: [
+          'es:DescribeElasticsearchDomain',
+          'es:DescribeElasticsearchDomains',
+          'es:DescribeElasticsearchDomainConfig',
+          'es:DescribeDomain',
+          'es:DescribeDomains',
+          'es:DescribeDomainConfig',
+        ],
+        resources: ['*'],
+      }),
+    )
+    if (serverS3PolicyAttach.policyDependable)
+      serverDelivery.node.addDependency(serverS3PolicyAttach.policyDependable)
+    if (serverEsPolicyAttach.policyDependable)
+      serverDelivery.node.addDependency(serverEsPolicyAttach.policyDependable)
+    if (serverEsDescribePolicyAttach.policyDependable)
+      serverDelivery.node.addDependency(
+        serverEsDescribePolicyAttach.policyDependable,
+      )
+    serverInvokeGrant.applyBefore(serverDelivery)
 
     // Role for CloudWatch Logs to put data into Firehose
     const logsToFirehoseRole = new IamRole(this, 'ItoLogsToFirehoseRole', {
       assumedBy: new ServicePrincipal('logs.amazonaws.com'),
     })
-    logsToFirehoseRole.addToPolicy(
-      new PolicyStatement({
-        actions: ['firehose:PutRecord', 'firehose:PutRecordBatch'],
-        resources: [clientDelivery.attrArn, serverDelivery.attrArn],
-      }),
+    const logsToFirehosePolicy = new Policy(
+      this,
+      'ItoLogsToFirehoseWritePolicy',
+      {
+        statements: [
+          new PolicyStatement({
+            actions: ['firehose:PutRecord', 'firehose:PutRecordBatch'],
+            resources: [clientDelivery.attrArn, serverDelivery.attrArn],
+          }),
+        ],
+      },
     )
+    logsToFirehoseRole.attachInlinePolicy(logsToFirehosePolicy)
 
     // Subscription filter to pipe client CW logs to Firehose
     const clientSubscription = new CfnSubscriptionFilter(
@@ -471,6 +592,7 @@ export class ServiceStack extends Stack {
       },
     )
     clientSubscription.addDependency(clientDelivery)
+    clientSubscription.node.addDependency(logsToFirehosePolicy)
 
     const serverSubscription = new CfnSubscriptionFilter(
       this,
@@ -483,8 +605,7 @@ export class ServiceStack extends Stack {
       },
     )
     serverSubscription.addDependency(serverDelivery)
-
-    // (moved) Add domain access policy after osBootstrap is created
+    serverSubscription.node.addDependency(logsToFirehosePolicy)
 
     // OpenSearch index templates and ISM policy bootstrap (retain forever)
     const osBootstrap = new NodejsFunction(this, 'ItoOpenSearchBootstrap', {

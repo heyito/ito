@@ -5,7 +5,7 @@ set -e
 
 # Load environment variables from .env file if it exists
 if [ -f .env ]; then
-  export $(grep -v '^#' .env | xargs)
+  export $(grep -v '^#' .env | sed 's/#.*//' | xargs)
 fi
 
 # Colors for output

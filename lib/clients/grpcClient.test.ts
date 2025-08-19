@@ -5,6 +5,7 @@ import { ActiveWindow } from '../media/active-application'
 const mockElectronWindow = {
   webContents: {
     send: mock(),
+    isDestroyed: mock(() => false),
   },
   isDestroyed: mock(() => false),
 } as any
@@ -365,10 +366,40 @@ describe('GrpcClient Business Logic Tests', () => {
       await grpcClient.transcribeStream(audioStream)
 
       expect(mockSetFocusedText).toHaveBeenCalledWith(transcript)
-      expect(mockElectronWindow.webContents.send).toHaveBeenCalledWith(
-        'transcription-result',
-        { transcript },
-      )
+      // Should not try to send to destroyed window
+      expect(mockElectronWindow.webContents.send).not.toHaveBeenCalled()
+    })
+
+    test('should handle webContents destroyed gracefully', async () => {
+      const { grpcClient } = await import('./grpcClient')
+      grpcClient.setAuthToken('test-token')
+
+      const mockWindowWithDestroyedWebContents = {
+        ...mockElectronWindow,
+        isDestroyed: mock(() => false),
+        webContents: {
+          ...mockElectronWindow.webContents,
+          isDestroyed: mock(() => true),
+        },
+      }
+      grpcClient.setMainWindow(mockWindowWithDestroyedWebContents)
+
+      const transcript = 'Test transcript'
+      mockGrpcClientMethods.transcribeStream.mockResolvedValueOnce({
+        transcript,
+      })
+
+      const audioStream = (async function* () {
+        yield { data: new Uint8Array([1, 2, 3]) } as any
+      })()
+
+      await grpcClient.transcribeStream(audioStream)
+
+      expect(mockSetFocusedText).toHaveBeenCalledWith(transcript)
+      // Should not try to send to window with destroyed webContents
+      expect(
+        mockWindowWithDestroyedWebContents.webContents.send,
+      ).not.toHaveBeenCalled()
     })
 
     test('should handle null window gracefully', async () => {
@@ -409,6 +440,30 @@ describe('GrpcClient Business Logic Tests', () => {
       // Should proceed with operation (empty headers but no crash)
       const result = await grpcClient.createNote(testNote)
       expect(result).toBeDefined()
+    })
+
+    test('should handle auth errors gracefully when window is destroyed', async () => {
+      const { grpcClient } = await import('./grpcClient')
+      grpcClient.setAuthToken('test-token')
+      grpcClient.setMainWindow(mockElectronWindow)
+
+      // Mock window as destroyed
+      mockElectronWindow.isDestroyed.mockReturnValue(true)
+
+      // Mock authentication error
+      const authError = new Error('Unauthenticated')
+      authError.code = 'UNAUTHENTICATED'
+      mockGrpcClientMethods.transcribeStream.mockRejectedValueOnce(authError)
+
+      const audioStream = (async function* () {
+        yield { data: new Uint8Array([1, 2, 3]) } as any
+      })()
+
+      // Should not crash when trying to send auth error to destroyed window
+      await expect(grpcClient.transcribeStream(audioStream)).rejects.toThrow(
+        'Unauthenticated',
+      )
+      expect(mockElectronWindow.webContents.send).not.toHaveBeenCalled()
     })
   })
 })

@@ -48,7 +48,13 @@ export function registerIPC() {
   ipcMain.on('audio-devices-changed', () => {
     log.info('[IPC] Audio devices changed, notifying windows.')
     // Notify all windows to refresh their device lists in the UI.
-    mainWindow?.webContents.send('force-device-list-reload')
+    if (
+      mainWindow &&
+      !mainWindow.isDestroyed() &&
+      !mainWindow.webContents.isDestroyed()
+    ) {
+      mainWindow.webContents.send('force-device-list-reload')
+    }
     getPillWindow()?.webContents.send('force-device-list-reload')
   })
 

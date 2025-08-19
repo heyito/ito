@@ -23,12 +23,16 @@ mock.module('../media/systemAudio', () => ({
 const mockPillWindow = {
   webContents: {
     send: mock(),
+    isDestroyed: mock(() => false),
   },
+  isDestroyed: mock(() => false),
 }
 const mockMainWindow = {
   webContents: {
     send: mock(),
+    isDestroyed: mock(() => false),
   },
+  isDestroyed: mock(() => false),
 }
 mock.module('./app', () => ({
   getPillWindow: mock(() => mockPillWindow),
@@ -259,6 +263,30 @@ describe('VoiceInputService Integration Tests', () => {
       // Error should be logged (we've mocked console.error)
       // Test passes if no exception is thrown
       expect(true).toBe(true)
+    })
+
+    test('should not send to main window when it is destroyed', () => {
+      voiceInputService.setUpAudioRecorderListeners()
+
+      const volumeUpdateHandler = mockAudioRecorderService.on.mock.calls.find(
+        call => call[0] === 'volume-update',
+      )?.[1]
+
+      expect(volumeUpdateHandler).toBeDefined()
+
+      // Simulate main window destroyed
+      mockMainWindow.isDestroyed.mockReturnValueOnce(true)
+
+      const testVolume = 0.42
+      volumeUpdateHandler(testVolume)
+
+      // Pill window should still receive the update
+      expect(mockPillWindow.webContents.send).toHaveBeenCalledWith(
+        'volume-update',
+        testVolume,
+      )
+      // Main window should not receive the update
+      expect(mockMainWindow.webContents.send).not.toHaveBeenCalled()
     })
   })
 

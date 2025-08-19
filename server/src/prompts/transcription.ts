@@ -9,8 +9,7 @@ function estimateTokenCount(text: string): number {
  * Creates a transcription prompt that stays within the 224 token limit
  */
 export function createTranscriptionPrompt(vocabulary: string[]): string {
-  const suffix =
-    'Transcribe accurately with proper punctuation and capitalization.'
+  const suffix = ''
   const maxTokens = 224
 
   // If no vocabulary, just return the base instruction

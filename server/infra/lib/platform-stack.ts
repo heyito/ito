@@ -7,7 +7,7 @@ import {
   Stage,
   Tags,
 } from 'aws-cdk-lib'
-import { SecurityGroup, Vpc } from 'aws-cdk-lib/aws-ec2'
+import { SecurityGroup, Vpc, EbsDeviceVolumeType } from 'aws-cdk-lib/aws-ec2'
 import {
   AuroraPostgresEngineVersion,
   ClusterInstance,
@@ -32,6 +32,7 @@ import {
   PolicyStatement,
   ServicePrincipal,
   ArnPrincipal,
+  Role,
 } from 'aws-cdk-lib/aws-iam'
 
 export interface PlatformStackProps extends StackProps {
@@ -110,6 +111,13 @@ export class PlatformStack extends Stack {
       lifecycleRules: [{ maxImageCount: 20 }],
     })
 
+    // Firehose role is created in the platform stack so the OpenSearch domain
+    // resource policy can reference a stable principal without cross-stack timing issues
+    const firehoseRole = new Role(this, 'ItoFirehoseRole', {
+      assumedBy: new ServicePrincipal('firehose.amazonaws.com'),
+      roleName: `${stageName}-ItoFirehoseRole`,
+    })
+
     // OpenSearch domain for logs (one per stage)
     const domain = new Domain(this, 'ItoLogsDomain', {
       domainName: `${stageName}-ito-logs`,
@@ -117,10 +125,14 @@ export class PlatformStack extends Stack {
       enforceHttps: true,
       nodeToNodeEncryption: true,
       encryptionAtRest: { enabled: true },
-      ebs: { enabled: true, volumeSize: isDev(stageName) ? 20 : 50 },
+      ebs: {
+        enabled: true,
+        volumeSize: isDev(stageName) ? 20 : 50,
+        volumeType: EbsDeviceVolumeType.GENERAL_PURPOSE_SSD_GP3,
+      },
       capacity: {
         dataNodes: isDev(stageName) ? 1 : 2,
-        dataNodeInstanceType: 'm6g.large.search',
+        dataNodeInstanceType: 'm7g.large.search',
         multiAzWithStandbyEnabled: false,
       },
       zoneAwareness: isDev(stageName)
@@ -131,44 +143,34 @@ export class PlatformStack extends Stack {
     domain.applyRemovalPolicy(
       isDev(stageName) ? RemovalPolicy.DESTROY : RemovalPolicy.RETAIN,
     )
+    domain.addAccessPolicies(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        principals: [new ArnPrincipal(firehoseRole.roleArn)],
+        actions: ['es:ESHttp*'],
+        resources: [domain.domainArn, `${domain.domainArn}/*`],
+      }),
+    )
+
+    // Also allow the Firehose service principal gated by SourceAccount/SourceArn
+    domain.addAccessPolicies(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        principals: [new ServicePrincipal('firehose.amazonaws.com')],
+        actions: ['es:ESHttp*'],
+        resources: [domain.domainArn, `${domain.domainArn}/*`],
+        conditions: {
+          StringEquals: { 'aws:SourceAccount': this.account },
+          ArnLike: {
+            'aws:SourceArn': [
+              `arn:aws:firehose:${this.region}:${this.account}:deliverystream/${stageName}-ito-client-logs`,
+              `arn:aws:firehose:${this.region}:${this.account}:deliverystream/${stageName}-ito-server-logs`,
+            ],
+          },
+        },
+      }),
+    )
     this.opensearchDomain = domain
-
-    // Allow any principal in this account (root) to interact with the domain over HTTP.
-    // This avoids cross-stack references that would create cycles while still restricting to this account.
-    domain.addAccessPolicies(
-      new PolicyStatement({
-        effect: Effect.ALLOW,
-        principals: [new AccountRootPrincipal()],
-        actions: [
-          'es:ESHttpGet',
-          'es:ESHttpHead',
-          'es:ESHttpPost',
-          'es:ESHttpPut',
-          'es:ESHttpDelete',
-        ],
-        resources: [domain.domainArn, `${domain.domainArn}/*`],
-      }),
-    )
-
-    // Explicitly allow the Firehose delivery role to access the domain
-    domain.addAccessPolicies(
-      new PolicyStatement({
-        effect: Effect.ALLOW,
-        principals: [
-          new ArnPrincipal(
-            `arn:aws:iam::${this.account}:role/${stageName}-ItoFirehoseRole`,
-          ),
-        ],
-        actions: [
-          'es:ESHttpGet',
-          'es:ESHttpHead',
-          'es:ESHttpPost',
-          'es:ESHttpPut',
-          'es:ESHttpDelete',
-        ],
-        resources: [domain.domainArn, `${domain.domainArn}/*`],
-      }),
-    )
 
     new CfnOutput(this, 'OpenSearchEndpoint', {
       value: domain.domainEndpoint,

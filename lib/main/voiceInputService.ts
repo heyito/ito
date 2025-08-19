@@ -68,7 +68,13 @@ export class VoiceInputService {
 
     audioRecorderService.on('volume-update', volume => {
       getPillWindow()?.webContents.send('volume-update', volume)
-      mainWindow?.webContents.send('volume-update', volume)
+      if (
+        mainWindow &&
+        !mainWindow.isDestroyed() &&
+        !mainWindow.webContents.isDestroyed()
+      ) {
+        mainWindow.webContents.send('volume-update', volume)
+      }
     })
 
     audioRecorderService.on('error', err => {

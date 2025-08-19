@@ -58,6 +58,26 @@ class GrpcClient {
     this.mainWindow = window
   }
 
+  // Helper method to safely send messages to the main window
+  private safeSendToMainWindow(channel: string, ...args: any[]) {
+    if (
+      this.mainWindow &&
+      !this.mainWindow.isDestroyed() &&
+      !this.mainWindow.webContents.isDestroyed()
+    ) {
+      try {
+        this.mainWindow.webContents.send(channel, ...args)
+      } catch (error) {
+        console.warn(
+          `Failed to send message to main window on channel ${channel}:`,
+          error,
+        )
+        // Clear the reference to the destroyed window
+        this.mainWindow = null
+      }
+    }
+  }
+
   setAuthToken(token: string | null) {
     this.authToken = token
   }
@@ -206,9 +226,7 @@ class GrpcClient {
       console.log('Signing out user due to authentication failure')
 
       // Notify the main window to sign out the user
-      if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-        this.mainWindow.webContents.send('auth-token-expired')
-      }
+      this.safeSendToMainWindow('auth-token-expired')
 
       // Clear the auth token
       this.authToken = null
@@ -253,9 +271,7 @@ class GrpcClient {
         }
       }
 
-      if (this.mainWindow) {
-        this.mainWindow.webContents.send('transcription-result', response)
-      }
+      this.safeSendToMainWindow('transcription-result', response)
       return response
     }).catch(error => {
       // Log gRPC error
@@ -273,9 +289,7 @@ class GrpcClient {
       }
 
       // Handle transcription errors separately
-      if (this.mainWindow) {
-        this.mainWindow.webContents.send('transcription-error', error)
-      }
+      this.safeSendToMainWindow('transcription-error', error)
       throw error
     })
   }

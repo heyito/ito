@@ -117,6 +117,10 @@ app.whenReady().then(async () => {
   app.on('activate', function () {
     if (mainWindow === null) {
       createAppWindow()
+      // Update the gRPC client with the new main window reference
+      if (mainWindow) {
+        grpcClient.setMainWindow(mainWindow)
+      }
     }
   })
 
@@ -148,11 +152,23 @@ app.whenReady().then(async () => {
       })
 
       autoUpdater.on('update-available', () => {
-        mainWindow?.webContents.send('update-available')
+        if (
+          mainWindow &&
+          !mainWindow.isDestroyed() &&
+          !mainWindow.webContents.isDestroyed()
+        ) {
+          mainWindow.webContents.send('update-available')
+        }
       })
 
       autoUpdater.on('update-downloaded', () => {
-        mainWindow?.webContents.send('update-downloaded')
+        if (
+          mainWindow &&
+          !mainWindow.isDestroyed() &&
+          !mainWindow.webContents.isDestroyed()
+        ) {
+          mainWindow.webContents.send('update-downloaded')
+        }
       })
 
       autoUpdater.on('download-progress', progressObj => {

@@ -125,7 +125,6 @@ class GroqClient {
         // Providing a filename with the correct extension is crucial for the API.
         file,
         model: asrModel,
-        prompt: transcriptionPrompt,
         response_format: 'verbose_json',
       })
 

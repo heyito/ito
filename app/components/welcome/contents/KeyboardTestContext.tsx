@@ -6,8 +6,8 @@ import { ItoMode } from '@/app/generated/ito_pb'
 export default function KeyboardTestContent() {
   const { incrementOnboardingStep, decrementOnboardingStep } =
     useOnboardingStore()
-  const { getItoModeShortcut, addKeyboardShortcut } = useSettingsStore()
-  const keyboardShortcut = getItoModeShortcut(ItoMode.TRANSCRIBE)
+  const { getItoModeShortcuts, addKeyboardShortcut } = useSettingsStore()
+  const keyboardShortcut = getItoModeShortcuts(ItoMode.TRANSCRIBE)[0].keys
 
   return (
     <div className="flex flex-row h-full w-full bg-background">

@@ -32,7 +32,8 @@ interface SettingsState {
   setMicrophoneDeviceId: (deviceId: string, name: string) => void
   addKeyboardShortcut: (shortcut: string[], mode: ItoMode) => void
   removeKeyboardShortcut: (shortcutId: string) => void
-  getItoModeShortcut: (mode: ItoMode) => string[]
+  getItoModeShortcuts: (mode: ItoMode) => KeyboardShortcutConfig[]
+  updateKeyboardShortcut(shortcutId: string, keys: string[]): void
 }
 
 type SettingCategory = 'general' | 'audio&mic' | 'keyboard' | 'account'
@@ -219,12 +220,32 @@ export const useSettingsStore = create<SettingsState>(set => {
       set(partialState)
       syncToStore(partialState)
     },
-    getItoModeShortcut: (mode: ItoMode) => {
+    getItoModeShortcuts: (mode: ItoMode) => {
       const { keyboardShortcuts } = useSettingsStore.getState()
-      return (
-        keyboardShortcuts.find(ks => ks.mode === mode)?.keys ||
-        shortcutDefaults[mode]
+      return keyboardShortcuts.filter(ks => ks.mode === mode)
+    },
+    updateKeyboardShortcut: (shortcutId: string, keys: string[]) => {
+      const currentShortcuts = useSettingsStore.getState().keyboardShortcuts
+      const updatedShortcuts = currentShortcuts.map(ks =>
+        ks.id === shortcutId ? { ...ks, keys } : ks,
       )
+      const partialState = {
+        keyboardShortcuts: updatedShortcuts,
+      }
+      // Track keyboard shortcut change
+      analytics.trackSettings(ANALYTICS_EVENTS.KEYBOARD_SHORTCUTS_CHANGED, {
+        setting_name: 'keyboardShortcuts',
+        old_value: currentShortcuts,
+        new_value: updatedShortcuts,
+        setting_category: 'input',
+      })
+
+      // Update user properties
+      analytics.updateUserProperties({
+        keyboard_shortcuts: updatedShortcuts.map(ks => JSON.stringify(ks)),
+      })
+      set(partialState)
+      syncToStore(partialState)
     },
   }
 })

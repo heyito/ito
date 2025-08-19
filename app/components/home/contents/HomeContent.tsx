@@ -57,8 +57,8 @@ const StatCard = ({
 }
 
 export default function HomeContent() {
-  const { getItoModeShortcut } = useSettingsStore()
-  const keyboardShortcut = getItoModeShortcut(ItoMode.TRANSCRIBE)
+  const { getItoModeShortcuts } = useSettingsStore()
+  const keyboardShortcut = getItoModeShortcuts(ItoMode.TRANSCRIBE)[0].keys
   const { user } = useAuthStore()
   const firstName = user?.name?.split(' ')[0]
   const [interactions, setInteractions] = useState<Interaction[]>([])

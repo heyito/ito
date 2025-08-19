@@ -11,8 +11,8 @@ export default function IntroducingIntelligentMode() {
   const { incrementOnboardingStep, decrementOnboardingStep } =
     useOnboardingStore()
 
-  const { getItoModeShortcut, addKeyboardShortcut } = useSettingsStore()
-  const keyboardShortcut = getItoModeShortcut(ItoMode.EDIT)
+  const { getItoModeShortcuts, addKeyboardShortcut } = useSettingsStore()
+  const keyboardShortcut = getItoModeShortcuts(ItoMode.EDIT)[0].keys
 
   return (
     <div className="flex flex-row h-full w-full bg-background">

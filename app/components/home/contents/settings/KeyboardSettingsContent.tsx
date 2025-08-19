@@ -1,11 +1,12 @@
 import { useSettingsStore } from '@/app/store/useSettingsStore'
 import KeyboardShortcutEditor from '@/app/components/ui/keyboard-shortcut-editor'
 import { ItoMode } from '@/app/generated/ito_pb'
+import MultiShortcutEditor from '@/app/components/ui/multi-shortcut-editor'
 
 export default function KeyboardSettingsContent() {
-  const { getItoModeShortcut, addKeyboardShortcut } = useSettingsStore()
-  const transcribeShortcut = getItoModeShortcut(ItoMode.TRANSCRIBE)
-  const editShortcut = getItoModeShortcut(ItoMode.EDIT)
+  const { getItoModeShortcuts, addKeyboardShortcut } = useSettingsStore()
+  const transcribeShortcuts = getItoModeShortcuts(ItoMode.TRANSCRIBE)
+  const editShortcuts = getItoModeShortcuts(ItoMode.EDIT)
 
   return (
     <div className="space-y-8">
@@ -19,11 +20,8 @@ export default function KeyboardSettingsContent() {
                 want to use for your shortcut.
               </div>
             </div>
-            <KeyboardShortcutEditor
-              shortcut={transcribeShortcut}
-              onShortcutChange={addKeyboardShortcut}
-              hideTitle={true}
-              className="w-1/2"
+            <MultiShortcutEditor
+              shortcuts={transcribeShortcuts}
               mode={ItoMode.TRANSCRIBE}
             />
           </div>
@@ -38,13 +36,7 @@ export default function KeyboardSettingsContent() {
                 text box.
               </div>
             </div>
-            <KeyboardShortcutEditor
-              shortcut={editShortcut}
-              onShortcutChange={addKeyboardShortcut}
-              hideTitle={true}
-              className="w-1/2"
-              mode={ItoMode.EDIT}
-            />
+            <MultiShortcutEditor shortcuts={editShortcuts} />
           </div>
         </div>
       </div>

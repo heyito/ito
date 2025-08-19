@@ -1,38 +1,53 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import KeyboardKey from '@/app/components/ui/keyboard-key'
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { Button } from '@/app/components/ui/button'
+import KeyboardKey from '@/app/components/ui/keyboard-key'
 import { normalizeKeyEvent } from '@/app/utils/keyboard'
 import { ItoMode } from '@/app/generated/ito_pb'
-import { Pencil } from 'lucide-react' // replace with your icon if needed
+import { useSettingsStore } from '@/app/store/useSettingsStore'
 
-type Shortcut = string[]
+export interface KeyboardShortcutConfig {
+  id: string
+  keys: string[]
+  mode: ItoMode
+}
 
-interface MultiShortcutEditorProps {
-  shortcuts: Shortcut[]
-  onChange: (next: Shortcut[], mode: ItoMode) => void
-  mode?: ItoMode
+type Props = {
+  shortcuts: KeyboardShortcutConfig[] // persisted rows
+  mode?: ItoMode // optional: filter rows by mode, and used when adding a new one
   className?: string
   keySize?: number
-  maxShortcuts?: number
+  maxShortcutsPerMode?: number
 }
 
 export default function MultiShortcutEditor({
   shortcuts,
-  onChange,
-  mode = ItoMode.TRANSCRIBE,
+  mode,
   className = '',
   keySize = 48,
-  maxShortcuts = 5,
-}: MultiShortcutEditorProps) {
-  const [editingIndex, setEditingIndex] = useState<number | null>(null)
-  const [draft, setDraft] = useState<Shortcut>([])
+  maxShortcutsPerMode = 5,
+}: Props) {
+  const {
+    addKeyboardShortcut,
+    removeKeyboardShortcut,
+    updateKeyboardShortcut,
+  } = useSettingsStore()
+
+  const rows = useMemo(
+    () => (mode == null ? shortcuts : shortcuts.filter(s => s.mode === mode)),
+    [shortcuts, mode],
+  )
+  const isAtLimit = rows.length >= maxShortcutsPerMode
+  const isMinimum = rows.length <= 1
+
+  // editing state
+  const [editingId, setEditingId] = useState<string | null>(null) // existing row id or "__new__"
+  const [draftKeys, setDraftKeys] = useState<string[]>([])
   const cleanupRef = useRef<(() => void) | null>(null)
 
-  const startEditing = (index: number) => {
-    setEditingIndex(index)
-    setDraft(shortcuts[index] ?? [])
+  const beginEditExisting = (row: KeyboardShortcutConfig) => {
+    setEditingId(row.id)
+    setDraftKeys([])
     try {
-      // pause global shortcut while editing
       window.api.send(
         'electron-store-set',
         'settings.isShortcutGloballyEnabled',
@@ -43,15 +58,23 @@ export default function MultiShortcutEditor({
     }
   }
 
-  const stopEditing = (commit: boolean) => {
-    if (editingIndex === null) return
-    if (commit && draft.length) {
-      const next = [...shortcuts]
-      next[editingIndex] = draft
-      onChange(next, mode)
+  const beginEditNew = () => {
+    setEditingId('__new__')
+    setDraftKeys([])
+    try {
+      window.api.send(
+        'electron-store-set',
+        'settings.isShortcutGloballyEnabled',
+        false,
+      )
+    } catch {
+      //ignore
     }
-    setEditingIndex(null)
-    setDraft([])
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setDraftKeys([])
     try {
       window.api.send(
         'electron-store-set',
@@ -63,152 +86,133 @@ export default function MultiShortcutEditor({
     }
   }
 
-  const addEntry = () => {
-    const next = [...shortcuts, []]
-    onChange(next, mode)
-    // immediately edit the new row
-    setTimeout(() => startEditing(next.length - 1), 0)
+  const saveEdit = (original?: KeyboardShortcutConfig) => {
+    if (!draftKeys.length) return
+    if (original) {
+      // update existing
+      updateKeyboardShortcut(original.id, draftKeys)
+    } else {
+      // add new
+      const addMode = mode ?? ItoMode.TRANSCRIBE
+      addKeyboardShortcut(draftKeys, addMode)
+    }
+    cancelEdit()
   }
 
-  const deleteEntry = (index: number) => {
-    const next = shortcuts.filter((_, i) => i !== index)
-    onChange(next, mode)
-    if (editingIndex === index) stopEditing(false)
-  }
-
+  // capture keys (no normalization/cleanup here by request)
   const handleKeyEvent = useCallback(
     (event: any) => {
-      if (editingIndex === null) return
-      if (event.type !== 'keydown') return
+      if (!editingId || event.type !== 'keydown') return
       const key = normalizeKeyEvent(event)
       if (key === 'fn_fast') return
-      setDraft(prev =>
+      setDraftKeys(prev =>
         prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key],
       )
     },
-    [editingIndex],
+    [editingId],
   )
 
   useEffect(() => {
-    if (editingIndex === null) return
+    if (!editingId) return
     try {
-      const cleanup = window.api.onKeyEvent(handleKeyEvent)
-      cleanupRef.current = cleanup
+      cleanupRef.current = window.api.onKeyEvent(handleKeyEvent)
     } catch {
-      //ignore
+      // ignore
     }
     return () => {
       try {
         cleanupRef.current?.()
       } catch {
-        // ignore
+        //ignore
       }
     }
-  }, [handleKeyEvent, editingIndex])
+  }, [handleKeyEvent, editingId])
 
   return (
     <div className={className}>
-      {shortcuts.map((combo, i) => {
-        const isEditing = editingIndex === i
-        const value = isEditing ? draft : combo
+      {rows.map(row => {
+        const isEditing = editingId === row.id
+        const displayKeys = isEditing ? draftKeys : row.keys
+
         return (
           <div
-            key={i}
+            key={row.id}
             className="mb-6 rounded-2xl border border-neutral-200 bg-white p-3"
           >
-            {/* view header */}
-            {!isEditing && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2 rounded-xl border border-neutral-300 bg-neutral-100 px-3 py-2">
-                    {value.length ? (
-                      value.map((k, idx) => (
-                        <KeyboardKey
-                          key={idx}
-                          keyboardKey={k}
-                          className="bg-white border-2 border-neutral-300"
-                          style={{ width: keySize, height: keySize }}
-                        />
-                      ))
-                    ) : (
-                      <span className="text-neutral-400">No keys set</span>
-                    )}
-                  </div>
-                </div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 rounded-xl border border-neutral-300 bg-neutral-100 px-3 py-2">
+                {displayKeys.length ? (
+                  displayKeys.map((k, idx) => (
+                    <KeyboardKey key={idx} keyboardKey={k} variant="inline" />
+                  ))
+                ) : (
+                  <span className="text-neutral-400">No keys set</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => startEditing(i)}
-                  className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 px-3 py-1.5 text-neutral-600 hover:bg-neutral-50"
+                  onClick={() => removeKeyboardShortcut(row.id)}
+                  hidden={isMinimum}
+                  className="text-red-600 hover:underline"
                 >
-                  <Pencil className="h-4 w-4" />
+                  Delete
+                </button>
+                <button
+                  type="button"
+                  onClick={() => beginEditExisting(row)}
+                  className="rounded-xl border border-neutral-300 px-3 py-1.5 text-neutral-700 hover:bg-neutral-50"
+                >
                   Edit
                 </button>
               </div>
-            )}
-
-            {/* edit panel */}
-            {isEditing && (
-              <div className="space-y-3">
-                <div className="rounded-2xl border-2 border-black/80 bg-white px-4 py-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {value.length ? (
-                      value.map((k, idx) => (
-                        <KeyboardKey
-                          key={idx}
-                          keyboardKey={k}
-                          className="bg-white border-2 border-neutral-300"
-                          style={{ width: keySize, height: keySize }}
-                        />
-                      ))
-                    ) : (
-                      <span className="text-neutral-400 text-xl">
-                        Press key
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-neutral-500">Add new shortcut</span>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => deleteEntry(i)}
-                      className="text-red-600 hover:underline"
-                    >
-                      Delete
-                    </button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => stopEditing(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => stopEditing(true)}
-                      disabled={!draft.length}
-                    >
-                      Save
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         )
       })}
 
+      {/* Add new */}
       <div className="mt-2 flex justify-end">
-        <button
-          type="button"
-          onClick={addEntry}
-          disabled={shortcuts.length >= maxShortcuts}
-          className="rounded-2xl border border-neutral-300 px-4 py-2 text-lg text-neutral-800 disabled:opacity-50"
-        >
-          Add another
-        </button>
+        {editingId === '__new__' ? (
+          <div className="w-full rounded-2xl border-2 border-black/80 bg-white px-4 py-4">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              {draftKeys.length ? (
+                draftKeys.map((k, idx) => (
+                  <KeyboardKey
+                    key={idx}
+                    keyboardKey={k}
+                    className="bg-white border-2 border-neutral-300"
+                    style={{ width: keySize, height: keySize }}
+                  />
+                ))
+              ) : (
+                <span className="text-neutral-400 text-xl">Press key</span>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <Button size="sm" variant="outline" onClick={cancelEdit}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => saveEdit(undefined)}
+                disabled={!draftKeys.length}
+              >
+                Save
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={beginEditNew}
+            hidden={isAtLimit}
+            className="rounded-xl border border-neutral-300 px-4 py-2 text-md text-neutral-800 disabled:opacity-50"
+          >
+            Add another
+          </button>
+        )}
       </div>
     </div>
   )

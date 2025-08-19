@@ -14,8 +14,8 @@ import { ItoMode } from '@/app/generated/ito_pb'
 export default function TryItOut() {
   const { decrementOnboardingStep, setOnboardingCompleted } =
     useOnboardingStore()
-  const { getItoModeShortcut } = useSettingsStore()
-  const keyboardShortcut = getItoModeShortcut(ItoMode.TRANSCRIBE)
+  const { getItoModeShortcuts } = useSettingsStore()
+  const keyboardShortcut = getItoModeShortcuts(ItoMode.TRANSCRIBE)[0].keys
   const [selectedApp, setSelectedApp] = useState<
     'slack' | 'gmail' | 'cursor' | 'chatgpt' | 'notion'
   >('slack')

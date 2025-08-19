@@ -599,8 +599,17 @@ describe('SyncService Integration Tests', () => {
     })
 
     test('should update timestamp only after successful complete sync', async () => {
-      // All operations succeed
-      mockGrpcClient.listNotesSince.mockResolvedValue([])
+      // All operations succeed and at least one change is processed (ensures cursor advances)
+      const remoteNote = {
+        id: 'remote-note-for-timestamp',
+        userId: 'test-user-123',
+        content: 'Remote note content',
+        createdAt: '2024-01-02T00:00:00.000Z',
+        updatedAt: '2024-01-02T00:00:00.000Z',
+        deletedAt: null,
+        interactionId: null,
+      }
+      mockGrpcClient.listNotesSince.mockResolvedValueOnce([remoteNote])
       mockGrpcClient.listInteractionsSince.mockResolvedValue([])
       mockGrpcClient.listDictionaryItemsSince.mockResolvedValue([])
 
@@ -608,17 +617,16 @@ describe('SyncService Integration Tests', () => {
       await syncService.start()
       const endTime = Date.now()
 
-      // Timestamp should be updated with current time
-      expect(mockKeyValueStore.set).toHaveBeenCalledWith(
-        'lastSyncedAt',
-        expect.any(String),
-      )
+      // Timestamp should be updated with current time using namespaced key
+      expect(mockKeyValueStore.set).toHaveBeenCalledTimes(1)
+      const [keyArg, valueArg] = mockKeyValueStore.set.mock.calls[0] as any
+      expect(typeof keyArg).toBe('string')
+      expect(keyArg.startsWith('lastSyncedAt:')).toBe(true)
+      expect(keyArg.endsWith(':test-user-123')).toBe(true)
+      expect(typeof valueArg).toBe('string')
 
       // Verify timestamp is recent (within test execution window)
-      const setCall: any = mockKeyValueStore.set.mock.calls.find(
-        call => (call as any)[0] === 'lastSyncedAt',
-      )
-      const timestamp = new Date(setCall[1]).getTime()
+      const timestamp = new Date(valueArg).getTime()
       expect(timestamp).toBeGreaterThanOrEqual(startTime)
       expect(timestamp).toBeLessThanOrEqual(endTime)
     })

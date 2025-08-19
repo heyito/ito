@@ -14,6 +14,8 @@ interface JwtPayload {
   email?: string
   name?: string
   picture?: string
+  iss?: string
+  aud?: string | string[]
   [key: string]: any
 }
 
@@ -46,6 +48,77 @@ export const validateStoredTokens = async (config?: any) => {
 
     if (hasTokens) {
       console.log('Checking stored access tokens for expiration...')
+
+      // First, ensure tokens match current environment (issuer/audience)
+      const tokenToCheck = mainStoreAccessToken || storedTokens?.access_token
+      if (config && tokenToCheck) {
+        let envMismatch = false
+        try {
+          const payload = jwtDecode<JwtPayload>(tokenToCheck)
+          const issuer = payload.iss || ''
+          const audience = payload.aud
+
+          // Determine expected issuer host from config.domain
+          const expectedDomain = (config.domain || '').toString().trim()
+          let issuerMatches = false
+          try {
+            const issUrl = new URL(issuer)
+            issuerMatches =
+              !!expectedDomain &&
+              issUrl.host.toLowerCase() === expectedDomain.toLowerCase()
+          } catch {
+            // If issuer is not a URL, do a loose contains match
+            issuerMatches = !!expectedDomain && issuer.includes(expectedDomain)
+          }
+
+          // Audience can be string or array
+          let audienceMatches = true
+          if (config.audience) {
+            const expectedAudience = config.audience.toString().trim()
+            const audiences = Array.isArray(audience)
+              ? audience
+              : audience
+                ? [audience]
+                : []
+            audienceMatches = audiences.some(a => a === expectedAudience)
+          }
+
+          envMismatch = !issuerMatches || !audienceMatches
+        } catch (e) {
+          // If we fail to decode for env check, treat as mismatch to be safe
+          envMismatch = true
+        }
+
+        if (envMismatch) {
+          console.log(
+            'Stored access token does not match current environment, clearing auth data',
+          )
+
+          // Clear auth store tokens
+          if (storedAuth) {
+            store.set(STORE_KEYS.AUTH, {
+              ...storedAuth,
+              tokens: null,
+            })
+          }
+
+          // Clear gRPC client token and stop sync
+          grpcClient.setAuthToken(null)
+          syncService.stop()
+
+          // Clear main process store
+          mainStore.delete(STORE_KEYS.USER_PROFILE)
+          mainStore.delete(STORE_KEYS.ID_TOKEN)
+          mainStore.delete(STORE_KEYS.ACCESS_TOKEN)
+
+          // Notify renderer process about token expiration/mismatch
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('auth-token-expired')
+          }
+
+          return false
+        }
+      }
 
       // Check both token sources
       const authStoreTokenExpired = storedTokens?.access_token

@@ -145,12 +145,28 @@ create_windows_installer() {
     export SKIP_SIGNING=true
     export WIN_CSC_LINK=""
     
-    # Try building without installer first to avoid signing issues
-    print_info "Building Windows app without installer..."
-    bun run electron-builder --config electron-builder.config.js --win --x64 --dir --publish=never
+    print_info "Using Docker for Windows build on macOS..."
     
-    print_info "Creating NSIS installer..."
-    bun run electron-builder --config electron-builder.config.js --win --x64 --publish=never
+    # Check if Docker is available
+    if ! command -v docker &> /dev/null; then
+        print_error "Docker is not installed. Please install Docker Desktop for Mac."
+        exit 1
+    fi
+    
+    # Use Docker for cross-compilation with ARM64 compatibility and bun
+    docker run --rm --platform linux/amd64 \
+        --env CSC_IDENTITY_AUTO_DISCOVERY=false \
+        --env SKIP_SIGNING=true \
+        -v "$(pwd)":/project \
+        electronuserland/builder:wine \
+        /bin/bash -c "
+            # Install bun
+            curl -fsSL https://bun.sh/install | bash
+            export PATH=\"/root/.bun/bin:\$PATH\"
+            
+            # Change to project and run electron-builder
+            cd /project && bunx electron-builder --config electron-builder.config.js --win --x64 --publish=never
+        "
     
     print_status "Windows installer created successfully!"
     

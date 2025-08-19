@@ -37,7 +37,14 @@ build_native_module() {
 
     # Install dependencies
     print_info "Installing dependencies for $module_name..."
-    if [ "$BUILD_WINDOWS" = true ] && [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ "$OS" == "Windows_NT" ]]; then
+    
+    # Check if we're compiling on a Windows machine
+    compiling_on_windows=false
+    if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ "$OS" == "Windows_NT" ]]; then
+        compiling_on_windows=true
+    fi
+    
+    if [ "$BUILD_WINDOWS" = true ] && [ "$compiling_on_windows" = true ]; then
         cargo +stable-x86_64-pc-windows-gnu fetch
         cargo +stable-x86_64-pc-windows-gnu install --path .
     else
@@ -86,7 +93,12 @@ build_native_module() {
         print_info "Building Windows binary for $module_name..."
         
         # Use GNU target (more reliable than MSVC)
-        cargo +stable-x86_64-pc-windows-gnu build --release --target x86_64-pc-windows-gnu
+        if [ "$compiling_on_windows" = true ]; then
+            cargo +stable-x86_64-pc-windows-gnu build --release --target x86_64-pc-windows-gnu
+        else
+            # Cross-compile from macOS/Linux using default toolchain
+            cargo build --release --target x86_64-pc-windows-gnu
+        fi
     fi
 
     # Return to the project root for the next module
@@ -138,9 +150,25 @@ if [ "$BUILD_WINDOWS" = true ]; then
     rustup target add x86_64-pc-windows-gnu
     
     # Check if MinGW-w64 is available
+    # Check if we're compiling on a Windows machine
+    compiling_on_windows=false
     if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ "$OS" == "Windows_NT" ]]; then
+        compiling_on_windows=true
+    fi
+    
+    if [ "$compiling_on_windows" = true ]; then
         # On Windows, use GNU toolchain
         print_info "Using GNU toolchain (requires MinGW-w64)"
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        # On macOS, check if MinGW-w64 is installed via brew or other package managers
+        if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
+            print_info "Using MinGW-w64 cross-compiler for Windows builds on macOS"
+        elif brew list mingw-w64 &> /dev/null; then
+            print_info "MinGW-w64 found via Homebrew, using for Windows cross-compilation"
+        else
+            print_error "Windows GNU target requires MinGW-w64 toolchain. Install with: brew install mingw-w64"
+            exit 1
+        fi
     else
         print_error "Windows GNU target requires MinGW-w64 toolchain."
         exit 1

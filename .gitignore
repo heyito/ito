@@ -16,4 +16,4 @@ tsconfig.node.tsbuildinfo
 .env.sentry-build-plugin
 .electron-builder-cache
 .npm-cache
-
+.cache

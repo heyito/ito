@@ -371,13 +371,13 @@ export function registerIPC() {
   // When the hotkey is pressed, start recording and notify the pill window.
   ipcMain.on('start-native-recording', _event => {
     log.info(`IPC: Received 'start-native-recording'`)
-    voiceInputService.startSTTService()
+    voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
   })
 
   ipcMain.on('start-native-recording-test', _event => {
     log.info(`IPC: Received 'start-native-recording-test'`)
     const sendToServer = false
-    voiceInputService.startSTTService(sendToServer)
+    voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
   })
 
   // When the hotkey is released, stop recording and notify the pill window.

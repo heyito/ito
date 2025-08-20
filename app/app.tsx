@@ -3,7 +3,7 @@ import appIcon from '@/resources/build/icon.png'
 import HomeKit from '@/app/components/home/HomeKit'
 import WelcomeKit from '@/app/components/welcome/WelcomeKit'
 import Pill from '@/app/components/pill/Pill'
-import { useOnboardingStore } from '@/app/store/useOnboardingStore'
+import { STEP_NAMES, useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { useAuth } from '@/app/components/auth/useAuth'
 import { WindowContextProvider } from '@/lib/window'
 import { Auth0Provider } from '@/app/components/auth/Auth0Provider'
@@ -20,10 +20,13 @@ const MainApp = () => {
     verifyStoredMicrophone()
   }, [])
 
-  // If authenticated and onboarding completed, show main app
-  const shouldEnableShortcutGlobally =
-    onboardingCompleted || onboardingStep >= 7
+  const onboardingSetupCompleted =
+    onboardingStep >= STEP_NAMES.indexOf('any_app')
 
+  const shouldEnableShortcutGlobally =
+    onboardingCompleted || onboardingSetupCompleted
+
+  // If authenticated and onboarding completed, show main app
   if (isAuthenticated && onboardingCompleted) {
     window.api.send(
       'electron-store-set',

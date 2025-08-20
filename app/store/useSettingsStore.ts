@@ -8,11 +8,6 @@ import { STORE_KEYS } from '../../lib/constants/store-keys'
 import type { KeyboardShortcutConfig } from '@/lib/main/store'
 import { ItoMode } from '../generated/ito_pb'
 
-const shortcutDefaults = {
-  [ItoMode.TRANSCRIBE]: ['fn'],
-  [ItoMode.EDIT]: ['control'],
-}
-
 interface SettingsState {
   shareAnalytics: boolean
   launchAtLogin: boolean
@@ -53,12 +48,12 @@ const getInitialState = () => {
     microphoneName: storedSettings?.microphoneName ?? 'Default Microphone',
     keyboardShortcuts: storedSettings?.keyboardShortcuts ?? [
       {
-        keys: [shortcutDefaults[ItoMode.EDIT]],
+        keys: ['control'],
         mode: ItoMode.EDIT,
         id: 'default-edit',
       },
       {
-        keys: [shortcutDefaults[ItoMode.TRANSCRIBE]],
+        keys: ['fn'],
         mode: ItoMode.TRANSCRIBE,
         id: 'default-transcribe',
       },

@@ -1,5 +1,6 @@
 import { ComponentPropsWithoutRef } from 'react'
 import clsx from 'clsx'
+import { cx } from 'class-variance-authority'
 
 const FnKey = () => (
   <svg
@@ -188,16 +189,8 @@ export default function KeyboardKey({
     )
   }
 
-  // Tile (SVG) — your existing look, with a smaller option
-  const tileClasses = clsx(
-    'inline-flex items-center justify-center select-none rounded-lg bg-white',
-    size === 'md' && 'h-14 w-14 border-2 border-neutral-300 shadow-lg',
-    size === 'sm' && 'h-10 w-10 border border-neutral-300 shadow',
-    className,
-  )
-
   return (
-    <div className={tileClasses} {...props}>
+    <div className={cx('rounded-lg shadow-lg', className)} {...props}>
       <KeyToRender keyboardKey={keyboardKey} />
     </div>
   )

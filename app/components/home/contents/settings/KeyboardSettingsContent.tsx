@@ -1,12 +1,12 @@
 import { useSettingsStore } from '@/app/store/useSettingsStore'
-import KeyboardShortcutEditor from '@/app/components/ui/keyboard-shortcut-editor'
 import { ItoMode } from '@/app/generated/ito_pb'
 import MultiShortcutEditor from '@/app/components/ui/multi-shortcut-editor'
 
 export default function KeyboardSettingsContent() {
-  const { getItoModeShortcuts, addKeyboardShortcut } = useSettingsStore()
+  const { getItoModeShortcuts } = useSettingsStore()
   const transcribeShortcuts = getItoModeShortcuts(ItoMode.TRANSCRIBE)
   const editShortcuts = getItoModeShortcuts(ItoMode.EDIT)
+  console.log({ editShortcuts })
 
   return (
     <div className="space-y-8">
@@ -36,7 +36,10 @@ export default function KeyboardSettingsContent() {
                 text box.
               </div>
             </div>
-            <MultiShortcutEditor shortcuts={editShortcuts} />
+            <MultiShortcutEditor
+              shortcuts={editShortcuts}
+              mode={ItoMode.EDIT}
+            />
           </div>
         </div>
       </div>

@@ -6,7 +6,6 @@ export default function KeyboardSettingsContent() {
   const { getItoModeShortcuts } = useSettingsStore()
   const transcribeShortcuts = getItoModeShortcuts(ItoMode.TRANSCRIBE)
   const editShortcuts = getItoModeShortcuts(ItoMode.EDIT)
-  console.log({ editShortcuts })
 
   return (
     <div className="space-y-8">

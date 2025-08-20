@@ -57,22 +57,11 @@ export default function IntroducingIntelligentMode() {
               >
                 <ArrowRight className="h-5 w-5 shrink-0 text-black" />
                 {step}
-              </div>
-            ))}
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              onClick={() => {
-                /** TODO: New screens for detailed examples */
-              }}
-              className={'w-fit p-4 mt-6'}
-            >
-              {'Detailed Examples'}
-            </Button>
+            </div>
+            ))}}
             <Tip
               tipText="You can also trigger Intelligent Mode by saying 'Hey Ito' when using the regular dictation hotkey."
-              className="mt-3"
+              className="mt-6"
             />
           </div>
 

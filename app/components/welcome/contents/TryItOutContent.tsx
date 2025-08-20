@@ -9,12 +9,13 @@ import CursorIcon from '../../icons/CursorIcon'
 import { useState } from 'react'
 import { ArrowUp } from '@mynaui/icons-react'
 import React from 'react'
+import { ItoMode } from '@/app/generated/ito_pb'
 
-export default function TryItOutContent() {
+export default function TryItOut() {
   const { decrementOnboardingStep, setOnboardingCompleted } =
     useOnboardingStore()
-  const { getTranscribeShortcut } = useSettingsStore()
-  const keyboardShortcut = getTranscribeShortcut()
+  const { getItoModeShortcuts } = useSettingsStore()
+  const keyboardShortcut = getItoModeShortcuts(ItoMode.TRANSCRIBE)[0].keys
   const [selectedApp, setSelectedApp] = useState<
     'slack' | 'gmail' | 'cursor' | 'chatgpt' | 'notion'
   >('slack')

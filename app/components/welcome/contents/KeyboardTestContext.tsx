@@ -1,12 +1,13 @@
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { useSettingsStore } from '@/app/store/useSettingsStore'
 import KeyboardShortcutEditor from '../../ui/keyboard-shortcut-editor'
+import { ItoMode } from '@/app/generated/ito_pb'
 
 export default function KeyboardTestContent() {
   const { incrementOnboardingStep, decrementOnboardingStep } =
     useOnboardingStore()
-  const { getTranscribeShortcut, addKeyboardShortcut } = useSettingsStore()
-  const keyboardShortcut = getTranscribeShortcut()
+  const { getItoModeShortcuts, addKeyboardShortcut } = useSettingsStore()
+  const keyboardShortcut = getItoModeShortcuts(ItoMode.TRANSCRIBE)[0].keys
 
   return (
     <div className="flex flex-row h-full w-full bg-background">
@@ -48,7 +49,7 @@ export default function KeyboardTestContent() {
           editButtonClassName="w-44"
           confirmButtonClassName="w-16"
           className="rounded-xl shadow-lg p-6 flex flex-col items-center min-w-[500px] max-h-[280px]"
-          mode="transcribe"
+          mode={ItoMode.TRANSCRIBE}
         />
       </div>
     </div>

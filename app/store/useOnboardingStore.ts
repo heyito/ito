@@ -18,7 +18,7 @@ interface OnboardingState {
   initializeOnboarding: () => void
 }
 
-const STEP_NAMES = [
+export const STEP_NAMES = [
   'create_account',
   'referral_source',
   'data_control',
@@ -26,6 +26,7 @@ const STEP_NAMES = [
   'microphone_test',
   'keyboard_test',
   'good_to_go',
+  'introducing_intelligent_mode',
   'any_app',
   'try_it_out',
 ]

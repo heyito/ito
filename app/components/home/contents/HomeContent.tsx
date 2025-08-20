@@ -22,6 +22,7 @@ import {
   getTotalWordsLevel,
   getActivityMessage,
 } from './activityMessages'
+import { ItoMode } from '@/app/generated/ito_pb'
 
 // Interface for interaction statistics
 interface InteractionStats {
@@ -56,8 +57,8 @@ const StatCard = ({
 }
 
 export default function HomeContent() {
-  const { getTranscribeShortcut } = useSettingsStore()
-  const keyboardShortcut = getTranscribeShortcut()
+  const { getItoModeShortcuts } = useSettingsStore()
+  const keyboardShortcut = getItoModeShortcuts(ItoMode.TRANSCRIBE)[0].keys
   const { user } = useAuthStore()
   const firstName = user?.name?.split(' ')[0]
   const [interactions, setInteractions] = useState<Interaction[]>([])

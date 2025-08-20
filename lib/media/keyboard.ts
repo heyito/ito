@@ -125,10 +125,11 @@ function handleKeyEventInMain(event: KeyEvent) {
     pressedKeys.delete(normalizedKey)
   }
 
-  // Check if any of the configured shortcuts are currently held\
-  const currentlyHeldShortcut = keyboardShortcuts.find(shortcut =>
-    shortcut.keys.every(key => pressedKeys.has(key)),
-  )
+  // Check if any of the configured shortcuts are currently held
+  // Ignore shortcuts with no keys
+  const currentlyHeldShortcut = keyboardShortcuts
+    .filter(ks => ks.keys.length > 0)
+    .find(shortcut => shortcut.keys.every(key => pressedKeys.has(key)))
 
   // Only block keys when a complete shortcut is being held
   if (currentlyHeldShortcut) {

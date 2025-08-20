@@ -135,8 +135,8 @@ create_windows_installer() {
     bun run vite:build:app
     
     # Set npm config to avoid symlink issues on Windows
-    export npm_config_cache=$(pwd)/.npm-cache
-    export ELECTRON_BUILDER_CACHE=$(pwd)/.electron-builder-cache
+    export npm_config_cache=$PWD/.npm-cache
+    export ELECTRON_BUILDER_CACHE=$PWD/.electron-builder-cache
     
     # Disable code signing completely
     export CSC_IDENTITY_AUTO_DISCOVERY=false
@@ -145,7 +145,7 @@ create_windows_installer() {
     export SKIP_SIGNING=true
     export WIN_CSC_LINK=""
     
-    print_info "Using Docker for Windows build on macOS..."
+    print_info "Using Docker for Windows build..."
     
     # Check if Docker is available
     if ! command -v docker &> /dev/null; then
@@ -157,22 +157,29 @@ create_windows_installer() {
     docker run --rm --platform linux/amd64 \
         --env CSC_IDENTITY_AUTO_DISCOVERY=false \
         --env SKIP_SIGNING=true \
-        -v "$(pwd)":/project \
+        -v "/$PWD":/project \
         electronuserland/builder:wine \
-        /bin/bash -c "
+        bash -c "
             # Install bun
             curl -fsSL https://bun.sh/install | bash
             export PATH=\"/root/.bun/bin:\$PATH\"
             
-            # Change to project and run electron-builder
-            cd /project && bunx electron-builder --config electron-builder.config.js --win --x64 --publish=never
+            # Change to project and debug file paths
+            cd /project
+            echo 'Current directory:' \$(pwd)
+            echo 'Directory contents:'
+            ls -la
+            echo 'electron-builder.config.js exists:' \$(test -f electron-builder.config.js && echo 'YES' || echo 'NO')
+            
+            # Run electron-builder
+            bunx electron-builder --config electron-builder.config.js --win --x64 --publish=never
         "
     
     print_status "Windows installer created successfully!"
     
     # Show output location
     if [ -d "dist" ]; then
-        print_info "Build output location: $(pwd)/dist"
+        print_info "Build output location: $PWD/dist"
         ls -la dist/*.exe 2>/dev/null || print_warning "No .exe files found in dist directory"
         ls -la dist/*.nsis.7z 2>/dev/null || print_warning "No .nsis.7z files found in dist directory"
     fi

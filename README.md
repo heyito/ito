@@ -66,6 +66,7 @@
 
 2. **Install the application**:
    - **macOS**: Open the `.dmg` file and drag Ito to Applications
+   - **Windows**: Run the `.exe` installer and follow the setup wizard
 
 3. **Grant permissions** when prompted:
    - **Microphone access**: Required for voice input
@@ -133,7 +134,9 @@ bun run dev
 
 **Required Setup:**
 
-1. **Install Rust with GNU toolchain**:
+1. **Install Docker Desktop**: Download from [docker.com](https://www.docker.com/products/docker-desktop/) and ensure it's running
+
+2. **Install Rust with GNU toolchain** (for native component development):
 
    ```bash
    # Install rustup (Rust installer)
@@ -144,14 +147,14 @@ bun run dev
    rustup target add x86_64-pc-windows-gnu
    ```
 
-2. **Install 7-Zip**: `winget install 7zip.7zip`
+3. **Install 7-Zip**: `winget install 7zip.7zip`
 
-3. **Download and install GCC & MinGW-w64 and add to path**:
+4. **Download and install GCC & MinGW-w64 and add to path**:
    https://winlibs.com/
 
-4. **Restart your terminal** to pick up PATH changes
+5. **Restart your terminal** to pick up PATH changes
 
-> **Note**: The build process automatically uses the GNU toolchain for Windows builds to ensure compatibility with MinGW-w64.
+> **Note**: Windows builds use Docker for cross-compilation to ensure consistent builds. The Docker container handles the Windows build environment automatically.
 
 ### Project Structure
 
@@ -191,6 +194,8 @@ bun run build:rust:win     # Build for Windows
 # Building Application
 bun run build:mac          # Build for macOS
 bun run build:win          # Build for Windows
+./build-app.sh mac          # Build macOS using build script
+./build-app.sh windows      # Build Windows using build script (requires Docker)
 bun run build:unpack       # Build unpacked for testing
 
 # Code Quality

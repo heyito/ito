@@ -56,10 +56,10 @@ jobs:
         run: |
           echo "${{ secrets.MACOS_CERT_BASE64 }}" | base64 --decode > release.p12
 
-      - name: Build and package application
+      - name: Build and package macOS application
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        run: ./build-app.sh
+        run: ./build-app.sh mac
 
       - name: Upload Mac Installer DMG
         uses: actions/upload-artifact@v4
@@ -86,23 +86,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v1
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          targets: 'x86_64-pc-windows-gnu'
-
-      - name: Install Windows build tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mingw-w64
-
       - name: Set up environment
         run: |
           echo "VITE_AUTH0_DOMAIN=\"${{ secrets.VITE_AUTH0_DOMAIN }}\"" >> .env
@@ -124,7 +107,7 @@ jobs:
       - name: Build and package Windows application
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        run: ./build-app-windows.sh
+        run: ./build-app.sh windows
 
       - name: Upload Windows Installer
         uses: actions/upload-artifact@v4

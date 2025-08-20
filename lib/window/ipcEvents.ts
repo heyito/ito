@@ -376,7 +376,6 @@ export function registerIPC() {
 
   ipcMain.on('start-native-recording-test', _event => {
     log.info(`IPC: Received 'start-native-recording-test'`)
-    const sendToServer = false
     voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
   })
 

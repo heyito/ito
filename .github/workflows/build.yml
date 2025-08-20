@@ -178,12 +178,12 @@ jobs:
 
           echo "Combining Mac and Windows artifacts"
           mkdir -p combined-dist
-          
+
           # Copy Mac artifacts
           if [ -d "mac-dist" ]; then
             cp -r mac-dist/* combined-dist/
           fi
-          
+
           # Copy Windows artifacts  
           if [ -d "windows-dist" ]; then
             cp -r windows-dist/* combined-dist/

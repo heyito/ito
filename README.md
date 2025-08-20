@@ -132,11 +132,13 @@ bun run dev
 #### Windows
 
 **Required Setup:**
+
 1. **Install Rust with GNU toolchain**:
+
    ```bash
    # Install rustup (Rust installer)
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-   
+
    # Install the GNU toolchain (required for native components)
    rustup toolchain install stable-x86_64-pc-windows-gnu
    rustup target add x86_64-pc-windows-gnu

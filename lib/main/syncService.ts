@@ -13,6 +13,21 @@ import { DEFAULT_ADVANCED_SETTINGS } from '../constants/generated-defaults.js'
 
 const LAST_SYNCED_AT_KEY = 'lastSyncedAt'
 
+function getEnvNamespace(): string {
+  const baseUrl = (import.meta.env?.VITE_GRPC_BASE_URL as string) || ''
+  try {
+    const url = new URL(baseUrl)
+    return url.host || baseUrl || 'unknown'
+  } catch {
+    return baseUrl || 'unknown'
+  }
+}
+
+function getLastSyncedAtKey(userId: string): string {
+  const envNs = getEnvNamespace()
+  return `${LAST_SYNCED_AT_KEY}:${envNs}:${userId}`
+}
+
 export class SyncService {
   private isSyncing = false
   private syncInterval: NodeJS.Timeout | null = null
@@ -65,31 +80,35 @@ export class SyncService {
         return
       }
 
-      const lastSyncedAt = await KeyValueStore.get(LAST_SYNCED_AT_KEY)
+      const lastSyncedAtKey = getLastSyncedAtKey(user.id)
+      const lastSyncedAt = await KeyValueStore.get(lastSyncedAtKey)
 
       // =================================================================
       // PUSH LOCAL CHANGES
       // =================================================================
+      let processedChanges = 0
       if (lastSyncedAt) {
-        await this.pushNotes(lastSyncedAt)
-        await this.pushInteractions(lastSyncedAt)
-        await this.pushDictionaryItems(lastSyncedAt)
+        processedChanges += await this.pushNotes(lastSyncedAt)
+        processedChanges += await this.pushInteractions(lastSyncedAt)
+        processedChanges += await this.pushDictionaryItems(lastSyncedAt)
       }
 
       // =================================================================
       // PULL REMOTE CHANGES
       // =================================================================
-      await this.pullNotes(lastSyncedAt)
-      await this.pullInteractions(lastSyncedAt)
-      await this.pullDictionaryItems(lastSyncedAt)
+      processedChanges += await this.pullNotes(lastSyncedAt)
+      processedChanges += await this.pullInteractions(lastSyncedAt)
+      processedChanges += await this.pullDictionaryItems(lastSyncedAt)
 
       // =================================================================
       // SYNC ADVANCED SETTINGS
       // =================================================================
       await this.syncAdvancedSettings(lastSyncedAt)
 
-      const newSyncTimestamp = new Date().toISOString()
-      await KeyValueStore.set(LAST_SYNCED_AT_KEY, newSyncTimestamp)
+      if (processedChanges > 0) {
+        const newSyncTimestamp = new Date().toISOString()
+        await KeyValueStore.set(lastSyncedAtKey, newSyncTimestamp)
+      }
     } catch (error) {
       console.error('Sync cycle failed:', error)
     } finally {
@@ -97,7 +116,7 @@ export class SyncService {
     }
   }
 
-  private async pushNotes(lastSyncedAt: string) {
+  private async pushNotes(lastSyncedAt: string): Promise<number> {
     const modifiedNotes = await NotesTable.findModifiedSince(lastSyncedAt)
     if (modifiedNotes.length > 0) {
       for (const note of modifiedNotes) {
@@ -115,9 +134,10 @@ export class SyncService {
         }
       }
     }
+    return modifiedNotes.length
   }
 
-  private async pushInteractions(lastSyncedAt: string) {
+  private async pushInteractions(lastSyncedAt: string): Promise<number> {
     const modifiedInteractions =
       await InteractionsTable.findModifiedSince(lastSyncedAt)
     if (modifiedInteractions.length > 0) {
@@ -135,9 +155,10 @@ export class SyncService {
         }
       }
     }
+    return modifiedInteractions.length
   }
 
-  private async pushDictionaryItems(lastSyncedAt: string) {
+  private async pushDictionaryItems(lastSyncedAt: string): Promise<number> {
     const modifiedItems = await DictionaryTable.findModifiedSince(lastSyncedAt)
     if (modifiedItems.length > 0) {
       for (const item of modifiedItems) {
@@ -154,9 +175,10 @@ export class SyncService {
         }
       }
     }
+    return modifiedItems.length
   }
 
-  private async pullNotes(lastSyncedAt?: string) {
+  private async pullNotes(lastSyncedAt?: string): Promise<number> {
     const remoteNotes = await grpcClient.listNotesSince(lastSyncedAt)
     if (remoteNotes.length > 0) {
       for (const remoteNote of remoteNotes) {
@@ -176,9 +198,10 @@ export class SyncService {
         await NotesTable.upsert(localNote)
       }
     }
+    return remoteNotes.length
   }
 
-  private async pullInteractions(lastSyncedAt?: string) {
+  private async pullInteractions(lastSyncedAt?: string): Promise<number> {
     const remoteInteractions =
       await grpcClient.listInteractionsSince(lastSyncedAt)
     if (remoteInteractions.length > 0) {
@@ -220,9 +243,10 @@ export class SyncService {
         await InteractionsTable.upsert(localInteraction)
       }
     }
+    return remoteInteractions.length
   }
 
-  private async pullDictionaryItems(lastSyncedAt?: string) {
+  private async pullDictionaryItems(lastSyncedAt?: string): Promise<number> {
     const remoteItems = await grpcClient.listDictionaryItemsSince(lastSyncedAt)
     if (remoteItems.length > 0) {
       for (const remoteItem of remoteItems) {
@@ -242,6 +266,7 @@ export class SyncService {
         await DictionaryTable.upsert(localItem)
       }
     }
+    return remoteItems.length
   }
 
   private async syncAdvancedSettings(lastSyncedAt?: string) {

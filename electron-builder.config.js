@@ -24,6 +24,7 @@ module.exports = {
     '!tsconfig.node.json',
     '!tsconfig.web.json',
     '!native/**',
+    '!build-*.sh',
     {
       from: 'out',
       filter: ['**/*'],

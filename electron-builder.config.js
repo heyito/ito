@@ -45,8 +45,12 @@ module.exports = {
       to: 'binaries/text-writer',
     },
     {
-      from: 'native/active-application/target/${arch}-apple-darwin/release/text-writer',
+      from: 'native/active-application/target/${arch}-apple-darwin/release/active-application',
       to: 'binaries/active-application',
+    },
+    {
+      from: 'native/selected-text-reader/target/${arch}-apple-darwin/release/selected-text-reader',
+      to: 'binaries/selected-text-reader',
     },
   ],
   extraMetadata: {

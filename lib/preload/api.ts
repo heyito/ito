@@ -165,6 +165,14 @@ const api = {
       ipcRenderer.on('update-downloaded', callback),
     installUpdate: () => ipcRenderer.send('install-update'),
   },
+
+  // Selected Text Reader
+  selectedText: {
+    get: (options?: any) => ipcRenderer.invoke('get-selected-text', options),
+    getString: (maxLength?: number) => 
+      ipcRenderer.invoke('get-selected-text-string', maxLength),
+    hasSelected: () => ipcRenderer.invoke('has-selected-text'),
+  },
 }
 
 export default api

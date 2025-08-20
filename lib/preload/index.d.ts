@@ -19,6 +19,24 @@ interface UpdaterAPI {
   installUpdate: () => void
 }
 
+interface SelectedTextOptions {
+  format?: 'json' | 'text'
+  maxLength?: number
+}
+
+interface SelectedTextResult {
+  success: boolean
+  text: string | null
+  error: string | null
+  length: number
+}
+
+interface SelectedTextAPI {
+  get: (options?: SelectedTextOptions) => Promise<SelectedTextResult>
+  getString: (maxLength?: number) => Promise<string | null>
+  hasSelected: () => Promise<boolean>
+}
+
 declare global {
   interface Window {
     electron: ElectronAPI & {
@@ -79,6 +97,7 @@ declare global {
         accessToken: string | null,
       ) => Promise<void>
       deleteUserData: () => Promise<void>
+      selectedText: SelectedTextAPI
     }
   }
 }

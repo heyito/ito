@@ -23,6 +23,11 @@ import {
   getActivityMessage,
 } from './activityMessages'
 import { ItoMode } from '@/app/generated/ito_pb'
+import {
+  getSelectedText,
+  getSelectedTextString,
+} from '@/lib/media/selected-text-reader'
+import { SelectedTextTester } from '../../ui/selected-text-tester'
 
 // Interface for interaction statistics
 interface InteractionStats {
@@ -446,6 +451,7 @@ export default function HomeContent() {
             </h1>
           </div>
         </div>
+        <SelectedTextTester />
         <div className="flex gap-4 w-full mb-6">
           <div className="flex w-full items-center text-sm text-gray-700 gap-2">
             <StatCard

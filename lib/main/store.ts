@@ -117,7 +117,7 @@ export const defaultValues: AppStore = {
     isShortcutGloballyEnabled: false,
     keyboardShortcuts: [
       { id: crypto.randomUUID(), keys: ['fn'], mode: ItoMode.TRANSCRIBE },
-      { id: crypto.randomUUID(), keys: ['control'], mode: ItoMode.EDIT },
+      { id: crypto.randomUUID(), keys: ['control', 'fn'], mode: ItoMode.EDIT },
     ],
     firstName: '',
     lastName: '',

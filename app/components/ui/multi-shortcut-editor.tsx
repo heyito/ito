@@ -44,11 +44,14 @@ export default function MultiShortcutEditor({
   // editing state
   const [editingId, setEditingId] = useState<string | null>(null) // existing row id or "__new__"
   const [draftKeys, setDraftKeys] = useState<string[]>([])
+  const [error, setError] = useState<string>('')
+
   const cleanupRef = useRef<(() => void) | null>(null)
 
   const beginEditExisting = (row: KeyboardShortcutConfig) => {
     setEditingId(row.id)
     setDraftKeys([])
+    setError('')
 
     window.api.send(
       'electron-store-set',
@@ -58,12 +61,21 @@ export default function MultiShortcutEditor({
   }
 
   const addNew = () => {
-    addKeyboardShortcut([], mode)
+    const result = addKeyboardShortcut([], mode)
+    if (!result.success) {
+      setError(
+        result.error === 'duplicate-key-same-mode'
+          ? 'This key combination is already in use for this mode.'
+          : 'This key combination is already in use for a different mode.',
+      )
+      return
+    }
   }
 
   const stopEdit = () => {
     setEditingId(null)
     setDraftKeys([])
+    setError('')
 
     window.api.send(
       'electron-store-set',
@@ -76,7 +88,15 @@ export default function MultiShortcutEditor({
     if (!draftKeys.length) return
     if (original) {
       // update existing
-      updateKeyboardShortcut(original.id, draftKeys)
+      const result = updateKeyboardShortcut(original.id, draftKeys)
+      if (!result.success) {
+        setError(
+          result.error === 'duplicate-key-same-mode'
+            ? 'This key combination is already in use for this mode.'
+            : 'This key combination is already in use for a different mode.',
+        )
+        return
+      }
     } else {
       // add new
       const addMode = mode ?? ItoMode.TRANSCRIBE
@@ -156,6 +176,9 @@ export default function MultiShortcutEditor({
                 )}
               </div>
             </div>
+            {editingId === row.id && true && (
+              <div className="mt-1 text-xs text-red-500">{error}</div>
+            )}
           </div>
         )
       })}

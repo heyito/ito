@@ -7,6 +7,11 @@ import {
 import { STORE_KEYS } from '../../lib/constants/store-keys'
 import type { KeyboardShortcutConfig } from '@/lib/main/store'
 import { ItoMode } from '../generated/ito_pb'
+import {
+  normalizeChord,
+  validateShortcutForDuplicate,
+  type ShortcutResult,
+} from '../utils/keyboardShortcutManager'
 
 interface SettingsState {
   shareAnalytics: boolean
@@ -25,10 +30,10 @@ interface SettingsState {
   setInteractionSounds: (enabled: boolean) => void
   setMuteAudioWhenDictating: (enabled: boolean) => void
   setMicrophoneDeviceId: (deviceId: string, name: string) => void
-  addKeyboardShortcut: (shortcut: string[], mode: ItoMode) => void
+  addKeyboardShortcut: (shortcut: string[], mode: ItoMode) => ShortcutResult
   removeKeyboardShortcut: (shortcutId: string) => void
   getItoModeShortcuts: (mode: ItoMode) => KeyboardShortcutConfig[]
-  updateKeyboardShortcut(shortcutId: string, keys: string[]): void
+  updateKeyboardShortcut: (shortcutId: string, keys: string[]) => ShortcutResult
 }
 
 type SettingCategory = 'general' | 'audio&mic' | 'keyboard' | 'account'
@@ -48,14 +53,14 @@ const getInitialState = () => {
     microphoneName: storedSettings?.microphoneName ?? 'Default Microphone',
     keyboardShortcuts: storedSettings?.keyboardShortcuts ?? [
       {
-        keys: ['control'],
+        keys: ['control', 'fn'],
         mode: ItoMode.EDIT,
-        id: 'default-edit',
+        id: crypto.randomUUID(),
       },
       {
         keys: ['fn'],
         mode: ItoMode.TRANSCRIBE,
-        id: 'default-transcribe',
+        id: crypto.randomUUID(),
       },
     ],
     firstName: storedSettings?.firstName ?? '',
@@ -170,12 +175,25 @@ export const useSettingsStore = create<SettingsState>(set => {
       set(partialState)
       syncToStore(partialState)
     },
-    addKeyboardShortcut: (shortcut: string[], mode: ItoMode) => {
+    addKeyboardShortcut: (keys: string[], mode: ItoMode): ShortcutResult => {
       const currentShortcuts = useSettingsStore.getState().keyboardShortcuts
-      const newShortcuts = [
-        ...currentShortcuts,
-        { keys: shortcut, mode, id: crypto.randomUUID() },
-      ]
+
+      const newShortcut = {
+        keys: normalizeChord(keys),
+        mode,
+        id: crypto.randomUUID(),
+      }
+
+      const duplicateError = validateShortcutForDuplicate(
+        currentShortcuts,
+        newShortcut,
+        mode,
+      )
+      if (duplicateError) {
+        return duplicateError
+      }
+
+      const newShortcuts = [...currentShortcuts, newShortcut]
       const partialState = {
         keyboardShortcuts: newShortcuts,
       }
@@ -193,6 +211,7 @@ export const useSettingsStore = create<SettingsState>(set => {
       })
       set(partialState)
       syncToStore(partialState)
+      return { success: true }
     },
     removeKeyboardShortcut: (shortcutId: string) => {
       const currentShortcuts = useSettingsStore.getState().keyboardShortcuts
@@ -219,10 +238,36 @@ export const useSettingsStore = create<SettingsState>(set => {
       const { keyboardShortcuts } = useSettingsStore.getState()
       return keyboardShortcuts.filter(ks => ks.mode === mode)
     },
-    updateKeyboardShortcut: (shortcutId: string, keys: string[]) => {
-      const currentShortcuts = useSettingsStore.getState().keyboardShortcuts
+    updateKeyboardShortcut: (
+      shortcutId: string,
+      keys: string[],
+    ): ShortcutResult => {
+      const currentShortcuts = useSettingsStore.getState()
+        .keyboardShortcuts as KeyboardShortcutConfig[]
+
+      const shortcut = currentShortcuts.find(ks => ks.id === shortcutId)
+
+      if (!shortcut) {
+        return { success: false, error: 'not-found' }
+      }
+
+      const normalizedKeys = normalizeChord(keys)
+      const newShortcut = {
+        ...shortcut,
+        keys: normalizedKeys,
+      }
+
+      const duplicateError = validateShortcutForDuplicate(
+        currentShortcuts,
+        newShortcut,
+        shortcut.mode,
+      )
+      if (duplicateError) {
+        return duplicateError
+      }
+
       const updatedShortcuts = currentShortcuts.map(ks =>
-        ks.id === shortcutId ? { ...ks, keys } : ks,
+        ks.id === shortcutId ? { ...ks, keys: normalizedKeys } : ks,
       )
       const partialState = {
         keyboardShortcuts: updatedShortcuts,
@@ -241,6 +286,8 @@ export const useSettingsStore = create<SettingsState>(set => {
       })
       set(partialState)
       syncToStore(partialState)
+
+      return { success: true }
     },
   }
 })

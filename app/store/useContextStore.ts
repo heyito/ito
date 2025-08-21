@@ -17,7 +17,9 @@ interface ContextZustandStore {
 
 // Initialize from electron store
 const getInitialState = () => {
-  const storedContext = window.electron?.store?.get(STORE_KEYS.CONTEXT) as ContextStore | undefined
+  const storedContext = window.electron?.store?.get(STORE_KEYS.CONTEXT) as
+    | ContextStore
+    | undefined
 
   return {
     contextText: storedContext?.contextText || '',
@@ -29,7 +31,7 @@ const getInitialState = () => {
 // Sync to electron store
 const syncToStore = (state: Partial<ContextZustandStore>) => {
   const currentContext = window.electron.store.get(STORE_KEYS.CONTEXT) || {}
-  
+
   const updatedContext = {
     ...currentContext,
     contextText: state.contextText || currentContext.contextText || '',
@@ -43,7 +45,7 @@ export const useContextStore = create<ContextZustandStore>((set, get) => {
 
   return {
     ...initialState,
-    
+
     setContextText: (text: string) => {
       const partialState = { contextText: text }
       set(partialState)

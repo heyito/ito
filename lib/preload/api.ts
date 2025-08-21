@@ -169,7 +169,7 @@ const api = {
   // Selected Text Reader
   selectedText: {
     get: (options?: any) => ipcRenderer.invoke('get-selected-text', options),
-    getString: (maxLength?: number) => 
+    getString: (maxLength?: number) =>
       ipcRenderer.invoke('get-selected-text-string', maxLength),
     hasSelected: () => ipcRenderer.invoke('has-selected-text'),
   },

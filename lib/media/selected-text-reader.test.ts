@@ -1,5 +1,9 @@
 import { describe, test, expect, beforeAll } from 'bun:test'
-import { getSelectedText, getSelectedTextString, hasSelectedText } from './selected-text-reader'
+import {
+  getSelectedText,
+  getSelectedTextString,
+  hasSelectedText,
+} from './selected-text-reader'
 import { existsSync } from 'fs'
 import { getNativeBinaryPath } from './native-interface'
 
@@ -53,7 +57,7 @@ describe('Selected Text Reader', () => {
     const result = await getSelectedText({ format: 'json', maxLength: 10 })
     expect(result).toBeDefined()
     expect(result.success).toBeDefined()
-    
+
     // If text is found, it should not exceed max length
     if (result.text) {
       expect(result.text.length).toBeLessThanOrEqual(10)

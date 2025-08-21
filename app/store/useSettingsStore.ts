@@ -12,6 +12,7 @@ import {
   validateShortcutForDuplicate,
   type ShortcutResult,
 } from '../utils/keyboardShortcutManager'
+import { ITO_MODE_SHORTCUT_DEFAULTS } from '@/lib/constants/keyboard-defaults'
 
 interface SettingsState {
   shareAnalytics: boolean
@@ -53,12 +54,12 @@ const getInitialState = () => {
     microphoneName: storedSettings?.microphoneName ?? 'Default Microphone',
     keyboardShortcuts: storedSettings?.keyboardShortcuts ?? [
       {
-        keys: ['control', 'fn'],
+        keys: ITO_MODE_SHORTCUT_DEFAULTS[ItoMode.EDIT],
         mode: ItoMode.EDIT,
         id: crypto.randomUUID(),
       },
       {
-        keys: ['fn'],
+        keys: ITO_MODE_SHORTCUT_DEFAULTS[ItoMode.TRANSCRIBE],
         mode: ItoMode.TRANSCRIBE,
         id: crypto.randomUUID(),
       },

@@ -25,7 +25,10 @@ interface SettingsState {
   microphoneDeviceId: string
   microphoneName: string
   keyboardShortcuts: KeyboardShortcutConfig[]
-  hotkeySource: { transcribe: 'onboarding' | 'user'; edit: 'onboarding' | 'user' }
+  hotkeySource: {
+    transcribe: 'onboarding' | 'user'
+    edit: 'onboarding' | 'user'
+  }
   setShareAnalytics: (share: boolean) => void
   setLaunchAtLogin: (launch: boolean) => void
   setShowItoBarAlways: (show: boolean) => void
@@ -248,7 +251,10 @@ export const useSettingsStore = create<SettingsState>(set => {
 
       // Dedupe within same mode
       const dupInSameMode = currentShortcuts.some(
-        ks => ks.mode === mode && ks.id !== shortcutId && stringifyChord(ks.keys) === stringifyChord(normalized),
+        ks =>
+          ks.mode === mode &&
+          ks.id !== shortcutId &&
+          stringifyChord(ks.keys) === stringifyChord(normalized),
       )
       if (dupInSameMode) {
         analytics.track('hotkey_settings_add_attempt' as any, {
@@ -261,11 +267,12 @@ export const useSettingsStore = create<SettingsState>(set => {
       }
 
       // Cross-mode conflict
-      const otherModeChord = state
-        .keyboardShortcuts
+      const otherModeChord = state.keyboardShortcuts
         .filter(ks => ks.mode === otherMode)
         .map(ks => ks.keys)
-      const hasConflict = otherModeChord.some(ch => detectConflict(ch, normalized))
+      const hasConflict = otherModeChord.some(ch =>
+        detectConflict(ch, normalized),
+      )
       if (hasConflict) {
         analytics.track('hotkey_conflict_blocked' as any, {
           chord: normalized,
@@ -285,7 +292,11 @@ export const useSettingsStore = create<SettingsState>(set => {
       )
       const partialState = {
         keyboardShortcuts: updatedShortcuts,
-        hotkeySource: { ...state.hotkeySource, [mode === ItoMode.TRANSCRIBE ? 'transcribe' : 'edit']: 'user' as const },
+        hotkeySource: {
+          ...state.hotkeySource,
+          [mode === ItoMode.TRANSCRIBE ? 'transcribe' : 'edit']:
+            'user' as const,
+        },
       }
       // Track keyboard shortcut change
       analytics.trackSettings(ANALYTICS_EVENTS.KEYBOARD_SHORTCUTS_CHANGED, {
@@ -330,7 +341,9 @@ export const useSettingsStore = create<SettingsState>(set => {
 
       let otherUpdated = false
       let nextOtherShortcuts = otherShortcuts
-      const conflictWithOther = otherShortcuts.some(ks => detectConflict(ks.keys, normalized))
+      const conflictWithOther = otherShortcuts.some(ks =>
+        detectConflict(ks.keys, normalized),
+      )
       if (conflictWithOther) {
         const disallowed = [normalized]
         const fallback = pickFallback(platform, disallowed)
@@ -359,7 +372,7 @@ export const useSettingsStore = create<SettingsState>(set => {
       }
 
       const rebuilt = [
-        ...filtered.filter(ks => ks.mode === otherMode ? false : true),
+        ...filtered.filter(ks => (ks.mode === otherMode ? false : true)),
         // Put enforced other mode shortcuts
         ...nextOtherShortcuts,
         // Finally our single hotkey for current mode

@@ -13,7 +13,8 @@ function sortKeysCanonical(keys: string[]): string[] {
     else nonModifiers.push(key)
   }
   modifiers.sort(
-    (a, b) => MODIFIER_ORDER.indexOf(a as any) - MODIFIER_ORDER.indexOf(b as any),
+    (a, b) =>
+      MODIFIER_ORDER.indexOf(a as any) - MODIFIER_ORDER.indexOf(b as any),
   )
   nonModifiers.sort()
   return [...modifiers, ...nonModifiers]
@@ -34,7 +35,10 @@ export function detectConflict(a: string[], b: string[]): boolean {
   return chordsEqual(a, b)
 }
 
-export function pickFallback(platform: Platform, disallowed: string[][] = []): string[] {
+export function pickFallback(
+  platform: Platform,
+  disallowed: string[][] = [],
+): string[] {
   const normalizedDisallowed = disallowed.map(normalizeChord)
   const isAllowed = (candidate: string[]) =>
     !normalizedDisallowed.some(c => chordsEqual(c, candidate))
@@ -86,10 +90,9 @@ export function dedupeWithinMode<T extends { keys: string[]; mode: ItoMode }>(
   return result
 }
 
-export function resolveCrossModeConflicts<T extends { keys: string[]; mode: ItoMode }>(
-  rows: T[],
-  platform: Platform,
-): T[] {
+export function resolveCrossModeConflicts<
+  T extends { keys: string[]; mode: ItoMode },
+>(rows: T[], platform: Platform): T[] {
   // Build maps of chords by mode
   const byMode = new Map<ItoMode, Map<string, T>>()
   for (const row of rows) {
@@ -133,5 +136,3 @@ export async function detectPlatform(): Promise<Platform> {
   if (ua.includes('linux')) return 'linux'
   return 'unknown'
 }
-
-

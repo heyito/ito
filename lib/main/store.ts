@@ -30,7 +30,10 @@ export interface SettingsStore {
   microphoneName: string
   isShortcutGloballyEnabled: boolean
   keyboardShortcuts: KeyboardShortcutConfig[]
-  hotkeySource?: { transcribe: 'onboarding' | 'user'; edit: 'onboarding' | 'user' }
+  hotkeySource?: {
+    transcribe: 'onboarding' | 'user'
+    edit: 'onboarding' | 'user'
+  }
   firstName: string
   lastName: string
   email: string
@@ -194,8 +197,7 @@ const migrations: Migration[] = [
       const platform = process.platform as 'darwin' | 'win32' | 'linux'
 
       const norm = (keys: string[]) =>
-        [...new Set(keys.map(k => k.toLowerCase()))]
-          .sort()
+        [...new Set(keys.map(k => k.toLowerCase()))].sort()
       const keyOf = (keys: string[]) => norm(keys).join('+')
 
       // Dedupe within each mode
@@ -206,7 +208,8 @@ const migrations: Migration[] = [
       }
       for (const row of shortcuts) {
         const k = keyOf(row.keys)
-        const map = byMode[row.mode] ?? new Map<string, KeyboardShortcutConfig>()
+        const map =
+          byMode[row.mode] ?? new Map<string, KeyboardShortcutConfig>()
         if (!map.has(k)) map.set(k, row)
         else dedupedCount += 1
         byMode[row.mode] = map
@@ -225,7 +228,8 @@ const migrations: Migration[] = [
 
       const pickFallback = (disallowed: string[]): string[] => {
         const disallowKeys = new Set(disallowed)
-        const allow = (candidate: string[]) => !disallowKeys.has(keyOf(candidate))
+        const allow = (candidate: string[]) =>
+          !disallowKeys.has(keyOf(candidate))
         if (platform === 'darwin') {
           const fn = ['fn']
           if (allow(fn)) return fn
@@ -241,7 +245,8 @@ const migrations: Migration[] = [
 
       for (const chord of Array.from(tMap.keys())) {
         if (eMap.has(chord)) {
-          const keepTranscribe = source.transcribe === 'onboarding' || source.edit === 'user'
+          const keepTranscribe =
+            source.transcribe === 'onboarding' || source.edit === 'user'
           // Move EDIT to fallback
           const editRow = eMap.get(chord)!
           const fallback = pickFallback([chord])

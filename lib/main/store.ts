@@ -69,12 +69,17 @@ export interface AdvancedSettings {
   llm: LlmSettings
 }
 
+export interface ContextStore {
+  contextText: string
+}
+
 interface AppStore {
   main: MainStore
   onboarding: OnboardingStore
   settings: SettingsStore
   auth: AuthStore
   advancedSettings: AdvancedSettings
+  context: ContextStore
   openMic: boolean
   selectedAudioInput: string | null
   interactionSounds: boolean
@@ -138,6 +143,9 @@ export const defaultValues: AppStore = {
       noSpeechThreshold: DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold,
       lowQualityThreshold: DEFAULT_ADVANCED_SETTINGS.lowQualityThreshold,
     },
+  },
+  context: {
+    contextText: '',
   },
   openMic: false,
   selectedAudioInput: null,

@@ -31,7 +31,7 @@ import {
 } from '../../db/models.js'
 import { ConnectError, Code } from '@connectrpc/connect'
 import { kUser } from '../../auth/userContext.js'
-import { WindowContext } from './types.js'
+import { ItoContext } from './types.js'
 import { HeaderValidator } from '../../validation/HeaderValidator.js'
 import { errorToProtobuf } from '../../clients/errors.js'
 import { ClientProvider } from '../../clients/providers.js'
@@ -238,8 +238,9 @@ export default (router: ConnectRouter) => {
         const windowTitle = context.requestHeader.get('window-title') || ''
         const appName = context.requestHeader.get('app-name') || ''
         const mode = getItoMode(context.requestHeader.get('mode'))
+        const contextText = context.requestHeader.get('context-text') || ''
 
-        const windowContext: WindowContext = { windowTitle, appName }
+        const windowContext: ItoContext = { windowTitle, appName, contextText }
 
         const detectedMode = mode || detectItoMode(transcript)
         const preContextPrompt = getPromptForMode(

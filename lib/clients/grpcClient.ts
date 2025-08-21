@@ -39,6 +39,7 @@ import { ensureValidTokens } from '../auth/events'
 import { Auth0Config } from '../auth/config'
 import { getActiveWindow } from '../media/active-application'
 import { traceLogger } from '../main/traceLogger'
+import { contextService } from '../media/context-service'
 
 class GrpcClient {
   private client: ReturnType<typeof createClient<typeof ItoService>>
@@ -158,7 +159,18 @@ class GrpcClient {
         advancedSettings.llm.lowQualityThreshold.toString(),
       )
 
-      headers.set('mode', mode)
+      headers.set('mode', mode.toString())
+
+      // Add context text from captured selected text
+      const contextText = contextService.getCurrentContext()
+      if (contextText && contextText.trim().length > 0) {
+        headers.set('context-text', flattenHeaderValue(contextText))
+        console.log(
+          '[gRPC Client] Adding context text to headers:',
+          contextText.length,
+          'characters',
+        )
+      }
     } catch (error) {
       console.error(
         'Failed to fetch vocabulary/settings for transcription:',

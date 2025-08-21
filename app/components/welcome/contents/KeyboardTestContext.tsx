@@ -6,8 +6,13 @@ import { ItoMode } from '@/app/generated/ito_pb'
 export default function KeyboardTestContent() {
   const { incrementOnboardingStep, decrementOnboardingStep } =
     useOnboardingStore()
-  const { getItoModeShortcuts, addKeyboardShortcut } = useSettingsStore()
-  const keyboardShortcut = getItoModeShortcuts(ItoMode.TRANSCRIBE)[0].keys
+  const keyboardShortcut = useSettingsStore(state => {
+    const rows = state.keyboardShortcuts.filter(
+      ks => ks.mode === ItoMode.TRANSCRIBE,
+    )
+    return rows[0]?.keys ?? []
+  })
+  const { setOnboardingHotkey } = useSettingsStore()
 
   return (
     <div className="flex flex-row h-full w-full bg-background">
@@ -37,7 +42,7 @@ export default function KeyboardTestContent() {
       <div className="flex w-[55%] items-center justify-center bg-gradient-to-b from-purple-50/10 to-purple-100 border-l-2 border-purple-100">
         <KeyboardShortcutEditor
           shortcut={keyboardShortcut}
-          onShortcutChange={addKeyboardShortcut}
+          onShortcutChange={setOnboardingHotkey}
           keySize={80}
           editButtonText="No, change shortcut"
           confirmButtonText="Yes"

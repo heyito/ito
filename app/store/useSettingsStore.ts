@@ -7,6 +7,13 @@ import {
 import { STORE_KEYS } from '../../lib/constants/store-keys'
 import type { KeyboardShortcutConfig } from '@/lib/main/store'
 import { ItoMode } from '../generated/ito_pb'
+import {
+  detectConflict,
+  getOtherMode,
+  normalizeChord,
+  pickFallback,
+  stringifyChord,
+} from '@/app/utils/hotkeysManager'
 
 interface SettingsState {
   shareAnalytics: boolean
@@ -18,6 +25,7 @@ interface SettingsState {
   microphoneDeviceId: string
   microphoneName: string
   keyboardShortcuts: KeyboardShortcutConfig[]
+  hotkeySource: { transcribe: 'onboarding' | 'user'; edit: 'onboarding' | 'user' }
   setShareAnalytics: (share: boolean) => void
   setLaunchAtLogin: (launch: boolean) => void
   setShowItoBarAlways: (show: boolean) => void
@@ -28,7 +36,11 @@ interface SettingsState {
   addKeyboardShortcut: (shortcut: string[], mode: ItoMode) => void
   removeKeyboardShortcut: (shortcutId: string) => void
   getItoModeShortcuts: (mode: ItoMode) => KeyboardShortcutConfig[]
-  updateKeyboardShortcut(shortcutId: string, keys: string[]): void
+  updateKeyboardShortcut(
+    shortcutId: string,
+    keys: string[],
+  ): { allowed: boolean; reason?: string }
+  setOnboardingHotkey: (keys: string[], mode: ItoMode) => void
 }
 
 type SettingCategory = 'general' | 'audio&mic' | 'keyboard' | 'account'
@@ -58,6 +70,9 @@ const getInitialState = () => {
         id: 'default-transcribe',
       },
     ],
+    hotkeySource:
+      storedSettings?.hotkeySource ??
+      ({ transcribe: 'onboarding', edit: 'onboarding' } as const),
     firstName: storedSettings?.firstName ?? '',
     lastName: storedSettings?.lastName ?? '',
     email: storedSettings?.email ?? '',
@@ -220,12 +235,57 @@ export const useSettingsStore = create<SettingsState>(set => {
       return keyboardShortcuts.filter(ks => ks.mode === mode)
     },
     updateKeyboardShortcut: (shortcutId: string, keys: string[]) => {
-      const currentShortcuts = useSettingsStore.getState().keyboardShortcuts
+      // Normalize keys
+      const normalized = normalizeChord(keys)
+      const state = useSettingsStore.getState()
+      const currentShortcuts = state.keyboardShortcuts
+      const currentRow = currentShortcuts.find(ks => ks.id === shortcutId)
+      if (!currentRow) {
+        return { allowed: false, reason: 'not_found' }
+      }
+      const mode = currentRow.mode
+      const otherMode = getOtherMode(mode)
+
+      // Dedupe within same mode
+      const dupInSameMode = currentShortcuts.some(
+        ks => ks.mode === mode && ks.id !== shortcutId && stringifyChord(ks.keys) === stringifyChord(normalized),
+      )
+      if (dupInSameMode) {
+        analytics.track('hotkey_settings_add_attempt' as any, {
+          mode,
+          chord: normalized,
+          result: 'blocked',
+          reason: 'duplicate_within_mode',
+        })
+        return { allowed: false, reason: 'duplicate_within_mode' }
+      }
+
+      // Cross-mode conflict
+      const otherModeChord = state
+        .keyboardShortcuts
+        .filter(ks => ks.mode === otherMode)
+        .map(ks => ks.keys)
+      const hasConflict = otherModeChord.some(ch => detectConflict(ch, normalized))
+      if (hasConflict) {
+        analytics.track('hotkey_conflict_blocked' as any, {
+          chord: normalized,
+          modes: [mode, otherMode],
+        })
+        analytics.track('hotkey_settings_add_attempt' as any, {
+          mode,
+          chord: normalized,
+          result: 'blocked',
+          reason: 'cross_mode_conflict',
+        })
+        return { allowed: false, reason: 'cross_mode_conflict' }
+      }
+
       const updatedShortcuts = currentShortcuts.map(ks =>
-        ks.id === shortcutId ? { ...ks, keys } : ks,
+        ks.id === shortcutId ? { ...ks, keys: normalized } : ks,
       )
       const partialState = {
         keyboardShortcuts: updatedShortcuts,
+        hotkeySource: { ...state.hotkeySource, [mode === ItoMode.TRANSCRIBE ? 'transcribe' : 'edit']: 'user' as const },
       }
       // Track keyboard shortcut change
       analytics.trackSettings(ANALYTICS_EVENTS.KEYBOARD_SHORTCUTS_CHANGED, {
@@ -235,10 +295,98 @@ export const useSettingsStore = create<SettingsState>(set => {
         setting_category: 'input',
       })
 
+      analytics.track('hotkey_settings_add_attempt' as any, {
+        mode,
+        chord: normalized,
+        result: 'allowed',
+      })
+
       // Update user properties
       analytics.updateUserProperties({
         keyboard_shortcuts: updatedShortcuts.map(ks => JSON.stringify(ks)),
       })
+      set(partialState)
+      syncToStore(partialState)
+      return { allowed: true }
+    },
+    setOnboardingHotkey: (keys: string[], mode: ItoMode) => {
+      const state = useSettingsStore.getState()
+      const normalized = normalizeChord(keys)
+      const platform: 'darwin' | 'win32' | 'linux' | 'unknown' =
+        navigator?.platform?.toLowerCase().includes('mac')
+          ? 'darwin'
+          : navigator?.platform?.toLowerCase().includes('win')
+            ? 'win32'
+            : navigator?.platform?.toLowerCase().includes('linux')
+              ? 'linux'
+              : 'unknown'
+
+      // Replace any existing onboarding-set hotkey for this mode: we will keep exactly one for the mode
+      const filtered = state.keyboardShortcuts.filter(ks => ks.mode !== mode)
+
+      // Ensure other mode does not conflict
+      const otherMode = getOtherMode(mode)
+      const otherShortcuts = filtered.filter(ks => ks.mode === otherMode)
+
+      let otherUpdated = false
+      let nextOtherShortcuts = otherShortcuts
+      const conflictWithOther = otherShortcuts.some(ks => detectConflict(ks.keys, normalized))
+      if (conflictWithOther) {
+        const disallowed = [normalized]
+        const fallback = pickFallback(platform, disallowed)
+        if (otherShortcuts.length === 0) {
+          nextOtherShortcuts = [
+            { id: crypto.randomUUID(), mode: otherMode, keys: fallback },
+          ]
+        } else {
+          // Force the first other mode shortcut to fallback and drop any duplicates
+          const first = { ...otherShortcuts[0], keys: fallback }
+          nextOtherShortcuts = [first]
+        }
+        otherUpdated = true
+      } else {
+        // Keep exactly one for other mode as well during onboarding
+        if (otherShortcuts.length > 1) {
+          nextOtherShortcuts = [otherShortcuts[0]]
+          otherUpdated = true
+        }
+      }
+
+      const newRow: KeyboardShortcutConfig = {
+        id: crypto.randomUUID(),
+        mode,
+        keys: normalized,
+      }
+
+      const rebuilt = [
+        ...filtered.filter(ks => ks.mode === otherMode ? false : true),
+        // Put enforced other mode shortcuts
+        ...nextOtherShortcuts,
+        // Finally our single hotkey for current mode
+        newRow,
+      ]
+
+      const source = { ...state.hotkeySource }
+      if (mode === ItoMode.TRANSCRIBE) source.transcribe = 'onboarding'
+      else source.edit = 'onboarding'
+      // If we auto-adjusted the other mode, mark it onboarding too
+      if (otherUpdated) {
+        if (otherMode === ItoMode.TRANSCRIBE) source.transcribe = 'onboarding'
+        else source.edit = 'onboarding'
+      }
+
+      const partialState = {
+        keyboardShortcuts: rebuilt,
+        hotkeySource: source,
+      }
+
+      analytics.track('hotkey_onboarding_set' as any, {
+        mode,
+        chord: normalized,
+        platform,
+        auto_adjusted: otherUpdated,
+      })
+
       set(partialState)
       syncToStore(partialState)
     },

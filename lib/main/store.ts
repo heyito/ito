@@ -30,6 +30,7 @@ export interface SettingsStore {
   microphoneName: string
   isShortcutGloballyEnabled: boolean
   keyboardShortcuts: KeyboardShortcutConfig[]
+  hotkeySource?: { transcribe: 'onboarding' | 'user'; edit: 'onboarding' | 'user' }
   firstName: string
   lastName: string
   email: string
@@ -119,6 +120,7 @@ export const defaultValues: AppStore = {
       { id: crypto.randomUUID(), keys: ['fn'], mode: ItoMode.TRANSCRIBE },
       { id: crypto.randomUUID(), keys: ['control'], mode: ItoMode.EDIT },
     ],
+    hotkeySource: { transcribe: 'onboarding', edit: 'onboarding' },
     firstName: '',
     lastName: '',
     email: '',
@@ -178,6 +180,95 @@ const migrations: Migration[] = [
         delete settings.keyboardShortcut
         s.set('settings', settings)
       }
+    },
+  },
+  {
+    id: '2025-09-01-hotkey-dedupe-and-conflicts',
+    run: s => {
+      const settings = (s.get('settings') || {}) as SettingsStore
+      const shortcuts = Array.isArray(settings.keyboardShortcuts)
+        ? [...settings.keyboardShortcuts]
+        : []
+      if (shortcuts.length === 0) return
+
+      const platform = process.platform as 'darwin' | 'win32' | 'linux'
+
+      const norm = (keys: string[]) =>
+        [...new Set(keys.map(k => k.toLowerCase()))]
+          .sort()
+      const keyOf = (keys: string[]) => norm(keys).join('+')
+
+      // Dedupe within each mode
+      let dedupedCount = 0
+      const byMode: Record<number, Map<string, KeyboardShortcutConfig>> = {
+        [ItoMode.TRANSCRIBE]: new Map(),
+        [ItoMode.EDIT]: new Map(),
+      }
+      for (const row of shortcuts) {
+        const k = keyOf(row.keys)
+        const map = byMode[row.mode] ?? new Map<string, KeyboardShortcutConfig>()
+        if (!map.has(k)) map.set(k, row)
+        else dedupedCount += 1
+        byMode[row.mode] = map
+      }
+
+      // Resolve cross-mode conflicts: prefer keeping TRANSCRIBE as-is, adjust EDIT
+      let conflictsResolved = 0
+      let fallbacksUsed = 0
+      const tMap = byMode[ItoMode.TRANSCRIBE]
+      const eMap = byMode[ItoMode.EDIT]
+
+      const source = settings.hotkeySource ?? {
+        transcribe: 'onboarding',
+        edit: 'onboarding',
+      }
+
+      const pickFallback = (disallowed: string[]): string[] => {
+        const disallowKeys = new Set(disallowed)
+        const allow = (candidate: string[]) => !disallowKeys.has(keyOf(candidate))
+        if (platform === 'darwin') {
+          const fn = ['fn']
+          if (allow(fn)) return fn
+        }
+        const altSpace = ['option', 'space']
+        if (allow(altSpace)) return altSpace
+        const ctrlSpace = ['control', 'space']
+        if (allow(ctrlSpace)) return ctrlSpace
+        const shiftSpace = ['shift', 'space']
+        if (allow(shiftSpace)) return shiftSpace
+        return []
+      }
+
+      for (const chord of Array.from(tMap.keys())) {
+        if (eMap.has(chord)) {
+          const keepTranscribe = source.transcribe === 'onboarding' || source.edit === 'user'
+          // Move EDIT to fallback
+          const editRow = eMap.get(chord)!
+          const fallback = pickFallback([chord])
+          editRow.keys = fallback
+          eMap.delete(chord)
+          eMap.set(keyOf(fallback), editRow)
+          conflictsResolved += 1
+          if (fallback.length > 0) fallbacksUsed += 1
+        }
+      }
+
+      const rebuilt = [
+        ...Array.from(tMap.values()),
+        ...Array.from(eMap.values()),
+      ]
+
+      s.set('settings.keyboardShortcuts', rebuilt)
+      if (!settings.hotkeySource) {
+        s.set('settings.hotkeySource', source)
+      }
+
+      console.info('hotkey_migration', {
+        deduped_count: dedupedCount,
+        conflicts_resolved: conflictsResolved,
+        fallbacks_used: fallbacksUsed,
+        platform,
+      })
     },
   },
 ]

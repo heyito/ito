@@ -44,11 +44,13 @@ export default function MultiShortcutEditor({
   // editing state
   const [editingId, setEditingId] = useState<string | null>(null) // existing row id or "__new__"
   const [draftKeys, setDraftKeys] = useState<string[]>([])
+  const [error, setError] = useState<string>('')
   const cleanupRef = useRef<(() => void) | null>(null)
 
   const beginEditExisting = (row: KeyboardShortcutConfig) => {
     setEditingId(row.id)
     setDraftKeys([])
+    setError('')
 
     window.api.send(
       'electron-store-set',
@@ -64,6 +66,7 @@ export default function MultiShortcutEditor({
   const stopEdit = () => {
     setEditingId(null)
     setDraftKeys([])
+    setError('')
 
     window.api.send(
       'electron-store-set',
@@ -76,7 +79,17 @@ export default function MultiShortcutEditor({
     if (!draftKeys.length) return
     if (original) {
       // update existing
-      updateKeyboardShortcut(original.id, draftKeys)
+      const res = updateKeyboardShortcut(original.id, draftKeys)
+      if (!res.allowed) {
+        setError(
+          res.reason === 'duplicate_within_mode'
+            ? 'Duplicate shortcut for this mode.'
+            : res.reason === 'cross_mode_conflict'
+              ? 'This shortcut is already used by the other mode.'
+              : 'Could not save shortcut.',
+        )
+        return
+      }
     } else {
       // add new
       const addMode = mode ?? ItoMode.TRANSCRIBE
@@ -156,6 +169,9 @@ export default function MultiShortcutEditor({
                 )}
               </div>
             </div>
+            {editingId === row.id && error && (
+              <div className="mt-1 text-xs text-red-500">{error}</div>
+            )}
           </div>
         )
       })}

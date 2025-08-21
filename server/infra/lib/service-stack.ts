@@ -213,7 +213,7 @@ export class ServiceStack extends Stack {
     })
 
     const logBucket = new Bucket(this, 'ItoAlbLogsBucket', {
-      bucketName: `${stageName}-ito-alb-logs`,
+      bucketName: `${stageName}-${this.account}-${this.region}-ito-alb-logs`,
       removalPolicy: isDev(stageName)
         ? RemovalPolicy.DESTROY
         : RemovalPolicy.RETAIN,
@@ -224,7 +224,7 @@ export class ServiceStack extends Stack {
 
     // Firehose backup bucket
     const firehoseBackupBucket = new Bucket(this, 'ItoFirehoseBackupBucket', {
-      bucketName: `${stageName}-ito-firehose-bucket`,
+      bucketName: `${stageName}-${this.account}-${this.region}-ito-firehose-bucket`,
       removalPolicy: isDev(stageName)
         ? RemovalPolicy.DESTROY
         : RemovalPolicy.RETAIN,

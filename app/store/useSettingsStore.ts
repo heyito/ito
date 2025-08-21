@@ -7,12 +7,13 @@ import {
 import { STORE_KEYS } from '../../lib/constants/store-keys'
 import type { KeyboardShortcutConfig } from '@/lib/main/store'
 import { ItoMode } from '../generated/ito_pb'
+
+import { ITO_MODE_SHORTCUT_DEFAULTS } from '@/lib/constants/keyboard-defaults'
 import {
   normalizeChord,
+  ShortcutResult,
   validateShortcutForDuplicate,
-  type ShortcutResult,
-} from '../utils/keyboardShortcutManager'
-import { ITO_MODE_SHORTCUT_DEFAULTS } from '@/lib/constants/keyboard-defaults'
+} from '../utils/keyboard'
 
 interface SettingsState {
   shareAnalytics: boolean
@@ -31,7 +32,7 @@ interface SettingsState {
   setInteractionSounds: (enabled: boolean) => void
   setMuteAudioWhenDictating: (enabled: boolean) => void
   setMicrophoneDeviceId: (deviceId: string, name: string) => void
-  addKeyboardShortcut: (shortcut: string[], mode: ItoMode) => ShortcutResult
+  createKeyboardShortcut: (mode: ItoMode) => ShortcutResult
   removeKeyboardShortcut: (shortcutId: string) => void
   getItoModeShortcuts: (mode: ItoMode) => KeyboardShortcutConfig[]
   updateKeyboardShortcut: (shortcutId: string, keys: string[]) => ShortcutResult
@@ -176,22 +177,13 @@ export const useSettingsStore = create<SettingsState>(set => {
       set(partialState)
       syncToStore(partialState)
     },
-    addKeyboardShortcut: (keys: string[], mode: ItoMode): ShortcutResult => {
+    createKeyboardShortcut: (mode: ItoMode): ShortcutResult => {
       const currentShortcuts = useSettingsStore.getState().keyboardShortcuts
 
       const newShortcut = {
-        keys: normalizeChord(keys),
+        keys: [],
         mode,
         id: crypto.randomUUID(),
-      }
-
-      const duplicateError = validateShortcutForDuplicate(
-        currentShortcuts,
-        newShortcut,
-        mode,
-      )
-      if (duplicateError) {
-        return duplicateError
       }
 
       const newShortcuts = [...currentShortcuts, newShortcut]

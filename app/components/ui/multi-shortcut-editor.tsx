@@ -5,6 +5,7 @@ import { ItoMode } from '@/app/generated/ito_pb'
 import { useSettingsStore } from '@/app/store/useSettingsStore'
 import { Check, Pencil } from '@mynaui/icons-react'
 import { cx } from 'class-variance-authority'
+import { ShortcutError } from '@/app/utils/keyboardShortcutManager'
 
 export interface KeyboardShortcutConfig {
   id: string
@@ -29,7 +30,7 @@ export default function MultiShortcutEditor({
   maxShortcutsPerMode = 5,
 }: Props) {
   const {
-    addKeyboardShortcut,
+    createKeyboardShortcut,
     removeKeyboardShortcut,
     updateKeyboardShortcut,
   } = useSettingsStore()
@@ -60,14 +61,23 @@ export default function MultiShortcutEditor({
     )
   }
 
+  const getErrorMessage = (error: ShortcutError) => {
+    switch (error) {
+      case 'duplicate-key-same-mode':
+        return 'This key combination is already in use for this mode.'
+      case 'duplicate-key-diff-mode':
+        return 'This key combination is already in use for a different mode.'
+      case 'not-found':
+        return 'The specified shortcut was not found.'
+      default:
+        return 'An unknown error occurred.'
+    }
+  }
+
   const addNew = () => {
-    const result = addKeyboardShortcut([], mode)
-    if (!result.success) {
-      setError(
-        result.error === 'duplicate-key-same-mode'
-          ? 'This key combination is already in use for this mode.'
-          : 'This key combination is already in use for a different mode.',
-      )
+    const result = createKeyboardShortcut(mode)
+    if (!result.success && result.error) {
+      setError(getErrorMessage(result.error))
       return
     }
   }
@@ -84,24 +94,20 @@ export default function MultiShortcutEditor({
     )
   }
 
-  const saveEdit = (original?: KeyboardShortcutConfig) => {
+  const saveEdit = (original: KeyboardShortcutConfig) => {
     if (!draftKeys.length) return
-    if (original) {
-      // update existing
-      const result = updateKeyboardShortcut(original.id, draftKeys)
-      if (!result.success) {
-        setError(
-          result.error === 'duplicate-key-same-mode'
-            ? 'This key combination is already in use for this mode.'
-            : 'This key combination is already in use for a different mode.',
-        )
-        return
-      }
-    } else {
-      // add new
-      const addMode = mode ?? ItoMode.TRANSCRIBE
-      addKeyboardShortcut(draftKeys, addMode)
+
+    // update existing
+    const result = updateKeyboardShortcut(original.id, draftKeys)
+    if (!result.success) {
+      setError(
+        result.error === 'duplicate-key-same-mode'
+          ? 'This key combination is already in use for this mode.'
+          : 'This key combination is already in use for a different mode.',
+      )
+      return
     }
+
     stopEdit()
   }
 

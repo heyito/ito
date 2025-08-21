@@ -73,14 +73,12 @@ export function validateShortcutForDuplicate(
   expectedMode: ItoMode,
 ): ShortcutResult | null {
   const duplicateMode = isDuplicateShortcut(currentShortcuts, shortcutToCheck)
-  
+
   if (duplicateMode !== undefined) {
     const sameMode = duplicateMode === expectedMode
     return {
       success: false,
-      error: sameMode
-        ? 'duplicate-key-same-mode'
-        : 'duplicate-key-diff-mode',
+      error: sameMode ? 'duplicate-key-same-mode' : 'duplicate-key-diff-mode',
     }
   }
 

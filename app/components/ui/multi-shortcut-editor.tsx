@@ -176,7 +176,7 @@ export default function MultiShortcutEditor({
                 )}
               </div>
             </div>
-            {editingId === row.id && true && (
+            {editingId === row.id && error && (
               <div className="mt-1 text-xs text-red-500">{error}</div>
             )}
           </div>

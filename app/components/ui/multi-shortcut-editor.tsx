@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import KeyboardKey from '@/app/components/ui/keyboard-key'
-import { normalizeKeyEvent } from '@/app/utils/keyboard'
+import { normalizeKeyEvent, ShortcutError } from '@/app/utils/keyboard'
 import { ItoMode } from '@/app/generated/ito_pb'
 import { useSettingsStore } from '@/app/store/useSettingsStore'
 import { Check, Pencil } from '@mynaui/icons-react'
 import { cx } from 'class-variance-authority'
-import { ShortcutError } from '@/app/utils/keyboardShortcutManager'
 
 export interface KeyboardShortcutConfig {
   id: string
@@ -99,12 +98,8 @@ export default function MultiShortcutEditor({
 
     // update existing
     const result = updateKeyboardShortcut(original.id, draftKeys)
-    if (!result.success) {
-      setError(
-        result.error === 'duplicate-key-same-mode'
-          ? 'This key combination is already in use for this mode.'
-          : 'This key combination is already in use for a different mode.',
-      )
+    if (!result.success && result.error) {
+      setError(getErrorMessage(result.error))
       return
     }
 

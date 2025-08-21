@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import KeyboardKey from '@/app/components/ui/keyboard-key'
-import { normalizeKeyEvent } from '@/app/utils/keyboard'
+import { normalizeKeyEvent, ShortcutError } from '@/app/utils/keyboard'
 import { ItoMode } from '@/app/generated/ito_pb'
 import { useSettingsStore } from '@/app/store/useSettingsStore'
 import { Check, Pencil } from '@mynaui/icons-react'
@@ -29,7 +29,7 @@ export default function MultiShortcutEditor({
   maxShortcutsPerMode = 5,
 }: Props) {
   const {
-    addKeyboardShortcut,
+    createKeyboardShortcut,
     removeKeyboardShortcut,
     updateKeyboardShortcut,
   } = useSettingsStore()
@@ -44,11 +44,14 @@ export default function MultiShortcutEditor({
   // editing state
   const [editingId, setEditingId] = useState<string | null>(null) // existing row id or "__new__"
   const [draftKeys, setDraftKeys] = useState<string[]>([])
+  const [error, setError] = useState<string>('')
+
   const cleanupRef = useRef<(() => void) | null>(null)
 
   const beginEditExisting = (row: KeyboardShortcutConfig) => {
     setEditingId(row.id)
     setDraftKeys([])
+    setError('')
 
     window.api.send(
       'electron-store-set',
@@ -57,13 +60,31 @@ export default function MultiShortcutEditor({
     )
   }
 
+  const getErrorMessage = (error: ShortcutError) => {
+    switch (error) {
+      case 'duplicate-key-same-mode':
+        return 'This key combination is already in use for this mode.'
+      case 'duplicate-key-diff-mode':
+        return 'This key combination is already in use for a different mode.'
+      case 'not-found':
+        return 'The specified shortcut was not found.'
+      default:
+        return 'An unknown error occurred.'
+    }
+  }
+
   const addNew = () => {
-    addKeyboardShortcut([], mode)
+    const result = createKeyboardShortcut(mode)
+    if (!result.success && result.error) {
+      setError(getErrorMessage(result.error))
+      return
+    }
   }
 
   const stopEdit = () => {
     setEditingId(null)
     setDraftKeys([])
+    setError('')
 
     window.api.send(
       'electron-store-set',
@@ -72,16 +93,16 @@ export default function MultiShortcutEditor({
     )
   }
 
-  const saveEdit = (original?: KeyboardShortcutConfig) => {
+  const saveEdit = (original: KeyboardShortcutConfig) => {
     if (!draftKeys.length) return
-    if (original) {
-      // update existing
-      updateKeyboardShortcut(original.id, draftKeys)
-    } else {
-      // add new
-      const addMode = mode ?? ItoMode.TRANSCRIBE
-      addKeyboardShortcut(draftKeys, addMode)
+
+    // update existing
+    const result = updateKeyboardShortcut(original.id, draftKeys)
+    if (!result.success && result.error) {
+      setError(getErrorMessage(result.error))
+      return
     }
+
     stopEdit()
   }
 
@@ -156,6 +177,9 @@ export default function MultiShortcutEditor({
                 )}
               </div>
             </div>
+            {editingId === row.id && error && (
+              <div className="mt-1 text-xs text-red-500">{error}</div>
+            )}
           </div>
         )
       })}

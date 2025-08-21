@@ -48,7 +48,7 @@ When you receive a transcript, immediately return the polished version following
   `,
 
   // Audio quality thresholds
-  noSpeechThreshold: 0.35,
+  noSpeechThreshold: 0.6,
   lowQualityThreshold: -0.55,
 }
 

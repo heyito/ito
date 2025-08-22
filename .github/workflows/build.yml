@@ -10,74 +10,74 @@ permissions:
   id-token: write # required for OIDC role assumption
 
 jobs:
-  build-mac:
-    runs-on: macos-latest
-    environment: ${{ github.event.release.target_commitish == 'main' && 'production' || 'develop' }}
+  # build-mac:
+  #   runs-on: macos-latest
+  #   environment: ${{ github.event.release.target_commitish == 'main' && 'production' || 'develop' }}
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v1
+  #     - name: Set up Bun
+  #       uses: oven-sh/setup-bun@v1
 
-      - name: Install dependencies
-        run: bun install
+  #     - name: Install dependencies
+  #       run: bun install
 
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          targets: 'x86_64-apple-darwin,aarch64-apple-darwin'
+  #     - name: Set up Rust
+  #       uses: dtolnay/rust-toolchain@stable
+  #       with:
+  #         toolchain: stable
+  #         targets: 'x86_64-apple-darwin,aarch64-apple-darwin'
 
-      - name: Set up environment
-        run: |
-          echo "VITE_AUTH0_DOMAIN=\"${{ secrets.VITE_AUTH0_DOMAIN }}\"" >> .env
-          echo "VITE_AUTH0_CLIENT_ID=\"${{ secrets.VITE_AUTH0_CLIENT_ID }}\"" >> .env
-          echo "VITE_AUTH0_AUDIENCE=\"${{ secrets.VITE_AUTH0_AUDIENCE }}\"" >> .env
-          echo "VITE_AMPLITUDE_API_KEY=\"${{ secrets.VITE_AMPLITUDE_API_KEY }}\"" >> .env
-          echo "VITE_GRPC_BASE_URL=\"${{ vars.VITE_GRPC_BASE_URL }}\"" >> .env
-          echo "VITE_UPDATER_BUCKET=\"${{ vars.VITE_UPDATER_BUCKET }}\"" >> .env
-          echo "VITE_SENTRY_DSN=\"${{ vars.VITE_SENTRY_DSN }}\"" >> .env
-          echo "VITE_SENTRY_ENV=\"${{ vars.VITE_SENTRY_ENV }}\"" >> .env
-          echo "VITE_SENTRY_TRACES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE }}\"" >> .env
-          echo "VITE_SENTRY_PROFILES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_PROFILES_SAMPLE_RATE }}\"" >> .env
-          echo "VITE_ITO_VERSION=\"${GITHUB_REF#refs/tags/v}\"" >> .env
-          echo "APPLE_ID=\"${{ secrets.APPLE_ID }}\"" >> .env
-          echo "APPLE_TEAM_ID=\"${{ secrets.APPLE_TEAM_ID }}\"" >> .env
-          echo "APPLE_APP_SPECIFIC_PASSWORD=\"${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}\"" >> .env
-          echo "CSC_LINK=\"release.p12\"" >> .env
-          echo "CSC_KEY_PASSWORD=\"${{ secrets.MACOS_CERT_PASSWORD }}\"" >> .env
-          echo "GH_TOKEN=\"${{ secrets.GITHUB_TOKEN }}\"" >> .env
-          echo "GRPC_BASE_URL=\"${{ vars.GRPC_BASE_URL }}\"" >> .env
-          echo "Created .env file:"
-          cat .env
+  #     - name: Set up environment
+  #       run: |
+  #         echo "VITE_AUTH0_DOMAIN=\"${{ secrets.VITE_AUTH0_DOMAIN }}\"" >> .env
+  #         echo "VITE_AUTH0_CLIENT_ID=\"${{ secrets.VITE_AUTH0_CLIENT_ID }}\"" >> .env
+  #         echo "VITE_AUTH0_AUDIENCE=\"${{ secrets.VITE_AUTH0_AUDIENCE }}\"" >> .env
+  #         echo "VITE_AMPLITUDE_API_KEY=\"${{ secrets.VITE_AMPLITUDE_API_KEY }}\"" >> .env
+  #         echo "VITE_GRPC_BASE_URL=\"${{ vars.VITE_GRPC_BASE_URL }}\"" >> .env
+  #         echo "VITE_UPDATER_BUCKET=\"${{ vars.VITE_UPDATER_BUCKET }}\"" >> .env
+  #         echo "VITE_SENTRY_DSN=\"${{ vars.VITE_SENTRY_DSN }}\"" >> .env
+  #         echo "VITE_SENTRY_ENV=\"${{ vars.VITE_SENTRY_ENV }}\"" >> .env
+  #         echo "VITE_SENTRY_TRACES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE }}\"" >> .env
+  #         echo "VITE_SENTRY_PROFILES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_PROFILES_SAMPLE_RATE }}\"" >> .env
+  #         echo "VITE_ITO_VERSION=\"${GITHUB_REF#refs/tags/v}\"" >> .env
+  #         echo "APPLE_ID=\"${{ secrets.APPLE_ID }}\"" >> .env
+  #         echo "APPLE_TEAM_ID=\"${{ secrets.APPLE_TEAM_ID }}\"" >> .env
+  #         echo "APPLE_APP_SPECIFIC_PASSWORD=\"${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}\"" >> .env
+  #         echo "CSC_LINK=\"release.p12\"" >> .env
+  #         echo "CSC_KEY_PASSWORD=\"${{ secrets.MACOS_CERT_PASSWORD }}\"" >> .env
+  #         echo "GH_TOKEN=\"${{ secrets.GITHUB_TOKEN }}\"" >> .env
+  #         echo "GRPC_BASE_URL=\"${{ vars.GRPC_BASE_URL }}\"" >> .env
+  #         echo "Created .env file:"
+  #         cat .env
 
-      - name: Decode and install certificate
-        run: |
-          echo "${{ secrets.MACOS_CERT_BASE64 }}" | base64 --decode > release.p12
+  #     - name: Decode and install certificate
+  #       run: |
+  #         echo "${{ secrets.MACOS_CERT_BASE64 }}" | base64 --decode > release.p12
 
-      - name: Build and package macOS application
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        run: ./build-app.sh mac
+  #     - name: Build and package macOS application
+  #       env:
+  #         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+  #       run: ./build-app.sh mac
 
-      - name: Upload Mac Installer DMG
-        uses: actions/upload-artifact@v4
-        with:
-          name: Ito-Mac-Installer
-          path: dist/Ito-Installer.dmg
+  #     - name: Upload Mac Installer DMG
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: Ito-Mac-Installer
+  #         path: dist/Ito-Installer.dmg
 
-      - name: Upload Mac Build Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: Mac-Build-Artifacts
-          path: |
-            dist/*.yml
-            dist/*universal-mac.zip
-            dist/*universal-mac.zip.blockmap
-            dist/*.dmg
-            dist/*.dmg.blockmap
+  #     - name: Upload Mac Build Artifacts
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: Mac-Build-Artifacts
+  #         path: |
+  #           dist/*.yml
+  #           dist/*universal-mac.zip
+  #           dist/*universal-mac.zip.blockmap
+  #           dist/*.dmg
+  #           dist/*.dmg.blockmap
 
   build-windows:
     runs-on: ubuntu-latest

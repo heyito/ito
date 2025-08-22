@@ -44,13 +44,7 @@ build_native_module() {
         compiling_on_windows=true
     fi
     
-    if [ "$BUILD_WINDOWS" = true ] && [ "$compiling_on_windows" = true ]; then
-        cargo +stable-x86_64-pc-windows-gnu fetch
-        cargo +stable-x86_64-pc-windows-gnu install --path .
-    else
-        cargo fetch
-        cargo install --path .
-    fi
+    cargo fetch
 
     # --- macOS Build ---
     if [ "$BUILD_MAC" = true ]; then

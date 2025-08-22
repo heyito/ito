@@ -105,7 +105,7 @@ module.exports = {
     ],
   },
   nsis: {
-    artifactName: '${name}-${version}-setup.${ext}',
+    artifactName: 'Ito-Installer.${ext}',
     shortcutName: '${productName}',
     uninstallDisplayName: '${productName}',
     createDesktopShortcut: false,

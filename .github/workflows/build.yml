@@ -1,8 +1,9 @@
 name: Build and Release
 
 on:
-  release:
-    types: [published]
+  push:
+    branches:
+      - build
 
 permissions:
   contents: write
@@ -85,6 +86,18 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v1
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: 'x86_64-pc-windows-gnu'
 
       - name: Set up environment
         run: |

@@ -24,6 +24,7 @@ module.exports = {
     '!tsconfig.node.json',
     '!tsconfig.web.json',
     '!native/**',
+    '!build-*.sh',
     {
       from: 'out',
       filter: ['**/*'],
@@ -45,7 +46,7 @@ module.exports = {
       to: 'binaries/text-writer',
     },
     {
-      from: 'native/active-application/target/${arch}-apple-darwin/release/text-writer',
+      from: 'native/active-application/target/${arch}-apple-darwin/release/active-application',
       to: 'binaries/active-application',
     },
   ],
@@ -75,15 +76,39 @@ module.exports = {
     artifactName: 'Ito-Installer.${ext}',
   },
   win: {
-    target: ['nsis'],
+    target: [
+      {
+        target: 'nsis',
+        arch: ['x64'],
+      },
+    ],
     icon: 'resources/build/icon.ico',
     executableName: 'Ito',
+    requestedExecutionLevel: 'asInvoker',
+    extraResources: [
+      {
+        from: 'native/global-key-listener/target/x86_64-pc-windows-gnu/release/global-key-listener.exe',
+        to: 'binaries/global-key-listener.exe',
+      },
+      {
+        from: 'native/audio-recorder/target/x86_64-pc-windows-gnu/release/audio-recorder.exe',
+        to: 'binaries/audio-recorder.exe',
+      },
+      {
+        from: 'native/text-writer/target/x86_64-pc-windows-gnu/release/text-writer.exe',
+        to: 'binaries/text-writer.exe',
+      },
+      {
+        from: 'native/active-application/target/x86_64-pc-windows-gnu/release/active-application.exe',
+        to: 'binaries/active-application.exe',
+      },
+    ],
   },
   nsis: {
     artifactName: '${name}-${version}-setup.${ext}',
     shortcutName: '${productName}',
     uninstallDisplayName: '${productName}',
-    createDesktopShortcut: 'always',
+    createDesktopShortcut: false,
     oneClick: false,
     perMachine: false,
     allowToChangeInstallationDirectory: true,

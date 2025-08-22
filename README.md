@@ -66,6 +66,7 @@
 
 2. **Install the application**:
    - **macOS**: Open the `.dmg` file and drag Ito to Applications
+   - **Windows**: Run the `.exe` installer and follow the setup wizard
 
 3. **Grant permissions** when prompted:
    - **Microphone access**: Required for voice input
@@ -122,6 +123,8 @@ bun run dev
 #### All Platforms
 
 - **Rust**: Install via [rustup.rs](https://rustup.rs/)
+  - **Windows users**: See Windows-specific instructions below for GNU toolchain setup
+  - **macOS/Linux users**: Default installation is sufficient
 
 #### macOS
 
@@ -129,14 +132,29 @@ bun run dev
 
 #### Windows
 
-- **Visual Studio Build Tools**: Install [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with "C++ build tools" workload
-- **MSYS2**: Install from [msys2.org](https://www.msys2.org/) for MinGW-w64 toolchain
-  - After installation, run: `pacman -S --needed base-devel mingw-w64-ucrt-x86_64-toolchain`
-- **Git Bash or PowerShell**: For running build scripts
-- **Environment Setup**: Add to your PATH (in Git Bash):
-  ```bash
-  export PATH="$HOME/.cargo/bin:/c/msys64/ucrt64/bin:$PATH"
-  ```
+**Required Setup:**
+
+1. **Install Docker Desktop**: Download from [docker.com](https://www.docker.com/products/docker-desktop/) and ensure it's running
+
+2. **Install Rust with GNU toolchain** (for native component development):
+
+   ```bash
+   # Install rustup (Rust installer)
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+   # Install the GNU toolchain (required for native components)
+   rustup toolchain install stable-x86_64-pc-windows-gnu
+   rustup target add x86_64-pc-windows-gnu
+   ```
+
+3. **Install 7-Zip**: `winget install 7zip.7zip`
+
+4. **Download and install GCC & MinGW-w64 and add to path**:
+   https://winlibs.com/
+
+5. **Restart your terminal** to pick up PATH changes
+
+> **Note**: Windows builds use Docker for cross-compilation to ensure consistent builds. The Docker container handles the Windows build environment automatically.
 
 ### Project Structure
 
@@ -176,6 +194,8 @@ bun run build:rust:win     # Build for Windows
 # Building Application
 bun run build:mac          # Build for macOS
 bun run build:win          # Build for Windows
+./build-app.sh mac          # Build macOS using build script
+./build-app.sh windows      # Build Windows using build script (requires Docker)
 bun run build:unpack       # Build unpacked for testing
 
 # Code Quality

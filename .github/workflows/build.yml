@@ -1,9 +1,8 @@
 name: Build and Release
 
 on:
-  push:
-    branches:
-      - devbuild
+  release:
+    types: [published]
 
 permissions:
   contents: write
@@ -102,7 +101,6 @@ jobs:
           targets: 'x86_64-pc-windows-gnu'
 
       - name: Set up environment
-        shell: bash
         run: |
           echo "VITE_AUTH0_DOMAIN=\"${{ secrets.VITE_AUTH0_DOMAIN }}\"" >> .env
           echo "VITE_AUTH0_CLIENT_ID=\"${{ secrets.VITE_AUTH0_CLIENT_ID }}\"" >> .env
@@ -124,7 +122,6 @@ jobs:
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: ./build-app.sh windows
-        shell: bash
 
       - name: Upload Windows Installer
         uses: actions/upload-artifact@v4

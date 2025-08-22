@@ -97,9 +97,10 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable-x86_64-pc-windows-gnu
-          targets: 'x86_64-pc-windows-gnu'
+          targets: "x86_64-pc-windows-gnu"
 
       - name: Set up environment
+        shell: bash
         run: |
           echo "VITE_AUTH0_DOMAIN=\"${{ secrets.VITE_AUTH0_DOMAIN }}\"" >> .env
           echo "VITE_AUTH0_CLIENT_ID=\"${{ secrets.VITE_AUTH0_CLIENT_ID }}\"" >> .env

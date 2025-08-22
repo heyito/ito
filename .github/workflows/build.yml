@@ -96,7 +96,7 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
+          toolchain: stable-x86_64-pc-windows-gnu
           targets: 'x86_64-pc-windows-gnu'
 
       - name: Set up environment
@@ -121,6 +121,7 @@ jobs:
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: ./build-app.sh windows
+        shell: bash
 
       - name: Upload Windows Installer
         uses: actions/upload-artifact@v4

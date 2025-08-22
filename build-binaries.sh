@@ -44,13 +44,7 @@ build_native_module() {
         compiling_on_windows=true
     fi
     
-    if [ "$BUILD_WINDOWS" = true ] && [ "$compiling_on_windows" = true ]; then
-        cargo +stable-x86_64-pc-windows-gnu fetch
-        cargo +stable-x86_64-pc-windows-gnu install --path .
-    else
-        cargo fetch
-        cargo install --path .
-    fi
+    cargo fetch
 
     # --- macOS Build ---
     if [ "$BUILD_MAC" = true ]; then
@@ -170,8 +164,13 @@ if [ "$BUILD_WINDOWS" = true ]; then
             exit 1
         fi
     else
-        print_error "Windows GNU target requires MinGW-w64 toolchain."
-        exit 1
+        # On Linux, check if MinGW-w64 is installed
+        if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
+            print_info "Using MinGW-w64 cross-compiler for Windows builds on Linux"
+        else
+            print_error "Windows GNU target requires MinGW-w64 toolchain. Install with: sudo apt-get install mingw-w64"
+            exit 1
+        fi
     fi
 fi
 

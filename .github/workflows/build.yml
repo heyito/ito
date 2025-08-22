@@ -90,8 +90,10 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v1
 
-      - name: Install dependencies
-        run: bun install
+      - name: Install dependencies and MinGW-w64
+        run: |
+          sudo apt-get update && sudo apt-get install -y mingw-w64
+          bun install
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable

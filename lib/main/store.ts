@@ -70,7 +70,6 @@ export interface AdvancedSettings {
   llm: LlmSettings
 }
 
-
 interface AppStore {
   main: MainStore
   onboarding: OnboardingStore

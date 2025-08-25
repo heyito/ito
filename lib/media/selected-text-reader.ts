@@ -27,10 +27,13 @@ const nativeModuleName = 'selected-text-reader'
 
 class SelectedTextReaderService extends EventEmitter {
   #selectedTextProcess: ChildProcessWithoutNullStreams | null = null
-  #pendingRequests = new Map<string, {
-    resolve: (value: SelectedTextResult) => void
-    reject: (reason?: any) => void
-  }>()
+  #pendingRequests = new Map<
+    string,
+    {
+      resolve: (value: SelectedTextResult) => void
+      reject: (reason?: any) => void
+    }
+  >()
   #requestIdCounter = 0
 
   constructor() {
@@ -49,13 +52,15 @@ class SelectedTextReaderService extends EventEmitter {
     const binaryPath = getNativeBinaryPath(nativeModuleName)
     if (!binaryPath) {
       log.error(
-        `[SelectedTextService] Cannot determine ${nativeModuleName} binary path for platform ${platform()} and arch ${arch()}`
+        `[SelectedTextService] Cannot determine ${nativeModuleName} binary path for platform ${platform()} and arch ${arch()}`,
       )
       this.emit('error', new Error('Selected text reader binary not found.'))
       return
     }
 
-    log.info(`[SelectedTextService] Spawning selected text reader at: ${binaryPath}`)
+    log.info(
+      `[SelectedTextService] Spawning selected text reader at: ${binaryPath}`,
+    )
     try {
       this.#selectedTextProcess = spawn(binaryPath, ['--daemon'], {
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -70,7 +75,7 @@ class SelectedTextReaderService extends EventEmitter {
     } catch (err) {
       log.error(
         '[SelectedTextService] Caught an error while spawning selected text reader:',
-        err
+        err,
       )
       this.#selectedTextProcess = null
       this.emit('error', err)
@@ -86,7 +91,7 @@ class SelectedTextReaderService extends EventEmitter {
       this.#selectedTextProcess.kill()
       this.#selectedTextProcess = null
       this.emit('stopped')
-      
+
       // Reject all pending requests
       this.#pendingRequests.forEach(({ reject }) => {
         reject(new Error('Service terminated'))
@@ -98,7 +103,9 @@ class SelectedTextReaderService extends EventEmitter {
   /**
    * Sends a command to get selected text.
    */
-  public getSelectedText(options: SelectedTextOptions = { format: 'json', maxLength: 10000 }): Promise<SelectedTextResult> {
+  public getSelectedText(
+    options: SelectedTextOptions = { format: 'json', maxLength: 10000 },
+  ): Promise<SelectedTextResult> {
     return new Promise((resolve, reject) => {
       if (!this.#selectedTextProcess) {
         return reject(new Error('Selected text reader process not running'))
@@ -111,7 +118,7 @@ class SelectedTextReaderService extends EventEmitter {
         command: 'get-text',
         format: options.format || 'json',
         maxLength: options.maxLength || 10000,
-        requestId
+        requestId,
       }
 
       this.#sendCommand(command)
@@ -128,7 +135,9 @@ class SelectedTextReaderService extends EventEmitter {
 
   #sendCommand(command: SelectedTextCommand): void {
     if (!this.#selectedTextProcess) {
-      log.error('[SelectedTextService] Cannot send command, process not running')
+      log.error(
+        '[SelectedTextService] Cannot send command, process not running',
+      )
       return
     }
 
@@ -143,22 +152,33 @@ class SelectedTextReaderService extends EventEmitter {
 
   #onData(data: Buffer): void {
     const lines = data.toString().trim().split('\n')
-    
+
     for (const line of lines) {
       if (!line.trim()) continue
-      
+
       try {
         const response = JSON.parse(line)
-        
-        if (response.requestId && this.#pendingRequests.has(response.requestId)) {
+
+        if (
+          response.requestId &&
+          this.#pendingRequests.has(response.requestId)
+        ) {
           const { resolve } = this.#pendingRequests.get(response.requestId)!
           this.#pendingRequests.delete(response.requestId)
           resolve(response as SelectedTextResult)
         } else {
-          log.warn('[SelectedTextService] Received response for unknown request:', response.requestId)
+          log.warn(
+            '[SelectedTextService] Received response for unknown request:',
+            response.requestId,
+          )
         }
       } catch (error) {
-        log.error('[SelectedTextService] Error parsing response:', error, 'Raw data:', line)
+        log.error(
+          '[SelectedTextService] Error parsing response:',
+          error,
+          'Raw data:',
+          line,
+        )
       }
     }
   }
@@ -168,15 +188,17 @@ class SelectedTextReaderService extends EventEmitter {
   }
 
   #onClose(code: number, signal: string): void {
-    log.warn(`[SelectedTextService] Process exited with code: ${code}, signal: ${signal}`)
+    log.warn(
+      `[SelectedTextService] Process exited with code: ${code}, signal: ${signal}`,
+    )
     this.#selectedTextProcess = null
-    
+
     // Reject all pending requests
     this.#pendingRequests.forEach(({ reject }) => {
       reject(new Error(`Process exited with code ${code}`))
     })
     this.#pendingRequests.clear()
-    
+
     this.emit('closed', { code, signal })
   }
 
@@ -207,7 +229,10 @@ export async function getSelectedTextString(
 ): Promise<string | null> {
   try {
     const now = performance.now()
-    const result = await selectedTextReaderService.getSelectedText({ format: 'json', maxLength })
+    const result = await selectedTextReaderService.getSelectedText({
+      format: 'json',
+      maxLength,
+    })
     const elapsed = performance.now() - now
     log.debug(`Selected text fetched in ${elapsed}ms`)
     return result.success ? result.text : null
@@ -222,7 +247,10 @@ export async function getSelectedTextString(
  */
 export async function hasSelectedText(): Promise<boolean> {
   try {
-    const result = await selectedTextReaderService.getSelectedText({ format: 'json', maxLength: 1 })
+    const result = await selectedTextReaderService.getSelectedText({
+      format: 'json',
+      maxLength: 1,
+    })
     return result.success && result.length > 0
   } catch (error) {
     log.error('Error checking for selected text:', error)

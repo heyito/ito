@@ -686,6 +686,134 @@ describe('Keyboard Module', () => {
       // Should not activate shortcut with partial match
       expect(mockVoiceInputService.startSTTService).not.toHaveBeenCalled()
     })
+
+    test('should not activate shortcut when superset of keys is pressed', async () => {
+      mockMainStore.get.mockReturnValue({
+        isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'superset-test',
+            keys: ['fn'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
+      })
+
+      const { startKeyListener } = await import('./keyboard')
+      startKeyListener()
+
+      // Press control first, then fn (so fn+control are pressed together but shortcut should not match)
+      const controlDown = {
+        type: 'keydown',
+        key: 'ControlLeft',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 17,
+      }
+      const fnDown = {
+        type: 'keydown',
+        key: 'Function',
+        timestamp: '2024-01-01T00:00:00.001Z',
+        raw_code: 179,
+      }
+
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(controlDown) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(fnDown) + '\n'),
+      )
+
+      // Should not activate shortcut when superset is pressed
+      expect(mockVoiceInputService.startSTTService).not.toHaveBeenCalled()
+    })
+
+    test('should require exact key match for shortcut activation', async () => {
+      mockMainStore.get.mockReturnValue({
+        isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'exact-match-test',
+            keys: ['fn'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
+      })
+
+      const { startKeyListener } = await import('./keyboard')
+      startKeyListener()
+
+      // Press exactly fn (exact match)
+      const fnDown = {
+        type: 'keydown',
+        key: 'Function',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 179,
+      }
+
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(fnDown) + '\n'),
+      )
+
+      // Should activate shortcut with exact match
+      expect(mockVoiceInputService.startSTTService).toHaveBeenCalledWith(
+        ItoMode.TRANSCRIBE
+      )
+    })
+
+    test('should not match when extra keys are held with configured shortcut', async () => {
+      mockMainStore.get.mockReturnValue({
+        isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'extra-keys-test',
+            keys: ['command', 'space'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
+      })
+
+      const { startKeyListener } = await import('./keyboard')
+      startKeyListener()
+
+      // Press shift first, then command + space (so all three are pressed but shortcut should not match)
+      const shiftDown = {
+        type: 'keydown',
+        key: 'ShiftLeft',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 16,
+      }
+      const commandDown = {
+        type: 'keydown',
+        key: 'MetaLeft',
+        timestamp: '2024-01-01T00:00:00.001Z',
+        raw_code: 91,
+      }
+      const spaceDown = {
+        type: 'keydown',
+        key: 'Space',
+        timestamp: '2024-01-01T00:00:00.002Z',
+        raw_code: 32,
+      }
+
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(shiftDown) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(commandDown) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(spaceDown) + '\n'),
+      )
+
+      // Should not activate shortcut when extra keys are pressed
+      expect(mockVoiceInputService.startSTTService).not.toHaveBeenCalled()
+    })
   })
 
   describe('Key Normalization Business Logic', () => {

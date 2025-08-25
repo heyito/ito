@@ -126,10 +126,17 @@ function handleKeyEventInMain(event: KeyEvent) {
   }
 
   // Check if any of the configured shortcuts are currently held
-  // Ignore shortcuts with no keys
+  // Match shortcuts that have exactly the same keys as currently pressed
   const currentlyHeldShortcut = keyboardShortcuts
     .filter(ks => ks.keys.length > 0)
-    .find(shortcut => shortcut.keys.every(key => pressedKeys.has(key)))
+    .find(shortcut => {
+      // Check if shortcut keys exactly match pressed keys
+      const shortcutKeySet = new Set(shortcut.keys)
+      const matches =
+        shortcutKeySet.size === pressedKeys.size &&
+        shortcut.keys.every(key => pressedKeys.has(key))
+      return matches
+    })
 
   // Only block keys when a complete shortcut is being held
   if (currentlyHeldShortcut) {

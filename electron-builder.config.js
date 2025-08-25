@@ -49,6 +49,10 @@ module.exports = {
       from: 'native/active-application/target/${arch}-apple-darwin/release/active-application',
       to: 'binaries/active-application',
     },
+    {
+      from: 'native/selected-text-reader/target/${arch}-apple-darwin/release/selected-text-reader',
+      to: 'binaries/selected-text-reader',
+    },
   ],
   extraMetadata: {
     version: process.env.VITE_ITO_VERSION || '0.0.0-dev',

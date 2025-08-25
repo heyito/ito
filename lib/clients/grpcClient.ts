@@ -35,6 +35,7 @@ import {
   getAdvancedSettings,
   getCurrentUserId,
 } from '../main/store'
+import { getSelectedTextString } from '../media/selected-text-reader'
 import { ensureValidTokens } from '../auth/events'
 import { Auth0Config } from '../auth/config'
 import { getActiveWindow } from '../media/active-application'
@@ -158,7 +159,22 @@ class GrpcClient {
         advancedSettings.llm.lowQualityThreshold.toString(),
       )
 
-      headers.set('mode', mode)
+      headers.set('mode', mode.toString())
+
+      // Add context text from selected text (now fast with long-living process)
+      try {
+        const contextText = await getSelectedTextString(10000)
+        if (contextText && contextText.trim().length > 0) {
+          headers.set('context-text', flattenHeaderValue(contextText))
+          console.log(
+            '[gRPC Client] Adding context text to headers:',
+            contextText.length,
+            'characters',
+          )
+        }
+      } catch (error) {
+        console.error('[gRPC Client] Error getting context text:', error)
+      }
     } catch (error) {
       console.error(
         'Failed to fetch vocabulary/settings for transcription:',

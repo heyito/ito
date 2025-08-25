@@ -23,6 +23,7 @@ import { checkAccessibilityPermission } from '../utils/crossPlatform'
 import mainStore from './store'
 import { STORE_KEYS } from '../constants/store-keys'
 import { audioRecorderService } from '../media/audio'
+import { selectedTextReaderService } from '../media/selected-text-reader'
 import { voiceInputService } from './voiceInputService'
 import { initializeMicrophoneSelection } from '../media/microphoneSetUp'
 import { validateStoredTokens, ensureValidTokens } from '../auth/events'
@@ -111,6 +112,9 @@ app.whenReady().then(async () => {
   console.log('Microphone access granted, starting audio recorder.')
   voiceInputService.setUpAudioRecorderListeners()
 
+  console.log('Starting selected text reader service.')
+  selectedTextReaderService.initialize()
+
   // Initialize microphone selection to prefer built-in microphone
   await initializeMicrophoneSelection()
 
@@ -128,6 +132,7 @@ app.whenReady().then(async () => {
     console.log('App is quitting, cleaning up resources...')
     stopKeyListener()
     audioRecorderService.terminate()
+    selectedTextReaderService.terminate()
     allowAppNap()
   })
 

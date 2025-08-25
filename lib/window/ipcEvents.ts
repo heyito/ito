@@ -29,6 +29,11 @@ import {
 import { audioRecorderService } from '../media/audio'
 import { voiceInputService } from '../main/voiceInputService'
 import { ItoMode } from '@/app/generated/ito_pb'
+import {
+  getSelectedText,
+  getSelectedTextString,
+  hasSelectedText,
+} from '../media/selected-text-reader'
 
 const handleIPC = (channel: string, handler: (...args: any[]) => any) => {
   ipcMain.handle(channel, handler)
@@ -249,6 +254,20 @@ export function registerIPC() {
       '[IPC] Received get-native-audio-devices, calling requestDeviceListPromise...',
     )
     return audioRecorderService.getDeviceList()
+  })
+
+  // Selected Text Reader
+  handleIPC('get-selected-text', async (_e, options) => {
+    log.info('[IPC] Received get-selected-text with options:', options)
+    return getSelectedText(options)
+  })
+  handleIPC('get-selected-text-string', async _e => {
+    log.info('[IPC] Received get-selected-text-string')
+    return getSelectedTextString()
+  })
+  handleIPC('has-selected-text', async () => {
+    log.info('[IPC] Received has-selected-text')
+    return hasSelectedText()
   })
 
   // App lifecycle

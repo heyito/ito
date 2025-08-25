@@ -148,6 +148,9 @@ export const defaultValues: AppStore = {
       lowQualityThreshold: DEFAULT_ADVANCED_SETTINGS.lowQualityThreshold,
     },
   },
+  context: {
+    contextText: '',
+  },
   openMic: false,
   selectedAudioInput: null,
   interactionSounds: false,

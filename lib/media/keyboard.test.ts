@@ -759,7 +759,7 @@ describe('Keyboard Module', () => {
 
       // Should activate shortcut with exact match
       expect(mockVoiceInputService.startSTTService).toHaveBeenCalledWith(
-        ItoMode.TRANSCRIBE
+        ItoMode.TRANSCRIBE,
       )
     })
 

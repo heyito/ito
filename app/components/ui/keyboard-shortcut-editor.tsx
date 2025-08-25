@@ -4,10 +4,11 @@ import KeyboardKey from '@/app/components/ui/keyboard-key'
 import { KeyState, normalizeKeyEvent } from '@/app/utils/keyboard'
 import { useAudioStore } from '@/app/store/useAudioStore'
 import { ItoMode } from '@/app/generated/ito_pb'
+import { KeyboardShortcutConfig } from './multi-shortcut-editor'
 
 interface KeyboardShortcutEditorProps {
-  shortcut: string[]
-  onShortcutChange: (newShortcut: string[], mode: ItoMode) => void
+  shortcut: KeyboardShortcutConfig
+  onShortcutChange: (shortcutId: string, newShortcutKeys: string[]) => void
   hideTitle?: boolean
   className?: string
   keySize?: number
@@ -40,8 +41,10 @@ export default function KeyboardShortcutEditor({
   confirmButtonClassName = '',
   mode = ItoMode.TRANSCRIBE,
 }: KeyboardShortcutEditorProps) {
+  const shortcutKeys = shortcut.keys
+
   const cleanupRef = useRef<(() => void) | null>(null)
-  const keyStateRef = useRef<KeyState>(new KeyState(shortcut))
+  const keyStateRef = useRef<KeyState>(new KeyState(shortcutKeys))
   const [pressedKeys, setPressedKeys] = useState<string[]>([])
   const [isEditing, setIsEditing] = useState(false)
   const [newShortcut, setNewShortcut] = useState<string[]>([])
@@ -76,7 +79,7 @@ export default function KeyboardShortcutEditor({
 
   useEffect(() => {
     // Update key state when shortcut changes
-    keyStateRef.current.updateShortcut(shortcut)
+    keyStateRef.current.updateShortcut(shortcutKeys)
   }, [shortcut])
 
   useEffect(() => {
@@ -136,7 +139,7 @@ export default function KeyboardShortcutEditor({
       return
     }
     keyStateRef.current.updateShortcut(newShortcut)
-    onShortcutChange(newShortcut, mode)
+    onShortcutChange(shortcut.id, newShortcut)
     setIsEditing(false)
     setIsShortcutEnabled(true)
     window.api.send(
@@ -206,7 +209,7 @@ export default function KeyboardShortcutEditor({
             className="flex justify-center items-center mb-4 w-full bg-neutral-100 py-3 rounded-lg gap-2"
             style={{ minHeight }}
           >
-            {shortcut.map((keyboardKey, index) => (
+            {shortcutKeys.map((keyboardKey, index) => (
               <KeyboardKey
                 key={index}
                 keyboardKey={keyboardKey}

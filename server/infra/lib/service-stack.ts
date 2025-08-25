@@ -126,7 +126,50 @@ export class ServiceStack extends Stack {
         executionRole: taskExecutionRole,
       },
     )
-    // Import existing CloudWatch Log Groups or create new ones
+    // Ensure CloudWatch Log Groups exist (create if missing, otherwise no-op)
+    const ensureClientLogGroup = new cr.AwsCustomResource(
+      this,
+      'EnsureClientLogGroup',
+      {
+        onCreate: {
+          service: 'CloudWatchLogs',
+          action: 'createLogGroup',
+          parameters: { logGroupName: `/ito/${stageName}/client` },
+          physicalResourceId: cr.PhysicalResourceId.of(
+            `loggroup-${stageName}-client`,
+          ),
+          ignoreErrorCodesMatching: 'ResourceAlreadyExistsException',
+        },
+        policy: cr.AwsCustomResourcePolicy.fromStatements([
+          new PolicyStatement({
+            actions: ['logs:CreateLogGroup'],
+            resources: ['*'],
+          }),
+        ]),
+      },
+    )
+    const ensureServerLogGroup = new cr.AwsCustomResource(
+      this,
+      'EnsureServerLogGroup',
+      {
+        onCreate: {
+          service: 'CloudWatchLogs',
+          action: 'createLogGroup',
+          parameters: { logGroupName: `/ito/${stageName}/server` },
+          physicalResourceId: cr.PhysicalResourceId.of(
+            `loggroup-${stageName}-server`,
+          ),
+          ignoreErrorCodesMatching: 'ResourceAlreadyExistsException',
+        },
+        policy: cr.AwsCustomResourcePolicy.fromStatements([
+          new PolicyStatement({
+            actions: ['logs:CreateLogGroup'],
+            resources: ['*'],
+          }),
+        ]),
+      },
+    )
+    // Import existing CloudWatch Log Groups or reference by name after ensuring existence
     const clientLogGroup = LogGroup.fromLogGroupName(
       this,
       'ItoClientLogsGroup',
@@ -170,7 +213,7 @@ export class ServiceStack extends Stack {
     })
 
     const logBucket = new Bucket(this, 'ItoAlbLogsBucket', {
-      bucketName: `${stageName}-ito-alb-logs`,
+      bucketName: `${stageName}-${this.account}-${this.region}-ito-alb-logs`,
       removalPolicy: isDev(stageName)
         ? RemovalPolicy.DESTROY
         : RemovalPolicy.RETAIN,
@@ -181,7 +224,7 @@ export class ServiceStack extends Stack {
 
     // Firehose backup bucket
     const firehoseBackupBucket = new Bucket(this, 'ItoFirehoseBackupBucket', {
-      bucketName: `${stageName}-ito-firehose-bucket`,
+      bucketName: `${stageName}-${this.account}-${this.region}-ito-firehose-bucket`,
       removalPolicy: isDev(stageName)
         ? RemovalPolicy.DESTROY
         : RemovalPolicy.RETAIN,
@@ -297,8 +340,10 @@ export class ServiceStack extends Stack {
     })
     fargateTaskRole.attachInlinePolicy(taskLogsPolicy)
 
-    // Ensure ECS Service waits for inline policy attachment to the task role
+    // Ensure ECS Service waits for inline policy attachment and log groups creation
     fargateService.service.node.addDependency(taskLogsPolicy)
+    fargateService.service.node.addDependency(ensureClientLogGroup)
+    fargateService.service.node.addDependency(ensureServerLogGroup)
 
     this.fargateService = fargateService.service
     this.albFargate = fargateService
@@ -593,6 +638,7 @@ export class ServiceStack extends Stack {
     )
     clientSubscription.addDependency(clientDelivery)
     clientSubscription.node.addDependency(logsToFirehosePolicy)
+    clientSubscription.node.addDependency(ensureClientLogGroup)
 
     const serverSubscription = new CfnSubscriptionFilter(
       this,
@@ -606,6 +652,7 @@ export class ServiceStack extends Stack {
     )
     serverSubscription.addDependency(serverDelivery)
     serverSubscription.node.addDependency(logsToFirehosePolicy)
+    serverSubscription.node.addDependency(ensureServerLogGroup)
 
     // OpenSearch index templates and ISM policy bootstrap (retain forever)
     const osBootstrap = new NodejsFunction(this, 'ItoOpenSearchBootstrap', {

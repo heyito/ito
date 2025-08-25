@@ -35,11 +35,11 @@ import {
   getAdvancedSettings,
   getCurrentUserId,
 } from '../main/store'
+import { getSelectedTextString } from '../media/selected-text-reader'
 import { ensureValidTokens } from '../auth/events'
 import { Auth0Config } from '../auth/config'
 import { getActiveWindow } from '../media/active-application'
 import { traceLogger } from '../main/traceLogger'
-import { contextService } from '../media/context-service'
 
 class GrpcClient {
   private client: ReturnType<typeof createClient<typeof ItoService>>
@@ -161,15 +161,19 @@ class GrpcClient {
 
       headers.set('mode', mode.toString())
 
-      // Add context text from captured selected text
-      const contextText = contextService.getCurrentContext()
-      if (contextText && contextText.trim().length > 0) {
-        headers.set('context-text', flattenHeaderValue(contextText))
-        console.log(
-          '[gRPC Client] Adding context text to headers:',
-          contextText.length,
-          'characters',
-        )
+      // Add context text from selected text (now fast with long-living process)
+      try {
+        const contextText = await getSelectedTextString(10000)
+        if (contextText && contextText.trim().length > 0) {
+          headers.set('context-text', flattenHeaderValue(contextText))
+          console.log(
+            '[gRPC Client] Adding context text to headers:',
+            contextText.length,
+            'characters',
+          )
+        }
+      } catch (error) {
+        console.error('[gRPC Client] Error getting context text:', error)
       }
     } catch (error) {
       console.error(

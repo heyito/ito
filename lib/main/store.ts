@@ -70,9 +70,6 @@ export interface AdvancedSettings {
   llm: LlmSettings
 }
 
-export interface ContextStore {
-  contextText: string
-}
 
 interface AppStore {
   main: MainStore
@@ -80,7 +77,6 @@ interface AppStore {
   settings: SettingsStore
   auth: AuthStore
   advancedSettings: AdvancedSettings
-  context: ContextStore
   openMic: boolean
   selectedAudioInput: string | null
   interactionSounds: boolean

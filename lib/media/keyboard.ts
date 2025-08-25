@@ -6,7 +6,6 @@ import { BrowserWindow } from 'electron'
 import { audioRecorderService } from './audio'
 import { voiceInputService } from '../main/voiceInputService'
 import { traceLogger } from '../main/traceLogger'
-import { contextService } from './context-service'
 
 interface KeyEvent {
   type: 'keydown' | 'keyup'
@@ -162,9 +161,7 @@ function handleKeyEventInMain(event: KeyEvent) {
     // Store interaction ID for later use
     ;(globalThis as any).currentInteractionId = interactionId
 
-    // Start STT service and capture context in parallel (non-blocking)
     voiceInputService.startSTTService(currentlyHeldShortcut.mode)
-    contextService.captureContextAsync()
   } else if (!currentlyHeldShortcut && isShortcutActive) {
     // Shortcut released
     isShortcutActive = false

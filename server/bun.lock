@@ -10,6 +10,7 @@
         "@bufbuild/protobuf": "^2.5.2",
         "@bufbuild/protoc-gen-es": "^2.5.2",
         "@bufbuild/protovalidate": "^0.6.0",
+        "@cerebras/cerebras_cloud_sdk": "^1.46.0",
         "@connectrpc/connect": "^2.0.2",
         "@connectrpc/connect-fastify": "^2.0.2",
         "@connectrpc/connect-node": "^2.0.2",
@@ -124,6 +125,8 @@
     "@bufbuild/protoplugin": ["@bufbuild/protoplugin@2.7.0", "", { "dependencies": { "@bufbuild/protobuf": "2.7.0", "@typescript/vfs": "^1.5.2", "typescript": "5.4.5" } }, "sha512-yUdg8hXzFGR6K8ren7aXly2hT9BxClId814VB142YeZPatY0wqD3c0D8KfIz5nIeMdoPt0/Pm/RycFJCNGMD6w=="],
 
     "@bufbuild/protovalidate": ["@bufbuild/protovalidate@0.6.0", "", { "dependencies": { "@bufbuild/cel": "0.2.0" }, "peerDependencies": { "@bufbuild/protobuf": "^2.6.1" } }, "sha512-pOogsvtHiH1TVcVhXngcucKZlWOv0BkoKeof2bHb9cFomyaN/DhC7g+2NYk4NBtxv2n3lpx3da608gCe5OG9oQ=="],
+
+    "@cerebras/cerebras_cloud_sdk": ["@cerebras/cerebras_cloud_sdk@1.46.0", "", { "dependencies": { "@types/node": "^18.11.18", "@types/node-fetch": "^2.6.4", "abort-controller": "^3.0.0", "agentkeepalive": "^4.2.1", "form-data-encoder": "1.7.2", "formdata-node": "^4.3.2", "node-fetch": "^2.6.7" } }, "sha512-5IFlD9jvZr5fRsHd4pL4sFkzDPSvHxzM0dmk3mJG2/biRBl+3EV6CdXCabf7J8kr8hyQyK67N0rQLnYy6NSh9w=="],
 
     "@connectrpc/connect": ["@connectrpc/connect@2.0.4", "", { "peerDependencies": { "@bufbuild/protobuf": "^2.2.0" } }, "sha512-E3EDUMHDdLKVYRxaGbb/MWImZUiGiPQgoehigCvy0NtMTiAn9AQIz/an1689b7mFbkMIXztPHwSNsvtqRPHhqQ=="],
 
@@ -659,6 +662,8 @@
 
     "@bufbuild/protoplugin/typescript": ["typescript@5.4.5", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-vcI4UpRgg81oIRUFwR0WSIHKt11nJ7SAVlYNIu+QpqeyXP+gpQJy/Z4+F0aGxSE4MqwjyXvW/TzgkLAx2AGHwQ=="],
 
+    "@cerebras/cerebras_cloud_sdk/@types/node": ["@types/node@18.19.123", "", { "dependencies": { "undici-types": "~5.26.4" } }, "sha512-K7DIaHnh0mzVxreCR9qwgNxp3MH9dltPNIEddW9MYUlcKAzm+3grKNSTe2vCJHI1FaLpvpL5JGJrz1UZDKYvDg=="],
+
     "@connectrpc/protoc-gen-connect-es/@bufbuild/protobuf": ["@bufbuild/protobuf@1.10.1", "", {}, "sha512-wJ8ReQbHxsAfXhrf9ixl0aYbZorRuOWpBNzm8pL8ftmSxQx/wnJD5Eg861NwJU/czy2VXFIebCeZnZrI9rktIQ=="],
 
     "@connectrpc/protoc-gen-connect-es/@bufbuild/protoplugin": ["@bufbuild/protoplugin@1.10.1", "", { "dependencies": { "@bufbuild/protobuf": "1.10.1", "@typescript/vfs": "^1.4.0", "typescript": "4.5.2" } }, "sha512-LaSbfwabAFIvbVnbn8jWwElRoffCIxhVraO8arliVwWupWezHLXgqPHEYLXZY/SsAR+/YsFBQJa8tAGtNPJyaQ=="],
@@ -684,6 +689,8 @@
     "@aws-crypto/sha256-browser/@smithy/util-utf8/@smithy/util-buffer-from": ["@smithy/util-buffer-from@2.2.0", "", { "dependencies": { "@smithy/is-array-buffer": "^2.2.0", "tslib": "^2.6.2" } }, "sha512-IJdWBbTcMQ6DA0gdNhh/BwrLkDR+ADW5Kr1aZmd4k3DIF6ezMV4R2NIAmT08wQJ3yUK82thHWmC/TnK/wpMMIA=="],
 
     "@aws-crypto/util/@smithy/util-utf8/@smithy/util-buffer-from": ["@smithy/util-buffer-from@2.2.0", "", { "dependencies": { "@smithy/is-array-buffer": "^2.2.0", "tslib": "^2.6.2" } }, "sha512-IJdWBbTcMQ6DA0gdNhh/BwrLkDR+ADW5Kr1aZmd4k3DIF6ezMV4R2NIAmT08wQJ3yUK82thHWmC/TnK/wpMMIA=="],
+
+    "@cerebras/cerebras_cloud_sdk/@types/node/undici-types": ["undici-types@5.26.5", "", {}, "sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA=="],
 
     "@connectrpc/protoc-gen-connect-es/@bufbuild/protoplugin/typescript": ["typescript@4.5.2", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-5BlMof9H1yGt0P8/WF+wPNw6GfctgGjXp5hkblpyT+8rkASSmkUKMXrxR0Xg8ThVCi/JnHQiKXeBaEwCeQwMFw=="],
 

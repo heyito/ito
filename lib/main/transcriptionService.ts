@@ -288,11 +288,6 @@ export class TranscriptionService {
     }
   }
 
-  // Backward compatibility aliases for the old method names
-  public startTranscription(mode: ItoMode) {
-    return this.startStreaming(mode)
-  }
-
   public stopTranscription() {
     // Get current interaction ID for trace logging
     const globalInteractionId = (globalThis as any).currentInteractionId

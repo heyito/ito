@@ -13,6 +13,12 @@ import {
   ClientError,
 } from './errors.js'
 import { ClientProvider } from './providers.js'
+import { LlmProvider } from './llmProvider.js'
+import { TranscriptionOptions } from './asrConfig.js'
+import { IntentTranscriptionOptions } from './intentTranscriptionConfig.js'
+import { ItoMode } from '../generated/ito_pb.js'
+import { WindowContext } from '../services/ito/types.js'
+import { DEFAULT_ADVANCED_SETTINGS } from '../constants/generated-defaults.js'
 
 // Load environment variables from .env file
 dotenv.config()
@@ -21,7 +27,7 @@ export const itoVocabulary = ['Ito', 'Hey Ito']
 /**
  * A TypeScript client for interacting with the Groq API, inspired by your Python implementation.
  */
-class GroqClient {
+class GroqClient implements LlmProvider {
   private readonly _client: Groq
   private readonly _userCommandModel: string
   private readonly _isValid: boolean
@@ -49,13 +55,19 @@ class GroqClient {
    */
   public async adjustTranscript(
     transcript: string,
-    temperature: number,
-    model: string,
-    systemPrompt: string,
+    mode: ItoMode,
+    context?: WindowContext,
+    options?: IntentTranscriptionOptions,
   ): Promise<string> {
     if (!this.isAvailable) {
       throw new ClientUnavailableError(ClientProvider.GROQ)
     }
+
+    const temperature = options?.temperature ?? 0.7
+    const model = options?.model || this._userCommandModel
+    const systemPrompt =
+      options?.prompt ||
+      'Adjust and improve this transcript for clarity and accuracy.'
 
     try {
       const completion = await this._client.chat.completions.create({
@@ -83,20 +95,22 @@ class GroqClient {
   /**
    * Transcribes an audio buffer using the Groq API.
    * @param audioBuffer The audio data as a Node.js Buffer.
-   * @param fileType The extension of the audio file type (e.g., 'webm', 'wav').
-   * @param vocabulary Optional custom vocabulary to improve transcription accuracy.
-   * @param asrModel The ASR model to use for transcription (required).
+   * @param options Optional transcription configuration.
    * @returns The transcribed text as a string.
    */
   public async transcribeAudio(
     audioBuffer: Buffer,
-    fileType: string = 'webm',
-    asrModel: string,
-    noSpeechThreshold: number,
-    lowQualityThreshold: number,
-    userTranscriptionPrompt?: string,
-    vocabulary?: string[],
+    options?: TranscriptionOptions,
   ): Promise<string> {
+    const fileType = options?.fileType || 'webm'
+    const asrModel = options?.asrModel
+    const vocabulary = options?.vocabulary
+    const noSpeechThreshold =
+      options?.noSpeechThreshold ?? DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold
+    const lowQualityThreshold =
+      options?.lowQualityThreshold ??
+      DEFAULT_ADVANCED_SETTINGS.lowQualityThreshold
+
     const file = await toFile(audioBuffer, `audio.${fileType}`)
     if (!this.isAvailable) {
       throw new ClientUnavailableError(ClientProvider.GROQ)
@@ -113,8 +127,7 @@ class GroqClient {
       const fullVocabulary = [...itoVocabulary, ...(vocabulary || [])]
 
       // Create a concise but effective transcription prompt
-      const transcriptionPrompt =
-        userTranscriptionPrompt || createTranscriptionPrompt(fullVocabulary)
+      const transcriptionPrompt = createTranscriptionPrompt(fullVocabulary)
 
       const transcription = await this._client.audio.transcriptions.create({
         // The toFile helper correctly handles buffers for multipart/form-data uploads.

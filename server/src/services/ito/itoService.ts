@@ -16,7 +16,7 @@ import {
 } from '../../generated/ito_pb.js'
 import { create } from '@bufbuild/protobuf'
 import type { HandlerContext } from '@connectrpc/connect'
-import { groqClient } from '../../clients/groqClient.js'
+import { getAsrProvider, getLlmProvider } from '../../clients/providerUtils.js'
 import {
   DictionaryRepository,
   InteractionsRepository,
@@ -34,7 +34,6 @@ import { kUser } from '../../auth/userContext.js'
 import { WindowContext } from './types.js'
 import { HeaderValidator } from '../../validation/HeaderValidator.js'
 import { errorToProtobuf } from '../../clients/errors.js'
-import { ClientProvider } from '../../clients/providers.js'
 import {
   addContextToPrompt,
   getAdvancedSettingsHeaders,
@@ -42,7 +41,6 @@ import {
   getPromptForMode,
   getItoMode,
 } from './helpers.js'
-import { de } from 'zod/v4/locales'
 
 /**
  * --- NEW: WAV Header Generation Function ---
@@ -196,6 +194,11 @@ export default (router: ConnectRouter) => {
         `🔧 [${new Date().toISOString()}] Concatenated audio: ${totalLength} bytes`,
       )
 
+      // Extract settings headers first so they're available in catch block
+      const advancedSettingsHeaders = getAdvancedSettingsHeaders(
+        context.requestHeader,
+      )
+
       try {
         // 1. Set audio properties to match the new capture settings.
         const sampleRate = 16000 // Correct sample rate
@@ -211,26 +214,21 @@ export default (router: ConnectRouter) => {
         )
         const fullAudioWAV = Buffer.concat([wavHeader, fullAudio])
 
-        // 3. Extract and validate vocabulary and ASR model from gRPC metadata
+        // 3. Extract and validate vocabulary from gRPC metadata
         const vocabularyHeader = context.requestHeader.get('vocabulary')
         const vocabulary = vocabularyHeader
           ? HeaderValidator.validateVocabulary(vocabularyHeader)
           : []
 
-        const advancedSettingsHeaders = getAdvancedSettingsHeaders(
-          context.requestHeader,
-        )
-
-        // 4. Send the corrected WAV file using the validated ASR model from headers.
-        let transcript = await groqClient.transcribeAudio(
-          fullAudioWAV,
-          'wav',
-          advancedSettingsHeaders.asrModel,
-          advancedSettingsHeaders.noSpeechThreshold,
-          advancedSettingsHeaders.lowQualityThreshold,
-          advancedSettingsHeaders.asrPrompt,
+        // 4. Send the corrected WAV file using the selected ASR provider
+        const asrProvider = getAsrProvider(advancedSettingsHeaders.asrProvider)
+        let transcript = await asrProvider.transcribeAudio(fullAudioWAV, {
+          fileType: 'wav',
+          asrModel: advancedSettingsHeaders.asrModel,
+          noSpeechThreshold: advancedSettingsHeaders.noSpeechThreshold,
+          lowQualityThreshold: advancedSettingsHeaders.lowQualityThreshold,
           vocabulary,
-        )
+        })
         console.log(
           `📝 [${new Date().toISOString()}] Received transcript: "${transcript}"`,
         )
@@ -253,11 +251,18 @@ export default (router: ConnectRouter) => {
         )
 
         if (detectedMode === ItoMode.EDIT) {
-          transcript = await groqClient.adjustTranscript(
+          const llmProvider = getLlmProvider(
+            advancedSettingsHeaders.llmProvider,
+          )
+          transcript = await llmProvider.adjustTranscript(
             transcript,
-            advancedSettingsHeaders.llmTemperature,
-            advancedSettingsHeaders.llmModel,
-            systemPrompt,
+            detectedMode,
+            windowContext,
+            {
+              temperature: advancedSettingsHeaders.llmTemperature,
+              model: advancedSettingsHeaders.llmModel,
+              prompt: systemPrompt,
+            },
           )
           console.log(
             `📝 [${new Date().toISOString()}] Adjusted transcript: "${transcript}"`,
@@ -283,7 +288,10 @@ export default (router: ConnectRouter) => {
         // Return structured error response
         return create(TranscriptionResponseSchema, {
           transcript: '',
-          error: errorToProtobuf(error, ClientProvider.GROQ),
+          error: errorToProtobuf(
+            error,
+            advancedSettingsHeaders.asrProvider as any,
+          ),
         })
       }
     },

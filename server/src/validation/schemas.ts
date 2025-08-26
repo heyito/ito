@@ -21,7 +21,7 @@ export const AsrPromptSchema = z.string().trim().max(100, 'ASR prompt too long')
 
 export const LlmProviderSchema = z.preprocess(
   val => (typeof val === 'string' ? val.trim() : val),
-  z.enum([ClientProvider.GROQ]),
+  z.enum([ClientProvider.GROQ, ClientProvider.CEREBRAS]),
 )
 
 export const LlmModelSchema = z

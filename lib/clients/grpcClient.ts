@@ -161,7 +161,6 @@ class GrpcClient {
 
       headers.set('mode', mode.toString())
 
-      // Add context text from selected text (now fast with long-living process)
       try {
         const contextText = await getSelectedTextString(10000)
         if (contextText && contextText.trim().length > 0) {

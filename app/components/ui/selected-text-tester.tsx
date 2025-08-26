@@ -35,10 +35,7 @@ export function SelectedTextTester() {
     try {
       console.log('Fetching selected text as string...')
       await new Promise(resolve => setTimeout(resolve, 3000)) // Simulate delay
-      const start = performance.now()
       const text = await window.api.selectedText.getString()
-      const end = performance.now()
-      console.log(`Selected text fetched in ${end - start}ms`)
       setResult({
         success: true,
         text,

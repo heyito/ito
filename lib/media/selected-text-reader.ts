@@ -1,4 +1,4 @@
-import { spawn, ChildProcessWithoutNullStreams } from 'child_process'
+import { spawn } from 'child_process'
 import { platform, arch } from 'os'
 import { getNativeBinaryPath } from './native-interface'
 import log from 'electron-log'
@@ -26,7 +26,7 @@ interface SelectedTextCommand {
 const nativeModuleName = 'selected-text-reader'
 
 class SelectedTextReaderService extends EventEmitter {
-  #selectedTextProcess: ChildProcessWithoutNullStreams | null = null
+  #selectedTextProcess: ReturnType<typeof spawn> | null = null
   #pendingRequests = new Map<
     string,
     {
@@ -62,16 +62,20 @@ class SelectedTextReaderService extends EventEmitter {
       `[SelectedTextService] Spawning selected text reader at: ${binaryPath}`,
     )
     try {
-      this.#selectedTextProcess = spawn(binaryPath, ['--daemon'], {
+      this.#selectedTextProcess = spawn(binaryPath, [], {
         stdio: ['pipe', 'pipe', 'pipe'],
       })
 
-      this.#selectedTextProcess.stdout.on('data', this.#onData.bind(this))
-      this.#selectedTextProcess.stderr.on('data', this.#onStdErr.bind(this))
+      if (!this.#selectedTextProcess) {
+        throw new Error('Failed to spawn process')
+      }
+
+      this.#selectedTextProcess.stdout?.on('data', this.#onData.bind(this))
+      this.#selectedTextProcess.stderr?.on('data', this.#onStdErr.bind(this))
       this.#selectedTextProcess.on('close', this.#onClose.bind(this))
       this.#selectedTextProcess.on('error', this.#onError.bind(this))
 
-      this.emit('started')
+      log.info('[SelectedTextService] Selected text reader process started.')
     } catch (err) {
       log.error(
         '[SelectedTextService] Caught an error while spawning selected text reader:',

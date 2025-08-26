@@ -23,10 +23,6 @@ import {
   getActivityMessage,
 } from './activityMessages'
 import { ItoMode } from '@/app/generated/ito_pb'
-import {
-  getSelectedText,
-  getSelectedTextString,
-} from '@/lib/media/selected-text-reader'
 import { SelectedTextTester } from '../../ui/selected-text-tester'
 
 // Interface for interaction statistics

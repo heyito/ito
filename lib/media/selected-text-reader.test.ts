@@ -99,7 +99,7 @@ describe('SelectedTextReaderService', () => {
 
     expect(mockSpawn).toHaveBeenCalledWith(
       selectedTextReaderPath,
-      ['--daemon'],
+      [],
       {
         stdio: ['pipe', 'pipe', 'pipe'],
       },

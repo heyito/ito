@@ -172,7 +172,7 @@ ito/
 │   ├── audio-recorder/    # Audio capture (Rust)
 │   ├── global-key-listener/ # Keyboard events (Rust)
 │   ├── text-writer/       # Text insertion (Rust)
-│   └── macos-text/        # macOS text reading (Swift)
+│   └── active-application/ # Get the active application for context (Rust)
 ├── server/                # gRPC transcription server
 │   ├── src/               # Server implementation
 │   └── infra/             # AWS infrastructure (CDK)

@@ -1,6 +1,10 @@
 import { ItoMode } from '@/app/generated/ito_pb'
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 import { EventEmitter } from 'events'
+import { fakeTimers } from '../__tests__/helpers/testUtils'
+import { DEBOUNCE_TIME } from './keyboard'
+
+const clock = fakeTimers()
 
 // Mock all external dependencies
 const mockChildProcess = {
@@ -89,6 +93,11 @@ const mockVoiceInputService = {
 mock.module('../main/voiceInputService', () => ({
   voiceInputService: mockVoiceInputService,
 }))
+
+// Helper function to wait for debounce
+const waitForDebounce = async () => {
+  clock.tick(DEBOUNCE_TIME + 1)
+}
 
 // Mock console to avoid spam
 beforeEach(async () => {
@@ -392,6 +401,9 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(spaceDown) + '\n'),
       )
 
+      // Wait for debounce delay
+      await waitForDebounce()
+
       expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
       expect(console.info).toHaveBeenCalledWith(
         'lib Shortcut ACTIVATED, starting recording...',
@@ -434,6 +446,9 @@ describe('Keyboard Module', () => {
         'data',
         Buffer.from(JSON.stringify(spaceDown) + '\n'),
       )
+
+      // Wait for debounce delay to activate shortcut
+      await waitForDebounce()
 
       // Release space key
       const spaceUp = {
@@ -529,6 +544,9 @@ describe('Keyboard Module', () => {
         'data',
         Buffer.from(JSON.stringify(spaceDown) + '\n'),
       )
+
+      // Wait for debounce delay to activate shortcut
+      await waitForDebounce()
 
       // Disable shortcuts
       isShortcutGloballyEnabled = false
@@ -641,6 +659,9 @@ describe('Keyboard Module', () => {
         'data',
         Buffer.from(JSON.stringify(fDown) + '\n'),
       )
+
+      // Wait for debounce delay
+      await waitForDebounce()
 
       expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
     })
@@ -757,6 +778,9 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(fnDown) + '\n'),
       )
 
+      // Wait for debounce delay
+      await waitForDebounce()
+
       // Should activate shortcut with exact match
       expect(mockVoiceInputService.startSTTService).toHaveBeenCalledWith(
         ItoMode.TRANSCRIBE,
@@ -814,6 +838,109 @@ describe('Keyboard Module', () => {
       // Should not activate shortcut when extra keys are pressed
       expect(mockVoiceInputService.startSTTService).not.toHaveBeenCalled()
     })
+
+    test('should allow repeated shortcut activations with exact matching', async () => {
+      mockMainStore.get.mockReturnValue({
+        isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'repeat-test',
+            keys: ['command', 'space'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
+      })
+
+      const { startKeyListener } = await import('./keyboard')
+      startKeyListener()
+
+      // First activation cycle
+      const commandDown1 = {
+        type: 'keydown',
+        key: 'MetaLeft',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 91,
+      }
+      const spaceDown1 = {
+        type: 'keydown',
+        key: 'Space',
+        timestamp: '2024-01-01T00:00:00.001Z',
+        raw_code: 32,
+      }
+      const commandUp1 = {
+        type: 'keyup',
+        key: 'MetaLeft',
+        timestamp: '2024-01-01T00:00:00.002Z',
+        raw_code: 91,
+      }
+      const spaceUp1 = {
+        type: 'keyup',
+        key: 'Space',
+        timestamp: '2024-01-01T00:00:00.003Z',
+        raw_code: 32,
+      }
+
+      // Press command + space
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(commandDown1) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(spaceDown1) + '\n'),
+      )
+
+      // Wait for debounce delay
+      await waitForDebounce()
+
+      expect(mockVoiceInputService.startSTTService).toHaveBeenCalledTimes(1)
+
+      // Release command + space
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(commandUp1) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(spaceUp1) + '\n'),
+      )
+
+      expect(mockVoiceInputService.stopSTTService).toHaveBeenCalledTimes(1)
+
+      // Clear mocks for second cycle
+      mockVoiceInputService.startSTTService.mockClear()
+      mockVoiceInputService.stopSTTService.mockClear()
+
+      // Second activation cycle - should work again
+      const commandDown2 = {
+        type: 'keydown',
+        key: 'MetaLeft',
+        timestamp: '2024-01-01T00:00:01.000Z',
+        raw_code: 91,
+      }
+      const spaceDown2 = {
+        type: 'keydown',
+        key: 'Space',
+        timestamp: '2024-01-01T00:00:01.001Z',
+        raw_code: 32,
+      }
+
+      // Press command + space again
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(commandDown2) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(spaceDown2) + '\n'),
+      )
+
+      // Wait for debounce delay
+      await waitForDebounce()
+
+      // Should activate shortcut again
+      expect(mockVoiceInputService.startSTTService).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('Key Normalization Business Logic', () => {
@@ -844,6 +971,9 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(metaLeftDown) + '\n'),
       )
 
+      // Wait for debounce delay
+      await waitForDebounce()
+
       expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
       mockVoiceInputService.startSTTService.mockClear()
 
@@ -869,6 +999,9 @@ describe('Keyboard Module', () => {
         'data',
         Buffer.from(JSON.stringify(metaRightDown) + '\n'),
       )
+
+      // Wait for debounce delay
+      await waitForDebounce()
 
       expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
     })
@@ -899,6 +1032,9 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(keyADown) + '\n'),
       )
 
+      // Wait for debounce delay
+      await waitForDebounce()
+
       expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
     })
 
@@ -928,6 +1064,9 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(digit1Down) + '\n'),
       )
 
+      // Wait for debounce delay
+      await waitForDebounce()
+
       expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
     })
 
@@ -956,6 +1095,9 @@ describe('Keyboard Module', () => {
         'data',
         Buffer.from(JSON.stringify(unknownKeyDown) + '\n'),
       )
+
+      // Wait for debounce delay
+      await waitForDebounce()
 
       expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
     })

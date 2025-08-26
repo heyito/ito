@@ -18,12 +18,22 @@ interface KeyEvent {
 export let KeyListenerProcess: ReturnType<typeof spawn> | null = null
 export let isShortcutActive = false
 
+// Debouncing state
+let shortcutDebounceTimeout: NodeJS.Timeout | null = null
+let pendingShortcut: KeyboardShortcutConfig | null = null
+export const DEBOUNCE_TIME = 10
+
 // Test utility function - only available in development
 export const resetForTesting = () => {
   if (process.env.NODE_ENV !== 'production') {
     KeyListenerProcess = null
     isShortcutActive = false
     pressedKeys.clear()
+    if (shortcutDebounceTimeout) {
+      clearTimeout(shortcutDebounceTimeout)
+      shortcutDebounceTimeout = null
+    }
+    pendingShortcut = null
   }
 }
 
@@ -130,12 +140,10 @@ function handleKeyEventInMain(event: KeyEvent) {
   const currentlyHeldShortcut = keyboardShortcuts
     .filter(ks => ks.keys.length > 0)
     .find(shortcut => {
-      // Check if shortcut keys exactly match pressed keys
-      const shortcutKeySet = new Set(shortcut.keys)
-      const matches =
-        shortcutKeySet.size === pressedKeys.size &&
-        shortcut.keys.every(key => pressedKeys.has(key))
-      return matches
+      const hasAllKeys = shortcut.keys.every(key => pressedKeys.has(key))
+      const exactMatch = shortcut.keys.length === pressedKeys.size && hasAllKeys
+
+      return exactMatch
     })
 
   // Only block keys when a complete shortcut is being held
@@ -147,36 +155,68 @@ function handleKeyEventInMain(event: KeyEvent) {
     blockKeys([])
   }
 
-  // Shortcut pressed
+  // Handle shortcut activation with debouncing
   if (currentlyHeldShortcut && !isShortcutActive) {
-    isShortcutActive = true
-    console.info('lib Shortcut ACTIVATED, starting recording...')
+    // New shortcut detected - start debounce timer
+    if (
+      !shortcutDebounceTimeout ||
+      pendingShortcut?.id !== currentlyHeldShortcut.id
+    ) {
+      // Clear any existing timeout
+      if (shortcutDebounceTimeout) {
+        clearTimeout(shortcutDebounceTimeout)
+      }
 
-    // Start trace logging for new interaction
-    const interactionId = traceLogger.startInteraction('HOTKEY_ACTIVATED', {
-      shortcut: currentlyHeldShortcut.keys,
-      mode: currentlyHeldShortcut.mode,
-      pressedKeys: Array.from(pressedKeys),
-      event: {
-        type: event.type,
-        key: event.key,
-        normalizedKey,
-        timestamp: event.timestamp,
-      },
-    })
+      pendingShortcut = currentlyHeldShortcut
+      shortcutDebounceTimeout = setTimeout(() => {
+        // After DEBOUNCE milliseconds, if the shortcut is still active, activate it
+        if (pendingShortcut && !isShortcutActive) {
+          isShortcutActive = true
+          console.info('lib Shortcut ACTIVATED, starting recording...')
 
-    // Store interaction ID for later use
-    ;(globalThis as any).currentInteractionId = interactionId
+          // Start trace logging for new interaction
+          const interactionId = traceLogger.startInteraction(
+            'HOTKEY_ACTIVATED',
+            {
+              shortcut: pendingShortcut.keys,
+              mode: pendingShortcut.mode,
+              pressedKeys: Array.from(pressedKeys),
+              event: {
+                type: event.type,
+                key: event.key,
+                normalizedKey,
+                timestamp: event.timestamp,
+              },
+            },
+          )
 
-    voiceInputService.startSTTService(currentlyHeldShortcut.mode)
-  } else if (!currentlyHeldShortcut && isShortcutActive) {
-    // Shortcut released
-    isShortcutActive = false
-    console.info('lib Shortcut DEACTIVATED, stopping recording...')
+          // Store interaction ID for later use
+          ;(globalThis as any).currentInteractionId = interactionId
 
-    // Don't end the interaction yet - let the transcription service handle it
-    // The interaction will be ended when transcription completes or fails
-    voiceInputService.stopSTTService()
+          voiceInputService.startSTTService(pendingShortcut.mode)
+        }
+
+        // Clear debounce state
+        shortcutDebounceTimeout = null
+        pendingShortcut = null
+      }, DEBOUNCE_TIME) // debounce
+    }
+  } else if (!currentlyHeldShortcut) {
+    // No shortcut detected - cancel pending activation or deactivate active shortcut
+    if (shortcutDebounceTimeout) {
+      // Cancel pending activation
+      clearTimeout(shortcutDebounceTimeout)
+      shortcutDebounceTimeout = null
+      pendingShortcut = null
+    } else if (isShortcutActive) {
+      // Shortcut released - deactivate immediately (no debounce on release)
+      isShortcutActive = false
+      console.info('lib Shortcut DEACTIVATED, stopping recording...')
+
+      // Don't end the interaction yet - let the transcription service handle it
+      // The interaction will be ended when transcription completes or fails
+      voiceInputService.stopSTTService()
+    }
   }
 }
 

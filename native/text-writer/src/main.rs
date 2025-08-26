@@ -1,5 +1,5 @@
 use clap::Parser;
-use enigo::{Enigo, Keyboard, Settings};
+use enigo::{Enigo, Key, Keyboard, Settings};
 use std::process;
 use std::thread;
 use std::time::Duration;
@@ -62,5 +62,13 @@ fn main() {
             eprintln!("Error typing text: {}", e);
             process::exit(1);
         }
+    }
+
+    // Patch fix: Send 'A' key release to clean up any phantom stuck KeyA events
+    // This addresses a bug where synthetic events from text typing can cause
+    // the global key listener to receive keydown events without corresponding keyup events
+    if let Err(e) = enigo.key(Key::Unicode('a'), enigo::Direction::Release) {
+        // Don't exit on this error since it's just a cleanup operation
+        eprintln!("Warning: Failed to send cleanup 'a' key release: {}", e);
     }
 }

@@ -224,6 +224,12 @@ create_windows_installer() {
         bunx electron-builder --config electron-builder.config.js --win --x64 --publish=never
       " 
     
+    # Rename latest.yml to latest-windows.yml for proper auto-updater support
+    if [ -f "dist/latest.yml" ]; then
+        print_info "Renaming latest.yml to latest-windows.yml for Windows auto-updater"
+        mv "dist/latest.yml" "dist/latest-windows.yml"
+    fi
+    
     print_status "Windows installer created successfully!"
     
     # Show output location

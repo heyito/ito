@@ -476,13 +476,13 @@ class GrpcClient {
     // Check if user is self-hosted and skip server sync
     const userId = getCurrentUserId()
     const isSelfHosted = userId === 'self-hosted'
-    
+
     if (isSelfHosted) {
       console.log('Self-hosted user detected, using local advanced settings')
       // Return null for self-hosted users since they don't sync with server
       return null
     }
-    
+
     return this.withRetry(async () => {
       const request = create(GetAdvancedSettingsRequestSchema, {})
       return await this.client.getAdvancedSettings(request, {
@@ -497,13 +497,15 @@ class GrpcClient {
     // Check if user is self-hosted and skip server sync
     const userId = getCurrentUserId()
     const isSelfHosted = userId === 'self-hosted'
-    
+
     if (isSelfHosted) {
-      console.log('Self-hosted user detected, skipping server sync for advanced settings')
+      console.log(
+        'Self-hosted user detected, skipping server sync for advanced settings',
+      )
       // Return null for self-hosted users since settings are stored locally
       return null
     }
-    
+
     return this.withRetry(async () => {
       const request = create(UpdateAdvancedSettingsRequestSchema, {
         llm: {

@@ -297,7 +297,8 @@ describe('GroqClient', () => {
         {
           temperature: 0.1,
           model: 'llama-3.3-70b-versatile',
-          prompt: 'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
+          prompt:
+            'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
         },
       )
 
@@ -331,7 +332,8 @@ describe('GroqClient', () => {
         {
           temperature: 0.1,
           model: 'llama-3.3-70b-versatile',
-          prompt: 'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
+          prompt:
+            'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
         },
       )
 
@@ -358,7 +360,8 @@ describe('GroqClient', () => {
         {
           temperature: 0.1,
           model: 'llama-3.3-70b-versatile',
-          prompt: 'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
+          prompt:
+            'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
         },
       )
 

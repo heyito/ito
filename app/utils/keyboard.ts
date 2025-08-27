@@ -113,10 +113,12 @@ export type ShortcutError =
   | 'duplicate-key-same-mode'
   | 'duplicate-key-diff-mode'
   | 'not-found'
+  | 'reserved-combination'
 
 export type ShortcutResult = {
   success: boolean
   error?: ShortcutError
+  errorDetails?: string
 }
 
 const MODIFIER_SEQUENCE = [
@@ -159,6 +161,39 @@ function sortKeysCanonical(keys: string[]): string[] {
 
 export function normalizeChord(keys: string[]): string[] {
   return sortKeysCanonical(keys.filter(Boolean))
+}
+
+// Reserved key combinations that would conflict with our selected-text-reader
+const RESERVED_COMBINATIONS = [
+  { keys: ['command', 'c'], reason: 'Reserved for text selection copying' },
+  // Add more reserved combinations as needed
+  { keys: ['command', 'q'], reason: 'System quit command' },
+  { keys: ['command', 'w'], reason: 'System close window' },
+  { keys: ['command', 'tab'], reason: 'System app switching' },
+  { keys: ['control', 'tab'], reason: 'Browser tab switching' },
+]
+
+// Check if a shortcut contains reserved key combinations
+export function isReservedCombination(keys: string[]): {
+  isReserved: boolean
+  reason?: string
+} {
+  const normalizedKeys = sortKeysCanonical(keys)
+
+  for (const reserved of RESERVED_COMBINATIONS) {
+    const normalizedReserved = sortKeysCanonical(reserved.keys)
+
+    // Check if the shortcut contains all keys from a reserved combination
+    const containsAllReserved = normalizedReserved.every(key =>
+      normalizedKeys.includes(key),
+    )
+
+    if (containsAllReserved) {
+      return { isReserved: true, reason: reserved.reason }
+    }
+  }
+
+  return { isReserved: false }
 }
 
 // Returns the mode of the duplicate shortcut if found, otherwise undefined

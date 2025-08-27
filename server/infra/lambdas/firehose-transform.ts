@@ -1,3 +1,5 @@
+import { gunzipSync } from 'zlib'
+
 type FirehoseRecord = {
   recordId: string
   data: string
@@ -23,6 +25,15 @@ type CwLogEvent = {
   subscriptionFilters?: string[]
 }
 
+type CwLogsBatch = {
+  messageType?: string
+  owner?: string
+  logGroup?: string
+  logStream?: string
+  subscriptionFilters?: string[]
+  logEvents?: { id: string; timestamp: number; message: string }[]
+}
+
 const DATASET = process.env.DATASET || 'server'
 const STAGE = process.env.STAGE || 'dev'
 
@@ -37,8 +48,14 @@ function tryJsonParse<T>(text: unknown): T | undefined {
   }
 }
 
-function base64ToUtf8(b64: string): string {
-  return Buffer.from(b64, 'base64').toString('utf8')
+function isGzip(buffer: Buffer): boolean {
+  return buffer.length >= 2 && buffer[0] === 0x1f && buffer[1] === 0x8b
+}
+
+function decodeRecord(b64: string): string {
+  const buf = Buffer.from(b64, 'base64')
+  const out = isGzip(buf) ? gunzipSync(buf) : buf
+  return out.toString('utf8')
 }
 
 function utf8ToBase64(s: string): string {
@@ -66,8 +83,8 @@ export const handler = async (
 
   for (const rec of event.records) {
     try {
-      const raw = base64ToUtf8(rec.data)
-      const wrapper = tryJsonParse<CwLogEvent>(raw)
+      const raw = decodeRecord(rec.data)
+      const wrapper = tryJsonParse<CwLogEvent | CwLogsBatch>(raw)
 
       let logGroup: string | undefined
       let logStream: string | undefined
@@ -75,10 +92,28 @@ export const handler = async (
       let originalMessage: unknown = raw
 
       if (wrapper && typeof wrapper === 'object') {
-        logGroup = wrapper.logGroup
-        logStream = wrapper.logStream
-        ts = wrapper.timestamp
-        originalMessage = wrapper.message
+        logGroup = (wrapper as any).logGroup
+        logStream = (wrapper as any).logStream
+        // CloudWatch Logs subscription payloads provide batched events
+        const batch = wrapper as CwLogsBatch
+        if (Array.isArray(batch.logEvents) && batch.logEvents.length > 0) {
+          if (batch.logEvents.length === 1) {
+            ts = batch.logEvents[0].timestamp
+            originalMessage = batch.logEvents[0].message
+          } else {
+            // Aggregate multiple events into a single message, earliest timestamp
+            ts = batch.logEvents.reduce(
+              (min, e) => (e.timestamp < min ? e.timestamp : min),
+              batch.logEvents[0].timestamp,
+            )
+            originalMessage = batch.logEvents.map(e => e.message).join('\n')
+          }
+        } else {
+          // Legacy/single-event shape
+          const single = wrapper as CwLogEvent
+          ts = single.timestamp
+          originalMessage = single.message ?? raw
+        }
       }
 
       const messageStr =

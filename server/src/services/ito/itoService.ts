@@ -254,16 +254,11 @@ export default (router: ConnectRouter) => {
           const llmProvider = getLlmProvider(
             advancedSettingsHeaders.llmProvider,
           )
-          transcript = await llmProvider.adjustTranscript(
-            transcript,
-            detectedMode,
-            windowContext,
-            {
-              temperature: advancedSettingsHeaders.llmTemperature,
-              model: advancedSettingsHeaders.llmModel,
-              prompt: systemPrompt,
-            },
-          )
+          transcript = await llmProvider.adjustTranscript(transcript, {
+            temperature: advancedSettingsHeaders.llmTemperature,
+            model: advancedSettingsHeaders.llmModel,
+            prompt: systemPrompt,
+          })
           console.log(
             `📝 [${new Date().toISOString()}] Adjusted transcript: "${transcript}"`,
           )

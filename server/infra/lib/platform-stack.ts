@@ -33,7 +33,16 @@ import {
   ServicePrincipal,
   ArnPrincipal,
   Role,
+  ManagedPolicy,
+  FederatedPrincipal,
 } from 'aws-cdk-lib/aws-iam'
+import {
+  UserPool,
+  UserPoolDomain,
+  CfnIdentityPool,
+  UserPoolClient,
+  CfnIdentityPoolRoleAttachment,
+} from 'aws-cdk-lib/aws-cognito'
 
 export interface PlatformStackProps extends StackProps {
   vpc: Vpc
@@ -118,6 +127,79 @@ export class PlatformStack extends Stack {
       roleName: `${stageName}-ItoFirehoseRole`,
     })
 
+    // Cognito resources for OpenSearch Dashboards authentication
+    const userPool = new UserPool(this, 'ItoOsUserPool', {
+      userPoolName: `${stageName}-ito-os-userpool`,
+      selfSignUpEnabled: true,
+      signInAliases: { email: true, username: true },
+      accountRecovery: undefined,
+    })
+    const userPoolClient = new UserPoolClient(this, 'ItoOsUserPoolClient', {
+      userPool,
+      userPoolClientName: `${stageName}-ito-os-client`,
+      generateSecret: false,
+      authFlows: { userSrp: true, userPassword: true },
+    })
+    new UserPoolDomain(this, 'ItoOsUserPoolDomain', {
+      userPool,
+      cognitoDomain: {
+        domainPrefix: `${stageName}-${this.account}-ito-os`.toLowerCase(),
+      },
+    })
+    const identityPool = new CfnIdentityPool(this, 'ItoOsIdentityPool', {
+      allowUnauthenticatedIdentities: true,
+      identityPoolName: `${stageName}-ito-os-identitypool`,
+      // Leave providers empty so OpenSearch can register its own App Client
+    })
+    const authenticatedRole = new Role(this, 'ItoOsCognitoAuthenticatedRole', {
+      assumedBy: new FederatedPrincipal(
+        'cognito-identity.amazonaws.com',
+        {
+          StringEquals: {
+            'cognito-identity.amazonaws.com:aud': identityPool.ref,
+          },
+          'ForAnyValue:StringLike': {
+            'cognito-identity.amazonaws.com:amr': 'authenticated',
+          },
+        },
+        'sts:AssumeRoleWithWebIdentity',
+      ),
+    })
+    const unauthenticatedRole = new Role(
+      this,
+      'ItoOsCognitoUnauthenticatedRole',
+      {
+        assumedBy: new FederatedPrincipal(
+          'cognito-identity.amazonaws.com',
+          {
+            StringEquals: {
+              'cognito-identity.amazonaws.com:aud': identityPool.ref,
+            },
+            'ForAnyValue:StringLike': {
+              'cognito-identity.amazonaws.com:amr': 'unauthenticated',
+            },
+          },
+          'sts:AssumeRoleWithWebIdentity',
+        ),
+      },
+    )
+    // Attach the authenticated role to the identity pool
+    new CfnIdentityPoolRoleAttachment(this, 'ItoOsIdentityPoolRoleAttachment', {
+      identityPoolId: identityPool.ref,
+      roles: {
+        authenticated: authenticatedRole.roleArn,
+        unauthenticated: unauthenticatedRole.roleArn,
+      },
+    })
+    const cognitoAccessRole = new Role(this, 'ItoOsCognitoAccessRole', {
+      assumedBy: new ServicePrincipal('opensearchservice.amazonaws.com'),
+      managedPolicies: [
+        ManagedPolicy.fromAwsManagedPolicyName(
+          'AmazonOpenSearchServiceCognitoAccess',
+        ),
+      ],
+    })
+
     // OpenSearch domain for logs (one per stage)
     const domain = new Domain(this, 'ItoLogsDomain', {
       domainName: `${stageName}-ito-logs`,
@@ -125,6 +207,14 @@ export class PlatformStack extends Stack {
       enforceHttps: true,
       nodeToNodeEncryption: true,
       encryptionAtRest: { enabled: true },
+      fineGrainedAccessControl: {
+        masterUserArn: `arn:aws:iam::${this.account}:root`,
+      },
+      cognitoDashboardsAuth: {
+        userPoolId: userPool.userPoolId,
+        identityPoolId: identityPool.ref,
+        role: cognitoAccessRole,
+      },
       ebs: {
         enabled: true,
         volumeSize: isDev(stageName) ? 20 : 50,
@@ -168,6 +258,27 @@ export class PlatformStack extends Stack {
             ],
           },
         },
+      }),
+    )
+
+    // Allow any IAM principal from this AWS account to access the domain via IAM (SigV4)
+    // Using AccountRootPrincipal is the recommended way to grant all users/roles in the account
+    domain.addAccessPolicies(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        principals: [new AccountRootPrincipal()],
+        actions: ['es:ESHttp*'],
+        resources: [domain.domainArn, `${domain.domainArn}/*`],
+      }),
+    )
+
+    // Allow Cognito authenticated users (role assumed via Identity Pool) to use Dashboards
+    domain.addAccessPolicies(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        principals: [new ArnPrincipal(authenticatedRole.roleArn)],
+        actions: ['es:ESHttp*'],
+        resources: [domain.domainArn, `${domain.domainArn}/*`],
       }),
     )
     this.opensearchDomain = domain

@@ -35,7 +35,7 @@ export class TranscriptionService {
     }
   }
 
-  public startStreaming(mode: ItoMode) {
+  public startTranscription(mode: ItoMode) {
     if (this.isStreaming) {
       log.warn('[TranscriptionService] Stream already in progress.')
       return

@@ -31,7 +31,7 @@ export class VoiceInputService {
       })
     }
 
-    transcriptionService.startStreaming(mode)
+    transcriptionService.startTranscription(mode)
     audioRecorderService.startRecording(deviceId)
 
     getPillWindow()?.webContents.send('recording-state-update', {

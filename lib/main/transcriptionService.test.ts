@@ -110,7 +110,7 @@ describe('TranscriptionService Integration Tests', () => {
       mockDbRun.mockResolvedValue(undefined)
 
       // Start streaming
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
       expect(mockGrpcClient.transcribeStream).toHaveBeenCalledTimes(1)
 
       // Simulate audio chunks
@@ -147,7 +147,7 @@ describe('TranscriptionService Integration Tests', () => {
       mockDbRun.mockResolvedValue(undefined)
 
       // Start and process
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
       transcriptionService.forwardAudioChunk(Buffer.from('audio-data'))
       transcriptionService.stopStreaming()
 
@@ -165,7 +165,7 @@ describe('TranscriptionService Integration Tests', () => {
         transcript: 'test',
       })
 
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
       transcriptionService.stopStreaming()
 
       // Wait a reasonable amount of time for any potential processing
@@ -180,11 +180,11 @@ describe('TranscriptionService Integration Tests', () => {
   describe('Streaming State Management', () => {
     test('should prevent multiple simultaneous streams', () => {
       // Start first stream
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
       const firstCallCount = mockGrpcClient.transcribeStream.mock.calls.length
 
       // Try to start again - should be ignored
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
       const secondCallCount = mockGrpcClient.transcribeStream.mock.calls.length
 
       // Should not increase call count
@@ -212,7 +212,7 @@ describe('TranscriptionService Integration Tests', () => {
       })
       mockDbRun.mockResolvedValue(undefined)
 
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
 
       // Add multiple chunks of different sizes
       const chunks = [
@@ -238,7 +238,7 @@ describe('TranscriptionService Integration Tests', () => {
       })
       mockDbRun.mockResolvedValue(undefined)
 
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
       // Don't add any chunks
       transcriptionService.stopStreaming()
 
@@ -262,7 +262,7 @@ describe('TranscriptionService Integration Tests', () => {
       mockGrpcClient.transcribeStream.mockReturnValueOnce(transcriptionPromise)
       mockDbRun.mockResolvedValue(undefined)
 
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
 
       // Simulate some processing time before resolving
       await new Promise(resolve => setTimeout(resolve, 50))
@@ -294,7 +294,7 @@ describe('TranscriptionService Integration Tests', () => {
       // Mock database error
       mockDbRun.mockRejectedValueOnce(new Error('Database error'))
 
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
       transcriptionService.stopStreaming()
 
       // Wait for the error handling to complete
@@ -314,7 +314,7 @@ describe('TranscriptionService Integration Tests', () => {
       })
       mockDbRun.mockResolvedValue(undefined)
 
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
       transcriptionService.stopStreaming()
       await waitForInteractionCreation()
 
@@ -336,7 +336,7 @@ describe('TranscriptionService Integration Tests', () => {
       })
       mockDbRun.mockResolvedValue(undefined)
 
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
       transcriptionService.stopStreaming()
       await waitForInteractionCreation()
 
@@ -352,7 +352,7 @@ describe('TranscriptionService Integration Tests', () => {
       })
       mockDbRun.mockResolvedValue(undefined)
 
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
       transcriptionService.stopStreaming()
       await waitForInteractionCreation()
 
@@ -369,7 +369,7 @@ describe('TranscriptionService Integration Tests', () => {
       })
       mockDbRun.mockResolvedValue(undefined)
 
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
       transcriptionService.stopStreaming()
       await waitForInteractionCreation()
 
@@ -388,7 +388,7 @@ describe('TranscriptionService Integration Tests', () => {
       })
       mockDbRun.mockResolvedValue(undefined)
 
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
 
       // Add chunks of known sizes
       const chunk1 = Buffer.from('12345') // 5 bytes
@@ -416,7 +416,7 @@ describe('TranscriptionService Integration Tests', () => {
       })
       mockDbRun.mockResolvedValue(undefined)
 
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
       // Don't add any chunks
       transcriptionService.stopStreaming()
       await waitForInteractionCreation()
@@ -440,7 +440,7 @@ describe('TranscriptionService Integration Tests', () => {
       })
       mockDbRun.mockResolvedValue(undefined)
 
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
       transcriptionService.forwardAudioChunk(Buffer.from('audio'))
       transcriptionService.stopStreaming()
 
@@ -456,7 +456,7 @@ describe('TranscriptionService Integration Tests', () => {
       )
       mockDbRun.mockResolvedValue(undefined)
 
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
       transcriptionService.forwardAudioChunk(Buffer.from('audio'))
       transcriptionService.stopStreaming()
       await waitForInteractionCreation()
@@ -476,7 +476,7 @@ describe('TranscriptionService Integration Tests', () => {
       })
       mockDbRun.mockResolvedValue(undefined)
 
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
 
       const chunk1 = Buffer.from([1, 2, 3])
       const chunk2 = Buffer.from([4, 5])
@@ -503,7 +503,7 @@ describe('TranscriptionService Integration Tests', () => {
       })
       mockDbRun.mockResolvedValue(undefined)
 
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
       // Don't add any chunks
       transcriptionService.stopStreaming()
       await waitForInteractionCreation()
@@ -520,7 +520,7 @@ describe('TranscriptionService Integration Tests', () => {
       })
       mockDbRun.mockResolvedValue(undefined)
 
-      transcriptionService.startStreaming()
+      transcriptionService.startTranscription()
 
       // Use binary data that could be corrupted if concatenation is wrong
       const chunk1 = Buffer.from([0xff, 0x00, 0xff])

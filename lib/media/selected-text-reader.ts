@@ -231,14 +231,10 @@ export async function getSelectedTextString(
   maxLength: number = 10000,
 ): Promise<string | null> {
   try {
-    const now = performance.now()
     const result = await selectedTextReaderService.getSelectedText({
       format: 'json',
       maxLength,
     })
-    console.log({ result })
-    const elapsed = performance.now() - now
-    log.debug(`Selected text fetched in ${elapsed}ms`)
     return result.success ? result.text : null
   } catch (error) {
     log.error('Error getting selected text:', error)

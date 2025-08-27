@@ -3,7 +3,6 @@ import { platform, arch } from 'os'
 import { getNativeBinaryPath } from './native-interface'
 import log from 'electron-log'
 import { EventEmitter } from 'events'
-
 interface SelectedTextOptions {
   format?: 'json' | 'text' // Output format
   maxLength?: number // Maximum length of text to return
@@ -107,14 +106,14 @@ class SelectedTextReaderService extends EventEmitter {
   /**
    * Sends a command to get selected text.
    */
-  public getSelectedText(
+  public async getSelectedText(
     options: SelectedTextOptions = { format: 'json', maxLength: 10000 },
   ): Promise<SelectedTextResult> {
-    return new Promise((resolve, reject) => {
-      if (!this.#selectedTextProcess) {
-        return reject(new Error('Selected text reader process not running'))
-      }
+    if (!this.#selectedTextProcess) {
+      throw new Error('Selected text reader process not running')
+    }
 
+    return new Promise((resolve, reject) => {
       const requestId = `req_${++this.#requestIdCounter}_${Date.now()}`
       this.#pendingRequests.set(requestId, { resolve, reject })
 
@@ -237,6 +236,7 @@ export async function getSelectedTextString(
       format: 'json',
       maxLength,
     })
+    console.log({ result })
     const elapsed = performance.now() - now
     log.debug(`Selected text fetched in ${elapsed}ms`)
     return result.success ? result.text : null

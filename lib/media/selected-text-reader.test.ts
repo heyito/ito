@@ -97,13 +97,9 @@ describe('SelectedTextReaderService', () => {
   test('should initialize service and spawn process', () => {
     selectedTextReaderService.initialize()
 
-    expect(mockSpawn).toHaveBeenCalledWith(
-      selectedTextReaderPath,
-      [],
-      {
-        stdio: ['pipe', 'pipe', 'pipe'],
-      },
-    )
+    expect(mockSpawn).toHaveBeenCalledWith(selectedTextReaderPath, [], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
     expect(mockChildProcess.stdout.on).toHaveBeenCalledWith(
       'data',
       expect.any(Function),

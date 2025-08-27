@@ -1,9 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::io::{self, BufRead, Write};
 use std::thread;
-use arboard::Clipboard;
-use enigo::{Direction, Enigo, Key, Keyboard, Settings};
-use std::time::Duration;
+
+// Platform-specific modules
+#[cfg(target_os = "macos")]
+mod macos;
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+mod cross_platform;
+
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "command")]
@@ -120,134 +124,13 @@ impl CommandProcessor {
     }
 }
 
-// =============================================================================
 // Platform-specific implementations
-// =============================================================================
-
 #[cfg(target_os = "macos")]
 fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
-    get_selected_text_macos()
+    macos::get_selected_text()
 }
 
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
-    get_selected_text_cross_platform()
-}
-
-// Fast macOS implementation
-#[cfg(target_os = "macos")]
-fn get_selected_text_macos() -> Result<String, Box<dyn std::error::Error>> {
-    let mut clipboard = Clipboard::new()?;
-    
-    // Store original clipboard contents
-    let original_clipboard = clipboard.get_text().unwrap_or_default();
-    
-    // Create enigo instance for keyboard simulation
-    let mut enigo = Enigo::new(&Settings::default())?;
-    
-    // Clear clipboard to detect if copy operation worked
-    clipboard.clear()?;
-    
-    // Perform Cmd+C to copy selected text
-    enigo.key(Key::Meta, Direction::Press)?;
-    enigo.key(Key::Unicode('c'), Direction::Click)?;
-    enigo.key(Key::Meta, Direction::Release)?;
-    
-    // Small delay to ensure copy operation completes
-    thread::sleep(Duration::from_millis(50));
-    
-    // Try to get the copied text
-    let result = match clipboard.get_text() {
-        Ok(text) => {
-            if text.is_empty() {
-                // No text was selected
-                Ok(String::new())
-            } else {
-                Ok(text)
-            }
-        }
-        Err(_) => {
-            // Clipboard might be empty or contain non-text data
-            Ok(String::new())
-        }
-    };
-    
-    // Restore original clipboard contents (fire and forget)
-    let _ = clipboard.set_text(original_clipboard);
-    
-    result
-}
-
-// Windows/Linux implementation using utils functions
-#[cfg(any(target_os = "windows", target_os = "linux"))]
-fn get_selected_text_cross_platform() -> Result<String, Box<dyn std::error::Error>> {
-    let mut enigo = Enigo::new(&Settings::default())?;
-    get_selected_text_by_clipboard(&mut enigo, false)
-}
-
-#[cfg(any(target_os = "windows", target_os = "linux"))]
-fn get_selected_text_by_clipboard(
-    enigo: &mut Enigo,
-    cancel_select: bool,
-) -> Result<String, Box<dyn std::error::Error>> {
-    let mut clipboard = Clipboard::new()?;
-    
-    // Store original clipboard contents
-    let original_clipboard = clipboard.get_text().unwrap_or_default();
-    
-    // Clear clipboard to detect if copy worked
-    clipboard.clear()?;
-    
-    // Copy selected text
-    copy(enigo);
-    
-    // Small delay for copy operation
-    thread::sleep(Duration::from_millis(100));
-    
-    // Get copied text
-    let result = match clipboard.get_text() {
-        Ok(text) => {
-            if text.is_empty() {
-                Ok(String::new())
-            } else {
-                Ok(text)
-            }
-        }
-        Err(_) => Ok(String::new()),
-    };
-    
-    // Cancel selection if requested
-    if cancel_select {
-        right_arrow_click(enigo, 1);
-    }
-    
-    // Restore original clipboard
-    let _ = clipboard.set_text(original_clipboard);
-    
-    result
-}
-
-#[cfg(any(target_os = "windows", target_os = "linux"))]
-fn right_arrow_click(enigo: &mut Enigo, n: usize) {
-    for _ in 0..n {
-        let _ = enigo.key(Key::RightArrow, Direction::Click);
-    }
-}
-
-#[cfg(any(target_os = "windows", target_os = "linux"))]
-fn up_control_keys(enigo: &mut Enigo) {
-    let _ = enigo.key(Key::Control, Direction::Release);
-    let _ = enigo.key(Key::Alt, Direction::Release);
-    let _ = enigo.key(Key::Shift, Direction::Release);
-    let _ = enigo.key(Key::Space, Direction::Release);
-    let _ = enigo.key(Key::Tab, Direction::Release);
-}
-
-#[cfg(any(target_os = "windows", target_os = "linux"))]
-fn copy(enigo: &mut Enigo) {
-    up_control_keys(enigo);
-    
-    let _ = enigo.key(Key::Control, Direction::Press);
-    let _ = enigo.key(Key::Unicode('c'), Direction::Click);
-    let _ = enigo.key(Key::Control, Direction::Release);
+    cross_platform::get_selected_text()
 }

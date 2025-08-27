@@ -162,14 +162,22 @@ class GrpcClient {
       headers.set('mode', mode.toString())
 
       try {
+        if (mode !== ItoMode.EDIT) {
+          console.log('mode wasnt edit')
+          return
+        }
         const contextText = await getSelectedTextString(10000)
+        console.log(
+          '[gRPC Client] Adding context text to headers:',
+          contextText,
+        )
         if (contextText && contextText.trim().length > 0) {
           headers.set('context-text', flattenHeaderValue(contextText))
-          console.log(
-            '[gRPC Client] Adding context text to headers:',
-            contextText.length,
-            'characters',
-          )
+          // console.log(
+          //   '[gRPC Client] Adding context text to headers:',
+          //   contextText.length,
+          //   'characters',
+          // )
         }
       } catch (error) {
         console.error('[gRPC Client] Error getting context text:', error)

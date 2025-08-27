@@ -246,17 +246,17 @@ export const useSettingsStore = create<SettingsState>(set => {
       }
 
       const normalizedKeys = normalizeChord(keys)
-      
+
       // Check for reserved combinations
       const reservedCheck = isReservedCombination(normalizedKeys)
       if (reservedCheck.isReserved) {
-        return { 
-          success: false, 
+        return {
+          success: false,
           error: 'reserved-combination',
-          errorDetails: reservedCheck.reason
+          errorDetails: reservedCheck.reason,
         }
       }
-      
+
       const newShortcut = {
         ...shortcut,
         keys: normalizedKeys,

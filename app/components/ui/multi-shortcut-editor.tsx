@@ -119,7 +119,7 @@ export default function MultiShortcutEditor({
       setDraftKeys(prev =>
         prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key],
       )
-      
+
       // Clear error when user starts typing new keys
       setError('')
     },

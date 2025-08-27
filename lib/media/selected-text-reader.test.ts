@@ -302,7 +302,7 @@ describe('Selected Text Reader Functions', () => {
 
     expect(result).toBe('hello world')
     expect(mockLog.debug).toHaveBeenCalledWith(
-      expect.stringContaining('Selected text fetched in'),
+      expect.stringContaining('[SelectedTextService] Sent command:'),
     )
   })
 

@@ -1,15 +1,9 @@
 import Cerebras from '@cerebras/cerebras_cloud_sdk'
 import * as dotenv from 'dotenv'
-import { createTranscriptionPrompt } from '../prompts/transcription.js'
 import {
   ClientApiKeyError,
   ClientUnavailableError,
-  ClientModelError,
-  ClientNoSpeechError,
-  ClientTranscriptionQualityError,
-  ClientAudioTooShortError,
   ClientApiError,
-  ClientError,
 } from './errors.js'
 import { ClientProvider } from './providers.js'
 import { LlmProvider } from './llmProvider.js'
@@ -54,8 +48,6 @@ class CerebrasClient implements LlmProvider {
    */
   public async adjustTranscript(
     transcript: string,
-    mode: ItoMode,
-    context?: WindowContext,
     options?: IntentTranscriptionOptions,
   ): Promise<string> {
     if (!this.isAvailable) {
@@ -84,7 +76,9 @@ class CerebrasClient implements LlmProvider {
         temperature,
       })
 
-      return completion.choices[0]?.message?.content?.trim() || transcript
+      return (
+        (completion.choices as any)[0]?.message?.content?.trim() || transcript
+      )
     } catch (error: any) {
       console.error('An error occurred during transcript adjustment:', error)
       return transcript

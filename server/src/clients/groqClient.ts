@@ -16,8 +16,6 @@ import { ClientProvider } from './providers.js'
 import { LlmProvider } from './llmProvider.js'
 import { TranscriptionOptions } from './asrConfig.js'
 import { IntentTranscriptionOptions } from './intentTranscriptionConfig.js'
-import { ItoMode } from '../generated/ito_pb.js'
-import { WindowContext } from '../services/ito/types.js'
 import { DEFAULT_ADVANCED_SETTINGS } from '../constants/generated-defaults.js'
 
 // Load environment variables from .env file
@@ -55,8 +53,6 @@ class GroqClient implements LlmProvider {
    */
   public async adjustTranscript(
     transcript: string,
-    mode: ItoMode,
-    context?: WindowContext,
     options?: IntentTranscriptionOptions,
   ): Promise<string> {
     if (!this.isAvailable) {

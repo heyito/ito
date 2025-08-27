@@ -290,17 +290,12 @@ describe('GroqClient', () => {
       mockGroqClient.chat.completions.create.mockResolvedValue(mockCompletion)
 
       const originalTranscript = 'Original transcript'
-      const result = await groqClient.adjustTranscript(
-        originalTranscript,
-        ItoMode.TRANSCRIBE,
-        undefined,
-        {
-          temperature: 0.1,
-          model: 'llama-3.3-70b-versatile',
-          prompt:
-            'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
-        },
-      )
+      const result = await groqClient.adjustTranscript(originalTranscript, {
+        temperature: 0.1,
+        model: 'llama-3.3-70b-versatile',
+        prompt:
+          'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
+      })
 
       expect(result).toBe('Adjusted transcript content')
       expect(mockGroqClient.chat.completions.create).toHaveBeenCalledWith({
@@ -325,17 +320,12 @@ describe('GroqClient', () => {
       mockGroqClient.chat.completions.create.mockRejectedValue(mockError)
 
       const originalTranscript = 'Original transcript'
-      const result = await groqClient.adjustTranscript(
-        originalTranscript,
-        ItoMode.TRANSCRIBE,
-        undefined,
-        {
-          temperature: 0.1,
-          model: 'llama-3.3-70b-versatile',
-          prompt:
-            'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
-        },
-      )
+      const result = await groqClient.adjustTranscript(originalTranscript, {
+        temperature: 0.1,
+        model: 'llama-3.3-70b-versatile',
+        prompt:
+          'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
+      })
 
       expect(result).toBe(originalTranscript)
     })
@@ -353,17 +343,12 @@ describe('GroqClient', () => {
       mockGroqClient.chat.completions.create.mockResolvedValue(mockCompletion)
 
       const originalTranscript = 'Original transcript'
-      const result = await groqClient.adjustTranscript(
-        originalTranscript,
-        ItoMode.TRANSCRIBE,
-        undefined,
-        {
-          temperature: 0.1,
-          model: 'llama-3.3-70b-versatile',
-          prompt:
-            'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
-        },
-      )
+      const result = await groqClient.adjustTranscript(originalTranscript, {
+        temperature: 0.1,
+        model: 'llama-3.3-70b-versatile',
+        prompt:
+          'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
+      })
 
       expect(result).toBe(originalTranscript)
     })

@@ -17,6 +17,7 @@ export class TranscriptionService {
   private currentInteractionId: string | null = null
   private audioChunksForInteraction: Buffer[] = []
   private interactionStartTime: number | null = null
+  private currentSampleRate: number = 16000
 
   private async *streamAudioChunks() {
     while (this.isStreaming) {
@@ -261,6 +262,7 @@ export class TranscriptionService {
         llm_output: null, // No LLM processing yet
         raw_audio: rawAudio,
         duration_ms: durationMs, // Add duration as separate field
+        sample_rate: this.currentSampleRate || null,
         created_at: now,
         updated_at: now,
         deleted_at: null,
@@ -315,6 +317,13 @@ export class TranscriptionService {
 
   public handleAudioChunk(chunk: Buffer) {
     return this.forwardAudioChunk(chunk)
+  }
+
+  public setAudioConfig(config: { sampleRate?: number; channels?: number }) {
+    console.log('[TranscriptionService] Setting audio config:', config)
+    if (typeof config.sampleRate === 'number' && config.sampleRate > 0) {
+      this.currentSampleRate = config.sampleRate
+    }
   }
 }
 

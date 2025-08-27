@@ -126,6 +126,14 @@ class AudioRecorderService extends EventEmitter {
     })
   }
 
+  /**
+   * Requests the effective output audio configuration (sample rate, channels)
+   * that the recorder will use for a given device. Resolves via 'audio-config'.
+   */
+  public requestDeviceConfig(deviceName: string): void {
+    this.#sendCommand({ command: 'get-device-config', device_name: deviceName })
+  }
+
   // --- Private Methods ---
 
   /**
@@ -205,6 +213,15 @@ class AudioRecorderService extends EventEmitter {
         if (jsonResponse.type === 'device-list' && this.#deviceListPromise) {
           this.#deviceListPromise.resolve(jsonResponse.devices || [])
           this.#deviceListPromise = null
+        } else if (jsonResponse.type === 'audio-config') {
+          const inputRate = Number(jsonResponse.input_sample_rate) || 16000
+          const outputRate = Number(jsonResponse.output_sample_rate) || 16000
+          const channels = Number(jsonResponse.channels) || 1
+          this.emit('audio-config', {
+            sampleRate: inputRate,
+            outputSampleRate: outputRate,
+            channels,
+          })
         }
         // You could emit a generic 'json-message' event here if needed
       } catch (err) {

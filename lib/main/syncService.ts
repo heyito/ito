@@ -64,6 +64,7 @@ export class SyncService {
   }
 
   private async runSync() {
+    return
     if (this.isSyncing) {
       return
     }

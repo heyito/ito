@@ -9,12 +9,15 @@ export function addContextToPrompt(
   context?: ItoContext,
 ): string {
   if (context) {
-    const contextPrompt = `
+    let contextPrompt = `
     To assist with this, you have been given the following context:
     - ${context.windowTitle}: The title of the current window where the user is working.
     - ${context.appName}: The name of the application where the user is issuing this command.
-    - ${context.contextText}: The text that the user currently has selected wants to edit.
     `
+    if (context.contextText) {
+      contextPrompt += `\n- ${context.contextText}: Additional context provided by the user.`
+    }
+
     return prompt + contextPrompt
   }
   return prompt

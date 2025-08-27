@@ -9,7 +9,7 @@
     "url": "https://github.com/demox-labs"
   },
   "build": {
-    "appId": "xyz.demox-labs.ito",
+    "appId": "ai.ito.ito",
     "asar": true,
     "extraResources": [
       {
@@ -58,7 +58,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/guasam/electron-react-app"
+    "url": "https://github.com/heyito/ito"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -114,11 +114,13 @@
     "@electron/rebuild": "^4.0.1",
     "@eslint/js": "^9.28.0",
     "@rushstack/eslint-patch": "^1.11.0",
+    "@sinonjs/fake-timers": "^14.0.0",
     "@tailwindcss/vite": "^4.1.8",
     "@types/bun": "^1.2.19",
     "@types/node": "^22.15.29",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
+    "@types/sinonjs__fake-timers": "^8.1.5",
     "@vitejs/plugin-react": "^4.5.0",
     "bun-types": "^1.2.19",
     "electron": "^37.2.6",

@@ -1,4 +1,20 @@
 import { mock } from 'bun:test'
+import { install } from '@sinonjs/fake-timers'
+import { afterAll, beforeEach } from 'bun:test'
+
+export function fakeTimers() {
+  const clock = install()
+
+  beforeEach(() => {
+    clock.reset()
+  })
+
+  afterAll(() => {
+    clock.uninstall()
+  })
+
+  return clock
+}
 
 // Helper to create a mock module with all exports
 export const createMockModule = (moduleExports: Record<string, any>) => {

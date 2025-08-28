@@ -291,7 +291,6 @@ describe('GroqClient', () => {
 
   describe('adjustTranscript', () => {
     beforeEach(() => {
-      // Reset mock before each test to prevent test pollution
       mockGroqClient.chat.completions.create.mockReset()
     })
 
@@ -334,8 +333,6 @@ describe('GroqClient', () => {
     })
 
     it('should return user prompt on LLM error', async () => {
-      // Mock console.error to suppress the error log during test
-
       const mockError = new Error('LLM API error')
       mockGroqClient.chat.completions.create.mockRejectedValue(mockError)
 
@@ -370,7 +367,6 @@ describe('GroqClient', () => {
         'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
       )
 
-      // When LLM returns empty content, the function returns a space to enable emptying documents
       expect(result).toBe(' ')
     })
   })

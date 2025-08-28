@@ -383,7 +383,10 @@ export default function HomeContent() {
 
         try {
           // If direct playback fails, try converting raw PCM to WAV
-          const wavBuffer = createWavFile(pcmData)
+          const wavBuffer = createWavFile(
+            pcmData,
+            interaction.sample_rate || 16000,
+          )
           audioBlob = new Blob([wavBuffer], { type: 'audio/wav' })
           audioUrl = URL.createObjectURL(audioBlob)
 

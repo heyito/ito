@@ -7,6 +7,6 @@ export const ITO_MODE_PROMPT: { [key in ItoMode]: string } = {
 }
 
 export const ITO_MODE_SYSTEM_PROMPT: { [key in ItoMode]: string } = {
-  [ItoMode.TRANSCRIBE]: 'You are a helpful AI transcriptionassistant.',
+  [ItoMode.TRANSCRIBE]: 'You are a helpful AI transcription assistant.',
   [ItoMode.EDIT]: 'You are an AI assistant helping to edit documents.',
 }

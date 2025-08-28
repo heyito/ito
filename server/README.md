@@ -33,6 +33,9 @@ DB_NAME=ito_db
 # GROQ API Configuration (Required)
 GROQ_API_KEY=your_groq_api_key_here
 
+# CEREBRUS API Key (Not Required)
+CEREBRUS_API_KEY=your_cerebrus_api_key_here
+
 # Authentication (Optional - set to false for local development)
 REQUIRE_AUTH=false
 AUTH0_DOMAIN=your_auth0_domain.auth0.com
@@ -159,17 +162,18 @@ bun run test-client      # Run gRPC client tests
 
 ### Environment Variables
 
-| Variable         | Required | Default     | Description                                 |
-| ---------------- | -------- | ----------- | ------------------------------------------- |
-| `DB_HOST`        | Yes      | `localhost` | PostgreSQL host                             |
-| `DB_PORT`        | Yes      | `5432`      | PostgreSQL port                             |
-| `DB_USER`        | Yes      | -           | Database username                           |
-| `DB_PASS`        | Yes      | -           | Database password                           |
-| `DB_NAME`        | Yes      | -           | Database name                               |
-| `GROQ_API_KEY`   | Yes      | -           | GROQ API key for transcription              |
-| `REQUIRE_AUTH`   | No       | `false`     | Enable Auth0 authentication                 |
-| `AUTH0_DOMAIN`   | No\*     | -           | Auth0 domain (\*required if auth enabled)   |
-| `AUTH0_AUDIENCE` | No\*     | -           | Auth0 audience (\*required if auth enabled) |
+| Variable           | Required | Default     | Description                                 |
+| ------------------ | -------- | ----------- | ------------------------------------------- |
+| `DB_HOST`          | Yes      | `localhost` | PostgreSQL host                             |
+| `DB_PORT`          | Yes      | `5432`      | PostgreSQL port                             |
+| `DB_USER`          | Yes      | -           | Database username                           |
+| `DB_PASS`          | Yes      | -           | Database password                           |
+| `DB_NAME`          | Yes      | -           | Database name                               |
+| `GROQ_API_KEY`     | Yes      | -           | GROQ API key for transcription              |
+| `CEREBRUS_API_KEY` | No       | -           | CEREBRUS API key for reasoning              |
+| `REQUIRE_AUTH`     | No       | `false`     | Enable Auth0 authentication                 |
+| `AUTH0_DOMAIN`     | No\*     | -           | Auth0 domain (\*required if auth enabled)   |
+| `AUTH0_AUDIENCE`   | No\*     | -           | Auth0 audience (\*required if auth enabled) |
 
 ### Database Configuration
 

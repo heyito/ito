@@ -6,6 +6,7 @@ export interface Interaction {
   llm_output: any
   raw_audio: Buffer | null
   duration_ms: number | null
+  sample_rate: number | null
   created_at: string
   updated_at: string
   deleted_at: string | null

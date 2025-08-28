@@ -273,6 +273,10 @@ export class SyncService {
     try {
       // Get remote advanced settings
       const remoteSettings = await grpcClient.getAdvancedSettings()
+      if (!remoteSettings) {
+        console.warn('No remote advanced settings found, skipping sync.')
+        return
+      }
 
       // Compare timestamps to determine sync direction
       const remoteUpdatedAt = new Date(remoteSettings.updatedAt)

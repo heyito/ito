@@ -60,7 +60,7 @@ export default function MultiShortcutEditor({
     )
   }
 
-  const getErrorMessage = (error: ShortcutError, details?: string) => {
+  const getErrorMessage = (error: ShortcutError, message?: string) => {
     switch (error) {
       case 'duplicate-key-same-mode':
         return 'This key combination is already in use for this mode.'
@@ -69,7 +69,7 @@ export default function MultiShortcutEditor({
       case 'not-found':
         return 'The specified shortcut was not found.'
       case 'reserved-combination':
-        return details || 'This key combination is reserved and cannot be used.'
+        return message || 'This key combination is reserved and cannot be used.'
       default:
         return 'An unknown error occurred.'
     }
@@ -78,7 +78,7 @@ export default function MultiShortcutEditor({
   const addNew = () => {
     const result = createKeyboardShortcut(mode)
     if (!result.success && result.error) {
-      setError(getErrorMessage(result.error, result.errorDetails))
+      setError(getErrorMessage(result.error, result.errorMessage))
       return
     }
   }
@@ -101,7 +101,7 @@ export default function MultiShortcutEditor({
     // update existing
     const result = updateKeyboardShortcut(original.id, draftKeys)
     if (!result.success && result.error) {
-      setError(getErrorMessage(result.error, result.errorDetails))
+      setError(getErrorMessage(result.error, result.errorMessage))
       return
     }
 

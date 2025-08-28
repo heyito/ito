@@ -118,7 +118,7 @@ export type ShortcutError =
 export type ShortcutResult = {
   success: boolean
   error?: ShortcutError
-  errorDetails?: string
+  errorMessage?: string
 }
 
 const MODIFIER_SEQUENCE = [

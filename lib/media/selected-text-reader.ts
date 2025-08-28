@@ -23,6 +23,7 @@ interface SelectedTextCommand {
 }
 
 const nativeModuleName = 'selected-text-reader'
+const MAXIUMUM_TEXT_LENGTH_DEFAULT = 10000 // Maximum length of text to return
 
 class SelectedTextReaderService extends EventEmitter {
   #selectedTextProcess: ReturnType<typeof spawn> | null = null
@@ -107,7 +108,10 @@ class SelectedTextReaderService extends EventEmitter {
    * Sends a command to get selected text.
    */
   public async getSelectedText(
-    options: SelectedTextOptions = { format: 'json', maxLength: 10000 },
+    options: SelectedTextOptions = {
+      format: 'json',
+      maxLength: MAXIUMUM_TEXT_LENGTH_DEFAULT,
+    },
   ): Promise<SelectedTextResult> {
     if (!this.#selectedTextProcess) {
       throw new Error('Selected text reader process not running')
@@ -120,7 +124,7 @@ class SelectedTextReaderService extends EventEmitter {
       const command: SelectedTextCommand = {
         command: 'get-text',
         format: options.format || 'json',
-        maxLength: options.maxLength || 10000,
+        maxLength: options.maxLength || MAXIUMUM_TEXT_LENGTH_DEFAULT,
         requestId,
       }
 
@@ -219,7 +223,10 @@ class SelectedTextReaderService extends EventEmitter {
 export const selectedTextReaderService = new SelectedTextReaderService()
 
 export function getSelectedText(
-  options: SelectedTextOptions = { format: 'json', maxLength: 10000 },
+  options: SelectedTextOptions = {
+    format: 'json',
+    maxLength: MAXIUMUM_TEXT_LENGTH_DEFAULT,
+  },
 ): Promise<SelectedTextResult> {
   return selectedTextReaderService.getSelectedText(options)
 }
@@ -228,7 +235,7 @@ export function getSelectedText(
  * Get selected text as plain string (convenience method)
  */
 export async function getSelectedTextString(
-  maxLength: number = 10000,
+  maxLength: number = MAXIUMUM_TEXT_LENGTH_DEFAULT,
 ): Promise<string | null> {
   try {
     const result = await selectedTextReaderService.getSelectedText({

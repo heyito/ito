@@ -261,9 +261,9 @@ export function registerIPC() {
     log.info('[IPC] Received get-selected-text with options:', options)
     return getSelectedText(options)
   })
-  handleIPC('get-selected-text-string', async _e => {
+  handleIPC('get-selected-text-string', async (_e, maxLength) => {
     log.info('[IPC] Received get-selected-text-string')
-    return getSelectedTextString()
+    return getSelectedTextString(maxLength)
   })
   handleIPC('has-selected-text', async () => {
     log.info('[IPC] Received has-selected-text')

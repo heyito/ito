@@ -1,11 +1,11 @@
 use arboard::Clipboard;
-use std::time::Duration;
-use std::thread;
-use std::num::NonZeroUsize;
+use libc::c_void;
 use lru::LruCache;
 use parking_lot::Mutex;
+use std::num::NonZeroUsize;
 use std::ptr;
-use libc::c_void;
+use std::thread;
+use std::time::Duration;
 
 use accessibility_ng::{AXAttribute, AXUIElement};
 use accessibility_sys_ng::{kAXFocusedUIElementAttribute, kAXSelectedTextAttribute};
@@ -27,7 +27,11 @@ type CGEventTapLocation = u32;
 const CG_HID_EVENT_TAP: CGEventTapLocation = 0;
 
 extern "C" {
-    fn CGEventCreateKeyboardEvent(source: *mut c_void, virtualKey: CGKeyCode, keyDown: bool) -> CGEventRef;
+    fn CGEventCreateKeyboardEvent(
+        source: *mut c_void,
+        virtualKey: CGKeyCode,
+        keyDown: bool,
+    ) -> CGEventRef;
     fn CGEventSetFlags(event: CGEventRef, flags: CGEventFlags);
     fn CGEventPost(tap: CGEventTapLocation, event: CGEventRef);
     fn CFRelease(cf: *const c_void);
@@ -39,16 +43,16 @@ pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
         let cache = LruCache::new(NonZeroUsize::new(100).unwrap());
         *GET_SELECTED_TEXT_METHOD.lock() = Some(cache);
     }
-    
+
     let mut cache = GET_SELECTED_TEXT_METHOD.lock();
     let cache = cache.as_mut().unwrap();
-    
+
     // Get the active application name
     let app_name = match get_active_window() {
         Ok(window) => window.app_name,
         Err(_) => return Err("No active window found".into()),
     };
-    
+
     // Check cache for preferred method for this app
     if let Some(method) = cache.get(&app_name) {
         if *method == 0 {
@@ -65,7 +69,7 @@ pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
             }
         }
     }
-    
+
     // No cached preference - try AX method first
     match get_selected_text_by_ax() {
         Ok(text) => {
@@ -76,7 +80,7 @@ pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
         }
         Err(_) => {}
     }
-    
+
     // AX failed or returned empty, try clipboard method
     match get_selected_text_by_clipboard_macos() {
         Ok(text) => {
@@ -87,11 +91,10 @@ pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
         }
         Err(_) => {}
     }
-    
+
     // Both AX and clipboard failed, try AppleScript as last resort
     get_selected_text_by_clipboard_using_applescript()
 }
-
 
 // Direct accessibility framework method
 fn get_selected_text_by_ax() -> Result<String, Box<dyn std::error::Error>> {
@@ -109,7 +112,7 @@ fn get_selected_text_by_ax() -> Result<String, Box<dyn std::error::Error>> {
             "No selected element",
         )));
     };
-    
+
     let Some(selected_text) = selected_element
         .attribute(&AXAttribute::new(&CFString::from_static_string(
             kAXSelectedTextAttribute,
@@ -123,23 +126,21 @@ fn get_selected_text_by_ax() -> Result<String, Box<dyn std::error::Error>> {
             "No selected text",
         )));
     };
-    
+
     Ok(selected_text.to_string())
 }
 
 // Fallback clipboard method for macOS with multiple copy strategies
 fn get_selected_text_by_clipboard_macos() -> Result<String, Box<dyn std::error::Error>> {
     let mut clipboard = Clipboard::new()?;
-    
+
     // Store original clipboard contents
     let original_clipboard = clipboard.get_text().unwrap_or_default();
-    
+
     // Try different copy methods
-    let copy_methods: Vec<fn(&mut Clipboard) -> Result<String, Box<dyn std::error::Error>>> = vec![
-        single_copy_method,
-        double_copy_method,
-    ];
-    
+    let copy_methods: Vec<fn(&mut Clipboard) -> Result<String, Box<dyn std::error::Error>>> =
+        vec![single_copy_method, double_copy_method];
+
     for copy_method in copy_methods {
         match copy_method(&mut clipboard) {
             Ok(text) if !text.is_empty() => {
@@ -147,11 +148,11 @@ fn get_selected_text_by_clipboard_macos() -> Result<String, Box<dyn std::error::
                 let _ = clipboard.set_text(original_clipboard);
                 return Ok(text);
             }
-            Ok(_) => continue, // Empty text, try next method
+            Ok(_) => continue,  // Empty text, try next method
             Err(_) => continue, // Method failed, try next
         }
     }
-    
+
     // All methods failed, restore clipboard and return empty
     let _ = clipboard.set_text(original_clipboard);
     Ok(String::new())
@@ -161,13 +162,13 @@ fn get_selected_text_by_clipboard_macos() -> Result<String, Box<dyn std::error::
 fn single_copy_method(clipboard: &mut Clipboard) -> Result<String, Box<dyn std::error::Error>> {
     // Clear clipboard to detect if copy operation worked
     clipboard.clear()?;
-    
+
     // Use native macOS keyboard events for better compatibility
     native_cmd_c()?;
-    
+
     // Small delay to ensure copy operation completes
-    thread::sleep(Duration::from_millis(50));
-    
+    thread::sleep(Duration::from_millis(25));
+
     // Try to get the copied text
     match clipboard.get_text() {
         Ok(text) => Ok(text),
@@ -180,39 +181,39 @@ fn native_cmd_c() -> Result<(), Box<dyn std::error::Error>> {
     unsafe {
         // Key code for 'C' is 8 on macOS
         let c_key_code: CGKeyCode = 8;
-        
+
         // Create key down event for Cmd+C - using None as source like Python
         let key_down_event = CGEventCreateKeyboardEvent(ptr::null_mut(), c_key_code, true);
         if key_down_event.is_null() {
             return Err("Failed to create key down event".into());
         }
-        
+
         // Set Command flag
         CGEventSetFlags(key_down_event, CG_EVENT_FLAG_MASK_COMMAND);
-        
-        // Create key up event for Cmd+C - using None as source like Python  
+
+        // Create key up event for Cmd+C - using None as source like Python
         let key_up_event = CGEventCreateKeyboardEvent(ptr::null_mut(), c_key_code, false);
         if key_up_event.is_null() {
             CFRelease(key_down_event as *const c_void);
             return Err("Failed to create key up event".into());
         }
-        
+
         // Set Command flag
         CGEventSetFlags(key_up_event, CG_EVENT_FLAG_MASK_COMMAND);
-        
+
         // Post the events with timing like Python
         CGEventPost(CG_HID_EVENT_TAP, key_down_event);
-        
+
         // Small delay between down and up like Python does
         thread::sleep(Duration::from_millis(10));
-        
+
         CGEventPost(CG_HID_EVENT_TAP, key_up_event);
-        
+
         // Clean up
         CFRelease(key_down_event as *const c_void);
         CFRelease(key_up_event as *const c_void);
     }
-    
+
     Ok(())
 }
 
@@ -220,19 +221,19 @@ fn native_cmd_c() -> Result<(), Box<dyn std::error::Error>> {
 fn double_copy_method(clipboard: &mut Clipboard) -> Result<String, Box<dyn std::error::Error>> {
     // Clear clipboard to detect if copy operation worked
     clipboard.clear()?;
-    
+
     // Perform first Cmd+C
     native_cmd_c()?;
-    
+
     // Short delay between copies
     thread::sleep(Duration::from_millis(25));
-    
+
     // Perform second Cmd+C
     native_cmd_c()?;
-    
+
     // Slightly longer delay for double copy
     thread::sleep(Duration::from_millis(75));
-    
+
     // Try to get the copied text
     match clipboard.get_text() {
         Ok(text) => Ok(text),
@@ -278,7 +279,8 @@ set the clipboard to savedClipboard
 theSelectedText
 "#;
 
-fn get_selected_text_by_clipboard_using_applescript() -> Result<String, Box<dyn std::error::Error>> {
+fn get_selected_text_by_clipboard_using_applescript() -> Result<String, Box<dyn std::error::Error>>
+{
     let output = std::process::Command::new("osascript")
         .arg("-e")
         .arg(APPLE_SCRIPT)

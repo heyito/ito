@@ -253,7 +253,7 @@ export const useSettingsStore = create<SettingsState>(set => {
         return {
           success: false,
           error: 'reserved-combination',
-          errorDetails: reservedCheck.reason,
+          errorMessage: reservedCheck.reason,
         }
       }
 

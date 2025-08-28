@@ -157,10 +157,12 @@ class GrpcClient {
         'transcription-prompt',
         flattenHeaderValue(advancedSettings.llm.transcriptionPrompt),
       )
-      headers.set(
-        'editing-prompt',
-        flattenHeaderValue(advancedSettings.llm.editingPrompt),
-      )
+      // Note: Editing prompt is currently disabled until a better versioning solution is implemented
+      // https://github.com/heyito/ito/issues/174
+      // headers.set(
+      //   'editing-prompt',
+      //   flattenHeaderValue(advancedSettings.llm.editingPrompt),
+      // )
       headers.set(
         'no-speech-threshold',
         advancedSettings.llm.noSpeechThreshold.toString(),

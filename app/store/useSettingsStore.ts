@@ -13,6 +13,7 @@ import {
   normalizeChord,
   ShortcutResult,
   validateShortcutForDuplicate,
+  isReservedCombination,
 } from '../utils/keyboard'
 
 interface SettingsState {
@@ -245,6 +246,17 @@ export const useSettingsStore = create<SettingsState>(set => {
       }
 
       const normalizedKeys = normalizeChord(keys)
+
+      // Check for reserved combinations
+      const reservedCheck = isReservedCombination(normalizedKeys)
+      if (reservedCheck.isReserved) {
+        return {
+          success: false,
+          error: 'reserved-combination',
+          errorMessage: reservedCheck.reason,
+        }
+      }
+
       const newShortcut = {
         ...shortcut,
         keys: normalizedKeys,

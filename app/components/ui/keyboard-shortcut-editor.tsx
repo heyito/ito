@@ -1,9 +1,12 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { Button } from '@/app/components/ui/button'
 import KeyboardKey from '@/app/components/ui/keyboard-key'
-import { KeyState, normalizeKeyEvent } from '@/app/utils/keyboard'
+import {
+  KeyState,
+  normalizeKeyEvent,
+  isReservedCombination,
+} from '@/app/utils/keyboard'
 import { useAudioStore } from '@/app/store/useAudioStore'
-import { ItoMode } from '@/app/generated/ito_pb'
 import { KeyboardShortcutConfig } from './multi-shortcut-editor'
 
 interface KeyboardShortcutEditorProps {
@@ -21,7 +24,6 @@ interface KeyboardShortcutEditorProps {
   minHeight?: number
   editButtonClassName?: string
   confirmButtonClassName?: string
-  mode?: ItoMode
 }
 
 export default function KeyboardShortcutEditor({
@@ -39,7 +41,6 @@ export default function KeyboardShortcutEditor({
   minHeight = 84,
   editButtonClassName = '',
   confirmButtonClassName = '',
-  mode = ItoMode.TRANSCRIBE,
 }: KeyboardShortcutEditorProps) {
   const shortcutKeys = shortcut.keys
 
@@ -48,6 +49,7 @@ export default function KeyboardShortcutEditor({
   const [pressedKeys, setPressedKeys] = useState<string[]>([])
   const [isEditing, setIsEditing] = useState(false)
   const [newShortcut, setNewShortcut] = useState<string[]>([])
+  const [validationError, setValidationError] = useState<string>('')
   const { setIsShortcutEnabled } = useAudioStore()
 
   const handleKeyEvent = useCallback(
@@ -66,11 +68,25 @@ export default function KeyboardShortcutEditor({
           if (normalizedKey === 'fn_fast') {
             return
           }
+
+          let updatedShortcut: string[]
           if (!newShortcut.includes(normalizedKey)) {
-            setNewShortcut(prev => [...prev, normalizedKey])
+            updatedShortcut = [...newShortcut, normalizedKey]
           } else {
-            setNewShortcut(prev => prev.filter(key => key !== normalizedKey))
+            updatedShortcut = newShortcut.filter(key => key !== normalizedKey)
           }
+
+          // Check for reserved combinations
+          const reservedCheck = isReservedCombination(updatedShortcut)
+          if (reservedCheck.isReserved) {
+            setValidationError(
+              reservedCheck.reason || 'This key combination is reserved',
+            )
+          } else {
+            setValidationError('')
+          }
+
+          setNewShortcut(updatedShortcut)
         }
       }
     },
@@ -80,7 +96,7 @@ export default function KeyboardShortcutEditor({
   useEffect(() => {
     // Update key state when shortcut changes
     keyStateRef.current.updateShortcut(shortcutKeys)
-  }, [shortcut])
+  }, [shortcut, shortcutKeys])
 
   useEffect(() => {
     // Capture the current keyState ref value for cleanup
@@ -120,6 +136,7 @@ export default function KeyboardShortcutEditor({
     setIsShortcutEnabled(false)
     setIsEditing(true)
     setNewShortcut([])
+    setValidationError('')
   }
 
   const handleCancel = () => {
@@ -179,6 +196,11 @@ export default function KeyboardShortcutEditor({
               </div>
             )}
           </div>
+          {validationError && (
+            <div className="text-red-500 text-sm text-center mb-2">
+              {validationError}
+            </div>
+          )}
           <div className="flex gap-2 justify-end w-full mt-1">
             <Button
               variant="outline"
@@ -192,7 +214,7 @@ export default function KeyboardShortcutEditor({
               size="sm"
               type="button"
               onClick={handleSave}
-              disabled={newShortcut.length === 0}
+              disabled={newShortcut.length === 0 || !!validationError}
             >
               Save
             </Button>

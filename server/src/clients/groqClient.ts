@@ -52,7 +52,7 @@ class GroqClient implements LlmProvider {
    * @returns The adjusted transcript.
    */
   public async adjustTranscript(
-    transcript: string,
+    userPrompt: string,
     options?: IntentTranscriptionOptions,
   ): Promise<string> {
     if (!this.isAvailable) {
@@ -74,17 +74,18 @@ class GroqClient implements LlmProvider {
           },
           {
             role: 'user',
-            content: `The user's transcript: ${transcript}`,
+            content: userPrompt,
           },
         ],
         model,
         temperature,
       })
 
-      return completion.choices[0]?.message?.content?.trim() || transcript
+      // Return a space to enable emptying the document
+      return completion.choices[0]?.message?.content?.trim() || ' '
     } catch (error: any) {
       console.error('An error occurred during transcript adjustment:', error)
-      return transcript
+      return userPrompt
     }
   }
 

@@ -19,7 +19,7 @@ type LlmSettingConfig = {
 const modelProviderLengthLimit = 30
 const floatLengthLimit = 4
 const asrPromptLengthLimit = 100
-const llmPromptLenghtLimit = 1500
+const llmPromptLengthLimit = 1500
 
 const llmSettingsConfig: LlmSettingConfig[] = [
   {
@@ -76,18 +76,20 @@ const llmSettingsConfig: LlmSettingConfig[] = [
     placeholder: 'Enter custom transcription prompt',
     description:
       'A custom prompt to guide the transcription process for better accuracy. (Leave empty for default)',
-    maxLength: llmPromptLenghtLimit,
+    maxLength: llmPromptLengthLimit,
     resize: true,
   },
-  {
-    name: 'editingPrompt',
-    label: 'Editing Prompt',
-    placeholder: 'Enter custom editing prompt',
-    description:
-      'A custom prompt to guide the editing process for improved text quality. (Leave empty for default)',
-    maxLength: llmPromptLenghtLimit,
-    resize: true,
-  },
+  // This is being removed until long term solution for versioning prompts is implemented
+  // https://github.com/heyito/ito/issues/174
+  // {
+  //   name: 'editingPrompt',
+  //   label: 'Editing Prompt',
+  //   placeholder: 'Enter custom editing prompt',
+  //   description:
+  //     'A custom prompt to guide the editing process for improved text quality. (Leave empty for default)',
+  //   maxLength: llmPromptLengthLimit,
+  //   resize: true,
+  // },
   {
     name: 'noSpeechThreshold',
     label: 'No Speech Threshold',

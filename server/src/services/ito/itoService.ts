@@ -31,16 +31,17 @@ import {
 } from '../../db/models.js'
 import { ConnectError, Code } from '@connectrpc/connect'
 import { kUser } from '../../auth/userContext.js'
-import { WindowContext } from './types.js'
+import { ItoContext } from './types.js'
 import { HeaderValidator } from '../../validation/HeaderValidator.js'
 import { errorToProtobuf } from '../../clients/errors.js'
 import {
-  addContextToPrompt,
   getAdvancedSettingsHeaders,
   detectItoMode,
   getPromptForMode,
   getItoMode,
+  createUserPromptWithContext,
 } from './helpers.js'
+import { ITO_MODE_SYSTEM_PROMPT } from './constants.js'
 
 /**
  * --- NEW: WAV Header Generation Function ---
@@ -237,14 +238,23 @@ export default (router: ConnectRouter) => {
         const appName = context.requestHeader.get('app-name') || ''
         const mode = getItoMode(context.requestHeader.get('mode'))
 
-        const windowContext: WindowContext = { windowTitle, appName }
+        // Decode context text if it was base64 encoded due to Unicode characters
+        const rawContextText = context.requestHeader.get('context-text') || ''
+        const contextText = rawContextText.startsWith('base64:')
+          ? Buffer.from(rawContextText.substring(7), 'base64').toString('utf8')
+          : rawContextText
+
+        const windowContext: ItoContext = { windowTitle, appName, contextText }
 
         const detectedMode = mode || detectItoMode(transcript)
-        const preContextPrompt = getPromptForMode(
+        const userPromptPrefix = getPromptForMode(
           detectedMode,
           advancedSettingsHeaders,
         )
-        const systemPrompt = addContextToPrompt(preContextPrompt, windowContext)
+        const userPrompt = createUserPromptWithContext(
+          transcript,
+          windowContext,
+        )
 
         console.log(
           `[${new Date().toISOString()}] Detected mode: ${detectedMode}, adjusting transcript`,
@@ -254,11 +264,14 @@ export default (router: ConnectRouter) => {
           const llmProvider = getLlmProvider(
             advancedSettingsHeaders.llmProvider,
           )
-          transcript = await llmProvider.adjustTranscript(transcript, {
-            temperature: advancedSettingsHeaders.llmTemperature,
-            model: advancedSettingsHeaders.llmModel,
-            prompt: systemPrompt,
-          })
+          transcript = await llmProvider.adjustTranscript(
+            userPromptPrefix + '\n' + userPrompt,
+            {
+              temperature: advancedSettingsHeaders.llmTemperature,
+              model: advancedSettingsHeaders.llmModel,
+              prompt: ITO_MODE_SYSTEM_PROMPT[detectedMode],
+            },
+          )
           console.log(
             `📝 [${new Date().toISOString()}] Adjusted transcript: "${transcript}"`,
           )

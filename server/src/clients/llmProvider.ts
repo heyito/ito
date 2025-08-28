@@ -10,7 +10,7 @@ export interface LlmProvider {
   ): Promise<string>
 
   adjustTranscript(
-    transcript: string,
+    userPrompt: string,
     options?: IntentTranscriptionOptions,
   ): Promise<string>
 }

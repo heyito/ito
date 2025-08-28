@@ -9,8 +9,6 @@ import { ClientProvider } from './providers.js'
 import { LlmProvider } from './llmProvider.js'
 import { TranscriptionOptions } from './asrConfig.js'
 import { IntentTranscriptionOptions } from './intentTranscriptionConfig.js'
-import { ItoMode } from '../generated/ito_pb.js'
-import { WindowContext } from '../services/ito/types.js'
 import { DEFAULT_ADVANCED_SETTINGS } from '../constants/generated-defaults.js'
 
 // Load environment variables from .env file
@@ -47,7 +45,7 @@ class CerebrasClient implements LlmProvider {
    * @returns The adjusted transcript.
    */
   public async adjustTranscript(
-    transcript: string,
+    userPrompt: string,
     options?: IntentTranscriptionOptions,
   ): Promise<string> {
     if (!this.isAvailable) {
@@ -69,19 +67,17 @@ class CerebrasClient implements LlmProvider {
           },
           {
             role: 'user',
-            content: `The user's transcript: ${transcript}`,
+            content: userPrompt,
           },
         ],
         model,
         temperature,
       })
 
-      return (
-        (completion.choices as any)[0]?.message?.content?.trim() || transcript
-      )
+      return (completion.choices as any)[0]?.message?.content?.trim() || ' '
     } catch (error: any) {
       console.error('An error occurred during transcript adjustment:', error)
-      return transcript
+      return userPrompt
     }
   }
 

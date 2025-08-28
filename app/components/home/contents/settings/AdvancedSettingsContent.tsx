@@ -76,15 +76,17 @@ const llmSettingsConfig: LlmSettingConfig[] = [
     maxLength: llmPromptLenghtLimit,
     resize: true,
   },
-  {
-    name: 'editingPrompt',
-    label: 'Editing Prompt',
-    placeholder: 'Enter custom editing prompt',
-    description:
-      'A custom prompt to guide the editing process for improved text quality. (Leave empty for default)',
-    maxLength: llmPromptLenghtLimit,
-    resize: true,
-  },
+  // This is being removed until long term solution for versioning prompts is implemented
+  // https://github.com/heyito/ito/issues/174
+  // {
+  //   name: 'editingPrompt',
+  //   label: 'Editing Prompt',
+  //   placeholder: 'Enter custom editing prompt',
+  //   description:
+  //     'A custom prompt to guide the editing process for improved text quality. (Leave empty for default)',
+  //   maxLength: llmPromptLenghtLimit,
+  //   resize: true,
+  // },
   {
     name: 'noSpeechThreshold',
     label: 'No Speech Threshold',

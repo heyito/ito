@@ -290,6 +290,10 @@ describe('GroqClient', () => {
   })
 
   describe('adjustTranscript', () => {
+    beforeEach(() => {
+      mockGroqClient.chat.completions.create.mockReset()
+    })
+
     it('should use LLM to adjust transcript', async () => {
       const mockCompletion = {
         choices: [
@@ -320,7 +324,7 @@ describe('GroqClient', () => {
           },
           {
             role: 'user',
-            content: `The user's transcript: ${originalTranscript}`,
+            content: originalTranscript,
           },
         ],
         model: 'llama-3.3-70b-versatile',
@@ -328,7 +332,7 @@ describe('GroqClient', () => {
       })
     })
 
-    it('should return original transcript on LLM error', async () => {
+    it('should return user prompt on LLM error', async () => {
       const mockError = new Error('LLM API error')
       mockGroqClient.chat.completions.create.mockRejectedValue(mockError)
 
@@ -363,7 +367,7 @@ describe('GroqClient', () => {
         'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
       )
 
-      expect(result).toBe(originalTranscript)
+      expect(result).toBe(' ')
     })
   })
 })

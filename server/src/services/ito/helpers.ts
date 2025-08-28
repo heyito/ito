@@ -3,24 +3,40 @@ import { ItoContext } from './types.js'
 import { ITO_MODE_PROMPT } from './constants.js'
 import { DEFAULT_ADVANCED_SETTINGS } from '../../constants/generated-defaults.js'
 import { ItoMode } from '../../generated/ito_pb.js'
+import {
+  END_APP_NAME_MARKER,
+  END_CONTEXT_MARKER,
+  END_USER_COMMAND_MARKER,
+  END_WINDOW_TITLE_MARKER,
+  START_APP_NAME_MARKER,
+  START_CONTEXT_MARKER,
+  START_USER_COMMAND_MARKER,
+  START_WINDOW_TITLE_MARKER,
+} from '../../constants/markers.js'
 
-export function addContextToPrompt(
-  prompt: string,
+export function createUserPromptWithContext(
+  transcript: string,
   context?: ItoContext,
 ): string {
+  let contextPrompt = ''
   if (context) {
-    let contextPrompt = `
-    To assist with this, you have been given the following context:
-    - ${context.windowTitle}: The title of the current window where the user is working.
-    - ${context.appName}: The name of the application where the user is issuing this command.
-    `
-    if (context.contextText) {
-      contextPrompt += `\n- ${context.contextText}: Additional context provided by the user.`
+    if (context.windowTitle) {
+      contextPrompt += `\n${START_WINDOW_TITLE_MARKER}\n${context.windowTitle}\n${END_WINDOW_TITLE_MARKER}`
     }
-
-    return prompt + contextPrompt
+    if (context.appName) {
+      contextPrompt += `\n${START_APP_NAME_MARKER}\n${context.appName}\n${END_APP_NAME_MARKER}`
+    }
   }
-  return prompt
+  const userPrompt = `
+    ${contextPrompt}${context?.contextText ? '\n' : ''}
+    ${START_CONTEXT_MARKER}
+    ${context?.contextText || ''}
+    ${END_CONTEXT_MARKER}
+    ${START_USER_COMMAND_MARKER}
+    ${transcript}
+    ${END_USER_COMMAND_MARKER}
+  `
+  return userPrompt
 }
 
 function validateAndTransformHeaderValue<T>(
@@ -165,7 +181,9 @@ export function getPromptForMode(
   switch (mode) {
     case ItoMode.EDIT:
       return (
-        advancedSettingsHeaders.editingPrompt || ITO_MODE_PROMPT[ItoMode.EDIT]
+        // TODO: Figure out how to version advanced settings such that we can overwrite user settings when a significant change is made
+        // advancedSettingsHeaders.editingPrompt || ITO_MODE_PROMPT[ItoMode.EDIT]
+        ITO_MODE_PROMPT[ItoMode.EDIT]
       )
     case ItoMode.TRANSCRIBE:
       return (

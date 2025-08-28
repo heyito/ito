@@ -36,13 +36,13 @@ import { HeaderValidator } from '../../validation/HeaderValidator.js'
 import { errorToProtobuf } from '../../clients/errors.js'
 import { ClientProvider } from '../../clients/providers.js'
 import {
-  addContextToPrompt,
   getAdvancedSettingsHeaders,
   detectItoMode,
   getPromptForMode,
   getItoMode,
+  createUserPromptWithContext,
 } from './helpers.js'
-import { de } from 'zod/v4/locales'
+import { ITO_MODE_SYSTEM_PROMPT } from './constants.js'
 
 /**
  * --- NEW: WAV Header Generation Function ---
@@ -238,16 +238,24 @@ export default (router: ConnectRouter) => {
         const windowTitle = context.requestHeader.get('window-title') || ''
         const appName = context.requestHeader.get('app-name') || ''
         const mode = getItoMode(context.requestHeader.get('mode'))
-        const contextText = context.requestHeader.get('context-text') || ''
+
+        // Decode context text if it was base64 encoded due to Unicode characters
+        const rawContextText = context.requestHeader.get('context-text') || ''
+        const contextText = rawContextText.startsWith('base64:')
+          ? Buffer.from(rawContextText.substring(7), 'base64').toString('utf8')
+          : rawContextText
 
         const windowContext: ItoContext = { windowTitle, appName, contextText }
 
         const detectedMode = mode || detectItoMode(transcript)
-        const preContextPrompt = getPromptForMode(
+        const userPromptPrefix = getPromptForMode(
           detectedMode,
           advancedSettingsHeaders,
         )
-        const systemPrompt = addContextToPrompt(preContextPrompt, windowContext)
+        const userPrompt = createUserPromptWithContext(
+          transcript,
+          windowContext,
+        )
 
         console.log(
           `[${new Date().toISOString()}] Detected mode: ${detectedMode}, adjusting transcript`,
@@ -255,10 +263,10 @@ export default (router: ConnectRouter) => {
 
         if (detectedMode === ItoMode.EDIT) {
           transcript = await groqClient.adjustTranscript(
-            transcript,
+            userPromptPrefix + '\n' + userPrompt,
             advancedSettingsHeaders.llmTemperature,
             advancedSettingsHeaders.llmModel,
-            systemPrompt,
+            ITO_MODE_SYSTEM_PROMPT[detectedMode],
           )
           console.log(
             `📝 [${new Date().toISOString()}] Adjusted transcript: "${transcript}"`,

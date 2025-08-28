@@ -118,10 +118,21 @@ class GrpcClient {
       }
 
       function flattenHeaderValue(value: string) {
-        return value
+        const flattened = value
           .replace(/[\r\n]+/g, ' ')
           .replace(/\s{2,}/g, ' ')
           .trim()
+
+        // Check if the string contains non-ASCII characters
+        // eslint-disable-next-line no-control-regex
+        const hasUnicode = /[^\x00-\x7F]/.test(flattened)
+
+        if (hasUnicode) {
+          // Base64 encode to safely transmit Unicode characters via gRPC headers
+          return `base64:${Buffer.from(flattened, 'utf8').toString('base64')}`
+        }
+
+        return flattened
       }
 
       // Add ASR model from advanced settings
@@ -146,10 +157,12 @@ class GrpcClient {
         'transcription-prompt',
         flattenHeaderValue(advancedSettings.llm.transcriptionPrompt),
       )
-      headers.set(
-        'editing-prompt',
-        flattenHeaderValue(advancedSettings.llm.editingPrompt),
-      )
+      // Note: Editing prompt is currently disabled until a better versioning solution is implemented
+      // https://github.com/heyito/ito/issues/174
+      // headers.set(
+      //   'editing-prompt',
+      //   flattenHeaderValue(advancedSettings.llm.editingPrompt),
+      // )
       headers.set(
         'no-speech-threshold',
         advancedSettings.llm.noSpeechThreshold.toString(),
@@ -170,6 +183,7 @@ class GrpcClient {
               '[gRPC Client] Adding context text to headers:',
               contextText.length,
               'characters',
+              contextText,
             )
           }
         }

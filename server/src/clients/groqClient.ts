@@ -48,7 +48,7 @@ class GroqClient {
    * @returns The adjusted transcript.
    */
   public async adjustTranscript(
-    transcript: string,
+    userPrompt: string,
     temperature: number,
     model: string,
     systemPrompt: string,
@@ -66,17 +66,18 @@ class GroqClient {
           },
           {
             role: 'user',
-            content: `The user's transcript: ${transcript}`,
+            content: userPrompt,
           },
         ],
         model,
         temperature,
       })
 
-      return completion.choices[0]?.message?.content?.trim() || transcript
+      // Return a space to enable emptying the document
+      return completion.choices[0]?.message?.content?.trim() || ' '
     } catch (error: any) {
       console.error('An error occurred during transcript adjustment:', error)
-      return transcript
+      return userPrompt
     }
   }
 

@@ -29,6 +29,8 @@ export const resetForTesting = () => {
     KeyListenerProcess = null
     isShortcutActive = false
     pressedKeys.clear()
+    keyPressTimestamps.clear()
+    stopStuckKeyChecker()
     if (shortcutDebounceTimeout) {
       clearTimeout(shortcutDebounceTimeout)
       shortcutDebounceTimeout = null
@@ -108,6 +110,77 @@ function normalizeKey(rawKey: string): string {
 // This set will track the state of all currently pressed keys.
 const pressedKeys = new Set<string>()
 
+// Track when each key was first pressed to detect stuck keys
+const keyPressTimestamps = new Map<string, number>()
+
+// Timer for checking stuck keys
+let stuckKeyCheckTimer: NodeJS.Timeout | null = null
+
+// Configuration for stuck key detection
+const STUCK_KEY_TIMEOUT = 5000 // 5 seconds
+const STUCK_KEY_CHECK_INTERVAL = 1000 // Check every 1 second
+
+// Function to check for and remove stuck keys
+function checkForStuckKeys() {
+  const currentTime = Date.now()
+  const stuckKeys: string[] = []
+
+  for (const [key, pressTime] of keyPressTimestamps) {
+    if (currentTime - pressTime > STUCK_KEY_TIMEOUT) {
+      stuckKeys.push(key)
+    }
+  }
+
+  // Remove stuck keys, but be careful not to interfere with active shortcuts
+  for (const stuckKey of stuckKeys) {
+    // If there's an active shortcut, check if this stuck key is part of it
+    let shouldRemove = true
+
+    if (isShortcutActive) {
+      const { keyboardShortcuts } = store.get(STORE_KEYS.SETTINGS)
+      const activeShortcut = keyboardShortcuts
+        .filter(ks => ks.keys.length > 0)
+        .find(shortcut => {
+          const hasAllKeys = shortcut.keys.every(key => pressedKeys.has(key))
+          const exactMatch =
+            shortcut.keys.length === pressedKeys.size && hasAllKeys
+          return exactMatch
+        })
+
+      // Don't remove the stuck key if it's part of the currently active shortcut
+      if (activeShortcut && activeShortcut.keys.includes(stuckKey)) {
+        shouldRemove = false
+      }
+    }
+
+    if (shouldRemove) {
+      console.warn(
+        `Removing stuck key: ${stuckKey} (held for ${(currentTime - keyPressTimestamps.get(stuckKey)!) / 1000}s)`,
+      )
+      pressedKeys.delete(stuckKey)
+      keyPressTimestamps.delete(stuckKey)
+    }
+  }
+}
+
+// Start the stuck key checking timer
+function startStuckKeyChecker() {
+  if (!stuckKeyCheckTimer) {
+    stuckKeyCheckTimer = setInterval(
+      checkForStuckKeys,
+      STUCK_KEY_CHECK_INTERVAL,
+    )
+  }
+}
+
+// Stop the stuck key checking timer
+function stopStuckKeyChecker() {
+  if (stuckKeyCheckTimer) {
+    clearInterval(stuckKeyCheckTimer)
+    stuckKeyCheckTimer = null
+  }
+}
+
 function handleKeyEventInMain(event: KeyEvent) {
   const { isShortcutGloballyEnabled, keyboardShortcuts } = store.get(
     STORE_KEYS.SETTINGS,
@@ -131,8 +204,13 @@ function handleKeyEventInMain(event: KeyEvent) {
 
   if (event.type === 'keydown') {
     pressedKeys.add(normalizedKey)
+    // Track when this key was first pressed (only if not already tracked)
+    if (!keyPressTimestamps.has(normalizedKey)) {
+      keyPressTimestamps.set(normalizedKey, Date.now())
+    }
   } else {
     pressedKeys.delete(normalizedKey)
+    keyPressTimestamps.delete(normalizedKey)
   }
 
   // Check if any of the configured shortcuts are currently held
@@ -298,6 +376,9 @@ export const startKeyListener = () => {
     })
 
     console.log('Key listener started successfully.')
+
+    // Start the stuck key checker
+    startStuckKeyChecker()
   } catch (error) {
     console.error('Failed to start key listener:', error)
     KeyListenerProcess = null
@@ -365,6 +446,8 @@ export const stopKeyListener = () => {
   if (KeyListenerProcess) {
     // Clear the set on stop to prevent stuck keys if the app restarts.
     pressedKeys.clear()
+    keyPressTimestamps.clear()
+    stopStuckKeyChecker()
     KeyListenerProcess.kill('SIGTERM')
     KeyListenerProcess = null
   }

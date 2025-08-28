@@ -54,6 +54,7 @@ enum ItoMode {
 // -----------------------------------------------------------------
 enum ClientProvider {
   GROQ = 0;
+  CEREBRAS = 1;
 }
 
 enum ErrorType {

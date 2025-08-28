@@ -35,7 +35,7 @@ export class TranscriptionService {
     }
   }
 
-  public startStreaming(mode: ItoMode) {
+  public startTranscription(mode: ItoMode) {
     if (this.isStreaming) {
       log.warn('[TranscriptionService] Stream already in progress.')
       return
@@ -286,11 +286,6 @@ export class TranscriptionService {
       log.error('[TranscriptionService] Failed to create interaction:', error)
       console.error('[TranscriptionService] Database save error:', error)
     }
-  }
-
-  // Backward compatibility aliases for the old method names
-  public startTranscription(mode: ItoMode) {
-    return this.startStreaming(mode)
   }
 
   public stopTranscription() {

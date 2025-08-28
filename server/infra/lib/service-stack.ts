@@ -96,12 +96,21 @@ export class ServiceStack extends Stack {
       groqApiKeyName,
     )
 
+    const cerebrusApiKeyName = `${stageName}/ito/cerebrus-api-key`
+
+    const cerebrusApiKeySecret = Secret.fromSecretNameV2(
+      this,
+      'CerebrusApiKey',
+      cerebrusApiKeyName,
+    )
+
     const fargateTaskRole = new IamRole(this, 'ItoFargateTaskRole', {
       assumedBy: new IamServicePrincipal('ecs-tasks.amazonaws.com'),
     })
 
     dbCredentialsSecret.grantRead(fargateTaskRole)
     groqApiKeySecret.grantRead(fargateTaskRole)
+    cerebrusApiKeySecret.grantRead(fargateTaskRole)
 
     const taskExecutionRole = new IamRole(this, 'ItoTaskExecRole', {
       assumedBy: new ServicePrincipal('ecs-tasks.amazonaws.com'),
@@ -188,6 +197,7 @@ export class ServiceStack extends Stack {
         DB_USER: EcsSecret.fromSecretsManager(dbCredentialsSecret, 'username'),
         DB_PASS: EcsSecret.fromSecretsManager(dbCredentialsSecret, 'password'),
         GROQ_API_KEY: EcsSecret.fromSecretsManager(groqApiKeySecret),
+        CEREBRUS_API_KEY: EcsSecret.fromSecretsManager(cerebrusApiKeySecret),
       },
       environment: {
         DB_HOST: props.dbEndpoint,

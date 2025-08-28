@@ -9,7 +9,11 @@ import { ItoMode } from '@/app/generated/ito_pb'
 
 export class VoiceInputService {
   public startSTTService = (mode: ItoMode) => {
-    console.info('[Audio] Starting STT service')
+    console.info(
+      '[Audio] Starting STT service with mode:',
+      mode,
+      mode === ItoMode.EDIT ? 'EDIT' : 'TRANSCRIBE',
+    )
     const deviceId = store.get(STORE_KEYS.SETTINGS).microphoneDeviceId
 
     const settings = store.get(STORE_KEYS.SETTINGS)

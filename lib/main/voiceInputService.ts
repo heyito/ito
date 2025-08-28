@@ -66,6 +66,14 @@ export class VoiceInputService {
   }
 
   public setUpAudioRecorderListeners = () => {
+    audioRecorderService.on(
+      'audio-config',
+      ({ outputSampleRate, sampleRate }: any) => {
+        // Use the recorder's effective output rate (matches the PCM we store)
+        const effectiveRate = outputSampleRate || sampleRate || 16000
+        transcriptionService.setAudioConfig({ sampleRate: effectiveRate })
+      },
+    )
     audioRecorderService.on('audio-chunk', chunk => {
       transcriptionService.handleAudioChunk(chunk)
     })
@@ -87,6 +95,14 @@ export class VoiceInputService {
     })
 
     audioRecorderService.initialize()
+  }
+
+  /**
+   * Call this when microphone selection changes to update the transcription
+   * config with the effective output sample rate for the chosen device.
+   */
+  public handleMicrophoneChanged = (deviceId: string) => {
+    audioRecorderService.requestDeviceConfig(deviceId)
   }
 }
 

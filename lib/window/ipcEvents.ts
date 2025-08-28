@@ -507,6 +507,12 @@ ipcMain.on('volume-update', (_event, volume: number) => {
 // Forwards settings updates from the main window to the pill window
 ipcMain.on('settings-update', (_event, settings: any) => {
   getPillWindow()?.webContents.send('settings-update', settings)
+
+  // If microphone selection changed, ensure TranscriptionService config is set
+  if (settings && typeof settings.microphoneDeviceId === 'string') {
+    // Ask the recorder for the effective output config for the selected mic
+    voiceInputService.handleMicrophoneChanged(settings.microphoneDeviceId)
+  }
 })
 
 // Forwards onboarding updates from the main window to the pill window

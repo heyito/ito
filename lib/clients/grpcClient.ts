@@ -118,10 +118,21 @@ class GrpcClient {
       }
 
       function flattenHeaderValue(value: string) {
-        return value
+        const flattened = value
           .replace(/[\r\n]+/g, ' ')
           .replace(/\s{2,}/g, ' ')
           .trim()
+
+        // Check if the string contains non-ASCII characters
+        // eslint-disable-next-line no-control-regex
+        const hasUnicode = /[^\x00-\x7F]/.test(flattened)
+
+        if (hasUnicode) {
+          // Base64 encode to safely transmit Unicode characters via gRPC headers
+          return `base64:${Buffer.from(flattened, 'utf8').toString('base64')}`
+        }
+
+        return flattened
       }
 
       // Add ASR model from advanced settings
@@ -170,6 +181,7 @@ class GrpcClient {
               '[gRPC Client] Adding context text to headers:',
               contextText.length,
               'characters',
+              contextText,
             )
           }
         }

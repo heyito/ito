@@ -163,14 +163,17 @@ export function normalizeChord(keys: string[]): string[] {
   return sortKeysCanonical(keys.filter(Boolean))
 }
 
-// Reserved key combinations that would conflict with our selected-text-reader
+// Reserved key combinations that would conflict with app functionality
 const RESERVED_COMBINATIONS = [
   { keys: ['command', 'c'], reason: 'Reserved for text selection copying' },
+  { keys: ['control', 'c'], reason: 'Reserved for text selection copying' },
   // Add more reserved combinations as needed
   { keys: ['command', 'q'], reason: 'System quit command' },
   { keys: ['command', 'w'], reason: 'System close window' },
   { keys: ['command', 'tab'], reason: 'System app switching' },
   { keys: ['control', 'tab'], reason: 'Browser tab switching' },
+  { keys: ['command', 'v'], reason: 'Reserved for text selection pasting' },
+  { keys: ['control', 'v'], reason: 'Reserved for text selection pasting' },
 ]
 
 // Check if a shortcut contains reserved key combinations

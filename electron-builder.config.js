@@ -1,3 +1,24 @@
+// Define the native binaries that are shared across platforms
+const nativeBinaries = [
+  'global-key-listener',
+  'audio-recorder',
+  'text-writer',
+  'active-application',
+  'selected-text-reader',
+]
+
+const getMacResources = () =>
+  nativeBinaries.map(binary => ({
+    from: `native/${binary}/target/\${arch}-apple-darwin/release/${binary}`,
+    to: `binaries/${binary}`,
+  }))
+
+const getWindowsResources = () =>
+  nativeBinaries.map(binary => ({
+    from: `native/${binary}/target/x86_64-pc-windows-gnu/release/${binary}.exe`,
+    to: `binaries/${binary}.exe`,
+  }))
+
 module.exports = {
   appId: 'ai.ito.ito',
   productName: 'Ito',
@@ -32,24 +53,7 @@ module.exports = {
   ],
   asar: true,
   asarUnpack: ['resources/**'],
-  extraResources: [
-    {
-      from: 'native/global-key-listener/target/${arch}-apple-darwin/release/global-key-listener',
-      to: 'binaries/global-key-listener',
-    },
-    {
-      from: 'native/audio-recorder/target/${arch}-apple-darwin/release/audio-recorder',
-      to: 'binaries/audio-recorder',
-    },
-    {
-      from: 'native/text-writer/target/${arch}-apple-darwin/release/text-writer',
-      to: 'binaries/text-writer',
-    },
-    {
-      from: 'native/active-application/target/${arch}-apple-darwin/release/active-application',
-      to: 'binaries/active-application',
-    },
-  ],
+  extraResources: getMacResources(),
   extraMetadata: {
     version: process.env.VITE_ITO_VERSION || '0.0.0-dev',
   },
@@ -85,24 +89,7 @@ module.exports = {
     icon: 'resources/build/icon.ico',
     executableName: 'Ito',
     requestedExecutionLevel: 'asInvoker',
-    extraResources: [
-      {
-        from: 'native/global-key-listener/target/x86_64-pc-windows-gnu/release/global-key-listener.exe',
-        to: 'binaries/global-key-listener.exe',
-      },
-      {
-        from: 'native/audio-recorder/target/x86_64-pc-windows-gnu/release/audio-recorder.exe',
-        to: 'binaries/audio-recorder.exe',
-      },
-      {
-        from: 'native/text-writer/target/x86_64-pc-windows-gnu/release/text-writer.exe',
-        to: 'binaries/text-writer.exe',
-      },
-      {
-        from: 'native/active-application/target/x86_64-pc-windows-gnu/release/active-application.exe',
-        to: 'binaries/active-application.exe',
-      },
-    ],
+    extraResources: getWindowsResources(),
   },
   nsis: {
     artifactName: 'Ito-Installer.${ext}',

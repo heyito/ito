@@ -1282,4 +1282,354 @@ describe('Keyboard Module', () => {
       expect(mockVoiceInputService.startSTTService).not.toHaveBeenCalled()
     })
   })
+
+  describe('Stuck Key Detection', () => {
+    test('should remove keys stuck for more than 5 seconds', async () => {
+      const { startKeyListener } = await import('./keyboard')
+
+      startKeyListener()
+
+      // Press a key
+      const keyADown = {
+        type: 'keydown',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 65,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyADown) + '\n'),
+      )
+
+      // Advance time by more than 5 seconds (5000ms + check interval 1000ms)
+      clock.tick(6000)
+
+      // Should warn about removing stuck key
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key: a'),
+      )
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('(held for 6s)'),
+      )
+    })
+
+    test('should not remove stuck keys that are part of active shortcuts', async () => {
+      mockMainStore.get.mockReturnValue({
+        isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'stuck-key-protection-test',
+            keys: ['command', 'space'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
+      })
+
+      const { startKeyListener } = await import('./keyboard')
+      startKeyListener()
+
+      // Activate shortcut
+      const commandDown = {
+        type: 'keydown',
+        key: 'MetaLeft',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 91,
+      }
+      const spaceDown = {
+        type: 'keydown',
+        key: 'Space',
+        timestamp: '2024-01-01T00:00:00.001Z',
+        raw_code: 32,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(commandDown) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(spaceDown) + '\n'),
+      )
+
+      // Wait for debounce to activate shortcut
+      await waitForDebounce()
+
+      // Advance time by more than 5 seconds
+      clock.tick(6000)
+
+      // Should not warn about removing stuck keys since they're part of active shortcut
+      expect(console.warn).not.toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key'),
+      )
+    })
+
+    test('should remove stuck keys that are not part of active shortcuts', async () => {
+      mockMainStore.get.mockReturnValue({
+        isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'partial-stuck-test',
+            keys: ['command', 'space'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
+      })
+
+      const { startKeyListener } = await import('./keyboard')
+      startKeyListener()
+
+      // Activate shortcut
+      const commandDown = {
+        type: 'keydown',
+        key: 'MetaLeft',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 91,
+      }
+      const spaceDown = {
+        type: 'keydown',
+        key: 'Space',
+        timestamp: '2024-01-01T00:00:00.001Z',
+        raw_code: 32,
+      }
+      // Press an extra key that's not part of the shortcut
+      const keyADown = {
+        type: 'keydown',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:00.002Z',
+        raw_code: 65,
+      }
+
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(commandDown) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(spaceDown) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyADown) + '\n'),
+      )
+
+      // Wait for debounce to activate shortcut
+      await waitForDebounce()
+
+      // Advance time by more than 5 seconds
+      clock.tick(6000)
+
+      // Should warn about removing the stuck key that's not part of the active shortcut
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key: a'),
+      )
+    })
+
+    test('should not check for stuck keys when no shortcut is active', async () => {
+      const { startKeyListener } = await import('./keyboard')
+
+      startKeyListener()
+
+      // Press some keys without activating any shortcuts
+      const keyADown = {
+        type: 'keydown',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 65,
+      }
+      const keyBDown = {
+        type: 'keydown',
+        key: 'KeyB',
+        timestamp: '2024-01-01T00:00:00.001Z',
+        raw_code: 66,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyADown) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyBDown) + '\n'),
+      )
+
+      // Advance time by more than 5 seconds
+      clock.tick(6000)
+
+      // Should still remove stuck keys even when no shortcut is active
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key: a'),
+      )
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key: b'),
+      )
+    })
+
+    test('should clear stuck key tracking on key release', async () => {
+      const { startKeyListener } = await import('./keyboard')
+
+      startKeyListener()
+
+      // Press and release a key quickly
+      const keyADown = {
+        type: 'keydown',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 65,
+      }
+      const keyAUp = {
+        type: 'keyup',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:00.100Z',
+        raw_code: 65,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyADown) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyAUp) + '\n'),
+      )
+
+      // Advance time by more than 5 seconds
+      clock.tick(6000)
+
+      // Should not warn about stuck key since it was released
+      expect(console.warn).not.toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key: a'),
+      )
+    })
+
+    test('should not track duplicate keydown events for same key', async () => {
+      const { startKeyListener } = await import('./keyboard')
+
+      startKeyListener()
+
+      // Press same key multiple times (simulating key repeat)
+      const keyADown1 = {
+        type: 'keydown',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 65,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyADown1) + '\n'),
+      )
+
+      // Advance time slightly
+      clock.tick(1000)
+
+      const keyADown2 = {
+        type: 'keydown',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:01.000Z',
+        raw_code: 65,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyADown2) + '\n'),
+      )
+
+      // Advance time by more than 5 seconds from first press
+      clock.tick(5000)
+
+      // Should warn about stuck key based on first timestamp, not second
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key: a'),
+      )
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('(held for 6s)'),
+      )
+    })
+
+    test('should clean up stuck key checker on stop', async () => {
+      const { startKeyListener, stopKeyListener } = await import('./keyboard')
+
+      startKeyListener()
+
+      // Press a key
+      const keyADown = {
+        type: 'keydown',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 65,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyADown) + '\n'),
+      )
+
+      // Stop the key listener
+      stopKeyListener()
+
+      // Advance time by more than 5 seconds
+      clock.tick(6000)
+
+      // Should not warn about stuck keys since listener was stopped
+      expect(console.warn).not.toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key'),
+      )
+    })
+
+    test('should clean up stuck key data in resetForTesting', async () => {
+      const { startKeyListener, resetForTesting } = await import('./keyboard')
+
+      startKeyListener()
+
+      // Press a key
+      const keyADown = {
+        type: 'keydown',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 65,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyADown) + '\n'),
+      )
+
+      // Reset for testing
+      resetForTesting()
+
+      // Start again
+      startKeyListener()
+
+      // Advance time by more than 5 seconds
+      clock.tick(6000)
+
+      // Should not warn about stuck keys since data was reset
+      expect(console.warn).not.toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key'),
+      )
+    })
+
+    test('should handle check interval timing correctly', async () => {
+      const { startKeyListener } = await import('./keyboard')
+
+      startKeyListener()
+
+      // Press a key
+      const keyADown = {
+        type: 'keydown',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 65,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyADown) + '\n'),
+      )
+
+      // Advance time by exactly 5 seconds (should not trigger removal yet)
+      clock.tick(5000)
+      expect(console.warn).not.toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key'),
+      )
+
+      // Advance time by the check interval (should trigger removal)
+      clock.tick(1000)
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key: a'),
+      )
+    })
+  })
 })

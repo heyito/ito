@@ -180,6 +180,7 @@ build_native_module "global-key-listener"
 build_native_module "audio-recorder"
 build_native_module "text-writer"
 build_native_module "active-application"
+build_native_module "selected-text-reader"
 
 
 print_status "All native module builds completed successfully!"

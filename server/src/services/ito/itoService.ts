@@ -16,7 +16,7 @@ import {
 } from '../../generated/ito_pb.js'
 import { create } from '@bufbuild/protobuf'
 import type { HandlerContext } from '@connectrpc/connect'
-import { groqClient } from '../../clients/groqClient.js'
+import { getAsrProvider, getLlmProvider } from '../../clients/providerUtils.js'
 import {
   DictionaryRepository,
   InteractionsRepository,
@@ -31,18 +31,17 @@ import {
 } from '../../db/models.js'
 import { ConnectError, Code } from '@connectrpc/connect'
 import { kUser } from '../../auth/userContext.js'
-import { WindowContext } from './types.js'
+import { ItoContext } from './types.js'
 import { HeaderValidator } from '../../validation/HeaderValidator.js'
 import { errorToProtobuf } from '../../clients/errors.js'
-import { ClientProvider } from '../../clients/providers.js'
 import {
-  addContextToPrompt,
   getAdvancedSettingsHeaders,
   detectItoMode,
   getPromptForMode,
   getItoMode,
+  createUserPromptWithContext,
 } from './helpers.js'
-import { de } from 'zod/v4/locales'
+import { ITO_MODE_SYSTEM_PROMPT } from './constants.js'
 
 /**
  * --- NEW: WAV Header Generation Function ---
@@ -196,6 +195,11 @@ export default (router: ConnectRouter) => {
         `🔧 [${new Date().toISOString()}] Concatenated audio: ${totalLength} bytes`,
       )
 
+      // Extract settings headers first so they're available in catch block
+      const advancedSettingsHeaders = getAdvancedSettingsHeaders(
+        context.requestHeader,
+      )
+
       try {
         // 1. Set audio properties to match the new capture settings.
         const sampleRate = 16000 // Correct sample rate
@@ -211,26 +215,21 @@ export default (router: ConnectRouter) => {
         )
         const fullAudioWAV = Buffer.concat([wavHeader, fullAudio])
 
-        // 3. Extract and validate vocabulary and ASR model from gRPC metadata
+        // 3. Extract and validate vocabulary from gRPC metadata
         const vocabularyHeader = context.requestHeader.get('vocabulary')
         const vocabulary = vocabularyHeader
           ? HeaderValidator.validateVocabulary(vocabularyHeader)
           : []
 
-        const advancedSettingsHeaders = getAdvancedSettingsHeaders(
-          context.requestHeader,
-        )
-
-        // 4. Send the corrected WAV file using the validated ASR model from headers.
-        let transcript = await groqClient.transcribeAudio(
-          fullAudioWAV,
-          'wav',
-          advancedSettingsHeaders.asrModel,
-          advancedSettingsHeaders.noSpeechThreshold,
-          advancedSettingsHeaders.lowQualityThreshold,
-          advancedSettingsHeaders.asrPrompt,
+        // 4. Send the corrected WAV file using the selected ASR provider
+        const asrProvider = getAsrProvider(advancedSettingsHeaders.asrProvider)
+        let transcript = await asrProvider.transcribeAudio(fullAudioWAV, {
+          fileType: 'wav',
+          asrModel: advancedSettingsHeaders.asrModel,
+          noSpeechThreshold: advancedSettingsHeaders.noSpeechThreshold,
+          lowQualityThreshold: advancedSettingsHeaders.lowQualityThreshold,
           vocabulary,
-        )
+        })
         console.log(
           `📝 [${new Date().toISOString()}] Received transcript: "${transcript}"`,
         )
@@ -239,25 +238,39 @@ export default (router: ConnectRouter) => {
         const appName = context.requestHeader.get('app-name') || ''
         const mode = getItoMode(context.requestHeader.get('mode'))
 
-        const windowContext: WindowContext = { windowTitle, appName }
+        // Decode context text if it was base64 encoded due to Unicode characters
+        const rawContextText = context.requestHeader.get('context-text') || ''
+        const contextText = rawContextText.startsWith('base64:')
+          ? Buffer.from(rawContextText.substring(7), 'base64').toString('utf8')
+          : rawContextText
+
+        const windowContext: ItoContext = { windowTitle, appName, contextText }
 
         const detectedMode = mode || detectItoMode(transcript)
-        const preContextPrompt = getPromptForMode(
+        const userPromptPrefix = getPromptForMode(
           detectedMode,
           advancedSettingsHeaders,
         )
-        const systemPrompt = addContextToPrompt(preContextPrompt, windowContext)
+        const userPrompt = createUserPromptWithContext(
+          transcript,
+          windowContext,
+        )
 
         console.log(
           `[${new Date().toISOString()}] Detected mode: ${detectedMode}, adjusting transcript`,
         )
 
         if (detectedMode === ItoMode.EDIT) {
-          transcript = await groqClient.adjustTranscript(
-            transcript,
-            advancedSettingsHeaders.llmTemperature,
-            advancedSettingsHeaders.llmModel,
-            systemPrompt,
+          const llmProvider = getLlmProvider(
+            advancedSettingsHeaders.llmProvider,
+          )
+          transcript = await llmProvider.adjustTranscript(
+            userPromptPrefix + '\n' + userPrompt,
+            {
+              temperature: advancedSettingsHeaders.llmTemperature,
+              model: advancedSettingsHeaders.llmModel,
+              prompt: ITO_MODE_SYSTEM_PROMPT[detectedMode],
+            },
           )
           console.log(
             `📝 [${new Date().toISOString()}] Adjusted transcript: "${transcript}"`,
@@ -283,7 +296,10 @@ export default (router: ConnectRouter) => {
         // Return structured error response
         return create(TranscriptionResponseSchema, {
           transcript: '',
-          error: errorToProtobuf(error, ClientProvider.GROQ),
+          error: errorToProtobuf(
+            error,
+            advancedSettingsHeaders.asrProvider as any,
+          ),
         })
       }
     },

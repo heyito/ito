@@ -32,8 +32,8 @@ export function setFocusedText(
       args.push('--char-delay', options.charDelay.toString())
     }
 
-    // Add the text as the final argument
-    args.push(text)
+    // Add the text as the final argument with -- separator to prevent flag parsing
+    args.push('--', text)
 
     execFile(binaryPath, args, (err, _stdout, stderr) => {
       if (err) {

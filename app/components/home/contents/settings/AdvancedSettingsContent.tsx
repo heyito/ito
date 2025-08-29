@@ -12,12 +12,14 @@ type LlmSettingConfig = {
   maxLength: number
   resize?: boolean
   readOnly?: boolean
+  isSelect?: boolean
+  options?: string[]
 }
 
 const modelProviderLengthLimit = 30
 const floatLengthLimit = 4
 const asrPromptLengthLimit = 100
-const llmPromptLenghtLimit = 1500
+const llmPromptLengthLimit = 1500
 
 const llmSettingsConfig: LlmSettingConfig[] = [
   {
@@ -47,10 +49,11 @@ const llmSettingsConfig: LlmSettingConfig[] = [
   {
     name: 'llmProvider',
     label: 'LLM Provider',
-    placeholder: 'Enter LLM provider name',
-    description: 'LLM provider (currently only Groq is supported)',
+    placeholder: 'Select LLM provider',
+    description: 'LLM provider for text generation tasks',
     maxLength: modelProviderLengthLimit,
-    readOnly: true,
+    isSelect: true,
+    options: ['groq', 'cerebras'],
   },
   {
     name: 'llmModel',
@@ -73,18 +76,20 @@ const llmSettingsConfig: LlmSettingConfig[] = [
     placeholder: 'Enter custom transcription prompt',
     description:
       'A custom prompt to guide the transcription process for better accuracy. (Leave empty for default)',
-    maxLength: llmPromptLenghtLimit,
+    maxLength: llmPromptLengthLimit,
     resize: true,
   },
-  {
-    name: 'editingPrompt',
-    label: 'Editing Prompt',
-    placeholder: 'Enter custom editing prompt',
-    description:
-      'A custom prompt to guide the editing process for improved text quality. (Leave empty for default)',
-    maxLength: llmPromptLenghtLimit,
-    resize: true,
-  },
+  // This is being removed until long term solution for versioning prompts is implemented
+  // https://github.com/heyito/ito/issues/174
+  // {
+  //   name: 'editingPrompt',
+  //   label: 'Editing Prompt',
+  //   placeholder: 'Enter custom editing prompt',
+  //   description:
+  //     'A custom prompt to guide the editing process for improved text quality. (Leave empty for default)',
+  //   maxLength: llmPromptLengthLimit,
+  //   resize: true,
+  // },
   {
     name: 'noSpeechThreshold',
     label: 'No Speech Threshold',
@@ -112,7 +117,10 @@ function formatDisplayValue(value: string): string {
 interface SettingInputProps {
   config: LlmSettingConfig
   value: string
-  onChange: (e: ChangeEvent<HTMLInputElement>, config: LlmSettingConfig) => void
+  onChange: (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+    config: LlmSettingConfig,
+  ) => void
 }
 
 function SettingInput({ config, value, onChange }: SettingInputProps) {
@@ -126,7 +134,9 @@ function SettingInput({ config, value, onChange }: SettingInputProps) {
     }
   }, [value, isFocused])
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const newValue = e.target.value
     setEditingValue(newValue)
     setLocalValue(newValue)
@@ -156,17 +166,33 @@ function SettingInput({ config, value, onChange }: SettingInputProps) {
       >
         {config.label}
       </label>
-      <input
-        id={config.name}
-        value={displayValue}
-        onChange={handleChange}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        className="w-3/4 px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        placeholder={config.placeholder}
-        maxLength={config.maxLength}
-        readOnly={config.readOnly}
-      />
+      {config.isSelect ? (
+        <select
+          id={config.name}
+          value={value}
+          onChange={handleChange}
+          className="w-3/4 px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          disabled={config.readOnly}
+        >
+          {config.options?.map(option => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input
+          id={config.name}
+          value={displayValue}
+          onChange={handleChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          className="w-3/4 px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          placeholder={config.placeholder}
+          maxLength={config.maxLength}
+          readOnly={config.readOnly}
+        />
+      )}
       <p className="text-xs text-slate-500 mt-1">{config.description}</p>
     </div>
   )
@@ -185,7 +211,7 @@ export default function AdvancedSettingsContent() {
   }, [])
 
   function handleInputChange(
-    e: ChangeEvent<HTMLInputElement>,
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
     config: LlmSettingConfig,
   ) {
     const newValue = e.target.value

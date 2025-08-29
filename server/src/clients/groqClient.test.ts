@@ -78,15 +78,13 @@ describe('GroqClient', () => {
         ...vocabulary,
       ])
 
-      const result = await groqClient.transcribeAudio(
-        audioBuffer,
-        'wav',
+      const result = await groqClient.transcribeAudio(audioBuffer, {
+        fileType: 'wav',
         asrModel,
-        NO_SPEECH_THRESHOLD,
-        LOW_QUALITY_THRESHOLD,
-        undefined,
+        noSpeechThreshold: NO_SPEECH_THRESHOLD,
+        lowQualityThreshold: LOW_QUALITY_THRESHOLD,
         vocabulary,
-      )
+      })
 
       expect(result).toBe('Hello world')
       expect(mockGroqClient.audio.transcriptions.create).toHaveBeenCalledWith({
@@ -109,13 +107,11 @@ describe('GroqClient', () => {
       const asrModel = 'distil-whisper-large-v3-en'
       const transcriptionPrompt = createTranscriptionPrompt(itoVocabulary)
 
-      await groqClient.transcribeAudio(
-        audioBuffer,
-        undefined,
+      await groqClient.transcribeAudio(audioBuffer, {
         asrModel,
-        NO_SPEECH_THRESHOLD,
-        LOW_QUALITY_THRESHOLD,
-      )
+        noSpeechThreshold: NO_SPEECH_THRESHOLD,
+        lowQualityThreshold: LOW_QUALITY_THRESHOLD,
+      })
 
       expect(mockGroqClient.audio.transcriptions.create).toHaveBeenCalledWith({
         file: expect.objectContaining({
@@ -141,15 +137,13 @@ describe('GroqClient', () => {
         ...vocabulary,
       ])
 
-      await groqClient.transcribeAudio(
-        audioBuffer,
-        'wav',
+      await groqClient.transcribeAudio(audioBuffer, {
+        fileType: 'wav',
         asrModel,
-        NO_SPEECH_THRESHOLD,
-        LOW_QUALITY_THRESHOLD,
-        undefined,
+        noSpeechThreshold: NO_SPEECH_THRESHOLD,
+        lowQualityThreshold: LOW_QUALITY_THRESHOLD,
         vocabulary,
-      )
+      })
 
       expect(mockGroqClient.audio.transcriptions.create).toHaveBeenCalledWith({
         file: expect.objectContaining({
@@ -171,15 +165,13 @@ describe('GroqClient', () => {
       const asrModel = 'whisper-large-v3'
       const transcriptionPrompt = createTranscriptionPrompt(itoVocabulary)
 
-      await groqClient.transcribeAudio(
-        audioBuffer,
-        'wav',
+      await groqClient.transcribeAudio(audioBuffer, {
+        fileType: 'wav',
         asrModel,
-        NO_SPEECH_THRESHOLD,
-        LOW_QUALITY_THRESHOLD,
-        undefined,
-        [],
-      )
+        noSpeechThreshold: NO_SPEECH_THRESHOLD,
+        lowQualityThreshold: LOW_QUALITY_THRESHOLD,
+        vocabulary: [],
+      })
 
       expect(mockGroqClient.audio.transcriptions.create).toHaveBeenCalledWith({
         file: expect.objectContaining({
@@ -195,13 +187,12 @@ describe('GroqClient', () => {
       const audioBuffer = Buffer.from('mock audio data')
 
       await expect(
-        groqClient.transcribeAudio(
-          audioBuffer,
-          'wav',
-          '',
-          NO_SPEECH_THRESHOLD,
-          LOW_QUALITY_THRESHOLD,
-        ),
+        groqClient.transcribeAudio(audioBuffer, {
+          fileType: 'wav',
+          asrModel: '',
+          noSpeechThreshold: NO_SPEECH_THRESHOLD,
+          lowQualityThreshold: LOW_QUALITY_THRESHOLD,
+        }),
       ).rejects.toThrow('ASR model is required for transcription.')
     })
 
@@ -214,13 +205,12 @@ describe('GroqClient', () => {
       const audioBuffer = Buffer.from('mock audio data')
       const asrModel = 'whisper-large-v3'
 
-      const result = await groqClient.transcribeAudio(
-        audioBuffer,
-        'wav',
+      const result = await groqClient.transcribeAudio(audioBuffer, {
+        fileType: 'wav',
         asrModel,
-        NO_SPEECH_THRESHOLD,
-        LOW_QUALITY_THRESHOLD,
-      )
+        noSpeechThreshold: NO_SPEECH_THRESHOLD,
+        lowQualityThreshold: LOW_QUALITY_THRESHOLD,
+      })
 
       expect(result).toBe('Hello world')
     })
@@ -238,13 +228,12 @@ describe('GroqClient', () => {
       const asrModel = 'whisper-large-v3'
 
       await expect(
-        groqClient.transcribeAudio(
-          audioBuffer,
-          'wav',
+        groqClient.transcribeAudio(audioBuffer, {
+          fileType: 'wav',
           asrModel,
-          NO_SPEECH_THRESHOLD,
-          LOW_QUALITY_THRESHOLD,
-        ),
+          noSpeechThreshold: NO_SPEECH_THRESHOLD,
+          lowQualityThreshold: LOW_QUALITY_THRESHOLD,
+        }),
       ).rejects.toThrow('Unable to transcribe audio.')
     })
 
@@ -260,13 +249,12 @@ describe('GroqClient', () => {
       const asrModel = 'whisper-large-v3'
 
       await expect(
-        groqClient.transcribeAudio(
-          audioBuffer,
-          'wav',
+        groqClient.transcribeAudio(audioBuffer, {
+          fileType: 'wav',
           asrModel,
-          NO_SPEECH_THRESHOLD,
-          LOW_QUALITY_THRESHOLD,
-        ),
+          noSpeechThreshold: NO_SPEECH_THRESHOLD,
+          lowQualityThreshold: LOW_QUALITY_THRESHOLD,
+        }),
       ).rejects.toThrow('No speech detected')
     })
 
@@ -278,18 +266,21 @@ describe('GroqClient', () => {
       const asrModel = 'whisper-large-v3'
 
       await expect(
-        groqClient.transcribeAudio(
-          audioBuffer,
-          'wav',
+        groqClient.transcribeAudio(audioBuffer, {
+          fileType: 'wav',
           asrModel,
-          NO_SPEECH_THRESHOLD,
-          LOW_QUALITY_THRESHOLD,
-        ),
+          noSpeechThreshold: NO_SPEECH_THRESHOLD,
+          lowQualityThreshold: LOW_QUALITY_THRESHOLD,
+        }),
       ).rejects.toThrow('Groq API error')
     })
   })
 
   describe('adjustTranscript', () => {
+    beforeEach(() => {
+      mockGroqClient.chat.completions.create.mockReset()
+    })
+
     it('should use LLM to adjust transcript', async () => {
       const mockCompletion = {
         choices: [
@@ -303,12 +294,12 @@ describe('GroqClient', () => {
       mockGroqClient.chat.completions.create.mockResolvedValue(mockCompletion)
 
       const originalTranscript = 'Original transcript'
-      const result = await groqClient.adjustTranscript(
-        originalTranscript,
-        0.1,
-        'llama-3.3-70b-versatile',
-        'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
-      )
+      const result = await groqClient.adjustTranscript(originalTranscript, {
+        temperature: 0.1,
+        model: 'llama-3.3-70b-versatile',
+        prompt:
+          'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
+      })
 
       expect(result).toBe('Adjusted transcript content')
       expect(mockGroqClient.chat.completions.create).toHaveBeenCalledWith({
@@ -320,7 +311,7 @@ describe('GroqClient', () => {
           },
           {
             role: 'user',
-            content: `The user's transcript: ${originalTranscript}`,
+            content: originalTranscript,
           },
         ],
         model: 'llama-3.3-70b-versatile',
@@ -328,17 +319,17 @@ describe('GroqClient', () => {
       })
     })
 
-    it('should return original transcript on LLM error', async () => {
+    it('should return user prompt on LLM error', async () => {
       const mockError = new Error('LLM API error')
       mockGroqClient.chat.completions.create.mockRejectedValue(mockError)
 
       const originalTranscript = 'Original transcript'
-      const result = await groqClient.adjustTranscript(
-        originalTranscript,
-        0.1,
-        'llama-3.3-70b-versatile',
-        'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
-      )
+      const result = await groqClient.adjustTranscript(originalTranscript, {
+        temperature: 0.1,
+        model: 'llama-3.3-70b-versatile',
+        prompt:
+          'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
+      })
 
       expect(result).toBe(originalTranscript)
     })
@@ -356,14 +347,14 @@ describe('GroqClient', () => {
       mockGroqClient.chat.completions.create.mockResolvedValue(mockCompletion)
 
       const originalTranscript = 'Original transcript'
-      const result = await groqClient.adjustTranscript(
-        originalTranscript,
-        0.1,
-        'llama-3.3-70b-versatile',
-        'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
-      )
+      const result = await groqClient.adjustTranscript(originalTranscript, {
+        temperature: 0.1,
+        model: 'llama-3.3-70b-versatile',
+        prompt:
+          'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.',
+      })
 
-      expect(result).toBe(originalTranscript)
+      expect(result).toBe(' ')
     })
   })
 })

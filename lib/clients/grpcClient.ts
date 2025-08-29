@@ -35,6 +35,7 @@ import {
   getAdvancedSettings,
   getCurrentUserId,
 } from '../main/store'
+import { getSelectedTextString } from '../media/selected-text-reader'
 import { ensureValidTokens } from '../auth/events'
 import { Auth0Config } from '../auth/config'
 import { getActiveWindow } from '../media/active-application'
@@ -117,10 +118,21 @@ class GrpcClient {
       }
 
       function flattenHeaderValue(value: string) {
-        return value
+        const flattened = value
           .replace(/[\r\n]+/g, ' ')
           .replace(/\s{2,}/g, ' ')
           .trim()
+
+        // Check if the string contains non-ASCII characters
+        // eslint-disable-next-line no-control-regex
+        const hasUnicode = /[^\x00-\x7F]/.test(flattened)
+
+        if (hasUnicode) {
+          // Base64 encode to safely transmit Unicode characters via gRPC headers
+          return `base64:${Buffer.from(flattened, 'utf8').toString('base64')}`
+        }
+
+        return flattened
       }
 
       // Add ASR model from advanced settings
@@ -145,10 +157,12 @@ class GrpcClient {
         'transcription-prompt',
         flattenHeaderValue(advancedSettings.llm.transcriptionPrompt),
       )
-      headers.set(
-        'editing-prompt',
-        flattenHeaderValue(advancedSettings.llm.editingPrompt),
-      )
+      // Note: Editing prompt is currently disabled until a better versioning solution is implemented
+      // https://github.com/heyito/ito/issues/174
+      // headers.set(
+      //   'editing-prompt',
+      //   flattenHeaderValue(advancedSettings.llm.editingPrompt),
+      // )
       headers.set(
         'no-speech-threshold',
         advancedSettings.llm.noSpeechThreshold.toString(),
@@ -158,7 +172,24 @@ class GrpcClient {
         advancedSettings.llm.lowQualityThreshold.toString(),
       )
 
-      headers.set('mode', mode)
+      headers.set('mode', mode.toString())
+
+      try {
+        if (mode === ItoMode.EDIT) {
+          const contextText = await getSelectedTextString(10000)
+          if (contextText && contextText.trim().length > 0) {
+            headers.set('context-text', flattenHeaderValue(contextText))
+            console.log(
+              '[gRPC Client] Adding context text to headers:',
+              contextText.length,
+              'characters',
+              contextText,
+            )
+          }
+        }
+      } catch (error) {
+        console.error('[gRPC Client] Error getting context text:', error)
+      }
     } catch (error) {
       console.error(
         'Failed to fetch vocabulary/settings for transcription:',
@@ -472,7 +503,17 @@ class GrpcClient {
     })
   }
 
-  async getAdvancedSettings(): Promise<AdvancedSettingsPb> {
+  async getAdvancedSettings(): Promise<AdvancedSettingsPb | null> {
+    // Check if user is self-hosted and skip server sync
+    const userId = getCurrentUserId()
+    const isSelfHosted = userId === 'self-hosted'
+
+    if (isSelfHosted) {
+      console.log('Self-hosted user detected, using local advanced settings')
+      // Return null for self-hosted users since they don't sync with server
+      return null
+    }
+
     return this.withRetry(async () => {
       const request = create(GetAdvancedSettingsRequestSchema, {})
       return await this.client.getAdvancedSettings(request, {
@@ -483,7 +524,19 @@ class GrpcClient {
 
   async updateAdvancedSettings(
     settings: AdvancedSettings,
-  ): Promise<AdvancedSettingsPb> {
+  ): Promise<AdvancedSettingsPb | null> {
+    // Check if user is self-hosted and skip server sync
+    const userId = getCurrentUserId()
+    const isSelfHosted = userId === 'self-hosted'
+
+    if (isSelfHosted) {
+      console.log(
+        'Self-hosted user detected, skipping server sync for advanced settings',
+      )
+      // Return null for self-hosted users since settings are stored locally
+      return null
+    }
+
     return this.withRetry(async () => {
       const request = create(UpdateAdvancedSettingsRequestSchema, {
         llm: {

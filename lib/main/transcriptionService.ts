@@ -17,6 +17,7 @@ export class TranscriptionService {
   private currentInteractionId: string | null = null
   private audioChunksForInteraction: Buffer[] = []
   private interactionStartTime: number | null = null
+  private currentSampleRate: number = 16000
 
   private async *streamAudioChunks() {
     while (this.isStreaming) {
@@ -35,7 +36,7 @@ export class TranscriptionService {
     }
   }
 
-  public startStreaming(mode: ItoMode) {
+  public startTranscription(mode: ItoMode) {
     if (this.isStreaming) {
       log.warn('[TranscriptionService] Stream already in progress.')
       return
@@ -261,6 +262,7 @@ export class TranscriptionService {
         llm_output: null, // No LLM processing yet
         raw_audio: rawAudio,
         duration_ms: durationMs, // Add duration as separate field
+        sample_rate: this.currentSampleRate || null,
         created_at: now,
         updated_at: now,
         deleted_at: null,
@@ -288,11 +290,6 @@ export class TranscriptionService {
     }
   }
 
-  // Backward compatibility aliases for the old method names
-  public startTranscription(mode: ItoMode) {
-    return this.startStreaming(mode)
-  }
-
   public stopTranscription() {
     // Get current interaction ID for trace logging
     const globalInteractionId = (globalThis as any).currentInteractionId
@@ -315,6 +312,13 @@ export class TranscriptionService {
 
   public handleAudioChunk(chunk: Buffer) {
     return this.forwardAudioChunk(chunk)
+  }
+
+  public setAudioConfig(config: { sampleRate?: number; channels?: number }) {
+    console.log('[TranscriptionService] Setting audio config:', config)
+    if (typeof config.sampleRate === 'number' && config.sampleRate > 0) {
+      this.currentSampleRate = config.sampleRate
+    }
   }
 }
 

@@ -52,7 +52,11 @@ module.exports = {
     },
   ],
   asar: true,
-  asarUnpack: ['resources/**'],
+  asarUnpack: [
+    'resources/**',
+    '**/node_modules/@sentry/**',
+    '**/node_modules/sqlite3/**',
+  ],
   extraResources: getMacResources(),
   extraMetadata: {
     version: process.env.VITE_ITO_VERSION || '0.0.0-dev',

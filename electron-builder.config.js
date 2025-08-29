@@ -90,6 +90,14 @@ module.exports = {
     executableName: 'Ito',
     requestedExecutionLevel: 'asInvoker',
     extraResources: getWindowsResources(),
+    publisherName: 'Demox Labs, Inc.',
+    rfc3161TimeStampServer: 'http://timestamp.acs.microsoft.com',
+    azureSignOptions: {
+      endpoint: 'https://eus.codesigning.azure.net',
+      // respect casing
+      certificateProfileName: 'Mockoon',
+      codeSigningAccountName: 'mockoon',
+    },
   },
   nsis: {
     artifactName: 'Ito-Installer.${ext}',

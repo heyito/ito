@@ -222,9 +222,9 @@ create_windows_installer() {
 
         # Rebuild native modules for Windows
         echo 'Rebuilding native modules for Windows...'
-        npm config set target_platform win32
-        npm config set target_arch x64
-        npm config set python python2.7
+        export npm_config_target_platform=win32
+        export npm_config_target_arch=x64
+        export npm_config_python=python2.7
         npm rebuild sqlite3 --build-from-source
 
         # Run electron-builder

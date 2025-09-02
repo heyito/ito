@@ -98,9 +98,9 @@ module.exports = {
     rfc3161TimeStampServer: 'http://timestamp.acs.microsoft.com',
     azureSignOptions: {
       endpoint: 'https://eus.codesigning.azure.net',
-      // respect casing
-      certificateProfileName: 'Mockoon',
-      codeSigningAccountName: 'mockoon',
+      certificateProfileName: 'github-actions-ito-windows-signer',
+      codeSigningAccountName: 'ito-github-actions-trusted-signing',
+      publisherName: 'Demox Labs, Inc.',
     },
   },
   nsis: {

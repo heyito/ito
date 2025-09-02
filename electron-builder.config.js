@@ -94,13 +94,12 @@ module.exports = {
     executableName: 'Ito',
     requestedExecutionLevel: 'asInvoker',
     extraResources: getWindowsResources(),
-    publisherName: 'Demox Labs, Inc.',
-    rfc3161TimeStampServer: 'http://timestamp.acs.microsoft.com',
     azureSignOptions: {
       endpoint: 'https://eus.codesigning.azure.net',
       certificateProfileName: 'github-actions-ito-windows-signer',
       codeSigningAccountName: 'ito-github-actions-trusted-signing',
       publisherName: 'Demox Labs, Inc.',
+      rfc3161TimeStampServer: 'http://timestamp.acs.microsoft.com',
     },
   },
   nsis: {

@@ -206,7 +206,7 @@ create_windows_installer() {
       --env CSC_IDENTITY_AUTO_DISCOVERY=false \
       --env SKIP_SIGNING=true \
       -v "$PWD":/project \
-      electronuserland/builder:wine \
+      electronuserland/builder:latest \
       bash -c "
         # Install bun with retry
         curl -fsSL https://bun.sh/install | bash || curl -fsSL https://bun.sh/install | bash

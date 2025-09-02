@@ -220,8 +220,7 @@ create_windows_installer() {
         echo 'Current directory:' \$(pwd)
         echo 'Directory contents:'
         ls -la
-        echo 'electron-builder.config.js exists:' \$(test -f
-        electron-builder.config.js && echo 'YES' || echo 'NO')
+        echo 'electron-builder.config.js exists:' \$(test -f electron-builder.config.js && echo 'YES' || echo 'NO')
 
         # Rebuild native modules for Windows
         echo 'Rebuilding native modules for Windows...'

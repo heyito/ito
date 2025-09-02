@@ -208,9 +208,12 @@ create_windows_installer() {
       -v "/$PWD":/project \
       electronuserland/builder:wine \
       bash -c "
-        # Install bun
-        curl -fsSL https://bun.sh/install | bash
+        # Install bun with retry
+        curl -fsSL https://bun.sh/install | bash || curl -fsSL https://bun.sh/install | bash
         export PATH=\"/root/.bun/bin:\$PATH\"
+        
+        # Verify bun installation
+        bun --version
 
         # Change to project and debug file paths
         cd /project
@@ -227,6 +230,9 @@ create_windows_installer() {
         export npm_config_python=python2.7
         npm rebuild sqlite3 --build-from-source
 
+        # Install dependencies with retry
+        bun install || bun install --force || bun install
+        
         # Run electron-builder
         bunx electron-builder --config electron-builder.config.js --win --x64 --publish=never
         

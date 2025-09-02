@@ -94,6 +94,7 @@ module.exports = {
     executableName: 'Ito',
     requestedExecutionLevel: 'asInvoker',
     extraResources: getWindowsResources(),
+    forceCodeSigning: false,
   },
   nsis: {
     artifactName: 'Ito-Installer.${ext}',

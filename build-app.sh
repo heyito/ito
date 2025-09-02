@@ -205,7 +205,7 @@ create_windows_installer() {
     docker run --rm --platform linux/amd64 \
       --env CSC_IDENTITY_AUTO_DISCOVERY=false \
       --env SKIP_SIGNING=true \
-      -v "/$PWD":/project \
+      -v "$PWD":/project \
       electronuserland/builder:wine \
       bash -c "
         # Install bun with retry

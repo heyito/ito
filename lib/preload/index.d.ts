@@ -91,6 +91,12 @@ declare global {
         getVisibility: () => Promise<{ isVisible: boolean }>
       }
       notifySettingsUpdate: (settings: any) => void
+      notifyOnboardingUpdate: (onboarding: any) => void
+      notifyUserAuthUpdate: (authUser: any) => void
+
+      // Analytics device ID methods
+      'analytics:get-device-id': () => Promise<string | undefined>
+
       notifyLoginSuccess: (
         profile: any,
         idToken: string | null,

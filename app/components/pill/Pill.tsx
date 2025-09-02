@@ -125,12 +125,32 @@ const Pill = () => {
       },
     )
 
+    // Listen for user auth updates from the main process
+    const unsubUserAuth = window.api.on('user-auth-update', (authUser: any) => {
+      if (authUser) {
+        analytics.identifyUser(
+          authUser.id,
+          {
+            user_id: authUser.id,
+            email: authUser.email,
+            name: authUser.name,
+            provider: authUser.provider,
+          },
+          authUser.provider,
+        )
+      } else {
+        // User logged out
+        analytics.resetUser()
+      }
+    })
+
     // Cleanup listeners when the component unmounts
     return () => {
       unsubRecording()
       unsubVolume()
       unsubSettings()
       unsubOnboarding()
+      unsubUserAuth()
     }
   }, [volumeHistory, lastVolumeUpdate])
 

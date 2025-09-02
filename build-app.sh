@@ -206,7 +206,7 @@ create_windows_installer() {
       --env CSC_IDENTITY_AUTO_DISCOVERY=false \
       --env SKIP_SIGNING=true \
       -v "$PWD":/project \
-      electronuserland/builder:latest \
+      electronuserland/builder:wine \
       bash -c "
         # Install bun with retry
         curl -fsSL https://bun.sh/install | bash || curl -fsSL https://bun.sh/install | bash
@@ -234,7 +234,7 @@ create_windows_installer() {
         bun install || bun install --force || bun install
         
         # Run electron-builder
-        bunx electron-builder --config electron-builder.config.js --win --x64 --publish=never
+        bunx electron-builder --config electron-builder.config.js --win --x64 --publish=never --skip-signing
         
         # Rename latest.yml to latest-windows.yml inside the container
         if [ -f dist/latest.yml ]; then

@@ -224,14 +224,12 @@ create_windows_installer() {
         
         # Install dependencies with retry
         bun install || bun install --force || bun install
+        # Add rebuild
+        .\node_modules\.bin\electron-rebuild.cmd
         
         # Run electron-builder
         bunx electron-builder --config electron-builder.config.js --win --x64 --publish=never
 
-        # Rebuild native modules for Windows
-        echo 'Rebuilding native modules for Windows...'
-        bunx electron-rebuild sqlite3 --build-from-source
-        
         # Rename latest.yml to latest-windows.yml inside the container
         if [ -f dist/latest.yml ]; then
           echo 'Renaming dist/latest.yml to dist/latest-windows.yml for Windows auto-updater'

@@ -109,6 +109,7 @@ export default function SignInContent() {
   const { loadEntries } = useDictionaryStore()
   const { resetOnboarding } = useOnboardingStore()
   const [isServerHealthy, setIsServerHealthy] = useState(true)
+  const [email, setEmail] = useState('')
 
   const {
     user,
@@ -118,6 +119,7 @@ export default function SignInContent() {
     loginWithApple,
     loginWithGitHub,
     loginWithSelfHosted,
+    loginWithEmail,
   } = useAuth()
 
   // Check server health on component mount and every 5 seconds
@@ -216,6 +218,28 @@ export default function SignInContent() {
             onClick={() => handleSocialAuth('github')}
           />
         </div>
+      </div>
+
+      {/* Email sign in */}
+      <div className="space-y-3 mb-8">
+        <input
+          type="email"
+          placeholder="Enter your email"
+          className="w-full h-12 px-3 rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground"
+          onChange={e => setEmail(e.target.value)}
+          defaultValue={userEmail}
+        />
+        <AuthButton
+          provider="google-oauth2"
+          onClick={() => {}}
+          className="hidden"
+        />
+        <Button
+          className="w-full h-12 text-sm font-medium"
+          onClick={() => loginWithEmail(email || userEmail)}
+        >
+          Continue with Email
+        </Button>
       </div>
 
       {/* Divider */}

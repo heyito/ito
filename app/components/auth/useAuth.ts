@@ -340,6 +340,49 @@ export const useAuth = () => {
     'GitHub',
   )
 
+  // Email/password via Auth0 Database connection
+  const loginWithEmail = useCallback(
+    async (email?: string) => {
+      try {
+        await openExternalAuth(
+          Auth0Connections.database,
+          email ? { email, mode: 'login' } : { mode: 'login' },
+        )
+      } catch (error) {
+        console.error('Email login failed:', error)
+        analytics.track(ANALYTICS_EVENTS.AUTH_METHOD_FAILED, {
+          provider: 'email',
+          error_message:
+            error instanceof Error ? error.message : 'Unknown error',
+          auth_method: 'external_browser',
+        })
+        throw error
+      }
+    },
+    [openExternalAuth],
+  )
+
+  const signupWithEmail = useCallback(
+    async (email?: string) => {
+      try {
+        await openExternalAuth(
+          Auth0Connections.database,
+          email ? { email, mode: 'signup' } : { mode: 'signup' },
+        )
+      } catch (error) {
+        console.error('Email signup failed:', error)
+        analytics.track(ANALYTICS_EVENTS.AUTH_METHOD_FAILED, {
+          provider: 'email',
+          error_message:
+            error instanceof Error ? error.message : 'Unknown error',
+          auth_method: 'external_browser',
+        })
+        throw error
+      }
+    },
+    [openExternalAuth],
+  )
+
   // Self-hosted authentication - bypasses all external auth
   const loginWithSelfHosted = useCallback(async () => {
     try {
@@ -562,6 +605,8 @@ export const useAuth = () => {
     loginWithMicrosoft,
     loginWithApple,
     loginWithGitHub,
+    loginWithEmail,
+    signupWithEmail,
     loginWithSelfHosted,
     logoutUser,
 

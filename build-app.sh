@@ -222,10 +222,8 @@ create_windows_installer() {
         ls -la
         echo 'electron-builder.config.js exists:' \$(test -f electron-builder.config.js && echo 'YES' || echo 'NO')
         
-        # Install dependencies with retry
+        # Install dependencies (let SQLite3 use prebuilt binaries)
         bun install || bun install --force || bun install
-        # Rebuild for Windows target
-        ./node_modules/.bin/electron-rebuild --arch=x64 --platform=win32
         
         # Run electron-builder
         bunx electron-builder --config electron-builder.config.js --win --x64 --publish=never

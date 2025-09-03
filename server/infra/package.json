@@ -8,7 +8,8 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "dev-cdk": "dotenv -e ../.env -- cdk"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
@@ -23,6 +24,8 @@
     "@aws-sdk/client-ecs": "^3.844.0",
     "aws-cdk-lib": "2.200.1",
     "constructs": "^10.0.0",
+    "dotenv": "^17.2.1",
+    "dotenv-cli": "^10.0.0",
     "global": "^4.4.0",
     "pg": "^8.16.3"
   }

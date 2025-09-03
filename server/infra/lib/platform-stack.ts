@@ -8,6 +8,7 @@ import {
   Tags,
 } from 'aws-cdk-lib'
 import { SecurityGroup, Vpc, EbsDeviceVolumeType } from 'aws-cdk-lib/aws-ec2'
+import { BlockPublicAccess, Bucket } from 'aws-cdk-lib/aws-s3'
 import {
   AuroraPostgresEngineVersion,
   ClusterInstance,
@@ -54,6 +55,7 @@ export class PlatformStack extends Stack {
   public readonly dbSecurityGroupId: string
   public readonly serviceRepo: Repository
   public readonly opensearchDomain: Domain
+  public readonly blobStorageBucket: Bucket
 
   constructor(scope: Construct, id: string, props: PlatformStackProps) {
     super(scope, id, props)
@@ -118,6 +120,17 @@ export class PlatformStack extends Stack {
         ? RemovalPolicy.DESTROY
         : RemovalPolicy.RETAIN,
       lifecycleRules: [{ maxImageCount: 20 }],
+    })
+
+    // Blob storage bucket for storing user-uploaded files and data
+    this.blobStorageBucket = new Bucket(this, 'ItoBlobStorage', {
+      bucketName: `${stageName}-${this.account}-${this.region}-ito-blob-storage`,
+      removalPolicy: isDev(stageName)
+        ? RemovalPolicy.DESTROY
+        : RemovalPolicy.RETAIN,
+      blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
+      enforceSSL: true,
+      versioned: true,
     })
 
     // Firehose role is created in the platform stack so the OpenSearch domain
@@ -285,6 +298,10 @@ export class PlatformStack extends Stack {
 
     new CfnOutput(this, 'OpenSearchEndpoint', {
       value: domain.domainEndpoint,
+    })
+
+    new CfnOutput(this, 'BlobStorageBucketArn', {
+      value: this.blobStorageBucket.bucketArn,
     })
 
     Tags.of(this).add('Project', 'Ito')

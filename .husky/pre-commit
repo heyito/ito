@@ -1,2 +1,1 @@
 bun lint:app
-bun format:fix

@@ -7,6 +7,7 @@
   "dependencies": {
     "@auth0/auth0-fastify-api": "^1.0.2",
     "@aws-sdk/client-cloudwatch-logs": "^3.723.0",
+    "@aws-sdk/client-s3": "^3.879.0",
     "@bufbuild/buf": "^1.55.1",
     "@bufbuild/protobuf": "^2.5.2",
     "@bufbuild/protoc-gen-es": "^2.5.2",

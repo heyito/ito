@@ -222,25 +222,12 @@ create_windows_installer() {
         ls -la
         echo 'electron-builder.config.js exists:' \$(test -f electron-builder.config.js && echo 'YES' || echo 'NO')
 
-        # Rebuild native modules for Windows
-        echo 'Rebuilding native modules for Windows...'
+        # Force SQLite3 to use prebuilt binaries for Windows
         export npm_config_target_platform=win32
         export npm_config_target_arch=x64
-        export npm_config_python=python2.7
-        export npm_config_cache=/tmp/.npm
-        export npm_config_build_from_source=true
+        export npm_config_runtime=electron
+        export npm_config_target=37.2.6
         
-        echo 'Environment variables:'
-        echo \"npm_config_target_platform=\$npm_config_target_platform\"
-        echo \"npm_config_target_arch=\$npm_config_target_arch\"
-        
-        npm rebuild sqlite3 --build-from-source --verbose
-        
-        echo 'Checking built sqlite3 binary:'
-        find node_modules/sqlite3 -name '*.node' -exec ls -la {} \;
-        echo 'Binary details:'
-        find node_modules/sqlite3 -name '*.node' -exec hexdump -C {} | head -2 \;
-
         # Install dependencies with retry
         bun install || bun install --force || bun install
         

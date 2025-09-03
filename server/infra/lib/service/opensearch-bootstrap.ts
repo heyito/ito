@@ -21,7 +21,7 @@ export function createOpenSearchBootstrap(
   config: OpenSearchBootstrapConfig,
 ): OpenSearchBootstrapResources {
   const stack = Stack.of(scope)
-  
+
   const bootstrapLambda = new NodejsFunction(scope, 'ItoOpenSearchBootstrap', {
     entry: 'lambdas/opensearch-bootstrap.ts',
     handler: 'handler',
@@ -43,17 +43,25 @@ export function createOpenSearchBootstrap(
     }),
   )
 
-  const bootstrapProvider = new cr.Provider(scope, 'ItoOpenSearchBootstrapProvider', {
-    onEventHandler: bootstrapLambda,
-  })
-
-  const bootstrapResource = new CustomResource(scope, 'ItoOpenSearchBootstrapResource', {
-    serviceToken: bootstrapProvider.serviceToken,
-    properties: {
-      domain: config.opensearchDomain.domainEndpoint,
-      stage: config.stageName,
+  const bootstrapProvider = new cr.Provider(
+    scope,
+    'ItoOpenSearchBootstrapProvider',
+    {
+      onEventHandler: bootstrapLambda,
     },
-  })
+  )
+
+  const bootstrapResource = new CustomResource(
+    scope,
+    'ItoOpenSearchBootstrapResource',
+    {
+      serviceToken: bootstrapProvider.serviceToken,
+      properties: {
+        domain: config.opensearchDomain.domainEndpoint,
+        stage: config.stageName,
+      },
+    },
+  )
 
   return {
     bootstrapLambda,

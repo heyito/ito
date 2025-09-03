@@ -193,9 +193,13 @@ export function createFirehoseStreams(
   )
 
   if (clientS3PolicyAttach.policyDependable)
-    clientDeliveryStream.node.addDependency(clientS3PolicyAttach.policyDependable)
+    clientDeliveryStream.node.addDependency(
+      clientS3PolicyAttach.policyDependable,
+    )
   if (clientEsPolicyAttach.policyDependable)
-    clientDeliveryStream.node.addDependency(clientEsPolicyAttach.policyDependable)
+    clientDeliveryStream.node.addDependency(
+      clientEsPolicyAttach.policyDependable,
+    )
   if (clientEsDescribePolicyAttach.policyDependable)
     clientDeliveryStream.node.addDependency(
       clientEsDescribePolicyAttach.policyDependable,
@@ -244,9 +248,13 @@ export function createFirehoseStreams(
   )
 
   if (serverS3PolicyAttach.policyDependable)
-    serverDeliveryStream.node.addDependency(serverS3PolicyAttach.policyDependable)
+    serverDeliveryStream.node.addDependency(
+      serverS3PolicyAttach.policyDependable,
+    )
   if (serverEsPolicyAttach.policyDependable)
-    serverDeliveryStream.node.addDependency(serverEsPolicyAttach.policyDependable)
+    serverDeliveryStream.node.addDependency(
+      serverEsPolicyAttach.policyDependable,
+    )
   if (serverEsDescribePolicyAttach.policyDependable)
     serverDeliveryStream.node.addDependency(
       serverEsDescribePolicyAttach.policyDependable,
@@ -264,12 +272,15 @@ export function createFirehoseStreams(
       statements: [
         new PolicyStatement({
           actions: ['firehose:PutRecord', 'firehose:PutRecordBatch'],
-          resources: [clientDeliveryStream.attrArn, serverDeliveryStream.attrArn],
+          resources: [
+            clientDeliveryStream.attrArn,
+            serverDeliveryStream.attrArn,
+          ],
         }),
       ],
     },
   )
-  
+
   logsToFirehoseRole.attachInlinePolicy(logsToFirehosePolicy)
 
   const clientSubscription = new CfnSubscriptionFilter(
@@ -282,7 +293,7 @@ export function createFirehoseStreams(
       roleArn: logsToFirehoseRole.roleArn,
     },
   )
-  
+
   clientSubscription.addDependency(clientDeliveryStream)
   clientSubscription.node.addDependency(logsToFirehosePolicy)
   clientSubscription.node.addDependency(config.ensureClientLogGroup)
@@ -297,7 +308,7 @@ export function createFirehoseStreams(
       roleArn: logsToFirehoseRole.roleArn,
     },
   )
-  
+
   serverSubscription.addDependency(serverDeliveryStream)
   serverSubscription.node.addDependency(logsToFirehosePolicy)
   serverSubscription.node.addDependency(config.ensureServerLogGroup)

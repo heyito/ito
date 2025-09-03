@@ -2,7 +2,11 @@ import { Construct } from 'constructs'
 import { Duration } from 'aws-cdk-lib'
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam'
-import { FargateTaskDefinition, FargateService, Cluster } from 'aws-cdk-lib/aws-ecs'
+import {
+  FargateTaskDefinition,
+  FargateService,
+  Cluster,
+} from 'aws-cdk-lib/aws-ecs'
 import { Vpc } from 'aws-cdk-lib/aws-ec2'
 import { IRole } from 'aws-cdk-lib/aws-iam'
 

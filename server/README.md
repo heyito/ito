@@ -33,8 +33,8 @@ DB_NAME=ito_db
 # GROQ API Configuration (Required)
 GROQ_API_KEY=your_groq_api_key_here
 
-# CEREBRUS API Key (Not Required)
-CEREBRUS_API_KEY=your_cerebrus_api_key_here
+# CEREBRAS API Key (Not Required)
+CEREBRAS_API_KEY=your_CEREBRAS_API_KEY_here
 
 # Authentication (Optional - set to false for local development)
 REQUIRE_AUTH=false
@@ -170,7 +170,7 @@ bun run test-client      # Run gRPC client tests
 | `DB_PASS`          | Yes      | -           | Database password                           |
 | `DB_NAME`          | Yes      | -           | Database name                               |
 | `GROQ_API_KEY`     | Yes      | -           | GROQ API key for transcription              |
-| `CEREBRUS_API_KEY` | No       | -           | CEREBRUS API key for reasoning              |
+| `CEREBRAS_API_KEY` | No       | -           | CEREBRAS API key for reasoning              |
 | `REQUIRE_AUTH`     | No       | `false`     | Enable Auth0 authentication                 |
 | `AUTH0_DOMAIN`     | No\*     | -           | Auth0 domain (\*required if auth enabled)   |
 | `AUTH0_AUDIENCE`   | No\*     | -           | Auth0 audience (\*required if auth enabled) |

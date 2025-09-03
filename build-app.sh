@@ -227,7 +227,17 @@ create_windows_installer() {
         export npm_config_target_platform=win32
         export npm_config_target_arch=x64
         export npm_config_python=python2.7
-        npm rebuild sqlite3 --build-from-source
+        export npm_config_cache=/tmp/.npm
+        export npm_config_build_from_source=true
+        
+        echo 'Environment variables:'
+        echo \"npm_config_target_platform=\$npm_config_target_platform\"
+        echo \"npm_config_target_arch=\$npm_config_target_arch\"
+        
+        npm rebuild sqlite3 --build-from-source --verbose
+        
+        echo 'Checking built sqlite3 binary:'
+        find node_modules/sqlite3 -name '*.node' -exec file {} \;
 
         # Install dependencies with retry
         bun install || bun install --force || bun install

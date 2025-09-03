@@ -22,7 +22,9 @@ export function initializeLogging() {
   // Set up IPC transport to receive logs from the renderer process
   log.initialize()
 
-  log.info('Logging initialized.')
+  log.info(
+    `Logging initialized, Ito Version: ${import.meta.env.VITE_ITO_VERSION}`,
+  )
   if (app.isPackaged) {
     log.info(`Log file is located at: ${log.transports.file.getFile().path}`)
   }

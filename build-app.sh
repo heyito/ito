@@ -237,7 +237,9 @@ create_windows_installer() {
         npm rebuild sqlite3 --build-from-source --verbose
         
         echo 'Checking built sqlite3 binary:'
-        find node_modules/sqlite3 -name '*.node' -exec file {} \;
+        find node_modules/sqlite3 -name '*.node' -exec ls -la {} \;
+        echo 'Binary details:'
+        find node_modules/sqlite3 -name '*.node' -exec hexdump -C {} | head -2 \;
 
         # Install dependencies with retry
         bun install || bun install --force || bun install

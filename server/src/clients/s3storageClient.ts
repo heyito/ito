@@ -13,7 +13,7 @@ import {
 } from '@aws-sdk/client-s3'
 import { Readable } from 'stream'
 
-export class StorageClient {
+export class S3StorageClient {
   private s3Client: S3Client
   private bucketName: string
 
@@ -127,11 +127,11 @@ export class StorageClient {
 }
 
 // Singleton instance
-let storageClient: StorageClient | null = null
+let storageClient: S3StorageClient | null = null
 
-export function getStorageClient(): StorageClient {
+export function getStorageClient(): S3StorageClient {
   if (!storageClient) {
-    storageClient = new StorageClient()
+    storageClient = new S3StorageClient()
   }
   return storageClient
 }

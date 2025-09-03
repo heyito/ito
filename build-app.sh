@@ -222,7 +222,12 @@ create_windows_installer() {
         ls -la
         echo 'electron-builder.config.js exists:' \$(test -f electron-builder.config.js && echo 'YES' || echo 'NO')
         
-        # Install dependencies (let SQLite3 use prebuilt binaries)
+        # Install dependencies (let SQLite3 use prebuilt binaries for Electron)
+        export npm_config_target_platform=win32
+        export npm_config_target_arch=x64
+        export npm_config_runtime=electron
+        export npm_config_sqlite3_binary_host_mirror=https://github.com/mapbox/node-sqlite3/releases/download
+        export npm_config_electron_version=\$(node -p \"require('./package.json').devDependencies.electron.replace('^', '')\")
         bun install || bun install --force || bun install
         
         # Run electron-builder

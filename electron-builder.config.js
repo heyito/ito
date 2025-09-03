@@ -96,6 +96,8 @@ module.exports = {
     extraResources: getWindowsResources(),
     forceCodeSigning: false,
   },
+  nodeGypRebuild: false,
+  buildDependenciesFromSource: false,
   nsis: {
     artifactName: 'Ito-Installer.${ext}',
     shortcutName: '${productName}',

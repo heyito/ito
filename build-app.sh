@@ -225,7 +225,7 @@ create_windows_installer() {
         # Install dependencies with retry
         bun install || bun install --force || bun install
         # Add rebuild
-        .\node_modules\.bin\electron-rebuild.cmd
+        ./node_modules/.bin/electron-rebuild
         
         # Run electron-builder
         bunx electron-builder --config electron-builder.config.js --win --x64 --publish=never

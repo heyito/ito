@@ -21,7 +21,7 @@ const MainApp = () => {
   }, [])
 
   const onboardingSetupCompleted =
-    onboardingStep >= STEP_NAMES.indexOf('any_app')
+    onboardingStep >= STEP_NAMES.indexOf('try_it_out')
 
   const shouldEnableShortcutGlobally =
     onboardingCompleted || onboardingSetupCompleted

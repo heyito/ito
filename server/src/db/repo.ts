@@ -90,11 +90,14 @@ export class NotesRepository {
 
 export class InteractionsRepository {
   static async create(
-    interactionData: CreateInteractionRequest & { userId: string },
+    interactionData: CreateInteractionRequest & {
+      userId: string
+      rawAudioUuid?: string
+    },
   ): Promise<Interaction> {
     const res = await pool.query<Interaction>(
-      `INSERT INTO interactions (id, user_id, title, asr_output, llm_output, raw_audio, duration_ms)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO interactions (id, user_id, title, asr_output, llm_output, raw_audio, raw_audio_uuid, duration_ms)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
       [
         interactionData.id,
@@ -102,7 +105,8 @@ export class InteractionsRepository {
         interactionData.title,
         interactionData.asrOutput,
         interactionData.llmOutput,
-        interactionData.rawAudio,
+        interactionData.rawAudio || null,
+        interactionData.rawAudioUuid || null,
         interactionData.durationMs ?? 0,
       ],
     )

@@ -8,6 +8,7 @@ import {
 import log from 'electron-log'
 import { STORE_KEYS } from '../../../lib/constants/store-keys'
 import { v4 as uuidv4 } from 'uuid'
+import type { OnboardingCategory } from '../../store/useOnboardingStore'
 
 // Get or generate a machine-based device ID that's shared across all windows
 const getSharedDeviceId = async (): Promise<string> => {
@@ -103,7 +104,7 @@ export interface BaseEventProperties {
 export interface OnboardingEventProperties extends BaseEventProperties {
   step: number
   step_name: string
-  category: 'sign-up' | 'permissions' | 'set-up' | 'try-it'
+  category: OnboardingCategory
   total_steps: number
   referral_source?: string
   provider?: string

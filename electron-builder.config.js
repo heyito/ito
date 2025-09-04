@@ -52,8 +52,11 @@ module.exports = {
     },
   ],
   asar: true,
-  asarUnpack: ['resources/**'],
-  extraResources: getMacResources(),
+  asarUnpack: [
+    'resources/**',
+    '**/node_modules/@sentry/**',
+    '**/node_modules/sqlite3/**',
+  ],
   extraMetadata: {
     version: process.env.VITE_ITO_VERSION || '0.0.0-dev',
   },
@@ -75,6 +78,7 @@ module.exports = {
       NSMicrophoneUsageDescription:
         'Ito requires microphone access to transcribe your speech.',
     },
+    extraResources: getMacResources(),
   },
   dmg: {
     artifactName: 'Ito-Installer.${ext}',
@@ -90,7 +94,10 @@ module.exports = {
     executableName: 'Ito',
     requestedExecutionLevel: 'asInvoker',
     extraResources: getWindowsResources(),
+    forceCodeSigning: false,
   },
+  nodeGypRebuild: false,
+  buildDependenciesFromSource: false,
   nsis: {
     artifactName: 'Ito-Installer.${ext}',
     shortcutName: '${productName}',

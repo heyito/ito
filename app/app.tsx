@@ -3,7 +3,11 @@ import appIcon from '@/resources/build/icon.png'
 import HomeKit from '@/app/components/home/HomeKit'
 import WelcomeKit from '@/app/components/welcome/WelcomeKit'
 import Pill from '@/app/components/pill/Pill'
-import { STEP_NAMES, useOnboardingStore } from '@/app/store/useOnboardingStore'
+import {
+  STEP_NAMES,
+  STEP_NAMES_ARRAY,
+  useOnboardingStore,
+} from '@/app/store/useOnboardingStore'
 import { useAuth } from '@/app/components/auth/useAuth'
 import { WindowContextProvider } from '@/lib/window'
 import { Auth0Provider } from '@/app/components/auth/Auth0Provider'
@@ -21,7 +25,7 @@ const MainApp = () => {
   }, [])
 
   const onboardingSetupCompleted =
-    onboardingStep >= STEP_NAMES.indexOf('try_it_out')
+    onboardingStep >= STEP_NAMES_ARRAY.indexOf(STEP_NAMES.TRY_IT_OUT)
 
   const shouldEnableShortcutGlobally =
     onboardingCompleted || onboardingSetupCompleted

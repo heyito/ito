@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useSettingsStore } from '../../store/useSettingsStore'
-import { useOnboardingStore } from '../../store/useOnboardingStore'
+import {
+  useOnboardingStore,
+  ONBOARDING_CATEGORIES,
+} from '../../store/useOnboardingStore'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
 import { X, StopSquare } from '@mynaui/icons-react'
 import { AudioBars } from './contents/AudioBars'
@@ -167,7 +170,8 @@ const Pill = () => {
   // Determine current state
   const anyRecording = isRecording || isManualRecording
   const shouldShow =
-    (onboardingCategory === 'try-it' || onboardingCompleted) &&
+    (onboardingCategory === ONBOARDING_CATEGORIES.TRY_IT ||
+      onboardingCompleted) &&
     (anyRecording || showItoBarAlways || isHovered)
 
   // Calculate dimensions based on state

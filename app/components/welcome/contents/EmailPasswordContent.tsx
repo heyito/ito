@@ -15,7 +15,6 @@ type Props = {
 export default function EmailPasswordContent({
   initialEmail = '',
   onBack,
-  onContinue,
 }: Props) {
   const email = initialEmail
   const [fullName, setFullName] = useState('')

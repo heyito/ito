@@ -18,7 +18,7 @@ import {
 } from './constants'
 import { BlockPublicAccess, Bucket } from 'aws-cdk-lib/aws-s3'
 import { CachePolicy, Distribution } from 'aws-cdk-lib/aws-cloudfront'
-import { S3BucketOrigin, S3Origin } from 'aws-cdk-lib/aws-cloudfront-origins'
+import { S3BucketOrigin } from 'aws-cdk-lib/aws-cloudfront-origins'
 
 export interface GitHubOidcStackProps extends StackProps {
   stages: string[]

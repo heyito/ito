@@ -367,7 +367,11 @@ export const useAuth = () => {
 
   // Direct email/password login without opening a browser window
   const loginWithEmailPassword = useCallback(
-    async (email: string, password: string) => {
+    async (
+      email: string,
+      password: string,
+      options?: { skipNavigate?: boolean },
+    ) => {
       try {
         analytics.trackAuth(ANALYTICS_EVENTS.AUTH_SIGNIN_STARTED, {
           provider: 'email',
@@ -403,7 +407,7 @@ export const useAuth = () => {
                 : 'email',
             lastSignInAt: new Date().toISOString(),
           }
-        } catch (e) {
+        } catch {
           console.warn(
             'Failed to decode id_token, proceeding with minimal profile',
           )
@@ -425,7 +429,9 @@ export const useAuth = () => {
           user_id: userInfo?.id,
         })
 
-        useMainStore.getState().setCurrentPage('home')
+        if (!options?.skipNavigate) {
+          useMainStore.getState().setCurrentPage('home')
+        }
 
         await window.api.notifyLoginSuccess(
           userInfo,

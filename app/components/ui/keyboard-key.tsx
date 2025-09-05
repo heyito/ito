@@ -170,7 +170,6 @@ export default function KeyboardKey({
   keyboardKey,
   className,
   variant = 'tile',
-  size = 'md',
   ...props
 }: KeyboardKeyProps) {
   if (variant === 'inline') {

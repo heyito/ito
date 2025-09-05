@@ -90,8 +90,8 @@ class CerebrasClient implements LlmProvider {
    * @returns The transcribed text as a string.
    */
   public async transcribeAudio(
-    audioBuffer: Buffer,
-    options?: TranscriptionOptions,
+    _audioBuffer: Buffer,
+    _options?: TranscriptionOptions,
   ): Promise<string> {
     if (!this.isAvailable) {
       throw new ClientUnavailableError(ClientProvider.CEREBRAS)

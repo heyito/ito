@@ -149,8 +149,9 @@ bun run dev
 
 3. **Install 7-Zip**: `winget install 7zip.7zip`
 
-4. **Download and install GCC & MinGW-w64 and add to path**:
-   https://winlibs.com/
+4. **Download and install GCC & MinGW-w64 but DO NOT add to path**:
+   https://code.visualstudio.com/docs/cpp/config-mingw
+   a. Do not add C:\msys64\ucrt64\bin to your path -- the rust build will automatically select the correct linker, and adding this to your path will cause the incorrect linking library to be used, causing compilation failures.
 
 5. **Restart your terminal** to pick up PATH changes
 

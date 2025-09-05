@@ -18,7 +18,7 @@ export default function CheckEmailContent({
   onUseAnotherEmail,
   onRequireLogin = () => {},
 }: Props) {
-  const [seconds, setSeconds] = useState(3)
+  const [seconds, setSeconds] = useState(30)
   const [isResending, setIsResending] = useState(false)
   const [pollError, setPollError] = useState<string | null>(null)
   const [resendError, setResendError] = useState<string | null>(null)
@@ -48,7 +48,7 @@ export default function CheckEmailContent({
           'Verification email requested but no job id was returned',
         )
       }
-      if (success) setSeconds(3)
+      if (success) setSeconds(30)
     } finally {
       setIsResending(false)
     }

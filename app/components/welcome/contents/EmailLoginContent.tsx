@@ -84,6 +84,12 @@ export default function EmailLoginContent({
               type="password"
               placeholder="Enter your password"
               value={password}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleLogin()
+                }
+              }}
               onChange={e => setPassword(e.target.value)}
               className="h-10 w-full rounded-md border border-border bg-background px-3 text-foreground placeholder:text-muted-foreground"
             />

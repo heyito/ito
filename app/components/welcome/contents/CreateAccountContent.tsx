@@ -278,6 +278,12 @@ export default function CreateAccountContent() {
             placeholder="Email address"
             onChange={e => setEmail(e.target.value)}
             onBlur={() => setEmailTouched(true)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleContinueWithEmail()
+              }
+            }}
             aria-invalid={emailTouched && !emailOk}
             aria-describedby={
               emailTouched && !emailOk ? 'signup-email-error' : undefined

@@ -22,7 +22,7 @@ import {
 } from '../auth/events'
 import { KeyValueStore } from '../main/sqlite/repo'
 import { machineId } from 'node-machine-id'
-import { Auth0Config } from '../auth/config'
+import { Auth0Config, Auth0Connections } from '../auth/config'
 import {
   NotesTable,
   DictionaryTable,
@@ -251,6 +251,225 @@ export function registerIPC() {
     window?.setFullScreen(!window.isFullScreen())
   })
   handleIPC('web-open-url', (_e, url) => shell.openExternal(url))
+  // Auth0 DB signup proxy (avoids CORS issues from custom schemes)
+  handleIPC('auth0-db-signup', async (_e, { email, password, name }) => {
+    try {
+      const url = `https://${Auth0Config.domain}/dbconnections/signup`
+      const payload: any = {
+        client_id: Auth0Config.clientId,
+        email,
+        password,
+        name,
+        connection: Auth0Connections.database,
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      let data: any
+      try {
+        data = await res.json()
+      } catch {
+        data = undefined
+      }
+      if (!res.ok) {
+        const message =
+          data?.description ||
+          data?.error ||
+          `Auth0 signup failed (${res.status})`
+        return { success: false, error: message, status: res.status }
+      }
+      console.log('[IPC] auth0-db-signup response', res.status, data)
+      return { success: true, data }
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Network error' }
+    }
+  })
+
+  // Auth0 DB login via Password Realm (Resource Owner Password) grant
+  handleIPC('auth0-db-login', async (_e, { email, password }) => {
+    try {
+      if (!email || !password) {
+        return { success: false, error: 'Missing email or password' }
+      }
+      const url = `https://${Auth0Config.domain}/oauth/token`
+      const payload: any = {
+        grant_type: 'http://auth0.com/oauth/grant-type/password-realm',
+        client_id: Auth0Config.clientId,
+        username: email,
+        password,
+        realm: Auth0Connections.database,
+        scope: Auth0Config.scope,
+      }
+      if (Auth0Config.audience) {
+        payload.audience = Auth0Config.audience
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      let data: any
+      try {
+        data = await res.json()
+      } catch {
+        data = undefined
+      }
+      if (!res.ok) {
+        const message =
+          data?.error_description ||
+          data?.error ||
+          `Auth0 login failed (${res.status})`
+        return { success: false, error: message, status: res.status }
+      }
+
+      return {
+        success: true,
+        tokens: {
+          id_token: data?.id_token || null,
+          access_token: data?.access_token || null,
+          refresh_token: data?.refresh_token || null,
+          scope: data?.scope || null,
+          expires_in: data?.expires_in || null,
+          token_type: data?.token_type || null,
+        },
+      }
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Network error' }
+    }
+  })
+
+  // Helper to get Auth0 Management API token
+  const getManagementToken = async () => {
+    try {
+      const tokenUrl = `https://${Auth0Config.domain}/oauth/token`
+      const res = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          grant_type: 'client_credentials',
+          client_id: (import.meta as any).env.VITE_AUTH0_MGMT_CLIENT_ID,
+          client_secret: (import.meta as any).env.VITE_AUTH0_MGMT_CLIENT_SECRET,
+          audience: `https://${Auth0Config.domain}/api/v2/`,
+        }),
+      })
+      const data: any = await res.json()
+      if (!res.ok || !data?.access_token) {
+        throw new Error(
+          data?.error_description || 'Failed to get management token',
+        )
+      }
+      return data.access_token as string
+    } catch (err) {
+      console.error('[IPC] getManagementToken error:', err)
+      return null
+    }
+  }
+
+  // Send verification email via Management API
+  handleIPC('auth0-send-verification', async (_e, { dbUserId }) => {
+    try {
+      const token = await getManagementToken()
+      if (!token) return { success: false, error: 'Missing management token' }
+      if (!dbUserId) return { success: false, error: 'Missing user identifier' }
+
+      const url = `https://${Auth0Config.domain}/api/v2/jobs/verification-email`
+      const payload: any = {
+        user_id: dbUserId,
+        client_id: Auth0Config.clientId,
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      })
+      let data: any
+      try {
+        data = await res.json()
+      } catch {
+        data = undefined
+      }
+      if (!res.ok) {
+        const message =
+          data?.message ||
+          data?.error_description ||
+          data?.error ||
+          `Verification request failed (${res.status})`
+        return { success: false, error: message, status: res.status }
+      }
+      return { success: true, jobId: data?.id || data?.job_id || null }
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Network error' }
+    }
+  })
+
+  // Check if user's email is verified
+  handleIPC('auth0-is-email-verified', async (_e, { email }) => {
+    try {
+      const token = await getManagementToken()
+      if (!token) return { success: false, error: 'Missing management token' }
+      const url = `https://${Auth0Config.domain}/api/v2/users-by-email?email=${encodeURIComponent(email)}`
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data: any = await res.json()
+      if (!res.ok) {
+        const message =
+          data?.message || data?.error || `Lookup failed (${res.status})`
+        return { success: false, error: message }
+      }
+      console.log('auth0-is-email-verified response', data)
+      const verified =
+        Array.isArray(data) &&
+        data[0]?.email?.toLowerCase() === email.toLowerCase() &&
+        !!data[0]?.email_verified
+      return { success: true, verified }
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Network error' }
+    }
+  })
+
+  // Check if email exists and whether it's verified
+  handleIPC('auth0-check-email', async (_e, { email }) => {
+    try {
+      const token = await getManagementToken()
+      if (!token) return { success: false, error: 'Missing management token' }
+      if (!email) return { success: false, error: 'Missing email' }
+
+      const url = `https://${Auth0Config.domain}/api/v2/users-by-email?email=${encodeURIComponent(email)}`
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data: any = await res.json()
+      if (!res.ok) {
+        const message =
+          data?.message || data?.error || `Lookup failed (${res.status})`
+        return { success: false, error: message }
+      }
+
+      const user = Array.isArray(data)
+        ? data.find((u: any) => u?.email?.toLowerCase() === email.toLowerCase())
+        : null
+
+      if (!user) return { success: true, exists: false, verified: false }
+
+      return {
+        success: true,
+        exists: true,
+        verified: !!user.email_verified,
+        dbUserId: typeof user.user_id === 'string' ? user.user_id : null,
+      }
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Network error' }
+    }
+  })
   handleIPC('open-auth-window', async (_e, { url, redirectUri }) => {
     try {
       if (!url || !redirectUri)

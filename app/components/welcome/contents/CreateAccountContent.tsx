@@ -8,6 +8,8 @@ import {
 } from '@/app/components/ui/dialog'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import EmailPasswordContent from './EmailPasswordContent'
+import EmailLoginContent from './EmailLoginContent'
+import CheckEmailContent from './CheckEmailContent'
 import ItoIcon from '../../icons/ItoIcon'
 import UserCog from '@/app/assets/icons/UserCog.svg'
 import GoogleIcon from '../../icons/GoogleIcon'
@@ -29,6 +31,13 @@ export default function CreateAccountContent() {
   const [emailTouched, setEmailTouched] = useState(false)
   const isDictInitialized = useRef(false)
   const [showEmailPassword, setShowEmailPassword] = useState(false)
+  const [showEmailLogin, setShowEmailLogin] = useState(false)
+  const [showCheckEmail, setShowCheckEmail] = useState(false)
+  const [checkEmailDbUserId, setCheckEmailDbUserId] = useState<string | null>(
+    null,
+  )
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false)
+  const [checkError, setCheckError] = useState<string | null>(null)
 
   const {
     user,
@@ -121,12 +130,60 @@ export default function CreateAccountContent() {
     }
   }
 
+  const handleContinueWithEmail = async () => {
+    if (!emailOk) {
+      setEmailTouched(true)
+      return
+    }
+    try {
+      setIsCheckingEmail(true)
+      setCheckError(null)
+      const res = await window.api.invoke('auth0-check-email', { email })
+      if (!res?.success) {
+        setCheckError(res?.error || 'Unable to check email')
+        return
+      }
+      if (res.exists) {
+        if (res.verified) {
+          setShowEmailLogin(true)
+        } else {
+          setCheckEmailDbUserId(res.dbUserId || null)
+          setShowCheckEmail(true)
+        }
+      } else {
+        setShowEmailPassword(true)
+      }
+    } finally {
+      setIsCheckingEmail(false)
+    }
+  }
+
   if (showEmailPassword) {
     return (
       <EmailPasswordContent
         initialEmail={email}
         onBack={() => setShowEmailPassword(false)}
         onContinue={em => signupWithEmail(em)}
+      />
+    )
+  }
+
+  if (showEmailLogin) {
+    return (
+      <EmailLoginContent
+        initialEmail={email}
+        onBack={() => setShowEmailLogin(false)}
+        onContinue={() => {}}
+      />
+    )
+  }
+
+  if (showCheckEmail) {
+    return (
+      <CheckEmailContent
+        email={email}
+        dbUserId={checkEmailDbUserId}
+        onUseAnotherEmail={() => setShowCheckEmail(false)}
       />
     )
   }
@@ -231,13 +288,15 @@ export default function CreateAccountContent() {
           )}
           <Button
             className="w-full h-12 text-sm font-medium"
-            disabled={!emailOk}
-            onClick={() =>
-              emailOk ? setShowEmailPassword(true) : setEmailTouched(true)
-            }
+            disabled={!emailOk || isCheckingEmail}
+            aria-busy={isCheckingEmail}
+            onClick={handleContinueWithEmail}
           >
-            Continue with email
+            {isCheckingEmail ? 'Checking…' : 'Continue with email'}
           </Button>
+          {checkError && (
+            <p className="text-xs text-destructive">{checkError}</p>
+          )}
         </div>
 
         {/* Self-hosted option (icon + label in a row, pinned near bottom) */}

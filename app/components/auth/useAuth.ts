@@ -365,6 +365,87 @@ export const useAuth = () => {
     [openExternalAuth],
   )
 
+  // Direct email/password login without opening a browser window
+  const loginWithEmailPassword = useCallback(
+    async (email: string, password: string) => {
+      try {
+        analytics.trackAuth(ANALYTICS_EVENTS.AUTH_SIGNIN_STARTED, {
+          provider: 'email',
+          is_returning_user: false,
+          auth_method: 'password_realm',
+        })
+
+        const result = await window.api.invoke('auth0-db-login', {
+          email,
+          password,
+        })
+        if (!result?.success || !result?.tokens) {
+          throw new Error(result?.error || 'Login failed')
+        }
+
+        const tokens = result.tokens as AuthTokens
+        const idToken = tokens.id_token || ''
+        let userInfo: AuthUser | null = null
+        try {
+          const payloadPart = idToken.split('.')[1]
+          const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/')
+          const padded = base64 + '==='.slice((base64.length + 3) % 4)
+          const json = atob(padded)
+          const payload = JSON.parse(json)
+          userInfo = {
+            id: payload.sub || '',
+            email: payload.email,
+            name: payload.name,
+            picture: payload.picture,
+            provider:
+              typeof payload.sub === 'string' && payload.sub.includes('|')
+                ? payload.sub.split('|')[0]
+                : 'email',
+            lastSignInAt: new Date().toISOString(),
+          }
+        } catch (e) {
+          console.warn(
+            'Failed to decode id_token, proceeding with minimal profile',
+          )
+          userInfo = {
+            id: 'email',
+            email,
+            provider: 'email',
+            lastSignInAt: new Date().toISOString(),
+          }
+        }
+
+        useAuthStore
+          .getState()
+          .setAuthData(tokens, userInfo as AuthUser, 'email')
+
+        analytics.trackAuth(ANALYTICS_EVENTS.AUTH_SIGNIN_COMPLETED, {
+          provider: 'email',
+          is_returning_user: false,
+          user_id: userInfo?.id,
+        })
+
+        useMainStore.getState().setCurrentPage('home')
+
+        await window.api.notifyLoginSuccess(
+          userInfo,
+          tokens.id_token ?? null,
+          tokens.access_token ?? null,
+        )
+      } catch (error) {
+        console.error('Email/password login failed:', error)
+        analytics.track(ANALYTICS_EVENTS.AUTH_METHOD_FAILED, {
+          provider: 'email',
+          error_message:
+            error instanceof Error ? error.message : 'Unknown error',
+          auth_method: 'password_realm',
+        })
+        throw error
+      }
+    },
+    [],
+  )
+
   const signupWithEmail = useCallback(
     async (email?: string) => {
       try {
@@ -386,42 +467,18 @@ export const useAuth = () => {
     [openExternalAuth],
   )
 
-  // Directly create a database user via Auth0 Authentication API
+  // Directly create a database user via Auth0 Authentication API (proxied via main to avoid CORS)
   const createDatabaseUser = useCallback(
-    async (
-      email: string,
-      password: string,
-      metadata?: Record<string, unknown>,
-    ) => {
-      const url = `https://${Auth0Config.domain}/dbconnections/signup`
-      const payload: Record<string, unknown> = {
-        client_id: Auth0Config.clientId,
+    async (email: string, password: string, name: string) => {
+      const result = await window.api.invoke('auth0-db-signup', {
         email,
         password,
-        connection: Auth0Connections.database,
-      }
-      if (metadata && Object.keys(metadata).length > 0) {
-        payload.user_metadata = metadata
-      }
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
+        name,
       })
-
-      let data: any = undefined
-      try {
-        data = await res.json()
-      } catch (_) {}
-
-      if (!res.ok) {
-        const message =
-          data?.description || data?.error || `Signup failed (${res.status})`
-        throw new Error(message)
+      if (!result?.success) {
+        throw new Error(result?.error || 'Signup failed')
       }
-
-      return data
+      return result.data
     },
     [],
   )
@@ -649,6 +706,7 @@ export const useAuth = () => {
     loginWithApple,
     loginWithGitHub,
     loginWithEmail,
+    loginWithEmailPassword,
     signupWithEmail,
     createDatabaseUser,
     loginWithSelfHosted,

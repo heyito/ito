@@ -1,20 +1,24 @@
 import { useEffect, useState } from 'react'
+import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { Button } from '@/app/components/ui/button'
 import { AppOrbitImage } from '@/app/components/ui/app-orbit-image'
 
 type Props = {
   email: string
+  dbUserId: string | null
   onUseAnotherEmail: () => void
-  onResend?: () => Promise<void> | void
 }
 
 export default function CheckEmailContent({
   email,
+  dbUserId,
   onUseAnotherEmail,
-  onResend,
 }: Props) {
-  const [seconds, setSeconds] = useState(60)
+  const [seconds, setSeconds] = useState(3)
   const [isResending, setIsResending] = useState(false)
+  const { incrementOnboardingStep } = useOnboardingStore()
+  const [pollError, setPollError] = useState<string | null>(null)
+  const [resendError, setResendError] = useState<string | null>(null)
 
   useEffect(() => {
     if (seconds <= 0) return
@@ -26,12 +30,52 @@ export default function CheckEmailContent({
     if (seconds > 0 || isResending) return
     try {
       setIsResending(true)
-      await onResend?.()
-      setSeconds(60)
+      setResendError(null)
+      let success = true
+      const res = await window.api.invoke('auth0-send-verification', {
+        dbUserId,
+      })
+      if (!res?.success) {
+        success = false
+        setResendError(res?.error || 'Failed to resend verification email')
+      } else if (!res?.jobId) {
+        setResendError(
+          'Verification email requested but no job id was returned',
+        )
+      }
+      if (success) setSeconds(3)
     } finally {
       setIsResending(false)
     }
   }
+
+  // Poll for verification status every 4 seconds
+  useEffect(() => {
+    let mounted = true
+    const poll = async () => {
+      try {
+        console.log('Polling for email verification')
+        const res = await window.api.invoke('auth0-is-email-verified', {
+          email,
+        })
+        if (mounted && res?.success && res.verified) {
+          console.log('Email verified')
+          incrementOnboardingStep()
+        }
+        if (mounted && !res?.success) {
+          setPollError(res?.error || null)
+        }
+      } catch (e: any) {
+        if (mounted) setPollError(e?.message || 'Polling error')
+      }
+    }
+    const id = setInterval(poll, 4000)
+    poll()
+    return () => {
+      mounted = false
+      clearInterval(id)
+    }
+  }, [email, dbUserId, incrementOnboardingStep])
 
   return (
     <div className="flex h-full w-full bg-background">
@@ -70,6 +114,9 @@ export default function CheckEmailContent({
                 ? 'Resending…'
                 : 'Resend email'}
           </Button>
+          {resendError && (
+            <p className="mt-2 text-xs text-destructive">{resendError}</p>
+          )}
         </div>
 
         <button
@@ -83,6 +130,11 @@ export default function CheckEmailContent({
           If you don't see it, check your Spam or Promotions folder for a
           message from support@ito.ai
         </p>
+        {pollError && (
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            {pollError}
+          </p>
+        )}
       </div>
 
       {/* Right illustration */}

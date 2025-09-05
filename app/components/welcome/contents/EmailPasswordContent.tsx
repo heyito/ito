@@ -33,13 +33,15 @@ export default function EmailPasswordContent({
   const [showCheckEmail, setShowCheckEmail] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [dbUserId, setDbUserId] = useState<string | null>(null)
 
   const handleCreate = async () => {
     if (!emailOk || !isStrongPassword(password) || !fullName.trim()) return
     try {
       setIsCreating(true)
       setErrorMessage(null)
-      await createDatabaseUser(email, password, { name: fullName.trim() })
+      const res = await createDatabaseUser(email, password, fullName.trim())
+      setDbUserId(`auth0|${res._id}`)
       setShowCheckEmail(true)
     } finally {
       setIsCreating(false)
@@ -60,10 +62,8 @@ export default function EmailPasswordContent({
     return (
       <CheckEmailContent
         email={email}
+        dbUserId={dbUserId}
         onUseAnotherEmail={onBack}
-        onResend={async () => {
-          await createDatabaseUser(email, password, { name: fullName.trim() })
-        }}
       />
     )
   }

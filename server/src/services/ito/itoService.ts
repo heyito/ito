@@ -390,11 +390,6 @@ export default (router: ConnectRouter) => {
             },
           )
 
-          console.log(
-            'TODO DELETE ME, Uploaded audio to S3 with key:',
-            audioKey,
-          )
-
           // Create interaction with UUID reference instead of blob
           const interactionRequest = {
             ...request,

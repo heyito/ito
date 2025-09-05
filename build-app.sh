@@ -205,24 +205,33 @@ create_windows_installer() {
     docker run --rm --platform linux/amd64 \
       --env CSC_IDENTITY_AUTO_DISCOVERY=false \
       --env SKIP_SIGNING=true \
-      -v "/$PWD":/project \
+      -v "$PWD":/project \
       electronuserland/builder:wine \
       bash -c "
-        # Install bun
-        curl -fsSL https://bun.sh/install | bash
+        # Install bun with retry
+        curl -fsSL https://bun.sh/install | bash || curl -fsSL https://bun.sh/install | bash
         export PATH=\"/root/.bun/bin:\$PATH\"
+        
+        # Verify bun installation
+        bun --version
 
         # Change to project and debug file paths
         cd /project
         echo 'Current directory:' \$(pwd)
         echo 'Directory contents:'
         ls -la
-        echo 'electron-builder.config.js exists:' \$(test -f
-        electron-builder.config.js && echo 'YES' || echo 'NO')
-
+        
+        # Install dependencies (let SQLite3 use prebuilt binaries for Electron)
+        export npm_config_target_platform=win32
+        export npm_config_target_arch=x64
+        export npm_config_runtime=electron
+        export npm_config_sqlite3_binary_host_mirror=https://github.com/mapbox/node-sqlite3/releases/download
+        export npm_config_electron_version=\$(node -p \"require('./package.json').devDependencies.electron.replace('^', '')\")
+        bun install || bun install --force || bun install
+        
         # Run electron-builder
         bunx electron-builder --config electron-builder.config.js --win --x64 --publish=never
-        
+
         # Rename latest.yml to latest-windows.yml inside the container
         if [ -f dist/latest.yml ]; then
           echo 'Renaming dist/latest.yml to dist/latest-windows.yml for Windows auto-updater'

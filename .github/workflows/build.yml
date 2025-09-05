@@ -118,18 +118,50 @@ jobs:
           echo "Created .env file:"
           cat .env
 
-      - name: Build and package Windows application
+      - name: Build and package Windows application (unsigned)
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: ./build-app.sh windows
 
-      - name: Upload Windows Installer
+      - name: Upload unsigned Windows artifacts for signing
         uses: actions/upload-artifact@v4
         with:
-          name: Ito-Windows-Installer
-          path: dist/*.exe
+          name: Windows-Unsigned-Artifacts
+          path: |
+            dist/*.exe
+            dist/*.yml
+            dist/*.nsis.7z
+            dist/*.zip
+            dist/*.blockmap
 
-      - name: Upload Windows Build Artifacts
+  sign-windows:
+    runs-on: windows-latest
+    needs: build-windows
+    environment: ${{ github.event.release.target_commitish == 'main' && 'production' || 'develop' }}
+
+    steps:
+      - name: Download unsigned Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Windows-Unsigned-Artifacts
+          path: dist
+
+      - name: Sign Windows executable with Azure Trusted Signing
+        uses: Azure/trusted-signing-action@v0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: https://eus.codesigning.azure.net/
+          trusted-signing-account-name: ${{ secrets.AZURE_CODE_SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_CODE_SIGNING_CERTIFICATE_PROFILE_NAME }}
+          files-folder: dist
+          files-folder-filter: exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Upload signed Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Windows-Build-Artifacts
@@ -142,7 +174,7 @@ jobs:
 
   upload-to-s3:
     runs-on: ubuntu-latest
-    needs: [build-mac, build-windows]
+    needs: [build-mac, sign-windows]
     environment: ${{ github.event.release.target_commitish == 'main' && 'production' || 'develop' }}
 
     steps:

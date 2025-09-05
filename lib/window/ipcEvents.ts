@@ -410,33 +410,7 @@ export function registerIPC() {
     }
   })
 
-  // Check if user's email is verified
-  handleIPC('auth0-is-email-verified', async (_e, { email }) => {
-    try {
-      const token = await getManagementToken()
-      if (!token) return { success: false, error: 'Missing management token' }
-      const url = `https://${Auth0Config.domain}/api/v2/users-by-email?email=${encodeURIComponent(email)}`
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const data: any = await res.json()
-      if (!res.ok) {
-        const message =
-          data?.message || data?.error || `Lookup failed (${res.status})`
-        return { success: false, error: message }
-      }
-      console.log('auth0-is-email-verified response', data)
-      const verified =
-        Array.isArray(data) &&
-        data[0]?.email?.toLowerCase() === email.toLowerCase() &&
-        !!data[0]?.email_verified
-      return { success: true, verified }
-    } catch (error: any) {
-      return { success: false, error: error?.message || 'Network error' }
-    }
-  })
-
-  // Check if email exists and whether it's verified
+  // Check if email exists for db signup and whether it's verified
   handleIPC('auth0-check-email', async (_e, { email }) => {
     try {
       const token = await getManagementToken()
@@ -453,9 +427,13 @@ export function registerIPC() {
           data?.message || data?.error || `Lookup failed (${res.status})`
         return { success: false, error: message }
       }
-
+      console.log('auth0-check-email response', data)
       const user = Array.isArray(data)
-        ? data.find((u: any) => u?.email?.toLowerCase() === email.toLowerCase())
+        ? data.find(
+            (u: any) =>
+              u?.email?.toLowerCase() === email.toLowerCase() &&
+              u?.user_id?.startsWith('auth0|'),
+          )
         : null
 
       if (!user) return { success: true, exists: false, verified: false }

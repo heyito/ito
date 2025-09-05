@@ -1,24 +1,29 @@
 import { useEffect, useState } from 'react'
-import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { Button } from '@/app/components/ui/button'
 import { AppOrbitImage } from '@/app/components/ui/app-orbit-image'
+import { useAuth } from '../../auth/useAuth'
 
 type Props = {
   email: string
+  password: string | null
   dbUserId: string | null
   onUseAnotherEmail: () => void
+  onRequireLogin?: () => void
 }
 
 export default function CheckEmailContent({
   email,
+  password,
   dbUserId,
   onUseAnotherEmail,
+  onRequireLogin = () => {},
 }: Props) {
   const [seconds, setSeconds] = useState(3)
   const [isResending, setIsResending] = useState(false)
-  const { incrementOnboardingStep } = useOnboardingStore()
   const [pollError, setPollError] = useState<string | null>(null)
   const [resendError, setResendError] = useState<string | null>(null)
+
+  const { loginWithEmailPassword } = useAuth()
 
   useEffect(() => {
     if (seconds <= 0) return
@@ -55,12 +60,18 @@ export default function CheckEmailContent({
     const poll = async () => {
       try {
         console.log('Polling for email verification')
-        const res = await window.api.invoke('auth0-is-email-verified', {
+        const res = await window.api.invoke('auth0-check-email', {
           email,
         })
         if (mounted && res?.success && res.verified) {
           console.log('Email verified')
-          incrementOnboardingStep()
+          if (password) {
+            await loginWithEmailPassword(email, password, {
+              skipNavigate: true,
+            })
+          } else {
+            onRequireLogin()
+          }
         }
         if (mounted && !res?.success) {
           setPollError(res?.error || null)
@@ -75,7 +86,7 @@ export default function CheckEmailContent({
       mounted = false
       clearInterval(id)
     }
-  }, [email, dbUserId, incrementOnboardingStep])
+  }, [email, dbUserId, loginWithEmailPassword, onRequireLogin, password])
 
   return (
     <div className="flex h-full w-full bg-background">

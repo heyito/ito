@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from '@/app/components/ui/dialog'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
-import EmailPasswordContent from './EmailPasswordContent'
+import EmailSignupContent from './EmailSignupContent'
 import EmailLoginContent from './EmailLoginContent'
 import CheckEmailContent from './CheckEmailContent'
 import ItoIcon from '../../icons/ItoIcon'
@@ -160,7 +160,7 @@ export default function CreateAccountContent() {
 
   if (showEmailPassword) {
     return (
-      <EmailPasswordContent
+      <EmailSignupContent
         initialEmail={email}
         onBack={() => setShowEmailPassword(false)}
         onContinue={em => signupWithEmail(em)}
@@ -184,6 +184,11 @@ export default function CreateAccountContent() {
         email={email}
         dbUserId={checkEmailDbUserId}
         onUseAnotherEmail={() => setShowCheckEmail(false)}
+        onRequireLogin={() => {
+          setShowCheckEmail(false)
+          setShowEmailLogin(true)
+        }}
+        password={null}
       />
     )
   }

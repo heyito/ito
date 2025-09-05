@@ -12,7 +12,7 @@ type Props = {
   onContinue: (email: string, password?: string) => void
 }
 
-export default function EmailPasswordContent({
+export default function EmailSignupContent({
   initialEmail = '',
   onBack,
 }: Props) {
@@ -61,6 +61,7 @@ export default function EmailPasswordContent({
     return (
       <CheckEmailContent
         email={email}
+        password={password}
         dbUserId={dbUserId}
         onUseAnotherEmail={onBack}
       />

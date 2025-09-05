@@ -50,52 +50,12 @@ export class S3StorageClient {
     this.s3Client = new S3Client(s3Config)
   }
 
-  private async ensureBucketExists(): Promise<void> {
-    if (this.bucketChecked) {
-      return
-    }
-
-    try {
-      // Check if bucket exists
-      await this.s3Client.send(
-        new HeadBucketCommand({ Bucket: this.bucketName }),
-      )
-      this.bucketChecked = true
-    } catch (error: any) {
-      if (
-        error.name === 'NotFound' ||
-        error.$metadata?.httpStatusCode === 404
-      ) {
-        try {
-          // Create bucket if it doesn't exist
-          console.log(`Creating bucket: ${this.bucketName}`)
-          await this.s3Client.send(
-            new CreateBucketCommand({ Bucket: this.bucketName }),
-          )
-          this.bucketChecked = true
-          console.log(`✅ Created bucket: ${this.bucketName}`)
-        } catch (createError: any) {
-          console.error(
-            `Failed to create bucket ${this.bucketName}:`,
-            createError,
-          )
-          throw createError
-        }
-      } else {
-        console.error(`Failed to check bucket ${this.bucketName}:`, error)
-        throw error
-      }
-    }
-  }
-
   async uploadObject(
     key: string,
     body: Buffer | Uint8Array | string | Readable,
     contentType?: string,
     metadata?: Record<string, string>,
   ): Promise<void> {
-    await this.ensureBucketExists()
-
     const params: PutObjectCommandInput = {
       Bucket: this.bucketName,
       Key: key,

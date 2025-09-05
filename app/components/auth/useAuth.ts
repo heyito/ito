@@ -1,5 +1,5 @@
 import { useAuth0 } from '@auth0/auth0-react'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { Auth0Connections, Auth0Config } from '../../../lib/auth/config'
 import { useAuthStore } from '../../store/useAuthStore'
 import { type AuthUser, type AuthTokens } from '../../../lib/main/store'
@@ -35,16 +35,17 @@ export const useAuth = () => {
   const error = storeError || auth0Error
 
   // Convert Auth0 user to our user interface
-  const auth0User: AuthUser | null = user
-    ? {
-        id: user.sub || '',
-        email: user.email,
-        name: user.name,
-        picture: user.picture,
-        provider: user.sub?.includes('|') ? user.sub.split('|')[0] : 'unknown',
-        lastSignInAt: new Date().toISOString(),
-      }
-    : null
+  const auth0User: AuthUser | null = useMemo(() => {
+    if (!user) return null
+    return {
+      id: user.sub || '',
+      email: user.email,
+      name: user.name,
+      picture: user.picture,
+      provider: user.sub?.includes('|') ? user.sub.split('|')[0] : 'unknown',
+      lastSignInAt: new Date().toISOString(), // Only updated when user object changes
+    }
+  }, [user]) // Dependency array now correctly includes 'user'
 
   // Prioritize store user over Auth0 user
   const authUser = storeUser || auth0User
@@ -93,8 +94,30 @@ export const useAuth = () => {
         },
         authUser.provider,
       )
+
+      // Notify pill window of user authentication
+      if (window.api?.notifyUserAuthUpdate) {
+        window.api.notifyUserAuthUpdate({
+          id: authUser.id,
+          email: authUser.email,
+          name: authUser.name,
+          provider: authUser.provider,
+        })
+      }
+    } else {
+      // Notify pill window that user is not authenticated (logout/reset)
+      if (window.api?.notifyUserAuthUpdate) {
+        console.log('[useAuth] Notifying pill window of user reset')
+        window.api.notifyUserAuthUpdate(null)
+      }
     }
-  }, [authUser])
+  }, [
+    authUser,
+    auth0IsAuthenticated,
+    auth0User,
+    storeIsAuthenticated,
+    storeUser,
+  ])
 
   // Handle auth code from protocol URL - only set up listener once globally
   useEffect(() => {

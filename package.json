@@ -99,6 +99,7 @@
     "electron-updater": "^6.6.2",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.511.0",
+    "node-machine-id": "^1.1.12",
     "react-router-dom": "^7.6.2",
     "sqlite3": "^5.1.7",
     "tailwind-merge": "^3.3.0",

@@ -133,6 +133,14 @@ const api = {
   notifyOnboardingUpdate: (onboarding: any) =>
     ipcRenderer.send('onboarding-update', onboarding),
 
+  // Send user auth updates to pill window
+  notifyUserAuthUpdate: (authUser: any) =>
+    ipcRenderer.send('user-auth-update', authUser),
+
+  // Analytics device ID methods
+  'analytics:get-device-id': () =>
+    ipcRenderer.invoke('analytics:get-device-id'),
+
   notifyLoginSuccess: (
     profile: any,
     idToken: string | null,

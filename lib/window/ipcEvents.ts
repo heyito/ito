@@ -20,6 +20,8 @@ import {
   handleLogout,
   ensureValidTokens,
 } from '../auth/events'
+import { KeyValueStore } from '../main/sqlite/repo'
+import { machineId } from 'node-machine-id'
 import { Auth0Config } from '../auth/config'
 import {
   NotesTable,
@@ -409,6 +411,34 @@ export function registerIPC() {
     log.info('IPC: Received stop-native-recording.')
     voiceInputService.stopSTTService()
   })
+
+  // Analytics Device ID storage - using machine ID
+  handleIPC('analytics:get-device-id', async () => {
+    try {
+      // First try to get cached device ID from SQLite
+      let deviceId = await KeyValueStore.get('analytics_device_id')
+
+      if (!deviceId) {
+        // Generate machine-specific ID if none exists
+        deviceId = await machineId()
+        await KeyValueStore.set('analytics_device_id', deviceId)
+        log.info('[Analytics] Generated new machine-based device ID:', deviceId)
+      } else {
+        log.info('[Analytics] Using cached machine-based device ID:', deviceId)
+      }
+
+      return deviceId
+    } catch (error) {
+      log.error('[Analytics] Failed to get/generate device ID:', error)
+      // Fallback to basic machine id without caching
+      try {
+        return await machineId()
+      } catch (fallbackError) {
+        log.error('[Analytics] Machine ID fallback failed:', fallbackError)
+        return undefined
+      }
+    }
+  })
 }
 
 // Handlers that are specific to a given window instance
@@ -537,4 +567,9 @@ ipcMain.on('settings-update', (_event, settings: any) => {
 // Forwards onboarding updates from the main window to the pill window
 ipcMain.on('onboarding-update', (_event, onboarding: any) => {
   getPillWindow()?.webContents.send('onboarding-update', onboarding)
+})
+
+// Forwards user authentication updates from the main window to the pill window
+ipcMain.on('user-auth-update', (_event, authUser: any) => {
+  getPillWindow()?.webContents.send('user-auth-update', authUser)
 })

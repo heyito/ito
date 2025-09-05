@@ -17,7 +17,6 @@ export default [
       '**/*.min.js',
       '**/*.bundle.js',
       '**/dist/**',
-      
 
       // CDK outputs
       'server/infra/cdk.out/**',

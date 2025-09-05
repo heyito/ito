@@ -120,42 +120,12 @@ impl CommandProcessor {
     fn start_recording(&mut self, device_name: Option<String>) {
         self.stop_recording();
 
-        // Try different hosts if stream creation fails
-        if cfg!(windows) {
-            let available_hosts = cpal::available_hosts();
-            eprintln!("[audio-recorder] Available hosts: {:?}", available_hosts);
-            let mut stream_created = false;
-            
-            for host_id in available_hosts.iter() {
-                eprintln!("[audio-recorder] Attempting with host: {:?}", host_id);
-                match start_capture_with_host(*host_id, device_name.clone(), Arc::clone(&self.stdout)) {
-                    Ok(stream) => {
-                        if stream.play().is_ok() {
-                            self.active_stream = Some(stream);
-                            stream_created = true;
-                            eprintln!("[audio-recorder] Successfully created stream with host: {:?}", host_id);
-                            break;
-                        } else {
-                            eprintln!("[audio-recorder] Failed to play stream with host: {:?}", host_id);
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("[audio-recorder] Failed to create stream with host {:?}: {}", host_id, e);
-                    }
-                }
-            }
-            
-            if !stream_created {
-                eprintln!("[audio-recorder] CRITICAL: Failed to create audio stream with any host");
+        if let Ok(stream) = start_capture(device_name, Arc::clone(&self.stdout)) {
+            if stream.play().is_ok() {
+                self.active_stream = Some(stream)
             }
         } else {
-            if let Ok(stream) = start_capture(device_name, Arc::clone(&self.stdout)) {
-                if stream.play().is_ok() {
-                    self.active_stream = Some(stream)
-                }
-            } else {
-                eprintln!("[audio-recorder] CRITICAL: Failed to create audio stream");
-            }
+            eprintln!("[audio-recorder] CRITICAL: Failed to create audio stream");
         }
     }
 
@@ -170,21 +140,10 @@ impl CommandProcessor {
         const TARGET_SAMPLE_RATE: u32 = 16000;
 
         let host = if cfg!(windows) {
-            let available_hosts = cpal::available_hosts();
-            
-            // Try each available host until one works for creating a device
-            let mut selected_host = None;
-            for host_id in available_hosts.iter() {
-                if let Ok(host) = cpal::host_from_id(*host_id) {
-                    // Test if we can get a default input device from this host
-                    if host.default_input_device().is_some() {
-                        selected_host = Some(host);
-                        break;
-                    }
-                }
-            }
-            
-            selected_host.unwrap_or_else(|| cpal::default_host())
+            cpal::available_hosts()
+                .into_iter()
+                .find_map(|id| cpal::host_from_id(id).ok())
+                .unwrap_or_else(|| cpal::default_host())
         } else {
             cpal::default_host()
         };
@@ -286,157 +245,6 @@ fn write_audio_chunk(data: &[f32], stdout: &Arc<Mutex<io::Stdout>>) {
     }
 }
 
-fn start_capture_with_host(
-    host_id: cpal::HostId,
-    device_name: Option<String>,
-    stdout: Arc<Mutex<io::Stdout>>,
-) -> Result<cpal::Stream> {
-    const TARGET_SAMPLE_RATE: u32 = 16000;
-    const RESAMPLER_CHUNK_SIZE: usize = 1024;
-
-    let host = cpal::host_from_id(host_id)?;
-    
-    let device = if let Some(name) = device_name {
-        if name.to_lowercase() == "default" || name.is_empty() {
-            host.default_input_device()
-        } else {
-            host.input_devices()?
-                .find(|d| d.name().unwrap_or_default() == name)
-        }
-    } else {
-        host.default_input_device()
-    }
-    .ok_or_else(|| anyhow!("[audio-recorder] Failed to find input device"))?;
-
-    let config = device
-        .supported_input_configs()?
-        .find(|r| r.channels() > 0)
-        .ok_or_else(|| anyhow!("[audio-recorder] No supported input config found"))?
-        .with_max_sample_rate();
-
-    let input_sample_rate = config.sample_rate().0;
-    let input_sample_format = config.sample_format();
-
-    let mut resampler = if input_sample_rate != TARGET_SAMPLE_RATE {
-        let resampler = FftFixedIn::new(
-            input_sample_rate as usize,
-            TARGET_SAMPLE_RATE as usize,
-            RESAMPLER_CHUNK_SIZE,
-            1,
-            1,
-        )?;
-        Some(resampler)
-    } else {
-        None
-    };
-
-    let err_fn = |err| eprintln!("[audio-recorder] Stream error: {}", err);
-    let stream_config: StreamConfig = config.clone().into();
-
-    let mut audio_buffer: Vec<f32> = Vec::new();
-    let channels_count: usize = config.channels() as usize;
-
-    // Notify JS about input and effective output audio configuration
-    {
-        let cfg = AudioConfig {
-            response_type: "audio-config".to_string(),
-            input_sample_rate: input_sample_rate,
-            output_sample_rate: TARGET_SAMPLE_RATE,
-            channels: 1,
-        };
-        if let Ok(json_string) = serde_json::to_string(&cfg) {
-            let mut writer = stdout.lock().unwrap();
-            let _ = write_framed_message(&mut *writer, MSG_TYPE_JSON, json_string.as_bytes());
-        }
-    }
-
-    let stream = match input_sample_format {
-        SampleFormat::F32 => device.build_input_stream(
-            &stream_config,
-            move |data: &[f32], _| {
-                process_and_write_data(
-                    data,
-                    &mut resampler,
-                    &mut audio_buffer,
-                    &stdout,
-                    RESAMPLER_CHUNK_SIZE,
-                    channels_count,
-                )
-            },
-            err_fn,
-            None,
-        )?,
-        SampleFormat::I16 => device.build_input_stream(
-            &stream_config,
-            move |data: &[i16], _| {
-                process_and_write_data(
-                    data,
-                    &mut resampler,
-                    &mut audio_buffer,
-                    &stdout,
-                    RESAMPLER_CHUNK_SIZE,
-                    channels_count,
-                )
-            },
-            err_fn,
-            None,
-        )?,
-        SampleFormat::U16 => device.build_input_stream(
-            &stream_config,
-            move |data: &[u16], _| {
-                process_and_write_data(
-                    data,
-                    &mut resampler,
-                    &mut audio_buffer,
-                    &stdout,
-                    RESAMPLER_CHUNK_SIZE,
-                    channels_count,
-                )
-            },
-            err_fn,
-            None,
-        )?,
-        SampleFormat::U8 => device.build_input_stream(
-            &stream_config,
-            move |data: &[u8], _| {
-                process_and_write_data(
-                    data,
-                    &mut resampler,
-                    &mut audio_buffer,
-                    &stdout,
-                    RESAMPLER_CHUNK_SIZE,
-                    channels_count,
-                )
-            },
-            err_fn,
-            None,
-        )?,
-        SampleFormat::I32 => device.build_input_stream(
-            &stream_config,
-            move |data: &[i32], _| {
-                process_and_write_data(
-                    data,
-                    &mut resampler,
-                    &mut audio_buffer,
-                    &stdout,
-                    RESAMPLER_CHUNK_SIZE,
-                    channels_count,
-                )
-            },
-            err_fn,
-            None,
-        )?,
-        format => {
-            return Err(anyhow!(
-                "[audio-recorder] Unsupported sample format {}",
-                format
-            ))
-        }
-    };
-
-    Ok(stream)
-}
-
 fn start_capture(
     device_name: Option<String>,
     stdout: Arc<Mutex<io::Stdout>>,
@@ -444,29 +252,19 @@ fn start_capture(
     const TARGET_SAMPLE_RATE: u32 = 16000;
     const RESAMPLER_CHUNK_SIZE: usize = 1024;
 
-    // On Windows, try different hosts in order of preference
+    // On Windows, try to get available hosts
     let host = if cfg!(windows) {
-        let available_hosts = cpal::available_hosts();
-        eprintln!("[audio-recorder] Available hosts: {:?}", available_hosts);
-        
-        // Try each available host until one works for creating a device
-        let mut selected_host = None;
-        for host_id in available_hosts.iter() {
-            eprintln!("[audio-recorder] Trying host: {:?}", host_id);
-            if let Ok(host) = cpal::host_from_id(*host_id) {
-                // Test if we can get a default input device from this host
-                if host.default_input_device().is_some() {
-                    eprintln!("[audio-recorder] Successfully using host: {:?}", host_id);
-                    selected_host = Some(host);
-                    break;
-                }
-            }
-        }
-        
-        selected_host.unwrap_or_else(|| {
-            eprintln!("[audio-recorder] All hosts failed, using default");
-            cpal::default_host()
-        })
+        // Try WASAPI first, then DirectSound, then default
+        cpal::available_hosts()
+            .into_iter()
+            .find_map(|id| {
+                eprintln!("[audio-recorder] Trying host: {:?}", id);
+                cpal::host_from_id(id).ok()
+            })
+            .unwrap_or_else(|| {
+                eprintln!("[audio-recorder] All hosts failed, using default");
+                cpal::default_host()
+            })
     } else {
         cpal::default_host()
     };
@@ -589,6 +387,36 @@ fn start_capture(
         SampleFormat::I32 => device.build_input_stream(
             &stream_config,
             move |data: &[i32], _| {
+                process_and_write_data(
+                    data,
+                    &mut resampler,
+                    &mut audio_buffer,
+                    &stdout,
+                    RESAMPLER_CHUNK_SIZE,
+                    channels_count,
+                )
+            },
+            err_fn,
+            None,
+        )?,
+        SampleFormat::F64 => device.build_input_stream(
+            &stream_config,
+            move |data: &[f64], _| {
+                process_and_write_data(
+                    data,
+                    &mut resampler,
+                    &mut audio_buffer,
+                    &stdout,
+                    RESAMPLER_CHUNK_SIZE,
+                    channels_count,
+                )
+            },
+            err_fn,
+            None,
+        )?,
+        SampleFormat::U32 => device.build_input_stream(
+            &stream_config,
+            move |data: &[u32], _| {
                 process_and_write_data(
                     data,
                     &mut resampler,

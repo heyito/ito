@@ -132,11 +132,12 @@ message Interaction {
   string title = 3;
   string asr_output = 4; // JSON string
   string llm_output = 5; // JSON string
-  bytes raw_audio = 6 [(buf.validate.field).bytes.max_len = 100000000]; // 100 MB limit
+  bytes raw_audio = 6 [(buf.validate.field).bytes.max_len = 100000000]; // 100 MB limit 
   int32 duration_ms = 7; // Duration in milliseconds
   string created_at = 8;
   string updated_at = 9;
   string deleted_at = 10;
+  optional string raw_audio_id = 11; // UUID reference to S3 stored audio
 }
 
 message CreateInteractionRequest {

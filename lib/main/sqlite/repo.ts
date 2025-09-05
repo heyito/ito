@@ -54,8 +54,8 @@ export class InteractionsTable {
     }
 
     const query = `
-      INSERT INTO interactions (id, user_id, title, asr_output, llm_output, raw_audio, duration_ms, sample_rate, created_at, updated_at, deleted_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO interactions (id, user_id, title, asr_output, llm_output, raw_audio, raw_audio_id, duration_ms, sample_rate, created_at, updated_at, deleted_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
     // Note: SQLite doesn't have a dedicated JSON type, so we stringify complex objects
     const params = [
@@ -65,6 +65,7 @@ export class InteractionsTable {
       JSON.stringify(newInteraction.asr_output),
       JSON.stringify(newInteraction.llm_output),
       newInteraction.raw_audio,
+      newInteraction.raw_audio_id,
       newInteraction.duration_ms,
       newInteraction.sample_rate,
       newInteraction.created_at,

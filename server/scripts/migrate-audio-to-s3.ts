@@ -2,7 +2,7 @@
 
 /**
  * Migration script to move raw audio blobs from PostgreSQL to S3
- * This script should be run after deploying the raw_audio_uuid column
+ * This script should be run after deploying the raw_audio_id column
  */
 
 import pool from '../src/db.js'
@@ -14,7 +14,7 @@ interface InteractionRow {
   id: string
   user_id: string | null
   raw_audio: Buffer | null
-  raw_audio_uuid: string | null
+  raw_audio_id: string | null
 }
 
 async function migrateAudioToS3() {
@@ -23,12 +23,12 @@ async function migrateAudioToS3() {
   try {
     const storageClient = getStorageClient()
 
-    // Find all interactions with raw_audio but no raw_audio_uuid
+    // Find all interactions with raw_audio but no raw_audio_id
     const result = await pool.query<InteractionRow>(`
-      SELECT id, user_id, raw_audio, raw_audio_uuid 
+      SELECT id, user_id, raw_audio, raw_audio_id 
       FROM interactions 
       WHERE raw_audio IS NOT NULL 
-      AND raw_audio_uuid IS NULL 
+      AND raw_audio_id IS NULL 
       AND deleted_at IS NULL
       ORDER BY created_at DESC
     `)
@@ -77,7 +77,7 @@ async function migrateAudioToS3() {
         // Update database with UUID and clear blob
         await pool.query(
           `UPDATE interactions 
-           SET raw_audio_uuid = $1, raw_audio = NULL, updated_at = current_timestamp 
+           SET raw_audio_id = $1, raw_audio = NULL, updated_at = current_timestamp 
            WHERE id = $2`,
           [audioUuid, interaction.id],
         )
@@ -106,7 +106,7 @@ async function migrateAudioToS3() {
       SELECT COUNT(*) as count 
       FROM interactions 
       WHERE raw_audio IS NOT NULL 
-      AND raw_audio_uuid IS NULL 
+      AND raw_audio_id IS NULL 
       AND deleted_at IS NULL
     `)
 

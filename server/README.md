@@ -16,8 +16,8 @@ The Ito transcription server provides gRPC-based speech-to-text services for the
 Create your environment configuration:
 
 ```bash
-# Create a new .env file
-touch .env
+# Copy the example environment file
+cp .env.example .env
 ```
 
 Add the following configuration to your `.env` file:
@@ -26,9 +26,16 @@ Add the following configuration to your `.env` file:
 # Database Configuration
 DB_HOST=localhost
 DB_PORT=5432
-DB_USER=ito_user
-DB_PASS=ito_password
-DB_NAME=ito_db
+DB_USER=devuser
+DB_PASS=devpass
+DB_NAME=devdb
+
+# Storage Configuration (S3/MinIO)
+BLOB_STORAGE_BUCKET=ito-audio-storage
+S3_ENDPOINT=http://localhost:9000
+S3_ACCESS_KEY_ID=minioadmin
+S3_SECRET_ACCESS_KEY=minioadmin
+S3_FORCE_PATH_STYLE=true
 
 # GROQ API Configuration (Required)
 GROQ_API_KEY=your_groq_api_key_here
@@ -67,17 +74,22 @@ For production or authenticated development:
 bun install
 ```
 
-### 4. Database Setup
+### 4. Local Services Setup
 
-Start the PostgreSQL database using Docker:
+Start all local services (PostgreSQL + MinIO for S3-compatible storage):
 
 ```bash
-# Start PostgreSQL container
-bun run local-db-up
+# Start all local services
+bun run local-services-up
 
 # Run database migrations
 bun run db:migrate
 ```
+
+This will start:
+- **PostgreSQL** on port 5432
+- **MinIO S3** on port 9000 (API) and 9001 (Console)
+- Auto-creates the `ito-audio-storage` bucket
 
 ### 5. Start Development Server
 
@@ -98,13 +110,19 @@ bun run start            # Start production server
 bun run build            # Build TypeScript to JavaScript
 ```
 
-### Database Management
+### Database & Storage Management
 
 ```bash
-bun run local-db-up      # Start PostgreSQL container
-bun run local-db-down    # Stop PostgreSQL container
-bun run db:migrate       # Run migrations up
-bun run db:migrate:down  # Run migrations down
+# Services Management
+bun run local-services-up    # Start PostgreSQL + MinIO
+bun run local-services-down  # Stop all local services
+bun run local-db-up          # Start only PostgreSQL
+bun run local-s3-up          # Start only MinIO + create bucket
+bun run local-s3-down        # Stop MinIO
+
+# Database Operations
+bun run db:migrate           # Run migrations up
+bun run db:migrate:down      # Run migrations down
 bun run db:migrate:create <name>  # Create new migration
 ```
 
@@ -128,7 +146,8 @@ bun run test-client      # Run gRPC client tests
 
 - **Fastify Server**: HTTP/gRPC server with Auth0 integration
 - **Connect RPC**: Type-safe gRPC implementation
-- **PostgreSQL**: Primary database for user data
+- **PostgreSQL**: Primary database for user data and metadata
+- **S3/MinIO**: Audio file storage (local development uses MinIO)
 - **GROQ SDK**: AI transcription service integration
 
 ### API Services
@@ -168,21 +187,39 @@ bun run test-client      # Run gRPC client tests
 | `DB_PORT`          | Yes      | `5432`      | PostgreSQL port                             |
 | `DB_USER`          | Yes      | -           | Database username                           |
 | `DB_PASS`          | Yes      | -           | Database password                           |
-| `DB_NAME`          | Yes      | -           | Database name                               |
-| `GROQ_API_KEY`     | Yes      | -           | GROQ API key for transcription              |
-| `CEREBRAS_API_KEY` | No       | -           | CEREBRAS API key for reasoning              |
-| `REQUIRE_AUTH`     | No       | `false`     | Enable Auth0 authentication                 |
-| `AUTH0_DOMAIN`     | No\*     | -           | Auth0 domain (\*required if auth enabled)   |
-| `AUTH0_AUDIENCE`   | No\*     | -           | Auth0 audience (\*required if auth enabled) |
+| `DB_NAME`              | Yes      | -           | Database name                               |
+| `BLOB_STORAGE_BUCKET`  | Yes      | -           | S3 bucket name for audio storage            |
+| `S3_ENDPOINT`          | No       | -           | S3 endpoint (for MinIO/local development)   |
+| `S3_ACCESS_KEY_ID`     | No       | -           | S3 access key (for MinIO/local development) |
+| `S3_SECRET_ACCESS_KEY` | No       | -           | S3 secret key (for MinIO/local development) |
+| `S3_FORCE_PATH_STYLE`  | No       | `false`     | Use path-style S3 URLs (required for MinIO) |
+| `GROQ_API_KEY`         | Yes      | -           | GROQ API key for transcription              |
+| `CEREBRAS_API_KEY`     | No       | -           | CEREBRAS API key for reasoning              |
+| `REQUIRE_AUTH`         | No       | `false`     | Enable Auth0 authentication                 |
+| `AUTH0_DOMAIN`         | No\*     | -           | Auth0 domain (\*required if auth enabled)   |
+| `AUTH0_AUDIENCE`       | No\*     | -           | Auth0 audience (\*required if auth enabled) |
 
-### Database Configuration
+### Database & Storage Configuration
 
+**PostgreSQL Database:**
 The server uses PostgreSQL with automatic migrations. The database schema includes:
 
 - **users**: User profiles and settings
 - **notes**: Transcribed text and metadata
-- **interactions**: Dictation sessions
+- **interactions**: Dictation sessions (with S3 audio references)
 - **dictionary**: Custom vocabulary
+- **llm_settings**: User-specific LLM configuration
+
+**S3 Storage:**
+Audio files are stored in S3 (or MinIO for local development) with the following structure:
+- **Bucket**: Configured via `BLOB_STORAGE_BUCKET`
+- **Keys**: `raw-audio/{userId}/{audioUuid}`
+- **Format**: Raw audio bytes (no file extensions)
+
+**Local Development Setup:**
+- **MinIO Console**: http://localhost:9001 (admin/admin)
+- **MinIO S3 API**: http://localhost:9000
+- **Auto-bucket creation**: `ito-audio-storage` created automatically
 
 ### Authentication
 
@@ -251,8 +288,8 @@ Test individual services using the included test client or tools like:
 #### 1. Database Connection Errors
 
 ```bash
-# Check if PostgreSQL is running
-bun run local-db-up
+# Check if PostgreSQL & MinIO are running
+bun run local-services-up
 
 # Verify database credentials in .env
 # Ensure DB_HOST, DB_PORT, DB_USER, DB_PASS are correct
@@ -266,16 +303,33 @@ bun run local-db-up
 # Ensure you have credits in your GROQ account
 ```
 
-#### 3. Migration Failures
+#### 3. S3/MinIO Storage Issues
+
+```bash
+# Check if MinIO is running
+bun run local-s3-up
+
+# Reset MinIO data (WARNING: destroys stored files)
+docker compose down -v
+bun run local-services-up
+
+# Manually setup MinIO bucket
+./scripts/setup-minio.sh
+
+# Verify S3 configuration in .env
+# Ensure S3_ENDPOINT, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY are set
+```
+
+#### 4. Migration Failures
 
 ```bash
 # Reset migrations (WARNING: destroys data)
-bun run local-db-down
-bun run local-db-up
+bun run local-services-down
+bun run local-services-up
 bun run db:migrate
 ```
 
-#### 4. Auth0 Configuration
+#### 5. Auth0 Configuration
 
 ```bash
 # For local development, disable auth
@@ -283,6 +337,12 @@ echo "REQUIRE_AUTH=false" >> .env
 
 # For production, ensure AUTH0_DOMAIN and AUTH0_AUDIENCE are set
 ```
+
+#### 6. Port Conflicts
+
+If ports 5432, 9000, or 9001 are in use:
+- Modify ports in `docker-compose.yml`
+- Update corresponding environment variables
 
 ### Debug Mode
 
@@ -292,6 +352,18 @@ Enable verbose logging:
 NODE_ENV=development bun run dev
 ```
 
+### MinIO Console Access
+
+For local development, access the MinIO console at http://localhost:9001:
+- **Username**: `minioadmin`
+- **Password**: `minioadmin`
+
+Use the console to:
+- View stored audio files
+- Monitor storage usage
+- Manage buckets and objects
+- Debug S3 operations
+
 ### Logs
 
 Check server logs for detailed error information:
@@ -300,6 +372,7 @@ Check server logs for detailed error information:
 - API authentication failures
 - Transcription service errors
 - Migration problems
+- S3 storage operations
 
 ## 📚 API Documentation
 

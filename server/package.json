@@ -38,7 +38,11 @@
     "db:migrate:down": "bash ./scripts/migrate.sh down",
     "docker": "docker compose up --build",
     "local-db-up": "docker compose up -d db",
-    "local-db-down": "docker compose down",
+    "local-db-down": "docker compose stop db",
+    "local-s3-up": "docker compose up -d minio && sleep 3 && ./scripts/setup-minio.sh",
+    "local-s3-down": "docker compose stop minio",
+    "local-services-up": "bun local-db-up && bun local-s3-up",
+    "local-services-down": "bun local-db-down && bun local-s3-down",
     "dev": "tsx watch src/index.ts",
     "test-client": "tsx ./test-client.ts",
     "migrate-audio-to-s3": "tsx scripts/migrate-audio-to-s3.ts"

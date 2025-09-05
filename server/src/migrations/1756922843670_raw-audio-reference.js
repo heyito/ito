@@ -11,7 +11,7 @@ export const shorthands = undefined
 export const up = pgm => {
   // Add new column for storing reference UUID instead of raw audio blob
   pgm.addColumn('interactions', {
-    raw_audio_uuid: {
+    raw_audio_id: {
       type: 'uuid',
       notNull: false,
       comment: 'Reference to audio file stored in S3',
@@ -26,5 +26,5 @@ export const up = pgm => {
  */
 export const down = pgm => {
   // Drop the column
-  pgm.dropColumn('interactions', 'raw_audio_uuid')
+  pgm.dropColumn('interactions', 'raw_audio_id')
 }

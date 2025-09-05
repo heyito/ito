@@ -289,9 +289,12 @@ export const useAuth = () => {
 
       const authUrl = `https://${Auth0Config.domain}/authorize?${params.toString()}`
 
-      // Open in external browser
+      // Open in in-app modal auth window
       if (window.api?.invoke) {
-        await window.api.invoke('web-open-url', authUrl)
+        await window.api.invoke('open-auth-window', {
+          url: authUrl,
+          redirectUri: Auth0Config.redirectUri,
+        })
       } else {
         window.open(authUrl, '_blank')
       }
@@ -381,6 +384,46 @@ export const useAuth = () => {
       }
     },
     [openExternalAuth],
+  )
+
+  // Directly create a database user via Auth0 Authentication API
+  const createDatabaseUser = useCallback(
+    async (
+      email: string,
+      password: string,
+      metadata?: Record<string, unknown>,
+    ) => {
+      const url = `https://${Auth0Config.domain}/dbconnections/signup`
+      const payload: Record<string, unknown> = {
+        client_id: Auth0Config.clientId,
+        email,
+        password,
+        connection: Auth0Connections.database,
+      }
+      if (metadata && Object.keys(metadata).length > 0) {
+        payload.user_metadata = metadata
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      let data: any = undefined
+      try {
+        data = await res.json()
+      } catch (_) {}
+
+      if (!res.ok) {
+        const message =
+          data?.description || data?.error || `Signup failed (${res.status})`
+        throw new Error(message)
+      }
+
+      return data
+    },
+    [],
   )
 
   // Self-hosted authentication - bypasses all external auth
@@ -607,6 +650,7 @@ export const useAuth = () => {
     loginWithGitHub,
     loginWithEmail,
     signupWithEmail,
+    createDatabaseUser,
     loginWithSelfHosted,
     logoutUser,
 

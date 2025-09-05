@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from '@/app/components/ui/dialog'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
+import EmailPasswordContent from './EmailPasswordContent'
 import ItoIcon from '../../icons/ItoIcon'
 import UserCog from '@/app/assets/icons/UserCog.svg'
 import GoogleIcon from '../../icons/GoogleIcon'
@@ -18,13 +19,16 @@ import { useAuth } from '../../auth/useAuth'
 import { checkLocalServerHealth } from '@/app/utils/healthCheck'
 import { useDictionaryStore } from '@/app/store/useDictionaryStore'
 import { EXTERNAL_LINKS } from '@/lib/constants/external-links'
+import { isValidEmail } from '@/app/utils/utils'
 
 export default function CreateAccountContent() {
   const { incrementOnboardingStep, initializeOnboarding } = useOnboardingStore()
   const [isServerHealthy, setIsServerHealthy] = useState(true)
   const [isSelfHostedModalOpen, setIsSelfHostedModalOpen] = useState(false)
   const [email, setEmail] = useState('')
+  const [emailTouched, setEmailTouched] = useState(false)
   const isDictInitialized = useRef(false)
+  const [showEmailPassword, setShowEmailPassword] = useState(false)
 
   const {
     user,
@@ -117,6 +121,18 @@ export default function CreateAccountContent() {
     }
   }
 
+  if (showEmailPassword) {
+    return (
+      <EmailPasswordContent
+        initialEmail={email}
+        onBack={() => setShowEmailPassword(false)}
+        onContinue={em => signupWithEmail(em)}
+      />
+    )
+  }
+
+  const emailOk = isValidEmail(email)
+
   return (
     <div className="flex flex-col h-full w-full bg-background items-center justify-center">
       <div className="relative flex flex-col items-center w-full h-full max-h-full px-8 py-16 mt-12 mb-12">
@@ -198,12 +214,27 @@ export default function CreateAccountContent() {
           <input
             type="email"
             placeholder="Email address"
-            className="w-full h-12 px-3 rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground"
             onChange={e => setEmail(e.target.value)}
+            onBlur={() => setEmailTouched(true)}
+            aria-invalid={emailTouched && !emailOk}
+            aria-describedby={
+              emailTouched && !emailOk ? 'signup-email-error' : undefined
+            }
+            className={`w-full h-12 px-3 rounded-md border bg-background text-foreground placeholder:text-muted-foreground ${
+              emailTouched && !emailOk ? 'border-destructive' : 'border-border'
+            }`}
           />
+          {emailTouched && !emailOk && (
+            <p id="signup-email-error" className="text-xs text-destructive">
+              Please enter a valid email address
+            </p>
+          )}
           <Button
             className="w-full h-12 text-sm font-medium"
-            onClick={() => signupWithEmail(email)}
+            disabled={!emailOk}
+            onClick={() =>
+              emailOk ? setShowEmailPassword(true) : setEmailTouched(true)
+            }
           >
             Continue with email
           </Button>

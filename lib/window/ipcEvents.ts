@@ -251,6 +251,51 @@ export function registerIPC() {
     window?.setFullScreen(!window.isFullScreen())
   })
   handleIPC('web-open-url', (_e, url) => shell.openExternal(url))
+  handleIPC('open-auth-window', async (_e, { url, redirectUri }) => {
+    try {
+      if (!url || !redirectUri)
+        return { success: false, error: 'Missing url or redirectUri' }
+
+      const win = new BrowserWindow({
+        parent: mainWindow ?? undefined,
+        modal: true,
+        width: 480,
+        height: 720,
+        show: true,
+        autoHideMenuBar: true,
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true,
+          sandbox: true,
+        },
+      })
+
+      const maybeHandleRedirect = (event: Electron.Event, navUrl: string) => {
+        try {
+          if (!navUrl || !navUrl.startsWith(redirectUri)) return
+          event.preventDefault()
+          const u = new URL(navUrl)
+          const code = u.searchParams.get('code') || ''
+          const state = u.searchParams.get('state') || ''
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('auth-code-received', code, state)
+          }
+          if (!win.isDestroyed()) win.close()
+        } catch (err) {
+          console.error('[IPC] open-auth-window redirect parse error:', err)
+        }
+      }
+
+      win.webContents.on('will-redirect', maybeHandleRedirect)
+      win.webContents.on('will-navigate', maybeHandleRedirect)
+
+      await win.loadURL(url)
+      return { success: true }
+    } catch (error: any) {
+      console.error('[IPC] open-auth-window error:', error)
+      return { success: false, error: error?.message || 'Unknown error' }
+    }
+  })
   handleIPC('get-native-audio-devices', async () => {
     log.info(
       '[IPC] Received get-native-audio-devices, calling requestDeviceListPromise...',

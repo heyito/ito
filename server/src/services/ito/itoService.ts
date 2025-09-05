@@ -402,8 +402,8 @@ export default (router: ConnectRouter) => {
           return dbToInteractionPb(newInteraction)
         } catch (error) {
           console.error('Failed to upload audio to S3:', error)
-          // Fall back to storing in DB if S3 fails
-          const interactionRequest = { ...request, userId }
+          // Fall back to storing in DB if S3 fails, avoid adding more debt by not storing the audio
+          const interactionRequest = { ...request, userId, rawAudio: undefined }
           const newInteraction =
             await InteractionsRepository.create(interactionRequest)
           return dbToInteractionPb(newInteraction)

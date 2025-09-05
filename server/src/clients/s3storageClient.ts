@@ -27,7 +27,7 @@ export class S3StorageClient {
     }
 
     this.bucketName = bucketName
-    
+
     // Configure S3 client with support for MinIO/local development
     const s3Config: any = {
       region: process.env.AWS_REGION || 'us-west-2',
@@ -37,7 +37,7 @@ export class S3StorageClient {
     if (process.env.S3_ENDPOINT) {
       s3Config.endpoint = process.env.S3_ENDPOINT
       s3Config.forcePathStyle = process.env.S3_FORCE_PATH_STYLE === 'true'
-      
+
       // Use explicit credentials for local development
       if (process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY) {
         s3Config.credentials = {
@@ -57,18 +57,28 @@ export class S3StorageClient {
 
     try {
       // Check if bucket exists
-      await this.s3Client.send(new HeadBucketCommand({ Bucket: this.bucketName }))
+      await this.s3Client.send(
+        new HeadBucketCommand({ Bucket: this.bucketName }),
+      )
       this.bucketChecked = true
     } catch (error: any) {
-      if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+      if (
+        error.name === 'NotFound' ||
+        error.$metadata?.httpStatusCode === 404
+      ) {
         try {
           // Create bucket if it doesn't exist
           console.log(`Creating bucket: ${this.bucketName}`)
-          await this.s3Client.send(new CreateBucketCommand({ Bucket: this.bucketName }))
+          await this.s3Client.send(
+            new CreateBucketCommand({ Bucket: this.bucketName }),
+          )
           this.bucketChecked = true
           console.log(`✅ Created bucket: ${this.bucketName}`)
         } catch (createError: any) {
-          console.error(`Failed to create bucket ${this.bucketName}:`, createError)
+          console.error(
+            `Failed to create bucket ${this.bucketName}:`,
+            createError,
+          )
           throw createError
         }
       } else {

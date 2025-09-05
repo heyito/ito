@@ -87,6 +87,7 @@ bun run db:migrate
 ```
 
 This will start:
+
 - **PostgreSQL** on port 5432
 - **MinIO S3** on port 9000 (API) and 9001 (Console)
 - Auto-creates the `ito-audio-storage` bucket
@@ -181,12 +182,12 @@ bun run test-client      # Run gRPC client tests
 
 ### Environment Variables
 
-| Variable           | Required | Default     | Description                                 |
-| ------------------ | -------- | ----------- | ------------------------------------------- |
-| `DB_HOST`          | Yes      | `localhost` | PostgreSQL host                             |
-| `DB_PORT`          | Yes      | `5432`      | PostgreSQL port                             |
-| `DB_USER`          | Yes      | -           | Database username                           |
-| `DB_PASS`          | Yes      | -           | Database password                           |
+| Variable               | Required | Default     | Description                                 |
+| ---------------------- | -------- | ----------- | ------------------------------------------- |
+| `DB_HOST`              | Yes      | `localhost` | PostgreSQL host                             |
+| `DB_PORT`              | Yes      | `5432`      | PostgreSQL port                             |
+| `DB_USER`              | Yes      | -           | Database username                           |
+| `DB_PASS`              | Yes      | -           | Database password                           |
 | `DB_NAME`              | Yes      | -           | Database name                               |
 | `BLOB_STORAGE_BUCKET`  | Yes      | -           | S3 bucket name for audio storage            |
 | `S3_ENDPOINT`          | No       | -           | S3 endpoint (for MinIO/local development)   |
@@ -212,11 +213,13 @@ The server uses PostgreSQL with automatic migrations. The database schema includ
 
 **S3 Storage:**
 Audio files are stored in S3 (or MinIO for local development) with the following structure:
+
 - **Bucket**: Configured via `BLOB_STORAGE_BUCKET`
 - **Keys**: `raw-audio/{userId}/{audioUuid}`
 - **Format**: Raw audio bytes (no file extensions)
 
 **Local Development Setup:**
+
 - **MinIO Console**: http://localhost:9001 (admin/admin)
 - **MinIO S3 API**: http://localhost:9000
 - **Auto-bucket creation**: `ito-audio-storage` created automatically
@@ -341,6 +344,7 @@ echo "REQUIRE_AUTH=false" >> .env
 #### 6. Port Conflicts
 
 If ports 5432, 9000, or 9001 are in use:
+
 - Modify ports in `docker-compose.yml`
 - Update corresponding environment variables
 
@@ -355,10 +359,12 @@ NODE_ENV=development bun run dev
 ### MinIO Console Access
 
 For local development, access the MinIO console at http://localhost:9001:
+
 - **Username**: `minioadmin`
 - **Password**: `minioadmin`
 
 Use the console to:
+
 - View stored audio files
 - Monitor storage usage
 - Manage buckets and objects

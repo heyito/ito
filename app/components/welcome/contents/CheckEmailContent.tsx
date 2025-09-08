@@ -18,7 +18,7 @@ export default function CheckEmailContent({
   onUseAnotherEmail,
   onRequireLogin = () => {},
 }: Props) {
-  const [seconds, setSeconds] = useState(30)
+  const [seconds, setSeconds] = useState(3)
   const [isResending, setIsResending] = useState(false)
   const [pollError, setPollError] = useState<string | null>(null)
   const [resendError, setResendError] = useState<string | null>(null)
@@ -37,6 +37,7 @@ export default function CheckEmailContent({
       setIsResending(true)
       setResendError(null)
       let success = true
+      console.log('Resending verification email for', email, dbUserId)
       const res = await window.api.invoke('auth0-send-verification', {
         dbUserId,
       })
@@ -48,7 +49,7 @@ export default function CheckEmailContent({
           'Verification email requested but no job id was returned',
         )
       }
-      if (success) setSeconds(30)
+      if (success) setSeconds(3)
     } finally {
       setIsResending(false)
     }

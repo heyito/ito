@@ -427,7 +427,6 @@ export function registerIPC() {
           data?.message || data?.error || `Lookup failed (${res.status})`
         return { success: false, error: message }
       }
-      console.log('auth0-check-email response', data)
       const user = Array.isArray(data)
         ? data.find(
             (u: any) =>

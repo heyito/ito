@@ -7,12 +7,27 @@ sleep 5
 # Install mc (MinIO client) if not already installed
 if ! command -v mc &> /dev/null; then
     echo "Installing MinIO client..."
-    brew install minio/stable/mc 2>/dev/null || {
+    
+    # Try macOS installation first
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        brew install minio/stable/mc 2>/dev/null || {
+            echo "Failed to install via brew. Please install MinIO client manually:"
+            echo "  macOS: brew install minio/stable/mc"
+            echo "  Or download from: https://dl.min.io/client/mc/release/darwin-amd64/mc"
+            exit 1
+        }
+    else
         echo "Please install MinIO client manually:"
         echo "  macOS: brew install minio/stable/mc"
-        echo "  Linux: wget https://dl.min.io/client/mc/release/linux-amd64/mc && chmod +x mc"
+        echo "  Linux: wget https://dl.min.io/client/mc/release/linux-amd64/mc && chmod +x mc && sudo mv mc /usr/local/bin/"
+        echo "  Windows (PowerShell): Invoke-WebRequest -Uri \"https://dl.min.io/client/mc/release/windows-amd64/mc.exe\" -OutFile \"mc.exe\""
+        echo "           Then add mc.exe to your PATH or run from current directory"
+        echo "  Windows (Command Prompt): curl -o mc.exe https://dl.min.io/client/mc/release/windows-amd64/mc.exe"
+        echo ""
+        echo "Alternative: Use Docker to run mc commands:"
+        echo "  docker run --rm -it --entrypoint=/bin/sh minio/mc -c \"mc alias set local http://host.docker.internal:9000 minioadmin minioadmin && mc mb local/ito-audio-storage\""
         exit 1
-    }
+    fi
 fi
 
 # Configure mc to connect to local MinIO

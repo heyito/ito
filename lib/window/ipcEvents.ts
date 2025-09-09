@@ -2,6 +2,7 @@ import { BrowserWindow, ipcMain, shell, app, autoUpdater } from 'electron'
 import log from 'electron-log'
 import os from 'os'
 import store, { getCurrentUserId } from '../main/store'
+import { STORE_KEYS } from '../constants/store-keys'
 import {
   checkAccessibilityPermission,
   checkMicrophonePermission,
@@ -342,107 +343,59 @@ export function registerIPC() {
     }
   })
 
-  // Helper to get Auth0 Management API token
-  const getManagementToken = async () => {
-    try {
-      const tokenUrl = `https://${Auth0Config.domain}/oauth/token`
-      const res = await fetch(tokenUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          grant_type: 'client_credentials',
-          client_id: (import.meta as any).env.VITE_AUTH0_MGMT_CLIENT_ID,
-          client_secret: (import.meta as any).env.VITE_AUTH0_MGMT_CLIENT_SECRET,
-          audience: `https://${Auth0Config.domain}/api/v2/`,
-        }),
-      })
-      const data: any = await res.json()
-      if (!res.ok || !data?.access_token) {
-        throw new Error(
-          data?.error_description || 'Failed to get management token',
-        )
-      }
-      return data.access_token as string
-    } catch (err) {
-      console.error('[IPC] getManagementToken error:', err)
-      return null
-    }
-  }
-
-  // Send verification email via Management API
+  // Send verification email via server proxy
   handleIPC('auth0-send-verification', async (_e, { dbUserId }) => {
     try {
-      const token = await getManagementToken()
-      if (!token) return { success: false, error: 'Missing management token' }
       if (!dbUserId) return { success: false, error: 'Missing user identifier' }
-
-      const url = `https://${Auth0Config.domain}/api/v2/jobs/verification-email`
-      const payload: any = {
-        user_id: dbUserId,
-        client_id: Auth0Config.clientId,
-      }
-
-      const res = await fetch(url, {
+      const baseUrl = import.meta.env.VITE_GRPC_BASE_URL
+      const token = (store.get(STORE_KEYS.ACCESS_TOKEN) as string | null) || ''
+      const url = new URL('/auth0/send-verification', baseUrl)
+      const res = await fetch(url.toString(), {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ dbUserId, clientId: Auth0Config.clientId }),
       })
-      let data: any
-      try {
-        data = await res.json()
-      } catch {
-        data = undefined
-      }
+      const data: any = await res.json().catch(() => undefined)
       if (!res.ok) {
-        const message =
-          data?.message ||
-          data?.error_description ||
-          data?.error ||
-          `Verification request failed (${res.status})`
-        return { success: false, error: message, status: res.status }
+        return {
+          success: false,
+          error: data?.error || `Verification request failed (${res.status})`,
+          status: res.status,
+        }
       }
-      return { success: true, jobId: data?.id || data?.job_id || null }
+      return data
     } catch (error: any) {
       return { success: false, error: error?.message || 'Network error' }
     }
   })
 
-  // Check if email exists for db signup and whether it's verified
+  // Check if email exists for db signup and whether it's verified (via server proxy)
   handleIPC('auth0-check-email', async (_e, { email }) => {
     try {
-      const token = await getManagementToken()
-      if (!token) return { success: false, error: 'Missing management token' }
       if (!email) return { success: false, error: 'Missing email' }
-
-      const url = `https://${Auth0Config.domain}/api/v2/users-by-email?email=${encodeURIComponent(email)}`
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
+      const baseUrl = import.meta.env.VITE_GRPC_BASE_URL
+      const token = (store.get(STORE_KEYS.ACCESS_TOKEN) as string | null) || ''
+      const url = new URL(
+        `/auth0/users-by-email?email=${encodeURIComponent(email)}`,
+        baseUrl,
+      )
+      const res = await fetch(url.toString(), {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
       })
-      const data: any = await res.json()
+      const data: any = await res.json().catch(() => undefined)
       if (!res.ok) {
-        const message =
-          data?.message || data?.error || `Lookup failed (${res.status})`
-        return { success: false, error: message }
+        return {
+          success: false,
+          error: data?.error || `Lookup failed (${res.status})`,
+          status: res.status,
+        }
       }
-      const user = Array.isArray(data)
-        ? data.find(
-            (u: any) =>
-              u?.email?.toLowerCase() === email.toLowerCase() &&
-              u?.user_id?.startsWith('auth0|'),
-          )
-        : null
-
-      if (!user) return { success: true, exists: false, verified: false }
-
-      return {
-        success: true,
-        exists: true,
-        verified: !!user.email_verified,
-        dbUserId: typeof user.user_id === 'string' ? user.user_id : null,
-      }
+      return data
     } catch (error: any) {
       return { success: false, error: error?.message || 'Network error' }
     }
@@ -574,12 +527,11 @@ export function registerIPC() {
   // Server health check
   handleIPC('check-server-health', async () => {
     try {
-      const response = await fetch(
-        `http://localhost:${import.meta.env.VITE_LOCAL_SERVER_PORT}`,
-        {
-          method: 'GET',
-        },
-      )
+      const baseUrl = import.meta.env.VITE_GRPC_BASE_URL
+      const url = new URL('/', baseUrl)
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+      })
 
       if (response.ok) {
         const text = await response.text()

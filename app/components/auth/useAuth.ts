@@ -289,12 +289,9 @@ export const useAuth = () => {
 
       const authUrl = `https://${Auth0Config.domain}/authorize?${params.toString()}`
 
-      // Open in in-app modal auth window
+      // Open in external browser
       if (window.api?.invoke) {
-        await window.api.invoke('open-auth-window', {
-          url: authUrl,
-          redirectUri: Auth0Config.redirectUri,
-        })
+        await window.api.invoke('web-open-url', authUrl)
       } else {
         window.open(authUrl, '_blank')
       }

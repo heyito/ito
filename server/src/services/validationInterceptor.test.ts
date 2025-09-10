@@ -135,7 +135,7 @@ describe('ValidationInterceptor', () => {
       // Now consume the modified stream to trigger validation
       let errorThrown = false
       try {
-        for await (const chunk of modifiedReq.message) {
+        for await (const _chunk of modifiedReq.message) {
           // This should throw during validation
         }
       } catch (error) {

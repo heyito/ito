@@ -1,5 +1,4 @@
 import { describe, it, expect, mock, beforeEach, afterAll } from 'bun:test'
-import { ItoMode } from '../generated/ito_pb.js'
 
 // Mock environment variables before any imports
 const originalEnv = process.env

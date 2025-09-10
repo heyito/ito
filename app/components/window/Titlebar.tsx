@@ -8,7 +8,6 @@ import { useAuthStore } from '@/app/store/useAuthStore'
 import { useAuth } from '@/app/components/auth/useAuth'
 
 export const Titlebar = () => {
-  const { icon } = useWindowContext().titlebar
   const { onboardingCompleted } = useOnboardingStore()
   const { isAuthenticated } = useAuthStore()
   const showOnboarding = !onboardingCompleted || !isAuthenticated

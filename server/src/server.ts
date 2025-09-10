@@ -10,6 +10,7 @@ import { createValidationInterceptor } from './services/validationInterceptor.js
 import { renderCallbackPage } from './utils/renderCallback.js'
 import dotenv from 'dotenv'
 import { registerLoggingRoutes } from './services/logging.js'
+import { registerAuth0Routes } from './services/auth0.js'
 
 dotenv.config()
 
@@ -65,6 +66,9 @@ export const startServer = async () => {
       reply.redirect(redirectUrl.toString(), 302)
     })
   }
+
+  // Register Auth0 management proxy routes at the root level (no auth required)
+  await registerAuth0Routes(connectRpcServer)
 
   // Register Connect RPC plugin in a context that conditionally applies Auth0 authentication
   await connectRpcServer.register(async function (fastify) {

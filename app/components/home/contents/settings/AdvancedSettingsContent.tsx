@@ -124,22 +124,14 @@ interface SettingInputProps {
 }
 
 function SettingInput({ config, value, onChange }: SettingInputProps) {
-  const [localValue, setLocalValue] = useState(value)
   const [isFocused, setIsFocused] = useState(false)
   const [editingValue, setEditingValue] = useState('')
-
-  useEffect(() => {
-    if (!isFocused) {
-      setLocalValue(value)
-    }
-  }, [value, isFocused])
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const newValue = e.target.value
     setEditingValue(newValue)
-    setLocalValue(newValue)
     onChange(e, config)
   }
 
@@ -148,7 +140,6 @@ function SettingInput({ config, value, onChange }: SettingInputProps) {
     // Start with the formatted display value to avoid jarring transition
     const startValue = formatDisplayValue(value)
     setEditingValue(startValue)
-    setLocalValue(startValue)
   }
 
   const handleBlur = () => {

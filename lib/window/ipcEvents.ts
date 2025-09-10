@@ -527,11 +527,12 @@ export function registerIPC() {
   // Server health check
   handleIPC('check-server-health', async () => {
     try {
-      const baseUrl = import.meta.env.VITE_GRPC_BASE_URL
-      const url = new URL('/', baseUrl)
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-      })
+      const response = await fetch(
+        `http://localhost:${import.meta.env.VITE_LOCAL_SERVER_PORT}`,
+        {
+          method: 'GET',
+        },
+      )
 
       if (response.ok) {
         const text = await response.text()

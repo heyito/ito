@@ -81,7 +81,7 @@ export default function CheckEmailContent({
         if (mounted) setPollError(e?.message || 'Polling error')
       }
     }
-    const id = setInterval(poll, 4000)
+    const id = setInterval(poll, 2000)
     poll()
     return () => {
       mounted = false

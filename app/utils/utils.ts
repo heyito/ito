@@ -3,6 +3,7 @@ export const isValidEmail = (email: string): boolean => {
   return emailRegex.test(email)
 }
 
+// Auth0 enforces these rules
 export const isStrongPassword = (password: string): boolean => {
   if (!password) return false // non-empty
   if (password.length < 8) return false // length

@@ -8,6 +8,7 @@ import {
 } from '@/app/utils/keyboard'
 import { useAudioStore } from '@/app/store/useAudioStore'
 import { KeyboardShortcutConfig } from './multi-shortcut-editor'
+import { KeyName } from '@/lib/types/keyboard'
 
 interface KeyboardShortcutEditorProps {
   shortcut: KeyboardShortcutConfig
@@ -182,7 +183,7 @@ export default function KeyboardShortcutEditor({
             {newShortcut.map((keyboardKey, index) => (
               <KeyboardKey
                 key={index}
-                keyboardKey={keyboardKey}
+                keyboardKey={keyboardKey as KeyName}
                 className="bg-white border-2 border-neutral-300"
                 style={{
                   width: `${keySize}px`,
@@ -234,7 +235,7 @@ export default function KeyboardShortcutEditor({
             {shortcutKeys.map((keyboardKey, index) => (
               <KeyboardKey
                 key={index}
-                keyboardKey={keyboardKey}
+                keyboardKey={keyboardKey as KeyName}
                 className={`${pressedKeys.includes(keyboardKey.toLowerCase()) ? 'bg-purple-50 border-2 border-purple-200' : 'bg-white border-2 border-neutral-300'}`}
                 style={{
                   width: `${keySize}px`,

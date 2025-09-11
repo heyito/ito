@@ -1,73 +1,81 @@
 import { KeyEvent } from '@/lib/preload'
 import { KeyboardShortcutConfig } from '@/lib/main/store'
 import { ItoMode } from '../generated/ito_pb'
+import {
+  keyNameMap,
+  normalizeLegacyKey,
+  isModifierMatch,
+  getKeyDisplayInfo,
+  KeyName,
+} from '@/lib/types/keyboard'
 
-// Map of key names to their normalized UI representations
-const keyNameMap: Record<string, string> = {
-  // Modifier keys
-  MetaLeft: 'command',
-  MetaRight: 'command',
-  ControlLeft: 'control',
-  ControlRight: 'control',
-  Alt: 'option',
-  AltGr: 'option',
-  ShiftLeft: 'shift',
-  ShiftRight: 'shift',
-  Function: 'fn',
-  'Unknown(179)': 'fn_fast', // Happens when pressing and releasing fn quickly
+/**
+ * Helper to format directional indicators for modifier keys
+ */
+export function getDirectionalIndicator(
+  side: 'left' | 'right' | undefined,
+  showText: boolean = false,
+): string {
+  if (!side) return ''
+  const arrow = side === 'left' ? '◀' : '▶'
+  if (showText) {
+    return side === 'left' ? `${arrow} left` : `right ${arrow}`
+  }
+  return arrow
+}
 
-  // Letter keys (remove the 'Key' prefix)
-  KeyA: 'a',
-  KeyB: 'b',
-  KeyC: 'c',
-  KeyD: 'd',
-  KeyE: 'e',
-  KeyF: 'f',
-  KeyG: 'g',
-  KeyH: 'h',
-  KeyI: 'i',
-  KeyJ: 'j',
-  KeyK: 'k',
-  KeyL: 'l',
-  KeyM: 'm',
-  KeyN: 'n',
-  KeyO: 'o',
-  KeyP: 'p',
-  KeyQ: 'q',
-  KeyR: 'r',
-  KeyS: 's',
-  KeyT: 't',
-  KeyU: 'u',
-  KeyV: 'v',
-  KeyW: 'w',
-  KeyX: 'x',
-  KeyY: 'y',
-  KeyZ: 'z',
+/**
+ * Get formatted display components for a key
+ * @param keyboardKey The key name to display
+ * @param options Display options
+ * @returns Object with formatted display components
+ */
+export function getKeyDisplay(
+  keyboardKey: KeyName,
+  options: {
+    showDirectionalText?: boolean
+    format?: 'symbol' | 'label' | 'both'
+  } = {},
+): string {
+  const { showDirectionalText = false, format = 'symbol' } = options
 
-  // Number keys (remove the 'Digit' prefix)
-  Digit1: '1',
-  Digit2: '2',
-  Digit3: '3',
-  Digit4: '4',
-  Digit5: '5',
-  Digit6: '6',
-  Digit7: '7',
-  Digit8: '8',
-  Digit9: '9',
-  Digit0: '0',
+  const displayInfo = getKeyDisplayInfo(keyboardKey as KeyName)
+  const dirIndicator = getDirectionalIndicator(
+    displayInfo.side,
+    showDirectionalText,
+  )
 
-  // Special keys
-  Space: 'space',
-  Enter: 'enter',
-  Escape: 'esc',
-  Backspace: 'backspace',
-  Tab: 'tab',
-  CapsLock: 'caps',
-  Delete: 'delete',
-  ArrowUp: '↑',
-  ArrowDown: '↓',
-  ArrowLeft: '←',
-  ArrowRight: '→',
+  const label = displayInfo.label
+
+  // Determine what to return for combined
+  let result: string
+  if (displayInfo.isModifier && displayInfo.symbol) {
+    if (format === 'symbol') {
+      result = displayInfo.symbol
+      if (dirIndicator) {
+        result = showDirectionalText
+          ? `${result} ${dirIndicator}`
+          : `${result} ${dirIndicator}`
+      }
+    } else if (format === 'label') {
+      result = label
+      if (dirIndicator) {
+        result = showDirectionalText
+          ? `${result} ${dirIndicator}`
+          : `${result} ${dirIndicator}`
+      }
+    } else {
+      // 'both'
+      result = `${displayInfo.symbol} ${label}`
+      if (dirIndicator) {
+        result = `${result} ${dirIndicator}`
+      }
+    }
+  } else {
+    result = label
+  }
+
+  return result
 }
 
 /**
@@ -92,7 +100,7 @@ const reverseKeyNameMap: Record<string, string[]> = Object.entries(
  * @param event The key event from the global key listener
  * @returns The normalized key name for UI display
  */
-export function normalizeKeyEvent(event: KeyEvent): string {
+export function normalizeKeyEvent(event: KeyEvent): KeyName {
   // If we have a mapping for this key, use it
   if (keyNameMap[event.key]) {
     return keyNameMap[event.key]
@@ -106,7 +114,7 @@ export function normalizeKeyEvent(event: KeyEvent): string {
     .replace(/^arrow/, '') // Remove 'Arrow' prefix
     .replace(/^(left|right)$/, '') // Remove 'Left'/'Right' suffix
 
-  return key || 'unknown'
+  return key as KeyName
 }
 
 export type ShortcutError =
@@ -123,10 +131,18 @@ export type ShortcutResult = {
 
 const MODIFIER_SEQUENCE = [
   'control',
+  'control-left',
+  'control-right',
   'option',
+  'option-left',
+  'option-right',
   'alt',
   'shift',
+  'shift-left',
+  'shift-right',
   'command',
+  'command-left',
+  'command-right',
   'fn',
 ] as const
 
@@ -138,15 +154,15 @@ const MODIFIER_INDEX: Record<string, number> = MODIFIER_SEQUENCE.reduce(
   {} as Record<string, number>,
 )
 
-function normalizeKey(raw: string): string {
-  return raw.trim().toLowerCase()
+function normalizeKey(raw: KeyName): KeyName {
+  return raw.trim().toLowerCase() as KeyName
 }
 
-function sortKeysCanonical(keys: string[]): string[] {
+function sortKeysCanonical(keys: KeyName[]): KeyName[] {
   const unique = Array.from(new Set(keys.map(normalizeKey)))
 
-  const modifiers: string[] = []
-  const nonModifiers: string[] = []
+  const modifiers: KeyName[] = []
+  const nonModifiers: KeyName[] = []
 
   for (const key of unique) {
     if (key in MODIFIER_INDEX) modifiers.push(key)
@@ -159,37 +175,75 @@ function sortKeysCanonical(keys: string[]): string[] {
   return [...modifiers, ...nonModifiers]
 }
 
-export function normalizeChord(keys: string[]): string[] {
+export function normalizeChord(keys: KeyName[]): KeyName[] {
   return sortKeysCanonical(keys.filter(Boolean))
+}
+
+// Helper to generate all variants of a modifier key (base, left, right)
+function modifierVariants(modifier: string): string[] {
+  return [modifier, `${modifier}-left`, `${modifier}-right`]
+}
+
+// Helper to create reserved combinations for all variants of a modifier
+function createReservedCombos(modifier: string, key: string, reason: string) {
+  return modifierVariants(modifier).map(mod => ({ keys: [mod, key], reason }))
 }
 
 // Reserved key combinations that would conflict with app functionality
 const RESERVED_COMBINATIONS = [
-  { keys: ['command', 'c'], reason: 'Reserved for text selection copying' },
-  { keys: ['control', 'c'], reason: 'Reserved for text selection copying' },
-  // Add more reserved combinations as needed
-  { keys: ['command', 'q'], reason: 'System quit command' },
-  { keys: ['command', 'w'], reason: 'System close window' },
-  { keys: ['command', 'tab'], reason: 'System app switching' },
-  { keys: ['control', 'tab'], reason: 'Browser tab switching' },
-  { keys: ['command', 'v'], reason: 'Reserved for text selection pasting' },
-  { keys: ['control', 'v'], reason: 'Reserved for text selection pasting' },
-]
+  // Copy combinations
+  ...createReservedCombos(
+    'command',
+    'c',
+    'Reserved for text selection copying',
+  ),
+  ...createReservedCombos(
+    'control',
+    'c',
+    'Reserved for text selection copying',
+  ),
+
+  // Paste combinations
+  ...createReservedCombos(
+    'command',
+    'v',
+    'Reserved for text selection pasting',
+  ),
+  ...createReservedCombos(
+    'control',
+    'v',
+    'Reserved for text selection pasting',
+  ),
+
+  // System commands
+  ...createReservedCombos('command', 'q', 'System quit command'),
+  ...createReservedCombos('command', 'w', 'System close window'),
+
+  // Tab/app switching
+  ...createReservedCombos('command', 'tab', 'System app switching'),
+  ...createReservedCombos('control', 'tab', 'Browser tab switching'),
+] as { keys: KeyName[]; reason?: string }[]
 
 // Check if a shortcut contains reserved key combinations
-export function isReservedCombination(keys: string[]): {
+export function isReservedCombination(keys: KeyName[]): {
   isReserved: boolean
   reason?: string
 } {
-  const normalizedKeys = sortKeysCanonical(keys)
+  // Normalize legacy keys to new format
+  const normalizedKeys = sortKeysCanonical(keys.map(normalizeLegacyKey))
 
   for (const reserved of RESERVED_COMBINATIONS) {
     const normalizedReserved = sortKeysCanonical(reserved.keys)
 
     // Check if the shortcut contains all keys from a reserved combination
-    const containsAllReserved = normalizedReserved.every(key =>
-      normalizedKeys.includes(key),
-    )
+    // Using flexible modifier matching for backward compatibility
+    const containsAllReserved = normalizedReserved.every(reservedKey => {
+      return normalizedKeys.some(userKey => {
+        if (userKey === reservedKey) return true
+        // Check if modifiers match regardless of side
+        return isModifierMatch(userKey, reservedKey)
+      })
+    })
 
     if (containsAllReserved) {
       return { isReserved: true, reason: reserved.reason }
@@ -204,11 +258,27 @@ export function isDuplicateShortcut(
   currentShortcuts: KeyboardShortcutConfig[],
   shortcutToCheck: KeyboardShortcutConfig,
 ): ItoMode | undefined {
-  const duplicate = currentShortcuts.find(
-    ks =>
-      ks.id !== shortcutToCheck.id &&
-      ks.keys.join(',') === shortcutToCheck.keys.join(','),
+  // Normalize keys for comparison
+  const normalizedCheckKeys = sortKeysCanonical(
+    shortcutToCheck.keys.map(normalizeLegacyKey),
   )
+
+  const duplicate = currentShortcuts.find(ks => {
+    if (ks.id === shortcutToCheck.id) return false
+
+    const normalizedStoredKeys = sortKeysCanonical(
+      ks.keys.map(normalizeLegacyKey),
+    )
+
+    // Check if all keys match with flexible modifier matching
+    if (normalizedCheckKeys.length !== normalizedStoredKeys.length) return false
+
+    return normalizedCheckKeys.every((checkKey, index) => {
+      const storedKey = normalizedStoredKeys[index]
+      if (checkKey === storedKey) return true
+      return isModifierMatch(checkKey, storedKey)
+    })
+  })
 
   if (duplicate) {
     return duplicate.mode
@@ -252,7 +322,8 @@ export class KeyState {
    * @param shortcut The shortcut to set, as an array of normalized key names.
    */
   updateShortcut(shortcut: string[]) {
-    this.shortcut = shortcut
+    // Normalize legacy keys to new format
+    this.shortcut = shortcut.map(normalizeLegacyKey)
     const keysToBlock = this.getKeysToBlock()
     window.api.blockKeys(keysToBlock)
   }
@@ -305,10 +376,26 @@ export class KeyState {
    * @returns Array of keys to block
    */
   private getKeysToBlock(): string[] {
-    // Use the reverse map to find all raw keys for the normalized shortcut keys.
-    const keys = this.shortcut.flatMap(
-      normalizedKey => reverseKeyNameMap[normalizedKey] || [],
-    )
+    const keys: string[] = []
+
+    for (const normalizedKey of this.shortcut) {
+      // Get the base modifier name (without -left/-right)
+      const baseKey = normalizedKey.replace(/-(?:left|right)$/, '')
+
+      // For directional modifiers, block specific side
+      if (normalizedKey.includes('-left') || normalizedKey.includes('-right')) {
+        keys.push(...(reverseKeyNameMap[normalizedKey] || []))
+      }
+      // For non-directional modifiers (legacy), block both sides
+      else if (['command', 'control', 'option', 'shift'].includes(baseKey)) {
+        keys.push(...(reverseKeyNameMap[`${baseKey}-left`] || []))
+        keys.push(...(reverseKeyNameMap[`${baseKey}-right`] || []))
+      }
+      // For other keys, use the reverse map directly
+      else {
+        keys.push(...(reverseKeyNameMap[normalizedKey] || []))
+      }
+    }
 
     // Also block the special "fast fn" key if fn is part of the shortcut.
     if (this.shortcut.includes('fn')) {

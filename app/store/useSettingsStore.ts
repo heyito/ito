@@ -15,6 +15,7 @@ import {
   validateShortcutForDuplicate,
   isReservedCombination,
 } from '../utils/keyboard'
+import { KeyName } from '@/lib/types/keyboard'
 
 interface SettingsState {
   shareAnalytics: boolean
@@ -36,7 +37,10 @@ interface SettingsState {
   createKeyboardShortcut: (mode: ItoMode) => ShortcutResult
   removeKeyboardShortcut: (shortcutId: string) => void
   getItoModeShortcuts: (mode: ItoMode) => KeyboardShortcutConfig[]
-  updateKeyboardShortcut: (shortcutId: string, keys: string[]) => ShortcutResult
+  updateKeyboardShortcut: (
+    shortcutId: string,
+    keys: KeyName[],
+  ) => ShortcutResult
 }
 
 type SettingCategory = 'general' | 'audio&mic' | 'keyboard' | 'account'
@@ -234,7 +238,7 @@ export const useSettingsStore = create<SettingsState>(set => {
     },
     updateKeyboardShortcut: (
       shortcutId: string,
-      keys: string[],
+      keys: KeyName[],
     ): ShortcutResult => {
       const currentShortcuts = useSettingsStore.getState()
         .keyboardShortcuts as KeyboardShortcutConfig[]

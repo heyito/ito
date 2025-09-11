@@ -23,6 +23,8 @@ import {
   getActivityMessage,
 } from './activityMessages'
 import { ItoMode } from '@/app/generated/ito_pb'
+import { getKeyDisplay } from '@/app/utils/keyboard'
+import { KeyName } from '@/lib/types/keyboard'
 
 // Interface for interaction statistics
 interface InteractionStats {
@@ -507,7 +509,10 @@ export default function HomeContent() {
               {keyboardShortcut.map((key, index) => (
                 <React.Fragment key={index}>
                   <span className="bg-slate-50 px-1 py-0.5 rounded text-xs font-mono shadow-sm">
-                    {key}
+                    {getKeyDisplay(key as KeyName, {
+                      showDirectionalText: false,
+                      format: 'label',
+                    })}
                   </span>
                   <span>{index < keyboardShortcut.length - 1 && ' + '}</span>
                 </React.Fragment>

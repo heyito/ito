@@ -85,14 +85,19 @@ function checkForStuckKeys() {
         .filter(ks => ks.keys.length > 0)
         .find(shortcut => {
           const normalizedShortcutKeys = shortcut.keys.map(normalizeLegacyKey)
-          const hasAllKeys = normalizedShortcutKeys.every(key => pressedKeys.has(key))
+          const hasAllKeys = normalizedShortcutKeys.every(key =>
+            pressedKeys.has(key),
+          )
           const exactMatch =
             normalizedShortcutKeys.length === pressedKeys.size && hasAllKeys
           return exactMatch
         })
 
       // Don't remove the stuck key if it's part of the currently active shortcut
-      if (activeShortcut && activeShortcut.keys.map(normalizeLegacyKey).includes(stuckKey)) {
+      if (
+        activeShortcut &&
+        activeShortcut.keys.map(normalizeLegacyKey).includes(stuckKey)
+      ) {
         shouldRemove = false
       }
     }

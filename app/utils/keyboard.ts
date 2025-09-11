@@ -4,7 +4,6 @@ import { ItoMode } from '../generated/ito_pb'
 import {
   keyNameMap,
   normalizeLegacyKey,
-  isModifierMatch,
   getKeyDisplayInfo,
   KeyName,
 } from '@/lib/types/keyboard'
@@ -235,14 +234,9 @@ export function isReservedCombination(keys: KeyName[]): {
   for (const reserved of RESERVED_COMBINATIONS) {
     const normalizedReserved = sortKeysCanonical(reserved.keys)
 
-    // Check if the shortcut contains all keys from a reserved combination
-    // Using flexible modifier matching for backward compatibility
+    // Check if the shortcut contains all keys from a reserved combination (exact match)
     const containsAllReserved = normalizedReserved.every(reservedKey => {
-      return normalizedKeys.some(userKey => {
-        if (userKey === reservedKey) return true
-        // Check if modifiers match regardless of side
-        return isModifierMatch(userKey, reservedKey)
-      })
+      return normalizedKeys.includes(reservedKey)
     })
 
     if (containsAllReserved) {
@@ -270,14 +264,11 @@ export function isDuplicateShortcut(
       ks.keys.map(normalizeLegacyKey),
     )
 
-    // Check if all keys match with flexible modifier matching
-    if (normalizedCheckKeys.length !== normalizedStoredKeys.length) return false
-
-    return normalizedCheckKeys.every((checkKey, index) => {
-      const storedKey = normalizedStoredKeys[index]
-      if (checkKey === storedKey) return true
-      return isModifierMatch(checkKey, storedKey)
-    })
+    // Check if all keys match exactly
+    return (
+      JSON.stringify(normalizedCheckKeys) ===
+      JSON.stringify(normalizedStoredKeys)
+    )
   })
 
   if (duplicate) {
@@ -310,10 +301,10 @@ export function validateShortcutForDuplicate(
  * Tracks the state of currently pressed keys
  */
 export class KeyState {
-  private pressedKeys: Set<string> = new Set()
-  private shortcut: string[] = []
+  private pressedKeys: Set<KeyName> = new Set()
+  private shortcut: KeyName[] = []
 
-  constructor(shortcut: string[] = []) {
+  constructor(shortcut: KeyName[] = []) {
     this.updateShortcut(shortcut)
   }
 
@@ -321,7 +312,7 @@ export class KeyState {
    * Updates the shortcut and instructs the native listener to block the relevant keys.
    * @param shortcut The shortcut to set, as an array of normalized key names.
    */
-  updateShortcut(shortcut: string[]) {
+  updateShortcut(shortcut: KeyName[]) {
     // Normalize legacy keys to new format
     this.shortcut = shortcut.map(normalizeLegacyKey)
     const keysToBlock = this.getKeysToBlock()
@@ -360,7 +351,7 @@ export class KeyState {
    * @param key The normalized key name to check
    * @returns Whether the key is currently pressed
    */
-  isKeyPressed(key: string): boolean {
+  isKeyPressed(key: KeyName): boolean {
     return this.pressedKeys.has(key)
   }
 
@@ -379,22 +370,7 @@ export class KeyState {
     const keys: string[] = []
 
     for (const normalizedKey of this.shortcut) {
-      // Get the base modifier name (without -left/-right)
-      const baseKey = normalizedKey.replace(/-(?:left|right)$/, '')
-
-      // For directional modifiers, block specific side
-      if (normalizedKey.includes('-left') || normalizedKey.includes('-right')) {
-        keys.push(...(reverseKeyNameMap[normalizedKey] || []))
-      }
-      // For non-directional modifiers (legacy), block both sides
-      else if (['command', 'control', 'option', 'shift'].includes(baseKey)) {
-        keys.push(...(reverseKeyNameMap[`${baseKey}-left`] || []))
-        keys.push(...(reverseKeyNameMap[`${baseKey}-right`] || []))
-      }
-      // For other keys, use the reverse map directly
-      else {
-        keys.push(...(reverseKeyNameMap[normalizedKey] || []))
-      }
+      keys.push(...(reverseKeyNameMap[normalizedKey] || []))
     }
 
     // Also block the special "fast fn" key if fn is part of the shortcut.

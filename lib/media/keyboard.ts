@@ -6,7 +6,7 @@ import { BrowserWindow } from 'electron'
 import { audioRecorderService } from './audio'
 import { voiceInputService } from '../main/voiceInputService'
 import { traceLogger } from '../main/traceLogger'
-import { keyNameMap, normalizeLegacyKey, isModifierMatch } from '../types/keyboard'
+import { KeyName, keyNameMap, normalizeLegacyKey } from '../types/keyboard'
 
 interface KeyEvent {
   type: 'keydown' | 'keyup'
@@ -43,7 +43,7 @@ export const resetForTesting = () => {
 const nativeModuleName = 'global-key-listener'
 
 // Normalizes a raw key event into a consistent string
-function normalizeKey(rawKey: string): string {
+function normalizeKey(rawKey: string): KeyName {
   return keyNameMap[rawKey] || rawKey.toLowerCase()
 }
 
@@ -54,7 +54,7 @@ export { keyNameMap }
 const pressedKeys = new Set<string>()
 
 // Track when each key was first pressed to detect stuck keys
-const keyPressTimestamps = new Map<string, number>()
+const keyPressTimestamps = new Map<KeyName, number>()
 
 // Timer for checking stuck keys
 let stuckKeyCheckTimer: NodeJS.Timeout | null = null
@@ -66,7 +66,7 @@ const STUCK_KEY_CHECK_INTERVAL = 1000 // Check every 1 second
 // Function to check for and remove stuck keys
 function checkForStuckKeys() {
   const currentTime = Date.now()
-  const stuckKeys: string[] = []
+  const stuckKeys: KeyName[] = []
 
   for (const [key, pressTime] of keyPressTimestamps) {
     if (currentTime - pressTime > STUCK_KEY_TIMEOUT) {
@@ -163,26 +163,14 @@ function handleKeyEventInMain(event: KeyEvent) {
     .find(shortcut => {
       // Normalize legacy keys in stored shortcuts
       const normalizedShortcutKeys = shortcut.keys.map(normalizeLegacyKey)
-      
-      // Check if all shortcut keys are pressed (with backward compatibility)
-      const hasAllKeys = normalizedShortcutKeys.every(shortcutKey => {
-        // For modifiers, check if any variant (left/right) is pressed
-        return Array.from(pressedKeys).some(pressedKey => {
-          if (shortcutKey === pressedKey) return true
-          return isModifierMatch(shortcutKey, pressedKey)
-        })
-      })
-      
-      // For exact match, we need to ensure no extra keys are pressed
-      // Count matching keys considering modifier flexibility
-      const matchingPressedKeys = Array.from(pressedKeys).filter(pressedKey => {
-        return normalizedShortcutKeys.some(shortcutKey => {
-          if (shortcutKey === pressedKey) return true
-          return isModifierMatch(shortcutKey, pressedKey)
-        })
-      })
-      
-      const exactMatch = normalizedShortcutKeys.length === matchingPressedKeys.length && hasAllKeys
+
+      // Check if all shortcut keys are pressed (exact match only)
+      const hasAllKeys = normalizedShortcutKeys.every(shortcutKey =>
+        pressedKeys.has(shortcutKey),
+      )
+
+      const exactMatch =
+        normalizedShortcutKeys.length === pressedKeys.size && hasAllKeys
 
       return exactMatch
     })
@@ -392,22 +380,11 @@ const getKeysToBlock = (shortcut?: KeyboardShortcutConfig): string[] => {
   }
 
   const keys: string[] = []
-  
+
   for (const key of shortcut.keys) {
-    // Normalize legacy keys first
+    // Normalize legacy keys (maps base modifiers to left variants)
     const normalizedKey = normalizeLegacyKey(key)
-    
-    // Check if this is a legacy modifier without direction
-    const isLegacyModifier = ['command', 'control', 'option', 'shift'].includes(key)
-    
-    if (isLegacyModifier) {
-      // For legacy modifiers, block both left and right variants
-      keys.push(...(reverseKeyNameMap[`${key}-left`] || []))
-      keys.push(...(reverseKeyNameMap[`${key}-right`] || []))
-    } else {
-      // For directional modifiers or regular keys, use the normalized key
-      keys.push(...(reverseKeyNameMap[normalizedKey] || []))
-    }
+    keys.push(...(reverseKeyNameMap[normalizedKey] || []))
   }
 
   // Also block the special "fast fn" key if fn is part of the shortcut.

@@ -138,25 +138,6 @@ export function normalizeLegacyKey(key: string): KeyName {
   return (legacyKeyMap[key] || key) as KeyName
 }
 
-// Function to check if any modifier (regardless of side) matches
-export function isModifierMatch(stored: string, pressed: string): boolean {
-  // Strip the -left/-right suffix for comparison
-  const getBaseModifier = (key: string) => key.replace(/-(?:left|right)$/, '')
-
-  const storedBase = getBaseModifier(stored)
-  const pressedBase = getBaseModifier(pressed)
-
-  // Special case: alt and option are equivalent
-  if (
-    (storedBase === 'alt' || storedBase === 'option') &&
-    (pressedBase === 'alt' || pressedBase === 'option')
-  ) {
-    return true
-  }
-
-  return storedBase === pressedBase
-}
-
 // Platform-specific display information
 export interface KeyDisplayInfo {
   label: string
@@ -173,7 +154,8 @@ export function getKeyDisplayInfo(
     : 'darwin') as any,
 ): KeyDisplayInfo {
   // Handle directional modifiers
-  if (keyName.includes('-')) {
+  const normalizedKey = normalizeLegacyKey(keyName)
+  if (normalizedKey.includes('-')) {
     const [baseKey, side] = keyName.split('-') as [string, 'left' | 'right']
 
     switch (baseKey) {
@@ -221,7 +203,7 @@ export function getKeyDisplayInfo(
   }
 
   // Handle non-directional keys
-  switch (keyName) {
+  switch (normalizedKey) {
     case 'fn':
       return {
         label: 'fn',

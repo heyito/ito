@@ -84,7 +84,7 @@ export const validateStoredTokens = async (config?: any) => {
           }
 
           envMismatch = !issuerMatches || !audienceMatches
-        } catch (e) {
+        } catch {
           // If we fail to decode for env check, treat as mismatch to be safe
           envMismatch = true
         }

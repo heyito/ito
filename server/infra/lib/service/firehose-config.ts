@@ -40,7 +40,7 @@ export function createFirehoseStreams(
   scope: Construct,
   config: FirehoseConfig,
 ): FirehoseResources {
-  const stack = Stack.of(scope)
+  Stack.of(scope)
 
   const clientProcessor = new NodejsFunction(
     scope,

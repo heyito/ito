@@ -9,3 +9,4 @@ alwaysApply: true
 2. Always rely on the user for manually testing and code changes
 3. Always use bun as your preferred package manager.
 4. Always rely on the user to install new packages / update new packages
+5. Prefer code that is easy to read and self-documenting. Use comments sparingly.

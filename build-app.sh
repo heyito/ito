@@ -202,10 +202,18 @@ create_windows_installer() {
     fi
     
     # Use Docker for cross-compilation with ARM64 compatibility and bun
+    # Get absolute path in a cross-platform way
+    if [[ "$OSTYPE" == "msys" ]]; then
+        # On MinGW/MSYS2, convert to Windows path format for Docker
+        PROJECT_PATH="$(cygpath -w "$(pwd)" | sed 's|\\|/|g')"
+    else
+        PROJECT_PATH="$(pwd)"
+    fi
+    
     docker run --rm --platform linux/amd64 \
       --env CSC_IDENTITY_AUTO_DISCOVERY=false \
       --env SKIP_SIGNING=true \
-      -v "$PWD":/project \
+      -v "${PROJECT_PATH}":/project \
       electronuserland/builder:wine \
       bash -c "
         # Install bun with retry

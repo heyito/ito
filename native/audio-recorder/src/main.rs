@@ -384,6 +384,51 @@ fn start_capture(
             err_fn,
             None,
         )?,
+        SampleFormat::I32 => device.build_input_stream(
+            &stream_config,
+            move |data: &[i32], _| {
+                process_and_write_data(
+                    data,
+                    &mut resampler,
+                    &mut audio_buffer,
+                    &stdout,
+                    RESAMPLER_CHUNK_SIZE,
+                    channels_count,
+                )
+            },
+            err_fn,
+            None,
+        )?,
+        SampleFormat::F64 => device.build_input_stream(
+            &stream_config,
+            move |data: &[f64], _| {
+                process_and_write_data(
+                    data,
+                    &mut resampler,
+                    &mut audio_buffer,
+                    &stdout,
+                    RESAMPLER_CHUNK_SIZE,
+                    channels_count,
+                )
+            },
+            err_fn,
+            None,
+        )?,
+        SampleFormat::U32 => device.build_input_stream(
+            &stream_config,
+            move |data: &[u32], _| {
+                process_and_write_data(
+                    data,
+                    &mut resampler,
+                    &mut audio_buffer,
+                    &stdout,
+                    RESAMPLER_CHUNK_SIZE,
+                    channels_count,
+                )
+            },
+            err_fn,
+            None,
+        )?,
         format => {
             return Err(anyhow!(
                 "[audio-recorder] Unsupported sample format {}",

@@ -38,7 +38,7 @@ describe('transcription', () => {
 
   describe('createTranscriptionPrompt', () => {
     it('should create prompt with empty vocabulary', () => {
-      const result = createTranscriptionPrompt([])
+      createTranscriptionPrompt([])
 
       expect(consoleLogs).toHaveLength(1)
       expect(consoleLogs[0]).toMatch(
@@ -165,7 +165,7 @@ describe('transcription', () => {
     it('should return simple prompt when vocabulary becomes empty after processing', () => {
       // Test edge case where vocabulary might be filtered to empty
       const vocabulary = [''] // This should be filtered out or result in empty vocab
-      const result = createTranscriptionPrompt(vocabulary)
+      createTranscriptionPrompt(vocabulary)
 
       // Should return just the base instruction since vocabulary is effectively empty
       expect(consoleLogs).toHaveLength(1)

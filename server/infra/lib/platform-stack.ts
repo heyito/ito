@@ -147,7 +147,7 @@ export class PlatformStack extends Stack {
       signInAliases: { email: true, username: true },
       accountRecovery: undefined,
     })
-    const userPoolClient = new UserPoolClient(this, 'ItoOsUserPoolClient', {
+    new UserPoolClient(this, 'ItoOsUserPoolClient', {
       userPool,
       userPoolClientName: `${stageName}-ito-os-client`,
       generateSecret: false,

@@ -5,6 +5,8 @@ import {
   DeleteObjectCommand,
   ListObjectsV2Command,
   HeadObjectCommand,
+  CreateBucketCommand,
+  HeadBucketCommand,
   PutObjectCommandInput,
   GetObjectCommandInput,
   DeleteObjectCommandInput,
@@ -16,6 +18,7 @@ import { Readable } from 'stream'
 export class S3StorageClient {
   private s3Client: S3Client
   private bucketName: string
+  private bucketChecked: boolean = false
 
   constructor() {
     const bucketName = process.env.BLOB_STORAGE_BUCKET
@@ -24,9 +27,27 @@ export class S3StorageClient {
     }
 
     this.bucketName = bucketName
-    this.s3Client = new S3Client({
+
+    // Configure S3 client with support for MinIO/local development
+    const s3Config: any = {
       region: process.env.AWS_REGION || 'us-west-2',
-    })
+    }
+
+    // If S3_ENDPOINT is set, we're using MinIO or another S3-compatible service
+    if (process.env.S3_ENDPOINT) {
+      s3Config.endpoint = process.env.S3_ENDPOINT
+      s3Config.forcePathStyle = process.env.S3_FORCE_PATH_STYLE === 'true'
+
+      // Use explicit credentials for local development
+      if (process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY) {
+        s3Config.credentials = {
+          accessKeyId: process.env.S3_ACCESS_KEY_ID,
+          secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+        }
+      }
+    }
+
+    this.s3Client = new S3Client(s3Config)
   }
 
   async uploadObject(

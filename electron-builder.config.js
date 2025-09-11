@@ -52,11 +52,7 @@ module.exports = {
     },
   ],
   asar: true,
-  asarUnpack: [
-    'resources/**',
-    '**/node_modules/@sentry/**',
-    '**/node_modules/sqlite3/**',
-  ],
+  asarUnpack: ['resources/**'],
   extraMetadata: {
     version: process.env.VITE_ITO_VERSION || '0.0.0-dev',
   },
@@ -95,6 +91,11 @@ module.exports = {
     requestedExecutionLevel: 'asInvoker',
     extraResources: getWindowsResources(),
     forceCodeSigning: false,
+    asarUnpack: [
+      'resources/**',
+      '**/node_modules/@sentry/**',
+      '**/node_modules/sqlite3/**',
+    ],
   },
   nodeGypRebuild: false,
   buildDependenciesFromSource: false,

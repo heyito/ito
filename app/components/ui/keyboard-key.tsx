@@ -146,14 +146,14 @@ const KeyToRender = ({
   keyboardKey,
   showDirectionalText = false,
 }: {
-  keyboardKey: string
+  keyboardKey: KeyName
   showDirectionalText?: boolean
 }) => {
   if (keyboardKey === 'fn' || keyboardKey === 'fn_fast') {
     return <FnKey />
   }
 
-  const displayInfo = getKeyDisplayInfo(keyboardKey as KeyName)
+  const displayInfo = getKeyDisplayInfo(keyboardKey)
 
   if (displayInfo.isModifier && displayInfo.symbol) {
     return (

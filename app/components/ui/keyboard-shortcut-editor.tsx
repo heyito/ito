@@ -49,7 +49,7 @@ export default function KeyboardShortcutEditor({
   const keyStateRef = useRef<KeyState>(new KeyState(shortcutKeys))
   const [pressedKeys, setPressedKeys] = useState<string[]>([])
   const [isEditing, setIsEditing] = useState(false)
-  const [newShortcut, setNewShortcut] = useState<string[]>([])
+  const [newShortcut, setNewShortcut] = useState<KeyName[]>([])
   const [validationError, setValidationError] = useState<string>('')
   const { setIsShortcutEnabled } = useAudioStore()
 
@@ -70,7 +70,7 @@ export default function KeyboardShortcutEditor({
             return
           }
 
-          let updatedShortcut: string[]
+          let updatedShortcut: KeyName[]
           if (!newShortcut.includes(normalizedKey)) {
             updatedShortcut = [...newShortcut, normalizedKey]
           } else {
@@ -183,7 +183,7 @@ export default function KeyboardShortcutEditor({
             {newShortcut.map((keyboardKey, index) => (
               <KeyboardKey
                 key={index}
-                keyboardKey={keyboardKey as KeyName}
+                keyboardKey={keyboardKey}
                 className="bg-white border-2 border-neutral-300"
                 style={{
                   width: `${keySize}px`,
@@ -235,7 +235,7 @@ export default function KeyboardShortcutEditor({
             {shortcutKeys.map((keyboardKey, index) => (
               <KeyboardKey
                 key={index}
-                keyboardKey={keyboardKey as KeyName}
+                keyboardKey={keyboardKey}
                 className={`${pressedKeys.includes(keyboardKey.toLowerCase()) ? 'bg-purple-50 border-2 border-purple-200' : 'bg-white border-2 border-neutral-300'}`}
                 style={{
                   width: `${keySize}px`,

@@ -38,7 +38,7 @@ export function getKeyDisplay(
 ): string {
   const { showDirectionalText = false, format = 'symbol' } = options
 
-  const displayInfo = getKeyDisplayInfo(keyboardKey as KeyName)
+  const displayInfo = getKeyDisplayInfo(keyboardKey)
   const dirIndicator = getDirectionalIndicator(
     displayInfo.side,
     showDirectionalText,

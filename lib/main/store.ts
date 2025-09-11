@@ -5,10 +5,11 @@ import { STORE_KEYS } from '../constants/store-keys'
 import type { LlmSettings } from '@/app/store/useAdvancedSettingsStore'
 import { ItoMode } from '@/app/generated/ito_pb.js'
 import { ITO_MODE_SHORTCUT_DEFAULTS } from '../constants/keyboard-defaults.js'
+import { KeyName } from '../types/keyboard.js'
 
 export interface KeyboardShortcutConfig {
   id: string
-  keys: string[]
+  keys: KeyName[]
   mode: ItoMode
 }
 

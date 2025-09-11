@@ -6,6 +6,7 @@ import { BrowserWindow } from 'electron'
 import { audioRecorderService } from './audio'
 import { voiceInputService } from '../main/voiceInputService'
 import { traceLogger } from '../main/traceLogger'
+import { KeyName, keyNameMap, normalizeLegacyKey } from '../types/keyboard'
 
 interface KeyEvent {
   type: 'keydown' | 'keyup'
@@ -41,77 +42,19 @@ export const resetForTesting = () => {
 
 const nativeModuleName = 'global-key-listener'
 
-// Map of raw key names to their normalized representations
-const keyNameMap: Record<string, string> = {
-  MetaLeft: 'command',
-  MetaRight: 'command',
-  ControlLeft: 'control',
-  ControlRight: 'control',
-  Alt: 'option',
-  AltGr: 'option',
-  ShiftLeft: 'shift',
-  ShiftRight: 'shift',
-  Function: 'fn',
-  'Unknown(179)': 'fn_fast',
-  KeyA: 'a',
-  KeyB: 'b',
-  KeyC: 'c',
-  KeyD: 'd',
-  KeyE: 'e',
-  KeyF: 'f',
-  KeyG: 'g',
-  KeyH: 'h',
-  KeyI: 'i',
-  KeyJ: 'j',
-  KeyK: 'k',
-  KeyL: 'l',
-  KeyM: 'm',
-  KeyN: 'n',
-  KeyO: 'o',
-  KeyP: 'p',
-  KeyQ: 'q',
-  KeyR: 'r',
-  KeyS: 's',
-  KeyT: 't',
-  KeyU: 'u',
-  KeyV: 'v',
-  KeyW: 'w',
-  KeyX: 'x',
-  KeyY: 'y',
-  KeyZ: 'z',
-  Digit1: '1',
-  Digit2: '2',
-  Digit3: '3',
-  Digit4: '4',
-  Digit5: '5',
-  Digit6: '6',
-  Digit7: '7',
-  Digit8: '8',
-  Digit9: '9',
-  Digit0: '0',
-  Space: 'space',
-  Enter: 'enter',
-  Escape: 'esc',
-  Backspace: 'backspace',
-  Tab: 'tab',
-  CapsLock: 'caps',
-  Delete: 'delete',
-  ArrowUp: '↑',
-  ArrowDown: '↓',
-  ArrowLeft: '←',
-  ArrowRight: '→',
-}
-
 // Normalizes a raw key event into a consistent string
-function normalizeKey(rawKey: string): string {
+function normalizeKey(rawKey: string): KeyName {
   return keyNameMap[rawKey] || rawKey.toLowerCase()
 }
+
+// Export the key name mapping for use in UI components
+export { keyNameMap }
 
 // This set will track the state of all currently pressed keys.
 const pressedKeys = new Set<string>()
 
 // Track when each key was first pressed to detect stuck keys
-const keyPressTimestamps = new Map<string, number>()
+const keyPressTimestamps = new Map<KeyName, number>()
 
 // Timer for checking stuck keys
 let stuckKeyCheckTimer: NodeJS.Timeout | null = null
@@ -123,7 +66,7 @@ const STUCK_KEY_CHECK_INTERVAL = 1000 // Check every 1 second
 // Function to check for and remove stuck keys
 function checkForStuckKeys() {
   const currentTime = Date.now()
-  const stuckKeys: string[] = []
+  const stuckKeys: KeyName[] = []
 
   for (const [key, pressTime] of keyPressTimestamps) {
     if (currentTime - pressTime > STUCK_KEY_TIMEOUT) {
@@ -141,14 +84,20 @@ function checkForStuckKeys() {
       const activeShortcut = keyboardShortcuts
         .filter(ks => ks.keys.length > 0)
         .find(shortcut => {
-          const hasAllKeys = shortcut.keys.every(key => pressedKeys.has(key))
+          const normalizedShortcutKeys = shortcut.keys.map(normalizeLegacyKey)
+          const hasAllKeys = normalizedShortcutKeys.every(key =>
+            pressedKeys.has(key),
+          )
           const exactMatch =
-            shortcut.keys.length === pressedKeys.size && hasAllKeys
+            normalizedShortcutKeys.length === pressedKeys.size && hasAllKeys
           return exactMatch
         })
 
       // Don't remove the stuck key if it's part of the currently active shortcut
-      if (activeShortcut && activeShortcut.keys.includes(stuckKey)) {
+      if (
+        activeShortcut &&
+        activeShortcut.keys.map(normalizeLegacyKey).includes(stuckKey)
+      ) {
         shouldRemove = false
       }
     }
@@ -218,8 +167,16 @@ function handleKeyEventInMain(event: KeyEvent) {
   const currentlyHeldShortcut = keyboardShortcuts
     .filter(ks => ks.keys.length > 0)
     .find(shortcut => {
-      const hasAllKeys = shortcut.keys.every(key => pressedKeys.has(key))
-      const exactMatch = shortcut.keys.length === pressedKeys.size && hasAllKeys
+      // Normalize legacy keys in stored shortcuts
+      const normalizedShortcutKeys = shortcut.keys.map(normalizeLegacyKey)
+
+      // Check if all shortcut keys are pressed (exact match only)
+      const hasAllKeys = normalizedShortcutKeys.every(shortcutKey =>
+        pressedKeys.has(shortcutKey),
+      )
+
+      const exactMatch =
+        normalizedShortcutKeys.length === pressedKeys.size && hasAllKeys
 
       return exactMatch
     })
@@ -428,10 +385,13 @@ const getKeysToBlock = (shortcut?: KeyboardShortcutConfig): string[] => {
     return []
   }
 
-  // Use the reverse map to find all raw keys for the normalized shortcut keys.
-  const keys = shortcut.keys.flatMap(
-    normalizedKey => reverseKeyNameMap[normalizedKey] || [],
-  )
+  const keys: string[] = []
+
+  for (const key of shortcut.keys) {
+    // Normalize legacy keys (maps base modifiers to left variants)
+    const normalizedKey = normalizeLegacyKey(key)
+    keys.push(...(reverseKeyNameMap[normalizedKey] || []))
+  }
 
   // Also block the special "fast fn" key if fn is part of the shortcut.
   if (shortcut.keys.includes('fn')) {

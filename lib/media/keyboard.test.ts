@@ -944,13 +944,13 @@ describe('Keyboard Module', () => {
   })
 
   describe('Key Normalization Business Logic', () => {
-    test('should normalize modifier keys correctly', async () => {
+    test('should normalize legacy modifier keys to left variants', async () => {
       mockMainStore.get.mockReturnValue({
         isShortcutGloballyEnabled: true,
         keyboardShortcuts: [
           {
             id: 'command-test',
-            keys: ['command'],
+            keys: ['command'], // Legacy key, should normalize to command-left
             mode: ItoMode.TRANSCRIBE,
           },
         ],
@@ -959,7 +959,7 @@ describe('Keyboard Module', () => {
       const { startKeyListener } = await import('./keyboard')
       startKeyListener()
 
-      // Test both left and right meta keys normalize to 'command'
+      // MetaLeft should match because 'command' normalizes to 'command-left'
       const metaLeftDown = {
         type: 'keydown',
         key: 'MetaLeft',
@@ -988,7 +988,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(metaLeftUp) + '\n'),
       )
 
-      // Now test right meta key
+      // MetaRight should NOT trigger since command normalizes to command-left only
       const metaRightDown = {
         type: 'keydown',
         key: 'MetaRight',
@@ -1003,7 +1003,8 @@ describe('Keyboard Module', () => {
       // Wait for debounce delay
       await waitForDebounce()
 
-      expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
+      // Should NOT have been called again
+      expect(mockVoiceInputService.startSTTService).not.toHaveBeenCalled()
     })
 
     test('should normalize letter keys correctly', async () => {

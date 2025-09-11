@@ -5,10 +5,11 @@ import { ItoMode } from '@/app/generated/ito_pb'
 import { useSettingsStore } from '@/app/store/useSettingsStore'
 import { Check, Pencil } from '@mynaui/icons-react'
 import { cx } from 'class-variance-authority'
+import { KeyName } from '@/lib/types/keyboard'
 
 export interface KeyboardShortcutConfig {
   id: string
-  keys: string[]
+  keys: KeyName[]
   mode: ItoMode
 }
 
@@ -43,7 +44,7 @@ export default function MultiShortcutEditor({
 
   // editing state
   const [editingId, setEditingId] = useState<string | null>(null) // existing row id or "__new__"
-  const [draftKeys, setDraftKeys] = useState<string[]>([])
+  const [draftKeys, setDraftKeys] = useState<KeyName[]>([])
   const [error, setError] = useState<string>('')
 
   const cleanupRef = useRef<(() => void) | null>(null)
@@ -141,7 +142,7 @@ export default function MultiShortcutEditor({
     'px-3 py-1.5 text-neutral-700 hover:bg-neutral-50 h-9 min-w-[48px] border-0'
 
   return (
-    <div className={cx('w-64', className)}>
+    <div className={cx('w-82', className)}>
       {rows.map(row => {
         const isEditing = editingId === row.id
         const displayKeys = isEditing ? draftKeys : row.keys

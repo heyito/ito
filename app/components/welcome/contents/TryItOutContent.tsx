@@ -10,6 +10,7 @@ import { useState } from 'react'
 import { ArrowUp } from '@mynaui/icons-react'
 import React from 'react'
 import { ItoMode } from '@/app/generated/ito_pb'
+import { getKeyDisplay } from '@/app/utils/keyboard'
 
 export default function TryItOut() {
   const { decrementOnboardingStep, setOnboardingCompleted } =
@@ -215,7 +216,10 @@ export default function TryItOut() {
                 keyboardShortcut.map((key, idx) => (
                   <React.Fragment key={`keyboard-shortcut-${idx}`}>
                     <span className="inline-flex items-center px-2 py-0.5 bg-neutral-100 border rounded text-xs font-mono mx-1">
-                      {key}
+                      {getKeyDisplay(key, {
+                        showDirectionalText: false,
+                        format: 'label',
+                      })}
                     </span>
                     {idx < keyboardShortcut.length - 1 && (
                       <span className="text-muted-foreground"> + </span>
@@ -227,7 +231,8 @@ export default function TryItOut() {
                   fn
                 </span>
               )}{' '}
-              key, speak, and let go to insert spoken text.
+              key{keyboardShortcut.length > 1 ? 's' : ''}, speak, and let go to
+              insert spoken text.
             </p>
           </div>
           <div className="flex flex-col items-start mb-8">

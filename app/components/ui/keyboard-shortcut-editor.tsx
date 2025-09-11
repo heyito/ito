@@ -8,6 +8,7 @@ import {
 } from '@/app/utils/keyboard'
 import { useAudioStore } from '@/app/store/useAudioStore'
 import { KeyboardShortcutConfig } from './multi-shortcut-editor'
+import { KeyName } from '@/lib/types/keyboard'
 
 interface KeyboardShortcutEditorProps {
   shortcut: KeyboardShortcutConfig
@@ -48,7 +49,7 @@ export default function KeyboardShortcutEditor({
   const keyStateRef = useRef<KeyState>(new KeyState(shortcutKeys))
   const [pressedKeys, setPressedKeys] = useState<string[]>([])
   const [isEditing, setIsEditing] = useState(false)
-  const [newShortcut, setNewShortcut] = useState<string[]>([])
+  const [newShortcut, setNewShortcut] = useState<KeyName[]>([])
   const [validationError, setValidationError] = useState<string>('')
   const { setIsShortcutEnabled } = useAudioStore()
 
@@ -69,7 +70,7 @@ export default function KeyboardShortcutEditor({
             return
           }
 
-          let updatedShortcut: string[]
+          let updatedShortcut: KeyName[]
           if (!newShortcut.includes(normalizedKey)) {
             updatedShortcut = [...newShortcut, normalizedKey]
           } else {

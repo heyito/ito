@@ -46,7 +46,6 @@ export function getKeyDisplay(
 
   const label = displayInfo.label
 
-  // Determine what to return for combined
   let result: string
   if (displayInfo.isModifier && displayInfo.symbol) {
     if (format === 'symbol') {

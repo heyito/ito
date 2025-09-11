@@ -39,6 +39,7 @@
     "runServerTests": "find server/src -name \"*.test.ts\" | xargs -I {} sh -c 'bun test {} || exit 255'",
     "clean": "rm -rf node_modules dist .vite",
     "clean:ito-app-data": "rm -rf ~/Library/Application\\ Support/Ito",
+    "postinstall": "bunx @electron/rebuild",
     "vite:build:app": "electron-vite build",
     "build:rust": "bash ./build-binaries.sh",
     "build:rust:mac": "bash ./build-binaries.sh --mac --universal",

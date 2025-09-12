@@ -3,6 +3,7 @@ import {
   ChartNoAxesColumn,
   InfoCircle,
   Play,
+  Stop,
   Copy,
   Check,
 } from '@mynaui/icons-react'
@@ -66,8 +67,11 @@ export default function HomeContent() {
   const [interactions, setInteractions] = useState<Interaction[]>([])
   const [loading, setLoading] = useState(true)
   const [playingAudio, setPlayingAudio] = useState<string | null>(null)
+  const [audioInstances, setAudioInstances] = useState<
+    Map<string, HTMLAudioElement>
+  >(new Map())
   const [copiedItems, setCopiedItems] = useState<Set<string>>(new Set())
-  const [tooltipOpen, setTooltipOpen] = useState<string | null>(null)
+  const [openTooltipKey, setOpenTooltipKey] = useState<string | null>(null)
   const [stats, setStats] = useState<InteractionStats>({
     streakDays: 0,
     totalWords: 0,
@@ -224,6 +228,24 @@ export default function HomeContent() {
     return unsubscribe
   }, [loadInteractions])
 
+  // Cleanup audio instances on unmount
+  useEffect(() => {
+    return () => {
+      audioInstances.forEach(audio => {
+        try {
+          audio.pause()
+          audio.currentTime = 0
+          // Best-effort release of object URL if used
+          if (audio.src?.startsWith('blob:')) {
+            URL.revokeObjectURL(audio.src)
+          }
+        } catch {
+          /* ignore */
+        }
+      })
+    }
+  }, [audioInstances])
+
   const formatTime = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleString('en-US', {
@@ -346,13 +368,32 @@ export default function HomeContent() {
     return buffer
   }
 
-  const playAudio = async (interaction: Interaction) => {
+  const handleAudioPlayStop = async (interaction: Interaction) => {
     try {
-      // Stop any currently playing audio
-      if (playingAudio) {
+      // If this interaction is currently playing, stop it
+      if (playingAudio === interaction.id) {
+        const current = audioInstances.get(interaction.id)
+        if (current) {
+          current.pause()
+          current.currentTime = 0
+          if (current.src?.startsWith('blob:')) {
+            URL.revokeObjectURL(current.src)
+          }
+        }
         setPlayingAudio(null)
-        // Small delay to ensure previous audio stops
-        await new Promise(resolve => setTimeout(resolve, 100))
+        return
+      }
+
+      // Stop any other playing audio
+      if (playingAudio) {
+        const other = audioInstances.get(playingAudio)
+        if (other) {
+          other.pause()
+          other.currentTime = 0
+          if (other.src?.startsWith('blob:')) {
+            URL.revokeObjectURL(other.src)
+          }
+        }
       }
 
       if (!interaction.raw_audio) {
@@ -360,59 +401,54 @@ export default function HomeContent() {
         return
       }
 
+      // Set playing state immediately for responsive UI
       setPlayingAudio(interaction.id)
 
-      // Convert Buffer to Uint8Array for browser compatibility
-      const pcmData = new Uint8Array(interaction.raw_audio)
+      // Reuse existing audio instance if available
+      let audio = audioInstances.get(interaction.id)
 
-      // Try to play as-is first (in case it's already a valid audio format)
-      let audioBlob = new Blob([pcmData], { type: 'audio/wav' })
-      let audioUrl = URL.createObjectURL(audioBlob)
-
-      // Create and play the audio
-      const audio = new Audio(audioUrl)
-
-      audio.onended = () => {
-        setPlayingAudio(null)
-        URL.revokeObjectURL(audioUrl) // Clean up memory
-      }
-
-      audio.onerror = async _error => {
-        console.log(
-          'Direct playback failed, trying as raw PCM with WAV headers...',
-        )
-        URL.revokeObjectURL(audioUrl)
-
+      if (!audio) {
+        const pcmData = new Uint8Array(interaction.raw_audio)
         try {
           // If direct playback fails, try converting raw PCM to WAV
           const wavBuffer = createWavFile(
             pcmData,
             interaction.sample_rate || 16000,
           )
-          audioBlob = new Blob([wavBuffer], { type: 'audio/wav' })
-          audioUrl = URL.createObjectURL(audioBlob)
+          const audioBlob = new Blob([wavBuffer], { type: 'audio/wav' })
+          const audioUrl = URL.createObjectURL(audioBlob)
 
-          const newAudio = new Audio(audioUrl)
-          newAudio.onended = () => {
+          audio = new Audio(audioUrl)
+          audio.onended = () => {
             setPlayingAudio(null)
-            URL.revokeObjectURL(audioUrl)
+            if (audio && audio.src?.startsWith('blob:')) {
+              URL.revokeObjectURL(audio.src)
+            }
           }
-          newAudio.onerror = err => {
-            console.error('WAV playback also failed:', err)
+          audio.onerror = err => {
+            console.error('Audio playback error:', err)
             setPlayingAudio(null)
-            URL.revokeObjectURL(audioUrl)
+            if (audio && audio.src?.startsWith('blob:')) {
+              URL.revokeObjectURL(audio.src)
+            }
           }
 
-          await newAudio.play()
-        } catch (wavError) {
-          console.error('Failed to create/play WAV file:', wavError)
+          setAudioInstances(prev => new Map(prev).set(interaction.id, audio!))
+        } catch (error) {
+          console.error('Failed to create audio instance:', error)
           setPlayingAudio(null)
+          return
         }
       }
 
-      await audio.play()
+      try {
+        await audio.play()
+      } catch (playError) {
+        console.error('Failed to start audio playback:', playError)
+        setPlayingAudio(null)
+      }
     } catch (error) {
-      console.error('Failed to play audio:', error)
+      console.error('Failed to play/stop audio:', error)
       setPlayingAudio(null)
     }
   }
@@ -423,7 +459,7 @@ export default function HomeContent() {
     try {
       await navigator.clipboard.writeText(text)
       setCopiedItems(prev => new Set(prev).add(interactionId))
-      setTooltipOpen(interactionId) // Keep tooltip open
+      setOpenTooltipKey(`copy:${interactionId}`) // Keep tooltip open
 
       // Reset the copied state after 2 seconds
       setTimeout(() => {
@@ -432,8 +468,10 @@ export default function HomeContent() {
           newSet.delete(interactionId)
           return newSet
         })
-        // Close tooltip if it's still open for this item
-        setTooltipOpen(prev => (prev === interactionId ? null : prev))
+        // Close tooltip if it's still open for this item (do not override if user hovered elsewhere)
+        setOpenTooltipKey(prev =>
+          prev === `copy:${interactionId}` ? null : prev,
+        )
       }, 2000)
     } catch (error) {
       console.error('Failed to copy text:', error)
@@ -592,10 +630,21 @@ export default function HomeContent() {
                           {/* Copy button */}
                           {!displayInfo.isError && (
                             <Tooltip
-                              open={tooltipOpen === interaction.id}
+                              open={openTooltipKey === `copy:${interaction.id}`}
                               onOpenChange={open => {
-                                if (!copiedItems.has(interaction.id)) {
-                                  setTooltipOpen(open ? interaction.id : null)
+                                if (open) {
+                                  // Opening: exclusively show this tooltip
+                                  setOpenTooltipKey(`copy:${interaction.id}`)
+                                } else {
+                                  // Closing: if in copied state, keep it open until timer clears,
+                                  // otherwise close normally
+                                  if (!copiedItems.has(interaction.id)) {
+                                    setOpenTooltipKey(prev =>
+                                      prev === `copy:${interaction.id}`
+                                        ? null
+                                        : prev,
+                                    )
+                                  }
                                 }
                               }}
                             >
@@ -620,37 +669,48 @@ export default function HomeContent() {
                                   )}
                                 </button>
                               </TooltipTrigger>
-                              <TooltipContent>
-                                <p>
-                                  {copiedItems.has(interaction.id)
-                                    ? 'Copied 🎉'
-                                    : 'Copy'}
-                                </p>
+                              <TooltipContent side="top" sideOffset={5}>
+                                {copiedItems.has(interaction.id)
+                                  ? 'Copied 🎉'
+                                  : 'Copy'}
                               </TooltipContent>
                             </Tooltip>
                           )}
 
-                          {/* Play button */}
-                          <button
-                            className={`p-1.5 hover:bg-gray-200 rounded transition-colors cursor-pointer ${
-                              playingAudio === interaction.id
-                                ? 'bg-blue-50 text-blue-600'
-                                : 'text-gray-600'
-                            }`}
-                            onClick={() => playAudio(interaction)}
-                            disabled={!interaction.raw_audio}
-                            title={
-                              !interaction.raw_audio
+                          {/* Play/Stop button with tooltip */}
+                          <Tooltip
+                            open={openTooltipKey === `play:${interaction.id}`}
+                            onOpenChange={open => {
+                              setOpenTooltipKey(
+                                open ? `play:${interaction.id}` : null,
+                              )
+                            }}
+                          >
+                            <TooltipTrigger asChild>
+                              <button
+                                className={`p-1.5 hover:bg-gray-200 rounded transition-colors cursor-pointer ${
+                                  playingAudio === interaction.id
+                                    ? 'bg-blue-50 text-blue-600'
+                                    : 'text-gray-600'
+                                }`}
+                                onClick={() => handleAudioPlayStop(interaction)}
+                                disabled={!interaction.raw_audio}
+                              >
+                                {playingAudio === interaction.id ? (
+                                  <Stop className="w-4 h-4" />
+                                ) : (
+                                  <Play className="w-4 h-4" />
+                                )}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" sideOffset={5}>
+                              {!interaction.raw_audio
                                 ? 'No audio available'
                                 : playingAudio === interaction.id
-                                  ? 'Playing audio...'
-                                  : 'Play audio'
-                            }
-                          >
-                            <Play
-                              className={`w-4 h-4 ${playingAudio === interaction.id ? 'animate-pulse' : ''}`}
-                            />
-                          </button>
+                                  ? 'Stop'
+                                  : 'Play'}
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
                       </div>
                     )

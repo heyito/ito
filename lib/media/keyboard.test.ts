@@ -268,7 +268,7 @@ describe('Keyboard Module', () => {
       mockChildProcess.stdout.emit('data', Buffer.from(malformedJson))
 
       expect(console.error).toHaveBeenCalledWith(
-        'Failed to parse key event:',
+        'Failed to parse key process event:',
         malformedJson.trim(),
         expect.any(Error),
       )

@@ -402,6 +402,13 @@ export const startKeyListener = () => {
       KeyListenerProcess = null
     })
 
+    KeyListenerProcess.on('exit', (code, signal) => {
+      console.warn(
+        `Key listener process exited with code: ${code}, signal: ${signal}`,
+      )
+      KeyListenerProcess = null
+    })
+
     console.log('Key listener started successfully.')
 
     // Start the stuck key checker

@@ -18,7 +18,7 @@ export class TranscriptionService {
   private audioChunksForInteraction: Buffer[] = []
   private interactionStartTime: number | null = null
   private currentSampleRate: number = 16000
-  private readonly MINIMUM_AUDIO_DURATION_MS = 500
+  private readonly MINIMUM_AUDIO_DURATION_MS = 100
   private hasStartedGrpc = false
   private bufferedAudioBytes = 0
   private currentMode: ItoMode | null = null

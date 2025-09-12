@@ -15,9 +15,28 @@ interface KeyEvent {
   raw_code: number
 }
 
+interface HeartbeatEvent {
+  type: 'heartbeat_ping'
+  id: string
+  timestamp: string
+}
+
+interface BlockedKeysEvent {
+  type: 'blocked_keys'
+  keys: string[]
+}
+
+type ProcessEvent = KeyEvent | HeartbeatEvent | BlockedKeysEvent
+
 // Global key listener process singleton
 export let KeyListenerProcess: ReturnType<typeof spawn> | null = null
 export let isShortcutActive = false
+
+// Heartbeat monitoring state
+let lastHeartbeatReceived = Date.now()
+let heartbeatCheckTimer: NodeJS.Timeout | null = null
+const HEARTBEAT_CHECK_INTERVAL_MS = 5000 // Check every 5 seconds
+const HEARTBEAT_TIMEOUT_MS = 15000 // 15 seconds without heartbeat triggers restart
 
 // Debouncing state
 let shortcutDebounceTimeout: NodeJS.Timeout | null = null
@@ -32,11 +51,13 @@ export const resetForTesting = () => {
     pressedKeys.clear()
     keyPressTimestamps.clear()
     stopStuckKeyChecker()
+    stopHeartbeatChecker()
     if (shortcutDebounceTimeout) {
       clearTimeout(shortcutDebounceTimeout)
       shortcutDebounceTimeout = null
     }
     pendingShortcut = null
+    lastHeartbeatReceived = Date.now()
   }
 }
 
@@ -49,6 +70,41 @@ function normalizeKey(rawKey: string): KeyName {
 
 // Export the key name mapping for use in UI components
 export { keyNameMap }
+
+// Heartbeat utility functions
+function handleHeartbeat(_event: HeartbeatEvent) {
+  lastHeartbeatReceived = Date.now()
+}
+
+function startHeartbeatChecker() {
+  if (!heartbeatCheckTimer) {
+    heartbeatCheckTimer = setInterval(() => {
+      const timeSinceLastHeartbeat = Date.now() - lastHeartbeatReceived
+      if (timeSinceLastHeartbeat > HEARTBEAT_TIMEOUT_MS) {
+        console.error(
+          `[Key listener] No heartbeat received for ${timeSinceLastHeartbeat}ms, restarting key listener...`,
+        )
+        restartKeyListener()
+      }
+    }, HEARTBEAT_CHECK_INTERVAL_MS)
+  }
+}
+
+function stopHeartbeatChecker() {
+  if (heartbeatCheckTimer) {
+    clearInterval(heartbeatCheckTimer)
+    heartbeatCheckTimer = null
+  }
+}
+
+function restartKeyListener() {
+  console.warn('🔄 Restarting keyboard listener due to timeout...')
+  stopKeyListener()
+  // Wait a brief moment before restarting to ensure cleanup is complete
+  setTimeout(() => {
+    startKeyListener()
+  }, 1000)
+}
 
 // This set will track the state of all currently pressed keys.
 const pressedKeys = new Set<string>()
@@ -277,6 +333,7 @@ export const startKeyListener = () => {
       RUST_BACKTRACE: '1',
       OBJC_DISABLE_INITIALIZE_FORK_SAFETY: 'YES',
     }
+
     KeyListenerProcess = spawn(binaryPath, [], {
       stdio: ['pipe', 'pipe', 'pipe'],
       env,
@@ -298,44 +355,68 @@ export const startKeyListener = () => {
       for (const line of lines) {
         if (line.trim()) {
           try {
-            const event = JSON.parse(line)
+            const event: ProcessEvent = JSON.parse(line)
 
-            // 1. Process the event here in the main process for hotkey detection.
-            handleKeyEventInMain(event)
+            // Handle heartbeat and other system events
+            if (event.type === 'heartbeat_ping') {
+              handleHeartbeat(event)
+              continue
+            } else if (event.type === 'blocked_keys') {
+              // Log blocked keys for debugging
+              console.info('🔒 Blocked keys received:', event.keys)
+              continue
+            }
 
-            // 2. Continue to broadcast the raw event to all renderer windows for UI updates.
-            BrowserWindow.getAllWindows().forEach(window => {
-              if (!window.webContents.isDestroyed()) {
-                window.webContents.send('key-event', event)
-              }
-            })
+            // Handle regular key events
+            if (event.type === 'keydown' || event.type === 'keyup') {
+              // 1. Process the event here in the main process for hotkey detection.
+              handleKeyEventInMain(event)
+
+              // 2. Continue to broadcast the raw event to all renderer windows for UI updates.
+              BrowserWindow.getAllWindows().forEach(window => {
+                if (!window.webContents.isDestroyed()) {
+                  window.webContents.send('key-event', event)
+                }
+              })
+            }
           } catch (e) {
-            console.error('Failed to parse key event:', line, e)
+            console.error('Failed to parse key process event:', line, e)
           }
         }
       }
     })
 
     KeyListenerProcess.stderr?.on('data', data => {
-      console.error('Key listener stderr:', data.toString())
+      console.error('[Key listener] stderr:', data.toString())
     })
 
     KeyListenerProcess.on('error', error => {
-      console.error('Key listener process spawn error:', error)
+      console.error('[Key listener] process spawn error:', error)
       KeyListenerProcess = null
     })
 
     KeyListenerProcess.on('close', (code, signal) => {
       console.warn(
-        `Key listener process exited with code: ${code}, signal: ${signal}`,
+        `[Key listener] process closed with code: ${code}, signal: ${signal}`,
       )
       KeyListenerProcess = null
     })
 
-    console.log('Key listener started successfully.')
+    KeyListenerProcess.on('exit', (code, signal) => {
+      console.warn(
+        `[Key listener] process exited with code: ${code}, signal: ${signal}`,
+      )
+      KeyListenerProcess = null
+    })
+
+    console.log('[Key listener] started successfully.')
 
     // Start the stuck key checker
     startStuckKeyChecker()
+
+    // Start heartbeat monitoring
+    lastHeartbeatReceived = Date.now()
+    startHeartbeatChecker()
   } catch (error) {
     console.error('Failed to start key listener:', error)
     KeyListenerProcess = null
@@ -408,6 +489,10 @@ export const stopKeyListener = () => {
     pressedKeys.clear()
     keyPressTimestamps.clear()
     stopStuckKeyChecker()
+
+    // Clean up heartbeat state
+    stopHeartbeatChecker()
+
     KeyListenerProcess.kill('SIGTERM')
     KeyListenerProcess = null
   }

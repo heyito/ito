@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::io::{self, BufRead, Write};
 use std::thread;
+use std::time::{Duration, Instant};
 
 mod key_codes;
 
@@ -37,6 +38,24 @@ fn main() {
                     Err(e) => eprintln!("Error parsing command: {}", e),
                 }
             }
+        }
+    });
+
+    // Spawn heartbeat thread
+    thread::spawn(|| {
+        let mut heartbeat_id = 0u64;
+        loop {
+            thread::sleep(Duration::from_secs(10)); // Send heartbeat every 10 seconds
+
+            heartbeat_id += 1;
+            let heartbeat_json = json!({
+                "type": "heartbeat_ping",
+                "id": heartbeat_id.to_string(),
+                "timestamp": Utc::now().to_rfc3339()
+            });
+
+            println!("{}", heartbeat_json);
+            io::stdout().flush().unwrap();
         }
     });
 

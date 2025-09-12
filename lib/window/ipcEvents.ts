@@ -1,14 +1,12 @@
-import {
-  BrowserWindow,
-  ipcMain,
-  shell,
-  systemPreferences,
-  app,
-  autoUpdater,
-} from 'electron'
+import { BrowserWindow, ipcMain, shell, app, autoUpdater } from 'electron'
 import log from 'electron-log'
 import os from 'os'
 import store, { getCurrentUserId } from '../main/store'
+import { STORE_KEYS } from '../constants/store-keys'
+import {
+  checkAccessibilityPermission,
+  checkMicrophonePermission,
+} from '../utils/crossPlatform'
 
 import {
   startKeyListener,
@@ -23,7 +21,9 @@ import {
   handleLogout,
   ensureValidTokens,
 } from '../auth/events'
-import { Auth0Config } from '../auth/config'
+import { KeyValueStore } from '../main/sqlite/repo'
+import { machineId } from 'node-machine-id'
+import { Auth0Config, Auth0Connections } from '../auth/config'
 import {
   NotesTable,
   DictionaryTable,
@@ -31,6 +31,12 @@ import {
 } from '../main/sqlite/repo'
 import { audioRecorderService } from '../media/audio'
 import { voiceInputService } from '../main/voiceInputService'
+import { ItoMode } from '@/app/generated/ito_pb'
+import {
+  getSelectedText,
+  getSelectedTextString,
+  hasSelectedText,
+} from '../media/selected-text-reader'
 
 const handleIPC = (channel: string, handler: (...args: any[]) => any) => {
   ipcMain.handle(channel, handler)
@@ -50,7 +56,13 @@ export function registerIPC() {
   ipcMain.on('audio-devices-changed', () => {
     log.info('[IPC] Audio devices changed, notifying windows.')
     // Notify all windows to refresh their device lists in the UI.
-    mainWindow?.webContents.send('force-device-list-reload')
+    if (
+      mainWindow &&
+      !mainWindow.isDestroyed() &&
+      !mainWindow.webContents.isDestroyed()
+    ) {
+      mainWindow.webContents.send('force-device-list-reload')
+    }
     getPillWindow()?.webContents.send('force-device-list-reload')
   })
 
@@ -117,7 +129,7 @@ export function registerIPC() {
   })
   handleIPC('stop-key-listener', () => stopKeyListener())
   handleIPC('start-native-recording-service', () =>
-    voiceInputService.startSTTService(),
+    voiceInputService.startSTTService(ItoMode.TRANSCRIBE),
   )
   handleIPC('stop-native-recording-service', () =>
     voiceInputService.stopSTTService(),
@@ -143,13 +155,12 @@ export function registerIPC() {
 
   // Permissions
   handleIPC('check-accessibility-permission', (_e, prompt: boolean = false) =>
-    systemPreferences.isTrustedAccessibilityClient(prompt),
+    checkAccessibilityPermission(prompt),
   )
   handleIPC(
     'check-microphone-permission',
     async (_e, prompt: boolean = false) => {
-      if (prompt) return systemPreferences.askForMediaAccess('microphone')
-      return systemPreferences.getMediaAccessStatus('microphone') === 'granted'
+      return checkMicrophonePermission(prompt)
     },
   )
 
@@ -241,11 +252,218 @@ export function registerIPC() {
     window?.setFullScreen(!window.isFullScreen())
   })
   handleIPC('web-open-url', (_e, url) => shell.openExternal(url))
+  // Auth0 DB signup proxy (avoids CORS issues from custom schemes)
+  handleIPC('auth0-db-signup', async (_e, { email, password, name }) => {
+    try {
+      const url = `https://${Auth0Config.domain}/dbconnections/signup`
+      const payload: any = {
+        client_id: Auth0Config.clientId,
+        email,
+        password,
+        name,
+        connection: Auth0Connections.database,
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      let data: any
+      try {
+        data = await res.json()
+      } catch {
+        data = undefined
+      }
+      if (!res.ok) {
+        const message =
+          data?.description ||
+          data?.error ||
+          `Auth0 signup failed (${res.status})`
+        return { success: false, error: message, status: res.status }
+      }
+      console.log('[IPC] auth0-db-signup response', res.status, data)
+      return { success: true, data }
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Network error' }
+    }
+  })
+
+  // Auth0 DB login via Password Realm (Resource Owner Password) grant
+  handleIPC('auth0-db-login', async (_e, { email, password }) => {
+    try {
+      if (!email || !password) {
+        return { success: false, error: 'Missing email or password' }
+      }
+      const url = `https://${Auth0Config.domain}/oauth/token`
+      const payload: any = {
+        grant_type: 'http://auth0.com/oauth/grant-type/password-realm',
+        client_id: Auth0Config.clientId,
+        username: email,
+        password,
+        realm: Auth0Connections.database,
+        scope: Auth0Config.scope,
+      }
+      if (Auth0Config.audience) {
+        payload.audience = Auth0Config.audience
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      let data: any
+      try {
+        data = await res.json()
+      } catch {
+        data = undefined
+      }
+      if (!res.ok) {
+        const message =
+          data?.error_description ||
+          data?.error ||
+          `Auth0 login failed (${res.status})`
+        return { success: false, error: message, status: res.status }
+      }
+
+      return {
+        success: true,
+        tokens: {
+          id_token: data?.id_token || null,
+          access_token: data?.access_token || null,
+          refresh_token: data?.refresh_token || null,
+          scope: data?.scope || null,
+          expires_in: data?.expires_in || null,
+          token_type: data?.token_type || null,
+        },
+      }
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Network error' }
+    }
+  })
+
+  // Send verification email via server proxy
+  handleIPC('auth0-send-verification', async (_e, { dbUserId }) => {
+    try {
+      if (!dbUserId) return { success: false, error: 'Missing user identifier' }
+      const baseUrl = import.meta.env.VITE_GRPC_BASE_URL
+      const token = (store.get(STORE_KEYS.ACCESS_TOKEN) as string | null) || ''
+      const url = new URL('/auth0/send-verification', baseUrl)
+      const res = await fetch(url.toString(), {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ dbUserId, clientId: Auth0Config.clientId }),
+      })
+      const data: any = await res.json().catch(() => undefined)
+      if (!res.ok) {
+        return {
+          success: false,
+          error: data?.error || `Verification request failed (${res.status})`,
+          status: res.status,
+        }
+      }
+      return data
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Network error' }
+    }
+  })
+
+  // Check if email exists for db signup and whether it's verified (via server proxy)
+  handleIPC('auth0-check-email', async (_e, { email }) => {
+    try {
+      if (!email) return { success: false, error: 'Missing email' }
+      const baseUrl = import.meta.env.VITE_GRPC_BASE_URL
+      const token = (store.get(STORE_KEYS.ACCESS_TOKEN) as string | null) || ''
+      const url = new URL(
+        `/auth0/users-by-email?email=${encodeURIComponent(email)}`,
+        baseUrl,
+      )
+      const res = await fetch(url.toString(), {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      })
+      const data: any = await res.json().catch(() => undefined)
+      if (!res.ok) {
+        return {
+          success: false,
+          error: data?.error || `Lookup failed (${res.status})`,
+          status: res.status,
+        }
+      }
+      return data
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Network error' }
+    }
+  })
+  handleIPC('open-auth-window', async (_e, { url, redirectUri }) => {
+    try {
+      if (!url || !redirectUri)
+        return { success: false, error: 'Missing url or redirectUri' }
+
+      const win = new BrowserWindow({
+        parent: mainWindow ?? undefined,
+        modal: true,
+        width: 480,
+        height: 720,
+        show: true,
+        autoHideMenuBar: true,
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true,
+          sandbox: true,
+        },
+      })
+
+      const maybeHandleRedirect = (event: Electron.Event, navUrl: string) => {
+        try {
+          if (!navUrl || !navUrl.startsWith(redirectUri)) return
+          event.preventDefault()
+          const u = new URL(navUrl)
+          const code = u.searchParams.get('code') || ''
+          const state = u.searchParams.get('state') || ''
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('auth-code-received', code, state)
+          }
+          if (!win.isDestroyed()) win.close()
+        } catch (err) {
+          console.error('[IPC] open-auth-window redirect parse error:', err)
+        }
+      }
+
+      win.webContents.on('will-redirect', maybeHandleRedirect)
+      win.webContents.on('will-navigate', maybeHandleRedirect)
+
+      await win.loadURL(url)
+      return { success: true }
+    } catch (error: any) {
+      console.error('[IPC] open-auth-window error:', error)
+      return { success: false, error: error?.message || 'Unknown error' }
+    }
+  })
   handleIPC('get-native-audio-devices', async () => {
     log.info(
       '[IPC] Received get-native-audio-devices, calling requestDeviceListPromise...',
     )
     return audioRecorderService.getDeviceList()
+  })
+
+  // Selected Text Reader
+  handleIPC('get-selected-text', async (_e, options) => {
+    log.info('[IPC] Received get-selected-text with options:', options)
+    return getSelectedText(options)
+  })
+  handleIPC('get-selected-text-string', async (_e, maxLength) => {
+    log.info('[IPC] Received get-selected-text-string')
+    return getSelectedTextString(maxLength)
+  })
+  handleIPC('has-selected-text', async () => {
+    log.info('[IPC] Received has-selected-text')
+    return hasSelectedText()
   })
 
   // App lifecycle
@@ -297,6 +515,13 @@ export function registerIPC() {
     }
     const { deleteCompleteUserData } = await import('../main/sqlite/db')
     return deleteCompleteUserData(userId)
+  })
+
+  handleIPC('update-advanced-settings', async (_e, advancedSettings) => {
+    console.log('Updating advanced settings:', advancedSettings)
+    const { grpcClient } = await import('../clients/grpcClient')
+    const result = await grpcClient.updateAdvancedSettings(advancedSettings)
+    return result
   })
 
   // Server health check
@@ -367,19 +592,46 @@ export function registerIPC() {
   // When the hotkey is pressed, start recording and notify the pill window.
   ipcMain.on('start-native-recording', _event => {
     log.info(`IPC: Received 'start-native-recording'`)
-    voiceInputService.startSTTService()
+    voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
   })
 
   ipcMain.on('start-native-recording-test', _event => {
     log.info(`IPC: Received 'start-native-recording-test'`)
-    const sendToServer = false
-    voiceInputService.startSTTService(sendToServer)
+    voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
   })
 
   // When the hotkey is released, stop recording and notify the pill window.
   ipcMain.on('stop-native-recording', () => {
     log.info('IPC: Received stop-native-recording.')
     voiceInputService.stopSTTService()
+  })
+
+  // Analytics Device ID storage - using machine ID
+  handleIPC('analytics:get-device-id', async () => {
+    try {
+      // First try to get cached device ID from SQLite
+      let deviceId = await KeyValueStore.get('analytics_device_id')
+
+      if (!deviceId) {
+        // Generate machine-specific ID if none exists
+        deviceId = await machineId()
+        await KeyValueStore.set('analytics_device_id', deviceId)
+        log.info('[Analytics] Generated new machine-based device ID:', deviceId)
+      } else {
+        log.info('[Analytics] Using cached machine-based device ID:', deviceId)
+      }
+
+      return deviceId
+    } catch (error) {
+      log.error('[Analytics] Failed to get/generate device ID:', error)
+      // Fallback to basic machine id without caching
+      try {
+        return await machineId()
+      } catch (fallbackError) {
+        log.error('[Analytics] Machine ID fallback failed:', fallbackError)
+        return undefined
+      }
+    }
   })
 }
 
@@ -449,21 +701,18 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
   handleIPC(
     `check-accessibility-permission-${mainWindow.id}`,
     (_event, prompt: boolean = false) => {
-      return systemPreferences.isTrustedAccessibilityClient(prompt)
+      return checkAccessibilityPermission(prompt)
     },
   )
 
   // Microphone permission check
   handleIPC(
     `check-microphone-permission-${mainWindow.id}`,
-    (_event, prompt: boolean = false) => {
+    async (_event, prompt: boolean = false) => {
       log.info('check-microphone-permission prompt', prompt)
-      if (prompt) {
-        const res = systemPreferences.askForMediaAccess('microphone')
-        log.info('check-microphone-permission askForMediaAccess', res)
-        return res
-      }
-      return systemPreferences.getMediaAccessStatus('microphone') === 'granted'
+      const res = await checkMicrophonePermission(prompt)
+      log.info('check-microphone-permission result', res)
+      return res
     },
   )
 
@@ -501,9 +750,20 @@ ipcMain.on('volume-update', (_event, volume: number) => {
 // Forwards settings updates from the main window to the pill window
 ipcMain.on('settings-update', (_event, settings: any) => {
   getPillWindow()?.webContents.send('settings-update', settings)
+
+  // If microphone selection changed, ensure TranscriptionService config is set
+  if (settings && typeof settings.microphoneDeviceId === 'string') {
+    // Ask the recorder for the effective output config for the selected mic
+    voiceInputService.handleMicrophoneChanged(settings.microphoneDeviceId)
+  }
 })
 
 // Forwards onboarding updates from the main window to the pill window
 ipcMain.on('onboarding-update', (_event, onboarding: any) => {
   getPillWindow()?.webContents.send('onboarding-update', onboarding)
+})
+
+// Forwards user authentication updates from the main window to the pill window
+ipcMain.on('user-auth-update', (_event, authUser: any) => {
+  getPillWindow()?.webContents.send('user-auth-update', authUser)
 })

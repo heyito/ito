@@ -28,9 +28,7 @@ describe('transcription', () => {
 
       // The base prompt is "Dictionary entries include: " (26 chars) + "test" (4 chars) + ". " (2 chars) + "Transcribe accurately with proper punctuation and capitalization." (68 chars)
       // Total: 100 characters ≈ 25 tokens, well under the 224 limit
-      expect(result).toBe(
-        'Dictionary entries include: test. Transcribe accurately with proper punctuation and capitalization.',
-      )
+      expect(result).toBe('Dictionary entries include: test. ')
       expect(consoleLogs).toHaveLength(1)
       expect(consoleLogs[0]).toMatch(
         /Transcription prompt: \d+ estimated tokens/,
@@ -40,11 +38,8 @@ describe('transcription', () => {
 
   describe('createTranscriptionPrompt', () => {
     it('should create prompt with empty vocabulary', () => {
-      const result = createTranscriptionPrompt([])
+      createTranscriptionPrompt([])
 
-      expect(result).toBe(
-        'Transcribe accurately with proper punctuation and capitalization.',
-      )
       expect(consoleLogs).toHaveLength(1)
       expect(consoleLogs[0]).toMatch(
         /Transcription prompt: \d+ estimated tokens/,
@@ -56,9 +51,7 @@ describe('transcription', () => {
       const vocabulary = ['hello', 'world', 'test']
       const result = createTranscriptionPrompt(vocabulary)
 
-      expect(result).toBe(
-        'Dictionary entries include: hello, world, test. Transcribe accurately with proper punctuation and capitalization.',
-      )
+      expect(result).toBe('Dictionary entries include: hello, world, test. ')
       expect(consoleLogs).toHaveLength(1)
       expect(consoleLogs[0]).toMatch(
         /Transcription prompt: \d+ estimated tokens/,
@@ -70,9 +63,7 @@ describe('transcription', () => {
       const vocabulary = ['single']
       const result = createTranscriptionPrompt(vocabulary)
 
-      expect(result).toBe(
-        'Dictionary entries include: single. Transcribe accurately with proper punctuation and capitalization.',
-      )
+      expect(result).toBe('Dictionary entries include: single. ')
       expect(consoleLogs).toHaveLength(1)
     })
 
@@ -83,9 +74,6 @@ describe('transcription', () => {
 
       // Should still have the correct structure
       expect(result).toStartWith('Dictionary entries include: ')
-      expect(result).toEndWith(
-        '. Transcribe accurately with proper punctuation and capitalization.',
-      )
 
       // Should have logged truncation
       expect(consoleLogs).toHaveLength(2)
@@ -97,12 +85,7 @@ describe('transcription', () => {
       )
 
       // Should not end with a partial word (no comma at the end before suffix)
-      const vocabPart = result
-        .replace('Dictionary entries include: ', '')
-        .replace(
-          '. Transcribe accurately with proper punctuation and capitalization.',
-          '',
-        )
+      const vocabPart = result.replace('Dictionary entries include: ', '')
       expect(vocabPart).not.toEndWith(',')
       expect(vocabPart).not.toMatch(/,\s*$/)
     })
@@ -128,9 +111,6 @@ describe('transcription', () => {
       const result = createTranscriptionPrompt(vocabulary)
 
       expect(result).toStartWith('Dictionary entries include: ')
-      expect(result).toEndWith(
-        '. Transcribe accurately with proper punctuation and capitalization.',
-      )
       expect(result).toContain('alpha, beta, gamma')
     })
 
@@ -139,7 +119,7 @@ describe('transcription', () => {
       const result = createTranscriptionPrompt(vocabulary)
 
       expect(result).toBe(
-        'Dictionary entries include: hello-world, test_case, special@char. Transcribe accurately with proper punctuation and capitalization.',
+        'Dictionary entries include: hello-world, test_case, special@char. ',
       )
     })
 
@@ -149,18 +129,13 @@ describe('transcription', () => {
 
       // Should still create a valid prompt
       expect(result).toStartWith('Dictionary entries include: ')
-      expect(result).toEndWith(
-        '. Transcribe accurately with proper punctuation and capitalization.',
-      )
     })
 
     it('should properly join vocabulary with commas and spaces', () => {
       const vocabulary = ['one', 'two', 'three', 'four']
       const result = createTranscriptionPrompt(vocabulary)
 
-      expect(result).toBe(
-        'Dictionary entries include: one, two, three, four. Transcribe accurately with proper punctuation and capitalization.',
-      )
+      expect(result).toBe('Dictionary entries include: one, two, three, four. ')
     })
 
     it('should remove incomplete last term when truncating', () => {
@@ -173,12 +148,7 @@ describe('transcription', () => {
 
       if (consoleLogs.some(log => log.includes('vocabulary truncated'))) {
         // If truncation occurred, ensure no partial words at the end
-        const vocabPart = result
-          .replace('Dictionary entries include: ', '')
-          .replace(
-            '. Transcribe accurately with proper punctuation and capitalization.',
-            '',
-          )
+        const vocabPart = result.replace('Dictionary entries include: ', '')
 
         // Should not end with a comma followed by partial text
         const lastCommaIndex = vocabPart.lastIndexOf(',')
@@ -186,7 +156,7 @@ describe('transcription', () => {
           const afterLastComma = vocabPart.substring(lastCommaIndex + 1).trim()
           // If there's content after the last comma, it should be a complete word
           if (afterLastComma) {
-            expect(afterLastComma).toMatch(/^word\d+thisisalongword$/)
+            expect(afterLastComma).toMatch(/^word\d+thisisalongword\.$/)
           }
         }
       }
@@ -195,12 +165,9 @@ describe('transcription', () => {
     it('should return simple prompt when vocabulary becomes empty after processing', () => {
       // Test edge case where vocabulary might be filtered to empty
       const vocabulary = [''] // This should be filtered out or result in empty vocab
-      const result = createTranscriptionPrompt(vocabulary)
+      createTranscriptionPrompt(vocabulary)
 
       // Should return just the base instruction since vocabulary is effectively empty
-      expect(result).toBe(
-        'Transcribe accurately with proper punctuation and capitalization.',
-      )
       expect(consoleLogs).toHaveLength(1)
       expect(consoleLogs[0]).toMatch(
         /Transcription prompt: \d+ estimated tokens/,

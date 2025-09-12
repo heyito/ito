@@ -12,10 +12,14 @@ import {
   AdvancedSettings,
   AdvancedSettingsSchema,
   LlmSettingsSchema,
+  ItoMode,
 } from '../../generated/ito_pb.js'
 import { create } from '@bufbuild/protobuf'
 import type { HandlerContext } from '@connectrpc/connect'
-import { groqClient } from '../../clients/groqClient.js'
+import { getAsrProvider, getLlmProvider } from '../../clients/providerUtils.js'
+import { getStorageClient } from '../../clients/s3storageClient.js'
+import { v4 as uuidv4 } from 'uuid'
+import { createAudioKey } from '../../constants/storage.js'
 import {
   DictionaryRepository,
   InteractionsRepository,
@@ -30,11 +34,17 @@ import {
 } from '../../db/models.js'
 import { ConnectError, Code } from '@connectrpc/connect'
 import { kUser } from '../../auth/userContext.js'
-import { ItoMode } from './constants.js'
-import { WindowContext } from './types.js'
+import { ItoContext } from './types.js'
 import { HeaderValidator } from '../../validation/HeaderValidator.js'
 import { errorToProtobuf } from '../../clients/errors.js'
-import { ClientProvider } from '../../clients/providers.js'
+import {
+  getAdvancedSettingsHeaders,
+  detectItoMode,
+  getPromptForMode,
+  getItoMode,
+  createUserPromptWithContext,
+} from './helpers.js'
+import { ITO_MODE_SYSTEM_PROMPT } from './constants.js'
 
 /**
  * --- NEW: WAV Header Generation Function ---
@@ -91,7 +101,19 @@ function dbToNotePb(dbNote: DbNote): Note {
   })
 }
 
-function dbToInteractionPb(dbInteraction: DbInteraction): Interaction {
+function dbToInteractionPb(
+  dbInteraction: DbInteraction,
+  rawAudio?: Buffer,
+): Interaction {
+  let rawAudioDb: Uint8Array | undefined
+  if (rawAudio) {
+    rawAudioDb = new Uint8Array(rawAudio)
+  } else if (dbInteraction.raw_audio) {
+    rawAudioDb = new Uint8Array(dbInteraction.raw_audio)
+  } else {
+    rawAudioDb = undefined
+  }
+
   return create(InteractionSchema, {
     id: dbInteraction.id,
     userId: dbInteraction.user_id ?? '',
@@ -102,9 +124,8 @@ function dbToInteractionPb(dbInteraction: DbInteraction): Interaction {
     llmOutput: dbInteraction.llm_output
       ? JSON.stringify(dbInteraction.llm_output)
       : '',
-    rawAudio: dbInteraction.raw_audio
-      ? new Uint8Array(dbInteraction.raw_audio)
-      : new Uint8Array(0),
+    rawAudio: rawAudioDb,
+    rawAudioId: dbInteraction.raw_audio_id ?? '',
     durationMs: dbInteraction.duration_ms ?? 0,
     createdAt: dbInteraction.created_at.toISOString(),
     updatedAt: dbInteraction.updated_at.toISOString(),
@@ -136,6 +157,15 @@ function dbToAdvancedSettingsPb(
     updatedAt: dbAdvancedSettings.updated_at.toISOString(),
     llm: create(LlmSettingsSchema, {
       asrModel: dbAdvancedSettings.llm.asr_model,
+      asrPrompt: dbAdvancedSettings.llm.asr_prompt,
+      asrProvider: dbAdvancedSettings.llm.asr_provider,
+      llmProvider: dbAdvancedSettings.llm.llm_provider,
+      llmTemperature: dbAdvancedSettings.llm.llm_temperature,
+      llmModel: dbAdvancedSettings.llm.llm_model,
+      transcriptionPrompt: dbAdvancedSettings.llm.transcription_prompt,
+      editingPrompt: dbAdvancedSettings.llm.editing_prompt,
+      noSpeechThreshold: dbAdvancedSettings.llm.no_speech_threshold,
+      lowQualityThreshold: dbAdvancedSettings.llm.low_quality_threshold,
     }),
   })
 }
@@ -179,6 +209,11 @@ export default (router: ConnectRouter) => {
         `🔧 [${new Date().toISOString()}] Concatenated audio: ${totalLength} bytes`,
       )
 
+      // Extract settings headers first so they're available in catch block
+      const advancedSettingsHeaders = getAdvancedSettingsHeaders(
+        context.requestHeader,
+      )
+
       try {
         // 1. Set audio properties to match the new capture settings.
         const sampleRate = 16000 // Correct sample rate
@@ -194,68 +229,67 @@ export default (router: ConnectRouter) => {
         )
         const fullAudioWAV = Buffer.concat([wavHeader, fullAudio])
 
-        // 3. Extract and validate vocabulary and ASR model from gRPC metadata
+        // 3. Extract and validate vocabulary from gRPC metadata
         const vocabularyHeader = context.requestHeader.get('vocabulary')
         const vocabulary = vocabularyHeader
           ? HeaderValidator.validateVocabulary(vocabularyHeader)
           : []
 
-        const asrModelHeader = context.requestHeader.get('asr-model')
-        // Use header value if provided, otherwise fall back to environment variable for backwards compatibility
-        const asrModelToValidate =
-          asrModelHeader || process.env.GROQ_TRANSCRIPTION_MODEL
-
-        if (!asrModelToValidate) {
-          throw new ConnectError(
-            'ASR model must be provided either in header or GROQ_TRANSCRIPTION_MODEL environment variable',
-            Code.InvalidArgument,
-          )
-        }
-
-        const asrModel = HeaderValidator.validateAsrModel(asrModelToValidate)
-        console.log(
-          `[Transcription] Using validated ASR model: ${asrModel} (source: ${asrModelHeader ? 'header' : 'env'})`,
-        )
-
-        // 4. Send the corrected WAV file using the validated ASR model from headers.
-        let transcript = await groqClient.transcribeAudio(
-          fullAudioWAV,
-          'wav',
-          asrModel,
+        // 4. Send the corrected WAV file using the selected ASR provider
+        const asrProvider = getAsrProvider(advancedSettingsHeaders.asrProvider)
+        let transcript = await asrProvider.transcribeAudio(fullAudioWAV, {
+          fileType: 'wav',
+          asrModel: advancedSettingsHeaders.asrModel,
+          noSpeechThreshold: advancedSettingsHeaders.noSpeechThreshold,
+          lowQualityThreshold: advancedSettingsHeaders.lowQualityThreshold,
           vocabulary,
-        )
-
+        })
         console.log(
           `📝 [${new Date().toISOString()}] Received transcript: "${transcript}"`,
         )
 
-        // 5. Check if transcript contains "Hey Ito" in the first 5 words
-        const words = transcript.trim().split(/\s+/)
-        const firstFiveWords = words.slice(0, 5).join(' ').toLowerCase()
-
-        let mode = ItoMode.TRANSCRIBE
-        if (firstFiveWords.includes('hey ito')) {
-          mode = ItoMode.EDIT
-        }
-
-        console.log(
-          `🧠 [${new Date().toISOString()}] Detected "Hey Ito", adjusting transcript`,
-        )
-
         const windowTitle = context.requestHeader.get('window-title') || ''
         const appName = context.requestHeader.get('app-name') || ''
-        const windowContext: WindowContext = { windowTitle, appName }
-        if (mode === ItoMode.EDIT) {
-          transcript = await groqClient.adjustTranscript(
-            transcript,
-            mode,
-            windowContext,
-          )
-        }
+        const mode = getItoMode(context.requestHeader.get('mode'))
+
+        // Decode context text if it was base64 encoded due to Unicode characters
+        const rawContextText = context.requestHeader.get('context-text') || ''
+        const contextText = rawContextText.startsWith('base64:')
+          ? Buffer.from(rawContextText.substring(7), 'base64').toString('utf8')
+          : rawContextText
+
+        const windowContext: ItoContext = { windowTitle, appName, contextText }
+
+        const detectedMode = mode || detectItoMode(transcript)
+        const userPromptPrefix = getPromptForMode(
+          detectedMode,
+          advancedSettingsHeaders,
+        )
+        const userPrompt = createUserPromptWithContext(
+          transcript,
+          windowContext,
+        )
 
         console.log(
-          `📝 [${new Date().toISOString()}] Adjusted transcript: "${transcript}"`,
+          `[${new Date().toISOString()}] Detected mode: ${detectedMode}, adjusting transcript`,
         )
+
+        if (detectedMode === ItoMode.EDIT) {
+          const llmProvider = getLlmProvider(
+            advancedSettingsHeaders.llmProvider,
+          )
+          transcript = await llmProvider.adjustTranscript(
+            userPromptPrefix + '\n' + userPrompt,
+            {
+              temperature: advancedSettingsHeaders.llmTemperature,
+              model: advancedSettingsHeaders.llmModel,
+              prompt: ITO_MODE_SYSTEM_PROMPT[detectedMode],
+            },
+          )
+          console.log(
+            `📝 [${new Date().toISOString()}] Adjusted transcript: "${transcript}"`,
+          )
+        }
 
         const duration = Date.now() - startTime
         console.log(
@@ -276,7 +310,10 @@ export default (router: ConnectRouter) => {
         // Return structured error response
         return create(TranscriptionResponseSchema, {
           transcript: '',
-          error: errorToProtobuf(error, ClientProvider.GROQ),
+          error: errorToProtobuf(
+            error,
+            advancedSettingsHeaders.asrProvider as any,
+          ),
         })
       }
     },
@@ -331,10 +368,53 @@ export default (router: ConnectRouter) => {
       if (!userId) {
         throw new ConnectError('User not authenticated', Code.Unauthenticated)
       }
-      const interactionRequest = { ...request, userId }
-      const newInteraction =
-        await InteractionsRepository.create(interactionRequest)
-      return dbToInteractionPb(newInteraction)
+
+      let rawAudioId: string | undefined
+
+      // If raw audio is provided, upload to S3
+      if (request.rawAudio && request.rawAudio.length > 0) {
+        try {
+          const storageClient = getStorageClient()
+          rawAudioId = uuidv4()
+          const audioKey = createAudioKey(userId, rawAudioId)
+
+          // Upload audio to S3
+          await storageClient.uploadObject(
+            audioKey,
+            Buffer.from(request.rawAudio),
+            undefined, // ContentType
+            {
+              userId,
+              interactionId: request.id,
+              timestamp: new Date().toISOString(),
+            },
+          )
+
+          // Create interaction with UUID reference instead of blob
+          const interactionRequest = {
+            ...request,
+            userId,
+            rawAudioId,
+            rawAudio: undefined, // Don't store the blob in DB
+          }
+          const newInteraction =
+            await InteractionsRepository.create(interactionRequest)
+          return dbToInteractionPb(newInteraction)
+        } catch (error) {
+          console.error('Failed to upload audio to S3:', error)
+
+          throw new ConnectError(
+            'Failed to store interaction audio',
+            Code.Internal,
+          )
+        }
+      } else {
+        // No audio provided
+        const interactionRequest = { ...request, userId }
+        const newInteraction =
+          await InteractionsRepository.create(interactionRequest)
+        return dbToInteractionPb(newInteraction)
+      }
     },
 
     async getInteraction(request) {
@@ -342,6 +422,29 @@ export default (router: ConnectRouter) => {
       if (!interaction) {
         throw new ConnectError('Interaction not found', Code.NotFound)
       }
+
+      // If audio is stored in S3, fetch it
+      if (interaction.raw_audio_id && !interaction.raw_audio) {
+        try {
+          const storageClient = getStorageClient()
+          const userId = interaction.user_id || 'unknown'
+          const audioKey = createAudioKey(userId, interaction.raw_audio_id)
+
+          const { body } = await storageClient.getObject(audioKey)
+          if (body) {
+            // Convert stream to buffer
+            const chunks: Uint8Array[] = []
+            for await (const chunk of body) {
+              chunks.push(chunk as Uint8Array)
+            }
+            interaction.raw_audio = Buffer.concat(chunks)
+          }
+        } catch (error) {
+          console.error('Failed to fetch audio from S3:', error)
+          // Continue without audio if S3 fetch fails
+        }
+      }
+
       return dbToInteractionPb(interaction)
     },
 
@@ -358,7 +461,50 @@ export default (router: ConnectRouter) => {
         userId,
         since,
       )
-      return { interactions: interactions.map(dbToInteractionPb) }
+
+      // Create a map to store audio buffers by interaction ID
+      const rawAudioMap = new Map<string, Buffer>()
+
+      // Fetch all audio files from S3 in parallel
+      const storageClient = getStorageClient()
+      const audioFetchPromises = interactions
+        .filter(
+          interaction => interaction.raw_audio_id && !interaction.raw_audio,
+        )
+        .map(async interaction => {
+          try {
+            const audioKey = createAudioKey(
+              interaction.user_id || userId,
+              interaction.raw_audio_id!,
+            )
+            const { body } = await storageClient.getObject(audioKey)
+            if (body) {
+              // Convert stream to buffer
+              const chunks: Uint8Array[] = []
+              for await (const chunk of body) {
+                chunks.push(chunk as Uint8Array)
+              }
+              const buffer = Buffer.concat(chunks)
+              rawAudioMap.set(interaction.id, buffer)
+            }
+          } catch (error) {
+            console.error(
+              `Failed to fetch audio for interaction ${interaction.id}:`,
+              error,
+            )
+          }
+        })
+
+      // Wait for all audio fetches to complete
+      await Promise.all(audioFetchPromises)
+
+      return {
+        interactions: interactions.map(dbInteraction => {
+          // Use S3 audio if available
+          const audioBuffer = rawAudioMap.get(dbInteraction.id) || undefined
+          return dbToInteractionPb(dbInteraction, audioBuffer)
+        }),
+      }
     },
 
     async updateInteraction(request) {

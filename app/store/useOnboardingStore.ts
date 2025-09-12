@@ -2,7 +2,17 @@ import { create } from 'zustand'
 import { analytics, ANALYTICS_EVENTS } from '../components/analytics'
 import { STORE_KEYS } from '../../lib/constants/store-keys'
 
-type OnboardingCategory = 'sign-up' | 'permissions' | 'set-up' | 'try-it'
+// Onboarding category constants
+export const ONBOARDING_CATEGORIES = {
+  SIGN_UP: 'sign-up',
+  PERMISSIONS: 'permissions',
+  SET_UP: 'set-up',
+  TRY_IT: 'try-it',
+} as const
+
+// Export the type so it can be used in other files
+export type OnboardingCategory =
+  (typeof ONBOARDING_CATEGORIES)[keyof typeof ONBOARDING_CATEGORIES]
 
 interface OnboardingState {
   onboardingStep: number
@@ -18,36 +28,52 @@ interface OnboardingState {
   initializeOnboarding: () => void
 }
 
-const STEP_NAMES = [
-  'create_account',
-  'referral_source',
-  'data_control',
-  'permissions',
-  'microphone_test',
-  'keyboard_test',
-  'good_to_go',
-  'any_app',
-  'try_it_out',
+// Step name constants
+export const STEP_NAMES = {
+  CREATE_ACCOUNT: 'create_account',
+  REFERRAL_SOURCE: 'referral_source',
+  DATA_CONTROL: 'data_control',
+  PERMISSIONS: 'permissions',
+  MICROPHONE_TEST: 'microphone_test',
+  KEYBOARD_TEST: 'keyboard_test',
+  GOOD_TO_GO: 'good_to_go',
+  INTRODUCING_INTELLIGENT_MODE: 'introducing_intelligent_mode',
+  ANY_APP: 'any_app',
+  TRY_IT_OUT: 'try_it_out',
+}
+
+// Order here matters for onboarding flow
+export const STEP_NAMES_ARRAY = [
+  STEP_NAMES.CREATE_ACCOUNT,
+  STEP_NAMES.REFERRAL_SOURCE,
+  STEP_NAMES.DATA_CONTROL,
+  STEP_NAMES.PERMISSIONS,
+  STEP_NAMES.MICROPHONE_TEST,
+  STEP_NAMES.KEYBOARD_TEST,
+  STEP_NAMES.GOOD_TO_GO,
+  STEP_NAMES.INTRODUCING_INTELLIGENT_MODE,
+  STEP_NAMES.ANY_APP,
+  STEP_NAMES.TRY_IT_OUT,
 ]
 
 const getOnboardingCategory = (onboardingStep: number): OnboardingCategory => {
-  if (onboardingStep < 3) return 'sign-up'
-  if (onboardingStep < 4) return 'permissions'
-  if (onboardingStep < 7) return 'set-up'
-  return 'try-it'
+  if (onboardingStep < 3) return ONBOARDING_CATEGORIES.SIGN_UP
+  if (onboardingStep < 4) return ONBOARDING_CATEGORIES.PERMISSIONS
+  if (onboardingStep < 7) return ONBOARDING_CATEGORIES.SET_UP
+  return ONBOARDING_CATEGORIES.TRY_IT
 }
 
 export const getOnboardingCategoryIndex = (
   onboardingCategory: OnboardingCategory,
 ): number => {
-  if (onboardingCategory === 'sign-up') return 0
-  if (onboardingCategory === 'permissions') return 1
-  if (onboardingCategory === 'set-up') return 2
+  if (onboardingCategory === ONBOARDING_CATEGORIES.SIGN_UP) return 0
+  if (onboardingCategory === ONBOARDING_CATEGORIES.PERMISSIONS) return 1
+  if (onboardingCategory === ONBOARDING_CATEGORIES.SET_UP) return 2
   return 3
 }
 
 const getStepName = (step: number): string => {
-  return STEP_NAMES[step] || 'unknown'
+  return STEP_NAMES_ARRAY[step] || 'unknown'
 }
 
 // Initialize from electron store
@@ -77,7 +103,7 @@ const syncToStore = (state: Partial<OnboardingState>) => {
 
 export const useOnboardingStore = create<OnboardingState>(set => {
   const initialState = getInitialState()
-  const totalOnboardingSteps = STEP_NAMES.length
+  const totalOnboardingSteps = STEP_NAMES_ARRAY.length
 
   return {
     onboardingStep: initialState.onboardingStep,
@@ -152,7 +178,7 @@ export const useOnboardingStore = create<OnboardingState>(set => {
         analytics.trackOnboarding(ANALYTICS_EVENTS.ONBOARDING_COMPLETED, {
           step: state.totalOnboardingSteps,
           step_name: 'completed',
-          category: 'try-it',
+          category: ONBOARDING_CATEGORIES.TRY_IT,
           total_steps: state.totalOnboardingSteps,
         })
 

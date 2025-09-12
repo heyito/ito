@@ -15,4 +15,14 @@ export const MIGRATIONS: Migration[] = [
     up: 'ALTER TABLE interactions ADD COLUMN duration_ms INTEGER DEFAULT 0;',
     down: 'ALTER TABLE interactions DROP COLUMN duration_ms;',
   },
+  {
+    id: '20250110120000_add_sample_rate_to_interactions',
+    up: 'ALTER TABLE interactions ADD COLUMN sample_rate INTEGER;',
+    down: 'ALTER TABLE interactions DROP COLUMN sample_rate;',
+  },
+  {
+    id: '20250111120000_add_raw_audio_id_to_interactions',
+    up: 'ALTER TABLE interactions ADD COLUMN raw_audio_id TEXT;',
+    down: 'ALTER TABLE interactions DROP COLUMN raw_audio_id;',
+  },
 ]

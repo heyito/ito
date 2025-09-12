@@ -3,29 +3,34 @@ import appIcon from '@/resources/build/icon.png'
 import HomeKit from '@/app/components/home/HomeKit'
 import WelcomeKit from '@/app/components/welcome/WelcomeKit'
 import Pill from '@/app/components/pill/Pill'
-import { useOnboardingStore } from '@/app/store/useOnboardingStore'
+import {
+  STEP_NAMES,
+  STEP_NAMES_ARRAY,
+  useOnboardingStore,
+} from '@/app/store/useOnboardingStore'
 import { useAuth } from '@/app/components/auth/useAuth'
 import { WindowContextProvider } from '@/lib/window'
 import { Auth0Provider } from '@/app/components/auth/Auth0Provider'
 import { useDeviceChangeListener } from './hooks/useDeviceChangeListener'
 import { verifyStoredMicrophone } from './media/microphone'
 import { useEffect } from 'react'
-import { useGlobalShortcut } from './hooks/useGlobalShortcut'
 
 const MainApp = () => {
   const { onboardingCompleted, onboardingStep } = useOnboardingStore()
   const { isAuthenticated } = useAuth()
   useDeviceChangeListener()
-  useGlobalShortcut()
 
   useEffect(() => {
     verifyStoredMicrophone()
   }, [])
 
-  // If authenticated and onboarding completed, show main app
-  const shouldEnableShortcutGlobally =
-    onboardingCompleted || onboardingStep >= 7
+  const onboardingSetupCompleted =
+    onboardingStep >= STEP_NAMES_ARRAY.indexOf(STEP_NAMES.TRY_IT_OUT)
 
+  const shouldEnableShortcutGlobally =
+    onboardingCompleted || onboardingSetupCompleted
+
+  // If authenticated and onboarding completed, show main app
   if (isAuthenticated && onboardingCompleted) {
     window.api.send(
       'electron-store-set',

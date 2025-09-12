@@ -1,8 +1,17 @@
 import { create } from 'zustand'
 import { STORE_KEYS } from '../../lib/constants/store-keys'
 
-interface LlmSettings {
+export interface LlmSettings {
+  asrProvider: string
   asrModel: string
+  asrPrompt: string
+  llmProvider: string
+  llmModel: string
+  llmTemperature: number
+  transcriptionPrompt: string
+  editingPrompt: string
+  noSpeechThreshold: number
+  lowQualityThreshold: number
 }
 
 interface AdvancedSettingsState {
@@ -18,7 +27,16 @@ const getInitialState = () => {
 
   return {
     llm: {
+      asrProvider: storedAdvancedSettings.llm.asrProvider,
       asrModel: storedAdvancedSettings.llm.asrModel,
+      asrPrompt: storedAdvancedSettings.llm.asrPrompt,
+      llmProvider: storedAdvancedSettings.llm.llmProvider,
+      llmModel: storedAdvancedSettings.llm.llmModel,
+      llmTemperature: storedAdvancedSettings.llm.llmTemperature,
+      transcriptionPrompt: storedAdvancedSettings.llm.transcriptionPrompt,
+      editingPrompt: storedAdvancedSettings.llm.editingPrompt,
+      noSpeechThreshold: storedAdvancedSettings.llm.noSpeechThreshold,
+      lowQualityThreshold: storedAdvancedSettings.llm.lowQualityThreshold,
     },
   }
 }

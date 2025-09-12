@@ -45,10 +45,16 @@ service ItoService {
 // -----------------------------------------------------------------
 message Empty {}
 
+enum ItoMode {
+  TRANSCRIBE = 0;
+  EDIT = 1;
+}
+
 // Error Types
 // -----------------------------------------------------------------
 enum ClientProvider {
   GROQ = 0;
+  CEREBRAS = 1;
 }
 
 enum ErrorType {
@@ -126,11 +132,12 @@ message Interaction {
   string title = 3;
   string asr_output = 4; // JSON string
   string llm_output = 5; // JSON string
-  bytes raw_audio = 6 [(buf.validate.field).bytes.max_len = 100000000]; // 100 MB limit
+  bytes raw_audio = 6 [(buf.validate.field).bytes.max_len = 100000000]; // 100 MB limit 
   int32 duration_ms = 7; // Duration in milliseconds
   string created_at = 8;
   string updated_at = 9;
   string deleted_at = 10;
+  optional string raw_audio_id = 11; // UUID reference to S3 stored audio
 }
 
 message CreateInteractionRequest {
@@ -207,8 +214,18 @@ message DeleteUserDataRequest {
 
 // Advanced Settings
 // -----------------------------------------------------------------
+
 message LlmSettings {
   string asr_model = 1;
+  string asr_provider = 2;
+  string asr_prompt = 3;
+  string llm_provider = 4;
+  string llm_model = 5;
+  float llm_temperature = 6;
+  string transcription_prompt = 7;
+  string editing_prompt = 8;
+  float no_speech_threshold = 9;
+  float low_quality_threshold = 10;
 }
 
 message AdvancedSettings {

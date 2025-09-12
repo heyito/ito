@@ -1,3 +1,24 @@
+// Define the native binaries that are shared across platforms
+const nativeBinaries = [
+  'global-key-listener',
+  'audio-recorder',
+  'text-writer',
+  'active-application',
+  'selected-text-reader',
+]
+
+const getMacResources = () =>
+  nativeBinaries.map(binary => ({
+    from: `native/${binary}/target/\${arch}-apple-darwin/release/${binary}`,
+    to: `binaries/${binary}`,
+  }))
+
+const getWindowsResources = () =>
+  nativeBinaries.map(binary => ({
+    from: `native/${binary}/target/x86_64-pc-windows-gnu/release/${binary}.exe`,
+    to: `binaries/${binary}.exe`,
+  }))
+
 module.exports = {
   appId: 'ai.ito.ito',
   productName: 'Ito',
@@ -24,6 +45,7 @@ module.exports = {
     '!tsconfig.node.json',
     '!tsconfig.web.json',
     '!native/**',
+    '!build-*.sh',
     {
       from: 'out',
       filter: ['**/*'],
@@ -31,24 +53,6 @@ module.exports = {
   ],
   asar: true,
   asarUnpack: ['resources/**'],
-  extraResources: [
-    {
-      from: 'native/global-key-listener/target/${arch}-apple-darwin/release/global-key-listener',
-      to: 'binaries/global-key-listener',
-    },
-    {
-      from: 'native/audio-recorder/target/${arch}-apple-darwin/release/audio-recorder',
-      to: 'binaries/audio-recorder',
-    },
-    {
-      from: 'native/text-writer/target/${arch}-apple-darwin/release/text-writer',
-      to: 'binaries/text-writer',
-    },
-    {
-      from: 'native/active-application/target/${arch}-apple-darwin/release/text-writer',
-      to: 'binaries/active-application',
-    },
-  ],
   extraMetadata: {
     version: process.env.VITE_ITO_VERSION || '0.0.0-dev',
   },
@@ -70,20 +74,36 @@ module.exports = {
       NSMicrophoneUsageDescription:
         'Ito requires microphone access to transcribe your speech.',
     },
+    extraResources: getMacResources(),
   },
   dmg: {
     artifactName: 'Ito-Installer.${ext}',
   },
   win: {
-    target: ['nsis'],
+    target: [
+      {
+        target: 'nsis',
+        arch: ['x64'],
+      },
+    ],
     icon: 'resources/build/icon.ico',
     executableName: 'Ito',
+    requestedExecutionLevel: 'asInvoker',
+    extraResources: getWindowsResources(),
+    forceCodeSigning: false,
+    asarUnpack: [
+      'resources/**',
+      '**/node_modules/@sentry/**',
+      '**/node_modules/sqlite3/**',
+    ],
   },
+  nodeGypRebuild: false,
+  buildDependenciesFromSource: false,
   nsis: {
-    artifactName: '${name}-${version}-setup.${ext}',
+    artifactName: 'Ito-Installer.${ext}',
     shortcutName: '${productName}',
     uninstallDisplayName: '${productName}',
-    createDesktopShortcut: 'always',
+    createDesktopShortcut: false,
     oneClick: false,
     perMachine: false,
     allowToChangeInstallationDirectory: true,

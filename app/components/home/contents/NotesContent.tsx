@@ -14,10 +14,12 @@ import {
   DialogFooter,
 } from '../../ui/dialog'
 import { Button } from '../../ui/button'
+import { ItoMode } from '@/app/generated/ito_pb'
 
 export default function NotesContent() {
   const { notes, loadNotes, addNote, deleteNote, updateNote } = useNotesStore()
-  const { keyboardShortcut } = useSettingsStore()
+  const { getItoModeShortcuts } = useSettingsStore()
+  const keyboardShortcut = getItoModeShortcuts(ItoMode.TRANSCRIBE)[0].keys
   const [creatingNote, setCreatingNote] = useState(false)
   const [showAddNoteButton, setShowAddNoteButton] = useState(false)
   const [noteContent, setNoteContent] = useState('')

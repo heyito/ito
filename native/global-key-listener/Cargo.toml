@@ -4,10 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rdev = { version = "0.4", features = ["unstable_grab"] }
 serde_json = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
+
+[dependencies.rdev]
+git = "https://github.com/heyito/rdev"
+branch = "main"
+features = ["unstable_grab"]
 
 [target.'cfg(target_os = "linux")'.dependencies]
 x11 = { version = "2.21.0", features = ["xlib"] }

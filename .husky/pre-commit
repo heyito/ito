@@ -1,1 +1,2 @@
-bun lint:app
+bun lint
+bun format:fix

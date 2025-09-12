@@ -4,7 +4,7 @@ import ReferralContent from './contents/ReferralContent'
 import DataControlContent from './contents/DataControlContent'
 import PermissionsContent from './contents/PermissionsContent'
 import MicrophoneTestContent from './contents/MicrophoneTestContent'
-import KeyboardTestContent from './contents/KeyboardTestContent'
+import KeyboardTestContext from './contents/KeyboardTestContext'
 import GoodToGoContent from './contents/GoodToGoContent'
 import AnyAppContent from './contents/AnyAppContent'
 import TryItOutContent from './contents/TryItOutContent'
@@ -13,10 +13,24 @@ import './styles.css'
 import { usePermissionsStore } from '../../store/usePermissionsStore'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { useAuthStore } from '@/app/store/useAuthStore'
+import IntroducingIntelligentModeContent from './contents/IntroducingIntelligentModeContent'
 
 export default function WelcomeKit() {
   const { onboardingStep } = useOnboardingStore()
   const { isAuthenticated, user } = useAuthStore()
+
+  const onboardingStepOrder = [
+    CreateAccountContent,
+    ReferralContent,
+    DataControlContent,
+    PermissionsContent,
+    MicrophoneTestContent,
+    KeyboardTestContext,
+    GoodToGoContent,
+    IntroducingIntelligentModeContent,
+    AnyAppContent,
+    TryItOutContent,
+  ]
 
   const { setAccessibilityEnabled, setMicrophoneEnabled } =
     usePermissionsStore()
@@ -46,27 +60,11 @@ export default function WelcomeKit() {
     }
   }
 
+  const CurrentComponent = onboardingStepOrder[onboardingStep]
+
   return (
     <div className="w-full h-full bg-background">
-      {onboardingStep === 0 ? (
-        <CreateAccountContent />
-      ) : onboardingStep === 1 ? (
-        <ReferralContent />
-      ) : onboardingStep === 2 ? (
-        <DataControlContent />
-      ) : onboardingStep === 3 ? (
-        <PermissionsContent />
-      ) : onboardingStep === 4 ? (
-        <MicrophoneTestContent />
-      ) : onboardingStep === 5 ? (
-        <KeyboardTestContent />
-      ) : onboardingStep === 6 ? (
-        <GoodToGoContent />
-      ) : onboardingStep === 7 ? (
-        <AnyAppContent />
-      ) : onboardingStep === 8 ? (
-        <TryItOutContent />
-      ) : null}
+      {CurrentComponent ? <CurrentComponent /> : null}
     </div>
   )
 }

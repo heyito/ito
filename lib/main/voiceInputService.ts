@@ -5,10 +5,15 @@ import store from './store'
 import { STORE_KEYS } from '../constants/store-keys'
 import { transcriptionService } from './transcriptionService'
 import { traceLogger } from './traceLogger'
+import { ItoMode } from '@/app/generated/ito_pb'
 
 export class VoiceInputService {
-  public startSTTService = (sendToServer: boolean = true) => {
-    console.info('[Audio] Starting STT service')
+  public startSTTService = (mode: ItoMode) => {
+    console.info(
+      '[Audio] Starting STT service with mode:',
+      mode,
+      mode === ItoMode.EDIT ? 'EDIT' : 'TRANSCRIBE',
+    )
     const deviceId = store.get(STORE_KEYS.SETTINGS).microphoneDeviceId
 
     const settings = store.get(STORE_KEYS.SETTINGS)
@@ -22,14 +27,11 @@ export class VoiceInputService {
     if (interactionId) {
       traceLogger.logStep(interactionId, 'VOICE_INPUT_START', {
         deviceId,
-        sendToServer,
         muteAudioWhenDictating: settings?.muteAudioWhenDictating,
       })
     }
 
-    if (sendToServer) {
-      transcriptionService.startTranscription()
-    }
+    transcriptionService.startTranscription(mode)
     audioRecorderService.startRecording(deviceId)
 
     getPillWindow()?.webContents.send('recording-state-update', {
@@ -64,13 +66,27 @@ export class VoiceInputService {
   }
 
   public setUpAudioRecorderListeners = () => {
+    audioRecorderService.on(
+      'audio-config',
+      ({ outputSampleRate, sampleRate }: any) => {
+        // Use the recorder's effective output rate (matches the PCM we store)
+        const effectiveRate = outputSampleRate || sampleRate || 16000
+        transcriptionService.setAudioConfig({ sampleRate: effectiveRate })
+      },
+    )
     audioRecorderService.on('audio-chunk', chunk => {
       transcriptionService.handleAudioChunk(chunk)
     })
 
     audioRecorderService.on('volume-update', volume => {
       getPillWindow()?.webContents.send('volume-update', volume)
-      mainWindow?.webContents.send('volume-update', volume)
+      if (
+        mainWindow &&
+        !mainWindow.isDestroyed() &&
+        !mainWindow.webContents.isDestroyed()
+      ) {
+        mainWindow.webContents.send('volume-update', volume)
+      }
     })
 
     audioRecorderService.on('error', err => {
@@ -79,6 +95,14 @@ export class VoiceInputService {
     })
 
     audioRecorderService.initialize()
+  }
+
+  /**
+   * Call this when microphone selection changes to update the transcription
+   * config with the effective output sample rate for the chosen device.
+   */
+  public handleMicrophoneChanged = (deviceId: string) => {
+    audioRecorderService.requestDeviceConfig(deviceId)
   }
 }
 

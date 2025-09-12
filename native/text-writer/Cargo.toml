@@ -6,3 +6,8 @@ edition = "2021"
 [dependencies]
 enigo = "0.3.0"
 clap = { version = "4.5", features = ["derive"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-graphics = "0.23"
+core-foundation = "0.9"
+cocoa = "0.25"

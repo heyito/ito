@@ -7,6 +7,25 @@ import {
 } from '@amplitude/analytics-browser'
 import log from 'electron-log'
 import { STORE_KEYS } from '../../../lib/constants/store-keys'
+import { v4 as uuidv4 } from 'uuid'
+import type { OnboardingCategory } from '../../store/useOnboardingStore'
+
+// Get or generate a machine-based device ID that's shared across all windows
+const getSharedDeviceId = async (): Promise<string> => {
+  try {
+    // Just request the device ID - main process handles generation/caching
+    const deviceId = await window.api?.invoke('analytics:get-device-id')
+    if (deviceId) {
+      log.info('[Analytics] Using machine-based device ID:', deviceId)
+      return deviceId
+    }
+    throw new Error('No device ID returned from main process')
+  } catch (error) {
+    log.error('[Analytics] Could not get machine device ID:', error)
+    // In true emergency, generate a temporary UUID as fallback
+    return uuidv4()
+  }
+}
 
 // Check if analytics should be enabled
 const getAnalyticsEnabled = (): boolean => {
@@ -31,26 +50,49 @@ const getAnalyticsEnabled = (): boolean => {
 
 // Initialize Amplitude only if analytics is enabled
 let isAnalyticsInitialized = false
+let sharedDeviceId: string | null = null
 const analyticsEnabled = getAnalyticsEnabled()
 
 console.log('VITE_AMPLITUDE_API_KEY', import.meta.env.VITE_AMPLITUDE_API_KEY)
 console.log('[Analytics] Analytics enabled:', analyticsEnabled)
 
-if (analyticsEnabled) {
-  init(import.meta.env.VITE_AMPLITUDE_API_KEY, {
-    autocapture: {
-      elementInteractions: false,
-      pageViews: false,
-      sessions: true, // Keep session tracking enabled
-      formInteractions: false,
-      fileDownloads: false,
-    },
-  })
-  isAnalyticsInitialized = true
-  log.info('[Analytics] Amplitude initialized')
-} else {
-  log.info('[Analytics] Amplitude disabled by user settings')
+// Initialize Amplitude asynchronously
+const initializeAnalytics = async () => {
+  if (!analyticsEnabled) {
+    log.info('[Analytics] Amplitude disabled by user settings')
+    return
+  }
+
+  try {
+    sharedDeviceId = await getSharedDeviceId()
+    console.log('[Analytics] Using shared device ID:', sharedDeviceId)
+
+    init(import.meta.env.VITE_AMPLITUDE_API_KEY, {
+      deviceId: sharedDeviceId, // Use shared device ID across all windows
+      autocapture: {
+        elementInteractions: false,
+        pageViews: false,
+        sessions: true, // Keep session tracking enabled
+        formInteractions: false,
+        fileDownloads: false,
+      },
+    })
+    isAnalyticsInitialized = true
+
+    // Update the service instance after successful initialization
+    analytics.updateInitializationStatus(true, sharedDeviceId)
+
+    log.info(
+      '[Analytics] Amplitude initialized with shared device ID:',
+      sharedDeviceId,
+    )
+  } catch (error) {
+    log.error('[Analytics] Failed to initialize analytics:', error)
+  }
 }
+
+// Initialize analytics when the module loads
+initializeAnalytics()
 
 // Event types for type safety
 export interface BaseEventProperties {
@@ -62,7 +104,7 @@ export interface BaseEventProperties {
 export interface OnboardingEventProperties extends BaseEventProperties {
   step: number
   step_name: string
-  category: 'sign-up' | 'permissions' | 'set-up' | 'try-it'
+  category: OnboardingCategory
   total_steps: number
   referral_source?: string
   provider?: string
@@ -97,7 +139,7 @@ export interface UserProperties {
   last_active?: string
   onboarding_completed?: boolean
   referral_source?: string
-  keyboard_shortcut?: string[]
+  keyboard_shortcuts?: string[]
 }
 
 // Event constants
@@ -130,7 +172,7 @@ export const ANALYTICS_EVENTS = {
   // Settings events
   SETTING_CHANGED: 'setting_changed',
   MICROPHONE_CHANGED: 'microphone_changed',
-  KEYBOARD_SHORTCUT_CHANGED: 'keyboard_shortcut_changed',
+  KEYBOARD_SHORTCUTS_CHANGED: 'keyboard_shortcuts_changed',
 } as const
 
 export type AnalyticsEvent =
@@ -145,18 +187,26 @@ class AnalyticsService {
   private currentUserId: string | null = null
   private currentProvider: string | null = null
   private sessionStartTime: number = Date.now()
+  private deviceId: string | null = null
 
   constructor() {
-    log.info(`[Analytics] Service initialized (enabled: ${this.isInitialized})`)
+    // Device ID will be set after async initialization
+    this.deviceId = sharedDeviceId
+    log.info(
+      `[Analytics] Service initialized (enabled: ${this.isInitialized}, deviceId: ${this.deviceId || 'pending'})`,
+    )
   }
 
   /**
    * Enable analytics (re-initialize if needed)
    */
-  enableAnalytics() {
+  async enableAnalytics() {
     if (!this.isInitialized && import.meta.env.VITE_AMPLITUDE_API_KEY) {
       try {
+        const deviceId = await getSharedDeviceId()
+        this.deviceId = deviceId
         init(import.meta.env.VITE_AMPLITUDE_API_KEY, {
+          deviceId: deviceId, // Use shared device ID for consistency
           autocapture: {
             elementInteractions: false,
             pageViews: false,
@@ -166,7 +216,10 @@ class AnalyticsService {
           },
         })
         this.isInitialized = true
-        log.info('[Analytics] Analytics enabled and initialized')
+        log.info(
+          '[Analytics] Analytics enabled and initialized with shared device ID:',
+          deviceId,
+        )
       } catch (error) {
         log.error('[Analytics] Failed to enable analytics:', error)
       }
@@ -231,7 +284,9 @@ class AnalyticsService {
 
         identify(identifyObj, { user_id: userId })
         setUserId(userId)
-        log.info('[Analytics] User identified:', userId)
+        log.info(
+          `[Analytics] User identified: ${userId} (deviceId: ${this.deviceId || 'pending'})`,
+        )
       }
     } catch (error) {
       log.error('[Analytics] Failed to identify user:', error)
@@ -286,8 +341,11 @@ class AnalyticsService {
       const trackOptions = this.currentUserId
         ? { user_id: this.currentUserId }
         : undefined
+
       track(eventName, eventProperties, trackOptions)
-      log.info(`[Analytics] Event tracked: ${eventName}`)
+      log.info(
+        `[Analytics] Event tracked: ${eventName} (deviceId: ${this.deviceId || 'pending'}, userId: ${this.currentUserId || 'anonymous'})`,
+      )
     } catch (error) {
       log.error(`[Analytics] Failed to track event ${eventName}:`, error)
     }
@@ -338,6 +396,7 @@ class AnalyticsService {
       | 'microphone_changed'
       | 'keyboard_shortcut_changed'
       | 'privacy_mode_toggled'
+      | 'keyboard_shortcuts_changed'
     >,
     properties: SettingsEventProperties,
   ) {
@@ -392,6 +451,24 @@ class AnalyticsService {
    */
   isUserIdentified(): boolean {
     return this.currentUserId !== null
+  }
+
+  /**
+   * Get the current device ID
+   */
+  getDeviceId(): string | null {
+    return this.deviceId
+  }
+
+  /**
+   * Update initialization status (called after async initialization completes)
+   */
+  updateInitializationStatus(isInitialized: boolean, deviceId: string | null) {
+    this.isInitialized = isInitialized
+    this.deviceId = deviceId
+    log.info(
+      `[Analytics] Service status updated (enabled: ${this.isInitialized}, deviceId: ${this.deviceId})`,
+    )
   }
 
   /**

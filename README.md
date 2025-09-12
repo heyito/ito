@@ -11,6 +11,7 @@
 
   <p>
     <img alt="macOS" src="https://img.shields.io/badge/macOS-supported-blue?logo=apple&logoColor=white">
+    <img alt="Windows" src="https://img.shields.io/badge/Windows-supported-blue?logo=windows&logoColor=white">
     <img alt="Version" src="https://img.shields.io/badge/version-0.2.0-green">
     <img alt="License" src="https://img.shields.io/badge/license-GPL-blue">
   </p>
@@ -54,7 +55,7 @@
 
 ### Prerequisites
 
-- **macOS 10.15+**
+- **macOS 10.15+** or **Windows 10+**
 - **Node.js 20+** and **Bun** (for development)
 - **Rust toolchain** (for building native components)
 - **Microphone access** and **Accessibility permissions**
@@ -65,6 +66,7 @@
 
 2. **Install the application**:
    - **macOS**: Open the `.dmg` file and drag Ito to Applications
+   - **Windows**: Run the `.exe` installer and follow the setup wizard
 
 3. **Grant permissions** when prompted:
    - **Microphone access**: Required for voice input
@@ -118,8 +120,42 @@ bun run dev
 
 ### Build Requirements
 
+#### All Platforms
+
 - **Rust**: Install via [rustup.rs](https://rustup.rs/)
-- **macOS**: Xcode Command Line Tools
+  - **Windows users**: See Windows-specific instructions below for GNU toolchain setup
+  - **macOS/Linux users**: Default installation is sufficient
+
+#### macOS
+
+- **Xcode Command Line Tools**: `xcode-select --install`
+
+#### Windows
+
+**Required Setup:**
+
+1. **Install Docker Desktop**: Download from [docker.com](https://www.docker.com/products/docker-desktop/) and ensure it's running
+
+2. **Install Rust with GNU toolchain** (for native component development):
+
+   ```bash
+   # Install rustup (Rust installer)
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+   # Install the GNU toolchain (required for native components)
+   rustup toolchain install stable-x86_64-pc-windows-gnu
+   rustup target add x86_64-pc-windows-gnu
+   ```
+
+3. **Install 7-Zip**: `winget install 7zip.7zip`
+
+4. **Download and install GCC & MinGW-w64 but DO NOT add to path**:
+   https://code.visualstudio.com/docs/cpp/config-mingw
+   a. Do not add C:\msys64\ucrt64\bin to your path -- the rust build will automatically select the correct linker, and adding this to your path will cause the incorrect linking library to be used, causing compilation failures.
+
+5. **Restart your terminal** to pick up PATH changes
+
+> **Note**: Windows builds use Docker for cross-compilation to ensure consistent builds. The Docker container handles the Windows build environment automatically.
 
 ### Project Structure
 
@@ -137,7 +173,7 @@ ito/
 │   ├── audio-recorder/    # Audio capture (Rust)
 │   ├── global-key-listener/ # Keyboard events (Rust)
 │   ├── text-writer/       # Text insertion (Rust)
-│   └── macos-text/        # macOS text reading (Swift)
+│   └── active-application/ # Get the active application for context (Rust)
 ├── server/                # gRPC transcription server
 │   ├── src/               # Server implementation
 │   └── infra/             # AWS infrastructure (CDK)
@@ -151,8 +187,16 @@ ito/
 bun run dev                 # Start with hot reload
 bun run dev:rust           # Build Rust components and start dev
 
-# Building
+# Building Native Components
+bun run build:rust         # Build for current platform
+bun run build:rust:mac     # Build for macOS (with universal binary)
+bun run build:rust:win     # Build for Windows
+
+# Building Application
 bun run build:mac          # Build for macOS
+bun run build:win          # Build for Windows
+./build-app.sh mac          # Build macOS using build script
+./build-app.sh windows      # Build Windows using build script (requires Docker)
 bun run build:unpack       # Build unpacked for testing
 
 # Code Quality

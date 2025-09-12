@@ -6,7 +6,7 @@ alwaysApply: true
 ## Development cycle
 
 1. Before writing any code, come up with an extremely good plan, review the plan, and then ask the user for permission to execute the plan.
-2. Never try to start a dev server or curl a local endpoint.
+2. Always rely on the user for manually testing and code changes
 3. Always use bun as your preferred package manager.
-4. NEVER run the app on your own via bun dev, bun run dev, etc.
-5. NEVER attempt to install any new packages on your own.
+4. Always rely on the user to install new packages / update new packages
+5. Prefer code that is easy to read and self-documenting. Use comments sparingly.

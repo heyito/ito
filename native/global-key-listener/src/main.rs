@@ -21,6 +21,11 @@ enum Command {
 // Global state for blocked keys
 static mut BLOCKED_KEYS: Vec<String> = Vec::new();
 
+// Global state for tracking modifier keys to detect Cmd+C/Ctrl+C combinations
+static mut CMD_PRESSED: bool = false;
+static mut CTRL_PRESSED: bool = false;
+static mut COPY_IN_PROGRESS: bool = false;
+
 fn main() {
     // Spawn a thread to read commands from stdin
     thread::spawn(|| {
@@ -68,6 +73,28 @@ fn callback(event: Event) -> Option<Event> {
             let key_name = format!("{:?}", key);
             let should_block = unsafe { BLOCKED_KEYS.contains(&key_name) };
 
+            // Check for copy combinations before updating modifier states
+            // Ignore Cmd+C (macOS) and Ctrl+C (Windows/Linux) combinations to prevent feedback loops with selected-text-reader
+            if matches!(key, Key::KeyC) && unsafe { CMD_PRESSED || CTRL_PRESSED } {
+                unsafe {
+                    COPY_IN_PROGRESS = true;
+                }
+                // Still pass through the event to the system but don't output it to our listener
+                return Some(event);
+            }
+
+            // Track modifier key states AFTER checking for combinations
+            if matches!(key, Key::MetaLeft | Key::MetaRight) {
+                unsafe {
+                    CMD_PRESSED = true;
+                }
+            }
+            if matches!(key, Key::ControlLeft | Key::ControlRight) {
+                unsafe {
+                    CTRL_PRESSED = true;
+                }
+            }
+
             output_event("keydown", &key);
 
             match should_block {
@@ -78,6 +105,29 @@ fn callback(event: Event) -> Option<Event> {
         EventType::KeyRelease(key) => {
             let key_name = format!("{:?}", key);
             let should_block = unsafe { BLOCKED_KEYS.contains(&key_name) };
+
+            // Check for C key release while copy is in progress or modifiers are still held
+            if matches!(key, Key::KeyC) {
+                if unsafe { COPY_IN_PROGRESS || CMD_PRESSED || CTRL_PRESSED } {
+                    unsafe {
+                        COPY_IN_PROGRESS = false;
+                    }
+                    // Don't output this C key release event
+                    return Some(event);
+                }
+            }
+
+            // Track modifier key states AFTER checking for combinations
+            if matches!(key, Key::MetaLeft | Key::MetaRight) {
+                unsafe {
+                    CMD_PRESSED = false;
+                }
+            }
+            if matches!(key, Key::ControlLeft | Key::ControlRight) {
+                unsafe {
+                    CTRL_PRESSED = false;
+                }
+            }
 
             output_event("keyup", &key);
 

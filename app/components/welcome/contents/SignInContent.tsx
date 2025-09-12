@@ -10,7 +10,7 @@ import GoogleIcon from '../../icons/GoogleIcon'
 import AppleIcon from '../../icons/AppleIcon'
 import GitHubIcon from '../../icons/GitHubIcon'
 import MicrosoftIcon from '../../icons/MicrosoftIcon'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../auth/useAuth'
 import { checkLocalServerHealth } from '@/app/utils/healthCheck'
 import { useAuthStore } from '@/app/store/useAuthStore'
@@ -18,9 +18,16 @@ import { useNotesStore } from '@/app/store/useNotesStore'
 import { useDictionaryStore } from '@/app/store/useDictionaryStore'
 import { AppOrbitImage } from '@/app/components/ui/app-orbit-image'
 import { STORE_KEYS } from '../../../../lib/constants/store-keys'
+import { isValidEmail, isStrongPassword } from '@/app/utils/utils'
 
 // Auth provider configuration
 const AUTH_PROVIDERS = {
+  email: {
+    key: 'email',
+    label: 'Email',
+    icon: null,
+    variant: 'default' as const,
+  },
   'google-oauth2': {
     key: 'google',
     label: 'Google',
@@ -109,6 +116,10 @@ export default function SignInContent() {
   const { loadEntries } = useDictionaryStore()
   const { resetOnboarding } = useOnboardingStore()
   const [isServerHealthy, setIsServerHealthy] = useState(true)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const {
     user,
@@ -118,6 +129,8 @@ export default function SignInContent() {
     loginWithApple,
     loginWithGitHub,
     loginWithSelfHosted,
+    loginWithEmail,
+    loginWithEmailPassword,
   } = useAuth()
 
   // Check server health on component mount and every 5 seconds
@@ -182,6 +195,33 @@ export default function SignInContent() {
   const userEmail = storedUser?.email
   const userProvider = storedUser?.provider as keyof typeof AUTH_PROVIDERS
 
+  // Prefill email if available
+  useEffect(() => {
+    if (typeof userEmail === 'string' && userEmail.length > 0) {
+      setEmail(userEmail)
+    }
+  }, [userEmail])
+
+  const emailOk = useMemo(() => isValidEmail(email || ''), [email])
+  const isValid = useMemo(
+    () => isStrongPassword(password) && emailOk,
+    [password, emailOk],
+  )
+
+  const handleEmailPasswordLogin = async () => {
+    if (!isValid) return
+    try {
+      setIsLoggingIn(true)
+      setErrorMessage(null)
+      await loginWithEmailPassword(email, password, { skipNavigate: true })
+    } catch (e: any) {
+      const msg = typeof e?.message === 'string' ? e.message : 'Login failed.'
+      setErrorMessage(msg)
+    } finally {
+      setIsLoggingIn(false)
+    }
+  }
+
   // Helper function to format provider names for display
   const formatProviderName = (provider?: string): string => {
     if (!provider) return 'Unknown'
@@ -218,6 +258,28 @@ export default function SignInContent() {
         </div>
       </div>
 
+      {/* Email sign in */}
+      <div className="space-y-3 mb-8">
+        <input
+          type="email"
+          placeholder="Enter your email"
+          className="w-full h-12 px-3 rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground"
+          onChange={e => setEmail(e.target.value)}
+          defaultValue={userEmail}
+        />
+        <AuthButton
+          provider="google-oauth2"
+          onClick={() => {}}
+          className="hidden"
+        />
+        <Button
+          className="w-full h-12 text-sm font-medium"
+          onClick={() => loginWithEmail(email || userEmail)}
+        >
+          Continue with Email
+        </Button>
+      </div>
+
       {/* Divider */}
       <div className="flex items-center my-8">
         <div className="flex-1 border-t border-border"></div>
@@ -246,6 +308,57 @@ export default function SignInContent() {
   const renderSingleProviderOption = (
     provider: keyof typeof AUTH_PROVIDERS,
   ) => {
+    // Special-case: email provider renders inline email/password form
+    if (provider === 'email') {
+      return (
+        <div className="space-y-5">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm text-foreground">Email</label>
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="h-10 w-full rounded-md border border-border bg-background px-3 text-foreground placeholder:text-muted-foreground"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm text-foreground">Password</label>
+            <input
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleEmailPasswordLogin()
+                }
+              }}
+              onChange={e => setPassword(e.target.value)}
+              className="h-10 w-full rounded-md border border-border bg-background px-3 text-foreground placeholder:text-muted-foreground"
+            />
+          </div>
+
+          <Button
+            className="h-10 w-full"
+            disabled={!isValid || isLoggingIn}
+            aria-busy={isLoggingIn}
+            onClick={handleEmailPasswordLogin}
+          >
+            {isLoggingIn && (
+              <span className="mr-2 inline-block size-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+            )}
+            {isLoggingIn ? 'Logging in…' : 'Log In'}
+          </Button>
+
+          {errorMessage && (
+            <p className="mt-2 text-sm text-destructive">{errorMessage}</p>
+          )}
+        </div>
+      )
+    }
+
     const getClickHandler = () => {
       switch (provider) {
         case 'google-oauth2':
@@ -289,10 +402,13 @@ export default function SignInContent() {
 
   // Helper function to render the appropriate auth button based on stored provider
   const renderAuthButton = () => {
+    // If provider is email, render the inline email/password form
+    if (userProvider === 'email') {
+      return renderSingleProviderOption('email')
+    }
     if (!userProvider || !AUTH_PROVIDERS[userProvider]) {
       return renderAllAuthOptions()
     }
-
     return renderSingleProviderOption(userProvider)
   }
 

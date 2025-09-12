@@ -23,6 +23,9 @@ import {
   getTotalWordsLevel,
   getActivityMessage,
 } from './activityMessages'
+import { ItoMode } from '@/app/generated/ito_pb'
+import { getKeyDisplay } from '@/app/utils/keyboard'
+import { KeyName } from '@/lib/types/keyboard'
 
 // Interface for interaction statistics
 interface InteractionStats {
@@ -57,7 +60,8 @@ const StatCard = ({
 }
 
 export default function HomeContent() {
-  const { keyboardShortcut } = useSettingsStore()
+  const { getItoModeShortcuts } = useSettingsStore()
+  const keyboardShortcut = getItoModeShortcuts(ItoMode.TRANSCRIBE)[0].keys
   const { user } = useAuthStore()
   const firstName = user?.name?.split(' ')[0]
   const [interactions, setInteractions] = useState<Interaction[]>([])
@@ -406,7 +410,11 @@ export default function HomeContent() {
       if (!audio) {
         const pcmData = new Uint8Array(interaction.raw_audio)
         try {
-          const wavBuffer = createWavFile(pcmData)
+          // If direct playback fails, try converting raw PCM to WAV
+          const wavBuffer = createWavFile(
+            pcmData,
+            interaction.sample_rate || 16000,
+          )
           const audioBlob = new Blob([wavBuffer], { type: 'audio/wav' })
           const audioUrl = URL.createObjectURL(audioBlob)
 
@@ -539,7 +547,10 @@ export default function HomeContent() {
               {keyboardShortcut.map((key, index) => (
                 <React.Fragment key={index}>
                   <span className="bg-slate-50 px-1 py-0.5 rounded text-xs font-mono shadow-sm">
-                    {key}
+                    {getKeyDisplay(key as KeyName, {
+                      showDirectionalText: false,
+                      format: 'label',
+                    })}
                   </span>
                   <span>{index < keyboardShortcut.length - 1 && ' + '}</span>
                 </React.Fragment>

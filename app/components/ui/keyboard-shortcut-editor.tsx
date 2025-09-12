@@ -1,12 +1,18 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { Button } from '@/app/components/ui/button'
 import KeyboardKey from '@/app/components/ui/keyboard-key'
-import { KeyState, normalizeKeyEvent } from '@/app/utils/keyboard'
+import {
+  KeyState,
+  normalizeKeyEvent,
+  isReservedCombination,
+} from '@/app/utils/keyboard'
 import { useAudioStore } from '@/app/store/useAudioStore'
+import { KeyboardShortcutConfig } from './multi-shortcut-editor'
+import { KeyName } from '@/lib/types/keyboard'
 
 interface KeyboardShortcutEditorProps {
-  shortcut: string[]
-  onShortcutChange: (newShortcut: string[]) => void
+  shortcut: KeyboardShortcutConfig
+  onShortcutChange: (shortcutId: string, newShortcutKeys: string[]) => void
   hideTitle?: boolean
   className?: string
   keySize?: number
@@ -37,11 +43,14 @@ export default function KeyboardShortcutEditor({
   editButtonClassName = '',
   confirmButtonClassName = '',
 }: KeyboardShortcutEditorProps) {
+  const shortcutKeys = shortcut.keys
+
   const cleanupRef = useRef<(() => void) | null>(null)
-  const keyStateRef = useRef<KeyState>(new KeyState(shortcut))
+  const keyStateRef = useRef<KeyState>(new KeyState(shortcutKeys))
   const [pressedKeys, setPressedKeys] = useState<string[]>([])
   const [isEditing, setIsEditing] = useState(false)
-  const [newShortcut, setNewShortcut] = useState<string[]>([])
+  const [newShortcut, setNewShortcut] = useState<KeyName[]>([])
+  const [validationError, setValidationError] = useState<string>('')
   const { setIsShortcutEnabled } = useAudioStore()
 
   const handleKeyEvent = useCallback(
@@ -60,11 +69,25 @@ export default function KeyboardShortcutEditor({
           if (normalizedKey === 'fn_fast') {
             return
           }
+
+          let updatedShortcut: KeyName[]
           if (!newShortcut.includes(normalizedKey)) {
-            setNewShortcut(prev => [...prev, normalizedKey])
+            updatedShortcut = [...newShortcut, normalizedKey]
           } else {
-            setNewShortcut(prev => prev.filter(key => key !== normalizedKey))
+            updatedShortcut = newShortcut.filter(key => key !== normalizedKey)
           }
+
+          // Check for reserved combinations
+          const reservedCheck = isReservedCombination(updatedShortcut)
+          if (reservedCheck.isReserved) {
+            setValidationError(
+              reservedCheck.reason || 'This key combination is reserved',
+            )
+          } else {
+            setValidationError('')
+          }
+
+          setNewShortcut(updatedShortcut)
         }
       }
     },
@@ -73,8 +96,8 @@ export default function KeyboardShortcutEditor({
 
   useEffect(() => {
     // Update key state when shortcut changes
-    keyStateRef.current.updateShortcut(shortcut)
-  }, [shortcut])
+    keyStateRef.current.updateShortcut(shortcutKeys)
+  }, [shortcut, shortcutKeys])
 
   useEffect(() => {
     // Capture the current keyState ref value for cleanup
@@ -114,6 +137,7 @@ export default function KeyboardShortcutEditor({
     setIsShortcutEnabled(false)
     setIsEditing(true)
     setNewShortcut([])
+    setValidationError('')
   }
 
   const handleCancel = () => {
@@ -133,7 +157,7 @@ export default function KeyboardShortcutEditor({
       return
     }
     keyStateRef.current.updateShortcut(newShortcut)
-    onShortcutChange(newShortcut)
+    onShortcutChange(shortcut.id, newShortcut)
     setIsEditing(false)
     setIsShortcutEnabled(true)
     window.api.send(
@@ -173,6 +197,11 @@ export default function KeyboardShortcutEditor({
               </div>
             )}
           </div>
+          {validationError && (
+            <div className="text-red-500 text-sm text-center mb-2">
+              {validationError}
+            </div>
+          )}
           <div className="flex gap-2 justify-end w-full mt-1">
             <Button
               variant="outline"
@@ -186,7 +215,7 @@ export default function KeyboardShortcutEditor({
               size="sm"
               type="button"
               onClick={handleSave}
-              disabled={newShortcut.length === 0}
+              disabled={newShortcut.length === 0 || !!validationError}
             >
               Save
             </Button>
@@ -203,7 +232,7 @@ export default function KeyboardShortcutEditor({
             className="flex justify-center items-center mb-4 w-full bg-neutral-100 py-3 rounded-lg gap-2"
             style={{ minHeight }}
           >
-            {shortcut.map((keyboardKey, index) => (
+            {shortcutKeys.map((keyboardKey, index) => (
               <KeyboardKey
                 key={index}
                 keyboardKey={keyboardKey}

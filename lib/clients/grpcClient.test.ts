@@ -1,10 +1,12 @@
 import { describe, test, expect, beforeEach, mock, Mock } from 'bun:test'
 import { ActiveWindow } from '../media/active-application'
+import { ItoMode } from '@/app/generated/ito_pb'
 
 // Mock external dependencies to focus on core grpcClient logic
 const mockElectronWindow = {
   webContents: {
     send: mock(),
+    isDestroyed: mock(() => false),
   },
   isDestroyed: mock(() => false),
 } as any
@@ -93,6 +95,10 @@ mock.module('../auth/events', () => ({
 
 mock.module('../auth/config', () => ({
   Auth0Config: { domain: 'test.auth0.com' },
+}))
+
+mock.module('../media/selected-text-reader', () => ({
+  getSelectedTextString: mock(() => Promise.resolve('Selected text')),
 }))
 
 const mockGetActiveWindow: Mock<() => Promise<ActiveWindow | null>> = mock(() =>
@@ -230,7 +236,10 @@ describe('GrpcClient Business Logic Tests', () => {
         yield { data: new Uint8Array([4, 5, 6]) } as any
       })()
 
-      const result = await grpcClient.transcribeStream(audioStream)
+      const result = await grpcClient.transcribeStream(
+        audioStream,
+        ItoMode.TRANSCRIBE,
+      )
 
       expect(result.transcript).toBe(transcript)
       expect(mockSetFocusedText).toHaveBeenCalledWith(transcript)
@@ -248,7 +257,7 @@ describe('GrpcClient Business Logic Tests', () => {
         yield { data: new Uint8Array([1, 2, 3]) } as any
       })()
 
-      await grpcClient.transcribeStream(audioStream)
+      await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
 
       expect(mockDictionaryTable.findAll).toHaveBeenCalledWith('test-user-123')
       expect(mockGrpcClientMethods.transcribeStream).toHaveBeenCalled()
@@ -265,7 +274,7 @@ describe('GrpcClient Business Logic Tests', () => {
 
       mockGetActiveWindow.mockResolvedValueOnce(null)
 
-      await grpcClient.transcribeStream(audioStream)
+      await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
       expect(mockGetActiveWindow).toHaveBeenCalled()
     })
 
@@ -281,9 +290,9 @@ describe('GrpcClient Business Logic Tests', () => {
         yield { data: new Uint8Array([1, 2, 3]) } as any
       })()
 
-      expect(grpcClient.transcribeStream(audioStream)).rejects.toThrow(
-        'Transcription failed',
-      )
+      expect(
+        grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE),
+      ).rejects.toThrow('Transcription failed')
       expect(mockElectronWindow.webContents.send).toHaveBeenCalledWith(
         'transcription-error',
         error,
@@ -302,7 +311,7 @@ describe('GrpcClient Business Logic Tests', () => {
         yield { data: new Uint8Array([1, 2, 3]) } as any
       })()
 
-      await grpcClient.transcribeStream(audioStream)
+      await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
 
       expect(mockSetFocusedText).not.toHaveBeenCalled()
     })
@@ -325,7 +334,7 @@ describe('GrpcClient Business Logic Tests', () => {
         yield { data: new Uint8Array([1, 2, 3]) } as any
       })()
 
-      await grpcClient.transcribeStream(audioStream)
+      await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
 
       expect(mockSetFocusedText).not.toHaveBeenCalled()
     })
@@ -342,7 +351,7 @@ describe('GrpcClient Business Logic Tests', () => {
         yield { data: new Uint8Array([1, 2, 3]) } as any
       })()
 
-      await grpcClient.transcribeStream(audioStream)
+      await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
       expect(mockGrpcClientMethods.transcribeStream).toHaveBeenCalled()
     })
 
@@ -362,13 +371,43 @@ describe('GrpcClient Business Logic Tests', () => {
         yield { data: new Uint8Array([1, 2, 3]) } as any
       })()
 
-      await grpcClient.transcribeStream(audioStream)
+      await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
 
       expect(mockSetFocusedText).toHaveBeenCalledWith(transcript)
-      expect(mockElectronWindow.webContents.send).toHaveBeenCalledWith(
-        'transcription-result',
-        { transcript },
-      )
+      // Should not try to send to destroyed window
+      expect(mockElectronWindow.webContents.send).not.toHaveBeenCalled()
+    })
+
+    test('should handle webContents destroyed gracefully', async () => {
+      const { grpcClient } = await import('./grpcClient')
+      grpcClient.setAuthToken('test-token')
+
+      const mockWindowWithDestroyedWebContents = {
+        ...mockElectronWindow,
+        isDestroyed: mock(() => false),
+        webContents: {
+          ...mockElectronWindow.webContents,
+          isDestroyed: mock(() => true),
+        },
+      }
+      grpcClient.setMainWindow(mockWindowWithDestroyedWebContents)
+
+      const transcript = 'Test transcript'
+      mockGrpcClientMethods.transcribeStream.mockResolvedValueOnce({
+        transcript,
+      })
+
+      const audioStream = (async function* () {
+        yield { data: new Uint8Array([1, 2, 3]) } as any
+      })()
+
+      await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
+
+      expect(mockSetFocusedText).toHaveBeenCalledWith(transcript)
+      // Should not try to send to window with destroyed webContents
+      expect(
+        mockWindowWithDestroyedWebContents.webContents.send,
+      ).not.toHaveBeenCalled()
     })
 
     test('should handle null window gracefully', async () => {
@@ -385,7 +424,7 @@ describe('GrpcClient Business Logic Tests', () => {
         yield { data: new Uint8Array([1, 2, 3]) } as any
       })()
 
-      await grpcClient.transcribeStream(audioStream)
+      await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
 
       expect(mockSetFocusedText).toHaveBeenCalledWith(transcript)
     })
@@ -409,6 +448,30 @@ describe('GrpcClient Business Logic Tests', () => {
       // Should proceed with operation (empty headers but no crash)
       const result = await grpcClient.createNote(testNote)
       expect(result).toBeDefined()
+    })
+
+    test('should handle auth errors gracefully when window is destroyed', async () => {
+      const { grpcClient } = await import('./grpcClient')
+      grpcClient.setAuthToken('test-token')
+      grpcClient.setMainWindow(mockElectronWindow)
+
+      // Mock window as destroyed
+      mockElectronWindow.isDestroyed.mockReturnValue(true)
+
+      // Mock authentication error
+      const authError = new Error('Unauthenticated')
+      authError.code = 'UNAUTHENTICATED'
+      mockGrpcClientMethods.transcribeStream.mockRejectedValueOnce(authError)
+
+      const audioStream = (async function* () {
+        yield { data: new Uint8Array([1, 2, 3]) } as any
+      })()
+
+      // Should not crash when trying to send auth error to destroyed window
+      await expect(
+        grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE),
+      ).rejects.toThrow('Unauthenticated')
+      expect(mockElectronWindow.webContents.send).not.toHaveBeenCalled()
     })
   })
 })

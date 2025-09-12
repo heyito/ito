@@ -1,4 +1,5 @@
 import { IpcRendererEvent, ipcRenderer } from 'electron'
+import { AdvancedSettings } from '../main/store'
 
 const api = {
   /**
@@ -132,6 +133,14 @@ const api = {
   notifyOnboardingUpdate: (onboarding: any) =>
     ipcRenderer.send('onboarding-update', onboarding),
 
+  // Send user auth updates to pill window
+  notifyUserAuthUpdate: (authUser: any) =>
+    ipcRenderer.send('user-auth-update', authUser),
+
+  // Analytics device ID methods
+  'analytics:get-device-id': () =>
+    ipcRenderer.invoke('analytics:get-device-id'),
+
   notifyLoginSuccess: (
     profile: any,
     idToken: string | null,
@@ -149,6 +158,10 @@ const api = {
     return ipcRenderer.invoke('delete-user-data')
   },
 
+  updateAdvancedSettings: (advancedSettings: AdvancedSettings) => {
+    return ipcRenderer.invoke('update-advanced-settings', advancedSettings)
+  },
+
   // Check if the local server is healthy and accessible
   checkServerHealth: () => {
     return ipcRenderer.invoke('check-server-health')
@@ -159,6 +172,14 @@ const api = {
     onUpdateDownloaded: callback =>
       ipcRenderer.on('update-downloaded', callback),
     installUpdate: () => ipcRenderer.send('install-update'),
+  },
+
+  // Selected Text Reader
+  selectedText: {
+    get: (options?: any) => ipcRenderer.invoke('get-selected-text', options),
+    getString: (maxLength?: number) =>
+      ipcRenderer.invoke('get-selected-text-string', maxLength),
+    hasSelected: () => ipcRenderer.invoke('has-selected-text'),
   },
 }
 

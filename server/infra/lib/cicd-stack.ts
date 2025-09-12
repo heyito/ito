@@ -18,7 +18,7 @@ import {
 } from './constants'
 import { BlockPublicAccess, Bucket } from 'aws-cdk-lib/aws-s3'
 import { CachePolicy, Distribution } from 'aws-cdk-lib/aws-cloudfront'
-import { S3BucketOrigin, S3Origin } from 'aws-cdk-lib/aws-cloudfront-origins'
+import { S3BucketOrigin } from 'aws-cdk-lib/aws-cloudfront-origins'
 
 export interface GitHubOidcStackProps extends StackProps {
   stages: string[]
@@ -83,8 +83,25 @@ export class GitHubOidcStack extends Stack {
         },
       })
 
+      // Grant CloudFront invalidation permissions
+      ciCdRole.addToPolicy(
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'cloudfront:CreateInvalidation',
+            'cloudfront:GetInvalidation',
+            'cloudfront:ListInvalidations',
+          ],
+          resources: [distribution.distributionArn],
+        }),
+      )
+
       new CfnOutput(this, `${stage}-ReleasesCDNUrl`, {
         value: `https://${distribution.domainName}`,
+      })
+
+      new CfnOutput(this, `${stage}-ReleasesCDNId`, {
+        value: distribution.distributionId,
       })
     })
 

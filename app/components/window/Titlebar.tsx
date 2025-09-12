@@ -8,7 +8,6 @@ import { useAuthStore } from '@/app/store/useAuthStore'
 import { useAuth } from '@/app/components/auth/useAuth'
 
 export const Titlebar = () => {
-  const { icon } = useWindowContext().titlebar
   const { onboardingCompleted } = useOnboardingStore()
   const { isAuthenticated } = useAuthStore()
   const showOnboarding = !onboardingCompleted || !isAuthenticated
@@ -114,14 +113,6 @@ export const Titlebar = () => {
           >
             <PanelLeft style={{ width: 20, height: 20 }} />
           </div>
-        </div>
-      )}
-      {wcontext?.platform === 'win32' && (
-        <div
-          className="window-titlebar-icon"
-          style={onboardingCompleted ? { left: 36 } : {}}
-        >
-          <img src={icon} />
         </div>
       )}
 

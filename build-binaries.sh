@@ -37,8 +37,14 @@ build_native_module() {
 
     # Install dependencies
     print_info "Installing dependencies for $module_name..."
+    
+    # Check if we're compiling on a Windows machine
+    compiling_on_windows=false
+    if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ "$OS" == "Windows_NT" ]]; then
+        compiling_on_windows=true
+    fi
+    
     cargo fetch
-    cargo install --path .
 
     # --- macOS Build ---
     if [ "$BUILD_MAC" = true ]; then
@@ -79,7 +85,14 @@ build_native_module() {
     # --- Windows Build ---
     if [ "$BUILD_WINDOWS" = true ]; then
         print_info "Building Windows binary for $module_name..."
-        cargo build --release --target x86_64-pc-windows-gnu
+        
+        # Use GNU target (more reliable than MSVC)
+        if [ "$compiling_on_windows" = true ]; then
+            cargo +stable-x86_64-pc-windows-gnu build --release --target x86_64-pc-windows-gnu
+        else
+            # Cross-compile from macOS/Linux using default toolchain
+            cargo build --release --target x86_64-pc-windows-gnu
+        fi
     fi
 
     # Return to the project root for the next module
@@ -126,7 +139,39 @@ if [ "$BUILD_MAC" = true ]; then
 fi
 if [ "$BUILD_WINDOWS" = true ]; then
     print_status "Adding Windows target..."
+    
+    # Use GNU target (more reliable than MSVC)
     rustup target add x86_64-pc-windows-gnu
+    
+    # Check if MinGW-w64 is available
+    # Check if we're compiling on a Windows machine
+    compiling_on_windows=false
+    if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ "$OS" == "Windows_NT" ]]; then
+        compiling_on_windows=true
+    fi
+    
+    if [ "$compiling_on_windows" = true ]; then
+        # On Windows, use GNU toolchain
+        print_info "Using GNU toolchain (requires MinGW-w64)"
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        # On macOS, check if MinGW-w64 is installed via brew or other package managers
+        if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
+            print_info "Using MinGW-w64 cross-compiler for Windows builds on macOS"
+        elif brew list mingw-w64 &> /dev/null; then
+            print_info "MinGW-w64 found via Homebrew, using for Windows cross-compilation"
+        else
+            print_error "Windows GNU target requires MinGW-w64 toolchain. Install with: brew install mingw-w64"
+            exit 1
+        fi
+    else
+        # On Linux, check if MinGW-w64 is installed
+        if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
+            print_info "Using MinGW-w64 cross-compiler for Windows builds on Linux"
+        else
+            print_error "Windows GNU target requires MinGW-w64 toolchain. Install with: sudo apt-get install mingw-w64"
+            exit 1
+        fi
+    fi
 fi
 
 
@@ -135,6 +180,7 @@ build_native_module "global-key-listener"
 build_native_module "audio-recorder"
 build_native_module "text-writer"
 build_native_module "active-application"
+build_native_module "selected-text-reader"
 
 
 print_status "All native module builds completed successfully!"

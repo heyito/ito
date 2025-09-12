@@ -6,12 +6,37 @@ import reactHooksPlugin from 'eslint-plugin-react-hooks'
 export default [
   {
     ignores: [
+      // Dependencies
       'node_modules/**',
+      '.pnpm-store/**',
+
+      // Build outputs
       'dist/**',
       'build/**',
       'out/**',
-      '.vscode/**',
-      '.git/**',
+      '**/*.min.js',
+      '**/*.bundle.js',
+      '**/dist/**',
+
+      // CDK outputs
+      'server/infra/cdk.out/**',
+      'server/infra/**/*.d.ts',
+      'server/infra/**/*.js',
+
+      // Generated files
+      '**/generated/**',
+      'lib/generated/**',
+      'app/generated/**',
+      'server/src/generated/**',
+      'server/src/ito_*',
+      '**/*.pb.ts',
+      '**/*_pb.ts',
+      '**/*_connect.ts',
+
+      // Electron
+      '.vite/**',
+
+      // Config files
       '.gitignore',
       '.eslintignore',
       '.eslintrc',
@@ -19,8 +44,22 @@ export default [
       'commitlint.config.js',
       'electron-builder.config.js',
       'tailwind.config.js',
+      'vite.config.ts',
+      'electron.config.ts',
+      'jest.config.js',
       'server/infra/jest.config.js',
-      '**/generated/**',
+
+      // Migration files
+      'server/src/migrations/**',
+
+      // Binary files
+      'resources/binaries/**',
+
+      // Utility scripts
+      'scripts/**',
+
+      // Other
+      'shared-constants.js',
     ],
   },
   eslint.configs.recommended,
@@ -109,6 +148,14 @@ export default [
         console: 'readonly',
         window: 'readonly',
       },
+    },
+  },
+  // Test file specific configuration
+  {
+    files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+      'no-console': 'off',
     },
   },
 ]

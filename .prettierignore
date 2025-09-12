@@ -3,6 +3,62 @@ dist/
 build/
 .next/
 coverage/
+out/
 
 # Generated proto files
 **/generated/
+lib/generated/
+app/generated/
+server/src/generated/
+
+# CDK outputs
+server/infra/cdk.out/
+server/infra/*.d.ts
+server/infra/*.js
+*.assets.json
+*.template.json
+
+# Build artifacts
+*.min.js
+*.bundle.js
+
+# Dependencies
+.pnpm-store/
+bun.lockb
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# Test coverage
+.nyc_output/
+
+# IDE and system files
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Environment files
+.env
+.env.*
+
+# Electron
+.vite/
+
+# Binary files
+resources/binaries/
+*.exe
+*.dll
+*.so
+*.dylib
+
+
+# Native build artifacts
+native/**/.build/**
+native/**/build/**
+native/**/*.json

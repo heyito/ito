@@ -1,5 +1,10 @@
+import { ItoMode } from '@/app/generated/ito_pb'
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 import { EventEmitter } from 'events'
+import { fakeTimers } from '../__tests__/helpers/testUtils'
+import { DEBOUNCE_TIME } from './keyboard'
+
+const clock = fakeTimers()
 
 // Mock all external dependencies
 const mockChildProcess = {
@@ -34,8 +39,14 @@ mock.module('child_process', () => ({
 
 const mockMainStore = {
   get: mock(() => ({
-    keyboardShortcut: ['command', 'space'],
     isShortcutGloballyEnabled: true,
+    keyboardShortcuts: [
+      {
+        id: 'mock-shortcut-1',
+        keys: ['command', 'space'],
+        mode: ItoMode.TRANSCRIBE,
+      },
+    ],
   })),
 }
 mock.module('../main/store', () => ({
@@ -83,6 +94,11 @@ mock.module('../main/voiceInputService', () => ({
   voiceInputService: mockVoiceInputService,
 }))
 
+// Helper function to wait for debounce
+const waitForDebounce = async () => {
+  clock.tick(DEBOUNCE_TIME + 1)
+}
+
 // Mock console to avoid spam
 beforeEach(async () => {
   console.log = mock()
@@ -126,8 +142,14 @@ describe('Keyboard Module', () => {
 
     // Set default mock return values
     mockMainStore.get.mockReturnValue({
-      keyboardShortcut: ['command', 'space'],
       isShortcutGloballyEnabled: true,
+      keyboardShortcuts: [
+        {
+          id: 'mock-shortcut-1',
+          keys: ['command', 'space'],
+          mode: ItoMode.TRANSCRIBE,
+        },
+      ],
     })
     mockGetNativeBinaryPath.mockReturnValue('/path/to/global-key-listener')
   })
@@ -342,8 +364,14 @@ describe('Keyboard Module', () => {
   describe('Shortcut Detection Business Logic', () => {
     test('should activate shortcut when keys match', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['command', 'space'],
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'test-shortcut-1',
+            keys: ['command', 'space'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
@@ -373,6 +401,9 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(spaceDown) + '\n'),
       )
 
+      // Wait for debounce delay
+      await waitForDebounce()
+
       expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
       expect(console.info).toHaveBeenCalledWith(
         'lib Shortcut ACTIVATED, starting recording...',
@@ -381,8 +412,14 @@ describe('Keyboard Module', () => {
 
     test('should deactivate shortcut when keys are released', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['command', 'space'],
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'test-shortcut',
+            keys: ['command', 'space'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
@@ -410,6 +447,9 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(spaceDown) + '\n'),
       )
 
+      // Wait for debounce delay to activate shortcut
+      await waitForDebounce()
+
       // Release space key
       const spaceUp = {
         type: 'keyup',
@@ -430,8 +470,14 @@ describe('Keyboard Module', () => {
 
     test('should not activate shortcut when globally disabled', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['command', 'space'],
         isShortcutGloballyEnabled: false,
+        keyboardShortcuts: [
+          {
+            id: 'test-shortcut',
+            keys: ['command', 'space'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
@@ -464,8 +510,14 @@ describe('Keyboard Module', () => {
     test('should stop active recording when shortcut is disabled', async () => {
       let isShortcutGloballyEnabled = true
       mockMainStore.get.mockImplementation(() => ({
-        keyboardShortcut: ['command', 'space'],
         isShortcutGloballyEnabled,
+        keyboardShortcuts: [
+          {
+            id: 'disable-test',
+            keys: ['command', 'space'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       }))
 
       const { startKeyListener } = await import('./keyboard')
@@ -492,6 +544,9 @@ describe('Keyboard Module', () => {
         'data',
         Buffer.from(JSON.stringify(spaceDown) + '\n'),
       )
+
+      // Wait for debounce delay to activate shortcut
+      await waitForDebounce()
 
       // Disable shortcuts
       isShortcutGloballyEnabled = false
@@ -559,8 +614,14 @@ describe('Keyboard Module', () => {
 
     test('should handle complex multi-key shortcuts', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['control', 'shift', 'f'],
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'complex-shortcut',
+            keys: ['control', 'shift', 'f'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
@@ -599,13 +660,22 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(fDown) + '\n'),
       )
 
+      // Wait for debounce delay
+      await waitForDebounce()
+
       expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
     })
 
     test('should handle partial shortcut matches correctly', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['command', 'shift', 'a'],
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'partial-test',
+            keys: ['command', 'shift', 'a'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
@@ -637,19 +707,259 @@ describe('Keyboard Module', () => {
       // Should not activate shortcut with partial match
       expect(mockVoiceInputService.startSTTService).not.toHaveBeenCalled()
     })
-  })
 
-  describe('Key Normalization Business Logic', () => {
-    test('should normalize modifier keys correctly', async () => {
+    test('should not activate shortcut when superset of keys is pressed', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['command'],
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'superset-test',
+            keys: ['fn'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
       startKeyListener()
 
-      // Test both left and right meta keys normalize to 'command'
+      // Press control first, then fn (so fn+control are pressed together but shortcut should not match)
+      const controlDown = {
+        type: 'keydown',
+        key: 'ControlLeft',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 17,
+      }
+      const fnDown = {
+        type: 'keydown',
+        key: 'Function',
+        timestamp: '2024-01-01T00:00:00.001Z',
+        raw_code: 179,
+      }
+
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(controlDown) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(fnDown) + '\n'),
+      )
+
+      // Should not activate shortcut when superset is pressed
+      expect(mockVoiceInputService.startSTTService).not.toHaveBeenCalled()
+    })
+
+    test('should require exact key match for shortcut activation', async () => {
+      mockMainStore.get.mockReturnValue({
+        isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'exact-match-test',
+            keys: ['fn'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
+      })
+
+      const { startKeyListener } = await import('./keyboard')
+      startKeyListener()
+
+      // Press exactly fn (exact match)
+      const fnDown = {
+        type: 'keydown',
+        key: 'Function',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 179,
+      }
+
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(fnDown) + '\n'),
+      )
+
+      // Wait for debounce delay
+      await waitForDebounce()
+
+      // Should activate shortcut with exact match
+      expect(mockVoiceInputService.startSTTService).toHaveBeenCalledWith(
+        ItoMode.TRANSCRIBE,
+      )
+    })
+
+    test('should not match when extra keys are held with configured shortcut', async () => {
+      mockMainStore.get.mockReturnValue({
+        isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'extra-keys-test',
+            keys: ['command', 'space'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
+      })
+
+      const { startKeyListener } = await import('./keyboard')
+      startKeyListener()
+
+      // Press shift first, then command + space (so all three are pressed but shortcut should not match)
+      const shiftDown = {
+        type: 'keydown',
+        key: 'ShiftLeft',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 16,
+      }
+      const commandDown = {
+        type: 'keydown',
+        key: 'MetaLeft',
+        timestamp: '2024-01-01T00:00:00.001Z',
+        raw_code: 91,
+      }
+      const spaceDown = {
+        type: 'keydown',
+        key: 'Space',
+        timestamp: '2024-01-01T00:00:00.002Z',
+        raw_code: 32,
+      }
+
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(shiftDown) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(commandDown) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(spaceDown) + '\n'),
+      )
+
+      // Should not activate shortcut when extra keys are pressed
+      expect(mockVoiceInputService.startSTTService).not.toHaveBeenCalled()
+    })
+
+    test('should allow repeated shortcut activations with exact matching', async () => {
+      mockMainStore.get.mockReturnValue({
+        isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'repeat-test',
+            keys: ['command', 'space'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
+      })
+
+      const { startKeyListener } = await import('./keyboard')
+      startKeyListener()
+
+      // First activation cycle
+      const commandDown1 = {
+        type: 'keydown',
+        key: 'MetaLeft',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 91,
+      }
+      const spaceDown1 = {
+        type: 'keydown',
+        key: 'Space',
+        timestamp: '2024-01-01T00:00:00.001Z',
+        raw_code: 32,
+      }
+      const commandUp1 = {
+        type: 'keyup',
+        key: 'MetaLeft',
+        timestamp: '2024-01-01T00:00:00.002Z',
+        raw_code: 91,
+      }
+      const spaceUp1 = {
+        type: 'keyup',
+        key: 'Space',
+        timestamp: '2024-01-01T00:00:00.003Z',
+        raw_code: 32,
+      }
+
+      // Press command + space
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(commandDown1) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(spaceDown1) + '\n'),
+      )
+
+      // Wait for debounce delay
+      await waitForDebounce()
+
+      expect(mockVoiceInputService.startSTTService).toHaveBeenCalledTimes(1)
+
+      // Release command + space
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(commandUp1) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(spaceUp1) + '\n'),
+      )
+
+      expect(mockVoiceInputService.stopSTTService).toHaveBeenCalledTimes(1)
+
+      // Clear mocks for second cycle
+      mockVoiceInputService.startSTTService.mockClear()
+      mockVoiceInputService.stopSTTService.mockClear()
+
+      // Second activation cycle - should work again
+      const commandDown2 = {
+        type: 'keydown',
+        key: 'MetaLeft',
+        timestamp: '2024-01-01T00:00:01.000Z',
+        raw_code: 91,
+      }
+      const spaceDown2 = {
+        type: 'keydown',
+        key: 'Space',
+        timestamp: '2024-01-01T00:00:01.001Z',
+        raw_code: 32,
+      }
+
+      // Press command + space again
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(commandDown2) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(spaceDown2) + '\n'),
+      )
+
+      // Wait for debounce delay
+      await waitForDebounce()
+
+      // Should activate shortcut again
+      expect(mockVoiceInputService.startSTTService).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('Key Normalization Business Logic', () => {
+    test('should normalize legacy modifier keys to left variants', async () => {
+      mockMainStore.get.mockReturnValue({
+        isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'command-test',
+            keys: ['command'], // Legacy key, should normalize to command-left
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
+      })
+
+      const { startKeyListener } = await import('./keyboard')
+      startKeyListener()
+
+      // MetaLeft should match because 'command' normalizes to 'command-left'
       const metaLeftDown = {
         type: 'keydown',
         key: 'MetaLeft',
@@ -660,6 +970,9 @@ describe('Keyboard Module', () => {
         'data',
         Buffer.from(JSON.stringify(metaLeftDown) + '\n'),
       )
+
+      // Wait for debounce delay
+      await waitForDebounce()
 
       expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
       mockVoiceInputService.startSTTService.mockClear()
@@ -675,7 +988,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(metaLeftUp) + '\n'),
       )
 
-      // Now test right meta key
+      // MetaRight should NOT trigger since command normalizes to command-left only
       const metaRightDown = {
         type: 'keydown',
         key: 'MetaRight',
@@ -687,13 +1000,23 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(metaRightDown) + '\n'),
       )
 
-      expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
+      // Wait for debounce delay
+      await waitForDebounce()
+
+      // Should NOT have been called again
+      expect(mockVoiceInputService.startSTTService).not.toHaveBeenCalled()
     })
 
     test('should normalize letter keys correctly', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['a'],
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'letter-test',
+            keys: ['a'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
@@ -710,13 +1033,22 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(keyADown) + '\n'),
       )
 
+      // Wait for debounce delay
+      await waitForDebounce()
+
       expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
     })
 
     test('should normalize number keys correctly', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['1'],
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'number-test',
+            keys: ['1'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
@@ -733,13 +1065,22 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(digit1Down) + '\n'),
       )
 
+      // Wait for debounce delay
+      await waitForDebounce()
+
       expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
     })
 
     test('should handle unknown keys by lowercasing them', async () => {
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['unknownkey'],
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'unknown-test',
+            keys: ['unknownkey'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       const { startKeyListener } = await import('./keyboard')
@@ -755,6 +1096,9 @@ describe('Keyboard Module', () => {
         'data',
         Buffer.from(JSON.stringify(unknownKeyDown) + '\n'),
       )
+
+      // Wait for debounce delay
+      await waitForDebounce()
 
       expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
     })
@@ -806,15 +1150,82 @@ describe('Keyboard Module', () => {
       expect(mockChildProcess.stdin.write).not.toHaveBeenCalled()
     })
 
-    test('should automatically block keys on startup', async () => {
-      const { startKeyListener } = await import('./keyboard')
+    test('should only block keys when complete shortcut is pressed', async () => {
+      mockMainStore.get.mockReturnValue({
+        isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'block-test',
+            keys: ['control', 'z'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
+      })
 
+      const { startKeyListener } = await import('./keyboard')
       startKeyListener()
 
-      // Should call blockKeys with getKeysToBlock() result
+      // Should not block keys initially
+      expect(mockChildProcess.stdin.write).not.toHaveBeenCalled()
+
+      // Press only control (partial shortcut) - should not block
+      const controlDown = {
+        type: 'keydown',
+        key: 'ControlLeft',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 17,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(controlDown) + '\n'),
+      )
+
+      // Should unblock keys since complete shortcut is not pressed
+      expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
+        JSON.stringify({ command: 'block', keys: [] }) + '\n',
+      )
+
+      // Press z key to complete shortcut
+      const zDown = {
+        type: 'keydown',
+        key: 'KeyZ',
+        timestamp: '2024-01-01T00:00:00.001Z',
+        raw_code: 90,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(zDown) + '\n'),
+      )
+
+      // Now should block keys since complete shortcut is pressed
       expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
         expect.stringContaining('"command":"block"'),
       )
+      expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
+        expect.stringContaining('ControlLeft'),
+      )
+      expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
+        expect.stringContaining('KeyZ'),
+      )
+    })
+
+    test('should not block keys when shortcut is disabled', async () => {
+      mockMainStore.get.mockReturnValue({
+        isShortcutGloballyEnabled: false,
+        keyboardShortcuts: [
+          {
+            id: 'disabled-block-test',
+            keys: ['control', 'z'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
+      })
+
+      const { startKeyListener } = await import('./keyboard')
+      startKeyListener()
+
+      // Should not block any keys if shortcut is disabled
+      expect(mockChildProcess.stdin.write).not.toHaveBeenCalled()
     })
   })
 
@@ -853,8 +1264,14 @@ describe('Keyboard Module', () => {
 
       // The shortcut that required both A and B should not be active
       mockMainStore.get.mockReturnValue({
-        keyboardShortcut: ['a', 'b'],
         isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'memory-test',
+            keys: ['a', 'b'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
       })
 
       // Only press A again - should not trigger shortcut since B was cleared
@@ -864,6 +1281,356 @@ describe('Keyboard Module', () => {
       )
 
       expect(mockVoiceInputService.startSTTService).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Stuck Key Detection', () => {
+    test('should remove keys stuck for more than 5 seconds', async () => {
+      const { startKeyListener } = await import('./keyboard')
+
+      startKeyListener()
+
+      // Press a key
+      const keyADown = {
+        type: 'keydown',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 65,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyADown) + '\n'),
+      )
+
+      // Advance time by more than 5 seconds (5000ms + check interval 1000ms)
+      clock.tick(6000)
+
+      // Should warn about removing stuck key
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key: a'),
+      )
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('(held for 6s)'),
+      )
+    })
+
+    test('should not remove stuck keys that are part of active shortcuts', async () => {
+      mockMainStore.get.mockReturnValue({
+        isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'stuck-key-protection-test',
+            keys: ['command', 'space'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
+      })
+
+      const { startKeyListener } = await import('./keyboard')
+      startKeyListener()
+
+      // Activate shortcut
+      const commandDown = {
+        type: 'keydown',
+        key: 'MetaLeft',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 91,
+      }
+      const spaceDown = {
+        type: 'keydown',
+        key: 'Space',
+        timestamp: '2024-01-01T00:00:00.001Z',
+        raw_code: 32,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(commandDown) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(spaceDown) + '\n'),
+      )
+
+      // Wait for debounce to activate shortcut
+      await waitForDebounce()
+
+      // Advance time by more than 5 seconds
+      clock.tick(6000)
+
+      // Should not warn about removing stuck keys since they're part of active shortcut
+      expect(console.warn).not.toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key'),
+      )
+    })
+
+    test('should remove stuck keys that are not part of active shortcuts', async () => {
+      mockMainStore.get.mockReturnValue({
+        isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'partial-stuck-test',
+            keys: ['command', 'space'],
+            mode: ItoMode.TRANSCRIBE,
+          },
+        ],
+      })
+
+      const { startKeyListener } = await import('./keyboard')
+      startKeyListener()
+
+      // Activate shortcut
+      const commandDown = {
+        type: 'keydown',
+        key: 'MetaLeft',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 91,
+      }
+      const spaceDown = {
+        type: 'keydown',
+        key: 'Space',
+        timestamp: '2024-01-01T00:00:00.001Z',
+        raw_code: 32,
+      }
+      // Press an extra key that's not part of the shortcut
+      const keyADown = {
+        type: 'keydown',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:00.002Z',
+        raw_code: 65,
+      }
+
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(commandDown) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(spaceDown) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyADown) + '\n'),
+      )
+
+      // Wait for debounce to activate shortcut
+      await waitForDebounce()
+
+      // Advance time by more than 5 seconds
+      clock.tick(6000)
+
+      // Should warn about removing the stuck key that's not part of the active shortcut
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key: a'),
+      )
+    })
+
+    test('should not check for stuck keys when no shortcut is active', async () => {
+      const { startKeyListener } = await import('./keyboard')
+
+      startKeyListener()
+
+      // Press some keys without activating any shortcuts
+      const keyADown = {
+        type: 'keydown',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 65,
+      }
+      const keyBDown = {
+        type: 'keydown',
+        key: 'KeyB',
+        timestamp: '2024-01-01T00:00:00.001Z',
+        raw_code: 66,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyADown) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyBDown) + '\n'),
+      )
+
+      // Advance time by more than 5 seconds
+      clock.tick(6000)
+
+      // Should still remove stuck keys even when no shortcut is active
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key: a'),
+      )
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key: b'),
+      )
+    })
+
+    test('should clear stuck key tracking on key release', async () => {
+      const { startKeyListener } = await import('./keyboard')
+
+      startKeyListener()
+
+      // Press and release a key quickly
+      const keyADown = {
+        type: 'keydown',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 65,
+      }
+      const keyAUp = {
+        type: 'keyup',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:00.100Z',
+        raw_code: 65,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyADown) + '\n'),
+      )
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyAUp) + '\n'),
+      )
+
+      // Advance time by more than 5 seconds
+      clock.tick(6000)
+
+      // Should not warn about stuck key since it was released
+      expect(console.warn).not.toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key: a'),
+      )
+    })
+
+    test('should not track duplicate keydown events for same key', async () => {
+      const { startKeyListener } = await import('./keyboard')
+
+      startKeyListener()
+
+      // Press same key multiple times (simulating key repeat)
+      const keyADown1 = {
+        type: 'keydown',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 65,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyADown1) + '\n'),
+      )
+
+      // Advance time slightly
+      clock.tick(1000)
+
+      const keyADown2 = {
+        type: 'keydown',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:01.000Z',
+        raw_code: 65,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyADown2) + '\n'),
+      )
+
+      // Advance time by more than 5 seconds from first press
+      clock.tick(5000)
+
+      // Should warn about stuck key based on first timestamp, not second
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key: a'),
+      )
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('(held for 6s)'),
+      )
+    })
+
+    test('should clean up stuck key checker on stop', async () => {
+      const { startKeyListener, stopKeyListener } = await import('./keyboard')
+
+      startKeyListener()
+
+      // Press a key
+      const keyADown = {
+        type: 'keydown',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 65,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyADown) + '\n'),
+      )
+
+      // Stop the key listener
+      stopKeyListener()
+
+      // Advance time by more than 5 seconds
+      clock.tick(6000)
+
+      // Should not warn about stuck keys since listener was stopped
+      expect(console.warn).not.toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key'),
+      )
+    })
+
+    test('should clean up stuck key data in resetForTesting', async () => {
+      const { startKeyListener, resetForTesting } = await import('./keyboard')
+
+      startKeyListener()
+
+      // Press a key
+      const keyADown = {
+        type: 'keydown',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 65,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyADown) + '\n'),
+      )
+
+      // Reset for testing
+      resetForTesting()
+
+      // Start again
+      startKeyListener()
+
+      // Advance time by more than 5 seconds
+      clock.tick(6000)
+
+      // Should not warn about stuck keys since data was reset
+      expect(console.warn).not.toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key'),
+      )
+    })
+
+    test('should handle check interval timing correctly', async () => {
+      const { startKeyListener } = await import('./keyboard')
+
+      startKeyListener()
+
+      // Press a key
+      const keyADown = {
+        type: 'keydown',
+        key: 'KeyA',
+        timestamp: '2024-01-01T00:00:00.000Z',
+        raw_code: 65,
+      }
+      mockChildProcess.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify(keyADown) + '\n'),
+      )
+
+      // Advance time by exactly 5 seconds (should not trigger removal yet)
+      clock.tick(5000)
+      expect(console.warn).not.toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key'),
+      )
+
+      // Advance time by the check interval (should trigger removal)
+      clock.tick(1000)
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Removing stuck key: a'),
+      )
     })
   })
 })

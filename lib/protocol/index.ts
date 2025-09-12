@@ -19,7 +19,11 @@ function handleProtocolUrl(url: string) {
 
       if (authCode && state) {
         // Find the main window (not the pill window) and send the auth code
-        if (mainWindow && !mainWindow.isDestroyed()) {
+        if (
+          mainWindow &&
+          !mainWindow.isDestroyed() &&
+          !mainWindow.webContents.isDestroyed()
+        ) {
           mainWindow.webContents.send('auth-code-received', authCode, state)
 
           // Focus and show the window with more aggressive methods

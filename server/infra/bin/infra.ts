@@ -37,6 +37,8 @@ export class AppStage extends Stage {
       dbSecretArn: platform.dbSecretArn,
       dbEndpoint: platform.dbEndpoint,
       serviceRepo: platform.serviceRepo,
+      opensearchDomain: platform.opensearchDomain,
+      blobStorageBucket: platform.blobStorageBucket,
     })
 
     new SecurityStack(this, `${ITO_PREFIX}Security`, {

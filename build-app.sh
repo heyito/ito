@@ -5,7 +5,7 @@ set -e
 
 # Load environment variables from .env file if it exists
 if [ -f .env ]; then
-  export $(grep -v '^#' .env | xargs)
+  export $(grep -v '^#' .env | sed 's/#.*//' | xargs)
 fi
 
 # Colors for output
@@ -51,14 +51,23 @@ clear_output_dir() {
 setup_node_env() {
     print_info "Setting up Node.js environment..."
     export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+    if [ -d "$NVM_DIR" ] && [ -s "$NVM_DIR/nvm.sh" ]; then
+        \. "$NVM_DIR/nvm.sh"
+        [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+        print_info "NVM environment loaded"
+    else
+        print_info "NVM not found or using system Node.js"
+    fi
 }
 
 # Load Rust environment
 setup_rust_env() {
     print_info "Setting up Rust environment..."
-    [ -s "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
+    if [ -s "$HOME/.cargo/env" ]; then
+        source "$HOME/.cargo/env"
+    else
+        print_info "Rust environment file not found, using system Rust"
+    fi
 }
 
 # Check if required tools are installed
@@ -93,8 +102,25 @@ check_prerequisites() {
 
 # Build native Rust modules
 build_native_modules() {
-    print_status "Building native Rust modules..."
-    ./build-binaries.sh --mac --universal
+    local platform=$1
+    print_status "Building native Rust modules for $platform..."
+    
+    case $platform in
+        "mac")
+            ./build-binaries.sh --mac --universal
+            ;;
+        "windows")
+            ./build-binaries.sh --windows
+            ;;
+        "all")
+            ./build-binaries.sh --all --universal
+            ;;
+        *)
+            print_error "Invalid platform: $platform. Use 'mac', 'windows', or 'all'"
+            exit 1
+            ;;
+    esac
+    
     print_status "Native modules built successfully!"
 }
 
@@ -115,9 +141,9 @@ build_electron_app() {
     print_status "Electron application built successfully!"
 }
 
-# Create DMG installer
+# Create macOS DMG installer
 create_dmg() {
-    print_status "Creating DMG installer..."
+    print_status "Creating macOS DMG installer..."
     
     # Check for notarization credentials if notarize is enabled in config
     if grep -q "notarize: true" electron-builder.config.js; then
@@ -131,11 +157,10 @@ create_dmg() {
     fi
     
     print_info "Packaging application with Electron Builder..."
-    # First build the Electron app, then run electron-builder
     bun run vite:build:app
     bun run electron-builder --config electron-builder.config.js --mac --universal --publish never
     
-    print_status "DMG installer created successfully!"
+    print_status "macOS DMG installer created successfully!"
     
     # Show output location
     if [ -d "dist" ]; then
@@ -144,24 +169,146 @@ create_dmg() {
     fi
 }
 
+# Create Windows installer
+create_windows_installer() {
+    print_status "Creating Windows installer..."
+    
+    print_info "Packaging application with Electron Builder..."
+    bun run vite:build:app
+    
+    # Set npm config to avoid symlink issues on Windows
+    export npm_config_cache=$PWD/.npm-cache
+    export ELECTRON_BUILDER_CACHE=$PWD/.electron-builder-cache  
+    
+    # Disable code signing completely
+    export CSC_IDENTITY_AUTO_DISCOVERY=false
+    export CSC_LINK=""
+    export CSC_KEY_PASSWORD=""
+    export SKIP_SIGNING=true
+    export WIN_CSC_LINK=""
+    
+    print_info "Using Docker for Windows build on $OSTYPE..."
+    
+    # Check if Docker is available
+    if ! command -v docker &> /dev/null; then
+        print_error "Docker is not installed. Please install Docker Desktop."
+        exit 1
+    fi
+    
+    # Check if Docker is running (skip in CI environments)
+    if [ -z "$CI" ] && ! docker info &> /dev/null; then
+        print_error "Docker is not running. Please start Docker."
+        exit 1
+    fi
+    
+    # Use Docker for cross-compilation with ARM64 compatibility and bun
+    # Get absolute path in a cross-platform way
+    if [[ "$OSTYPE" == "msys" ]]; then
+        # On MinGW/MSYS2, convert to Windows path format for Docker
+        PROJECT_PATH="$(cygpath -w "$(pwd)" | sed 's|\\|/|g')"
+    else
+        PROJECT_PATH="$(pwd)"
+    fi
+    
+    docker run --rm --platform linux/amd64 \
+      --env CSC_IDENTITY_AUTO_DISCOVERY=false \
+      --env SKIP_SIGNING=true \
+      -v "${PROJECT_PATH}":/project \
+      electronuserland/builder:wine \
+      bash -c "
+        # Install bun with retry
+        curl -fsSL https://bun.sh/install | bash || curl -fsSL https://bun.sh/install | bash
+        export PATH=\"/root/.bun/bin:\$PATH\"
+        
+        # Verify bun installation
+        bun --version
+
+        # Change to project and debug file paths
+        cd /project
+        echo 'Current directory:' \$(pwd)
+        echo 'Directory contents:'
+        ls -la
+        
+        # Install dependencies (let SQLite3 use prebuilt binaries for Electron)
+        export npm_config_target_platform=win32
+        export npm_config_target_arch=x64
+        export npm_config_runtime=electron
+        export npm_config_sqlite3_binary_host_mirror=https://github.com/mapbox/node-sqlite3/releases/download
+        export npm_config_electron_version=\$(node -p \"require('./package.json').devDependencies.electron.replace('^', '')\")
+        bun install || bun install --force || bun install
+        
+        # Run electron-builder
+        bunx electron-builder --config electron-builder.config.js --win --x64 --publish=never
+
+        # Rename latest.yml to latest-windows.yml inside the container
+        if [ -f dist/latest.yml ]; then
+          echo 'Renaming dist/latest.yml to dist/latest-windows.yml for Windows auto-updater'
+          mv dist/latest.yml dist/latest-windows.yml
+        fi
+      "
+    
+    print_status "Windows installer created successfully!"
+    
+    # Show output location
+    if [ -d "dist" ]; then
+        print_info "Build output location: $(pwd)/dist"
+        ls -la dist/*.exe 2>/dev/null || print_warning "No .exe files found in dist directory"
+        ls -la dist/*.nsis.7z 2>/dev/null || print_warning "No .nsis.7z files found in dist directory"
+    fi
+}
+
+# Show usage information
+show_usage() {
+    echo "Usage: $0 [PLATFORM] [OPTIONS]"
+    echo ""
+    echo "PLATFORMS:"
+    echo "  mac, macos          Build for macOS (default)"
+    echo "  win, windows        Build for Windows"
+    echo ""
+    echo "OPTIONS:"
+    echo "  --skip-binaries     Skip building native Rust modules"
+    echo "  --help, -h          Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0                  # Build for macOS"
+    echo "  $0 mac              # Build for macOS"
+    echo "  $0 windows          # Build for Windows"
+    echo "  $0 mac --skip-binaries    # Build macOS without rebuilding Rust modules"
+}
+
 # Main build function
 main() {
-    print_status "Starting Ito build process..."
-    echo
-    
     # Parse command line arguments
+    PLATFORM="mac"  # default platform
     SKIP_BINARIES=false
+    
     for arg in "$@"; do
         case $arg in
+            "mac"|"macos")
+                PLATFORM="mac"
+                shift
+                ;;
+            "win"|"windows")
+                PLATFORM="windows"
+                shift
+                ;;
             --skip-binaries)
                 SKIP_BINARIES=true
                 shift
                 ;;
+            --help|-h)
+                show_usage
+                exit 0
+                ;;
             *)
                 # Unknown option
+                print_warning "Unknown option: $arg"
                 ;;
         esac
     done
+    
+    print_status "Starting Ito $PLATFORM build process..."
+    echo
     
     # Clear output directory first
     clear_output_dir
@@ -174,27 +321,42 @@ main() {
         setup_rust_env
     fi
     
-    
     # Check prerequisites
     check_prerequisites
     echo
     
     # Build native modules (unless skipped)
     if [ "$SKIP_BINARIES" = false ]; then
-        build_native_modules
+        case $PLATFORM in
+            "mac")
+                build_native_modules "mac"
+                ;;
+            "windows")
+                build_native_modules "windows"
+                ;;
+        esac
         echo
     else
         print_info "Skipping native modules build (--skip-binaries flag passed)"
         echo
     fi
     
-    # Create DMG (includes Electron build)
-    create_dmg
-    echo
-    
-    print_status "Build process completed successfully! 🎉"
-    print_info "Your DMG installer is ready: dist/Ito-Installer.dmg"
+    # Build for the specified platform(s)
+    case $PLATFORM in
+        "mac")
+            create_dmg
+            echo
+            print_status "macOS build process completed successfully! 🎉"
+            print_info "Your DMG installer is ready: dist/Ito-Installer.dmg"
+            ;;
+        "windows")
+            create_windows_installer
+            echo
+            print_status "Windows build process completed successfully! 🎉"
+            print_info "Your Windows installer is ready in the dist/ directory"
+            ;;
+    esac
 }
 
 # Run main function
-main "$@" 
+main "$@"

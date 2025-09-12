@@ -1,9 +1,6 @@
 import Groq from 'groq-sdk'
 import { toFile } from 'groq-sdk/uploads'
 import * as dotenv from 'dotenv'
-import { ITO_MODE_PROMPT, ItoMode } from '../services/ito/constants.js'
-import { addContextToPrompt } from '../services/ito/helpers.js'
-import { WindowContext } from '../services/ito/types.js'
 import { createTranscriptionPrompt } from '../prompts/transcription.js'
 import {
   ClientApiKeyError,
@@ -16,17 +13,19 @@ import {
   ClientError,
 } from './errors.js'
 import { ClientProvider } from './providers.js'
+import { LlmProvider } from './llmProvider.js'
+import { TranscriptionOptions } from './asrConfig.js'
+import { IntentTranscriptionOptions } from './intentTranscriptionConfig.js'
+import { DEFAULT_ADVANCED_SETTINGS } from '../constants/generated-defaults.js'
 
 // Load environment variables from .env file
 dotenv.config()
 export const itoVocabulary = ['Ito', 'Hey Ito']
-export const NO_SPEECH_THRESHOLD = 0.35
-export const LOW_QUALITY_THRESHOLD = -0.55
 
 /**
  * A TypeScript client for interacting with the Groq API, inspired by your Python implementation.
  */
-class GroqClient {
+class GroqClient implements LlmProvider {
   private readonly _client: Groq
   private readonly _userCommandModel: string
   private readonly _isValid: boolean
@@ -53,55 +52,62 @@ class GroqClient {
    * @returns The adjusted transcript.
    */
   public async adjustTranscript(
-    transcript: string,
-    mode: ItoMode,
-    context?: WindowContext,
+    userPrompt: string,
+    options?: IntentTranscriptionOptions,
   ): Promise<string> {
     if (!this.isAvailable) {
       throw new ClientUnavailableError(ClientProvider.GROQ)
     }
-    const defaultPrompt =
-      'You are a dictation assistant named Ito. Your job is to fulfill the intent of the transcript without asking follow up questions.'
+
+    const temperature = options?.temperature ?? 0.7
+    const model = options?.model || this._userCommandModel
+    const systemPrompt =
+      options?.prompt ||
+      'Adjust and improve this transcript for clarity and accuracy.'
+
     try {
       const completion = await this._client.chat.completions.create({
         messages: [
           {
             role: 'system',
-            content: addContextToPrompt(
-              ITO_MODE_PROMPT[mode] || defaultPrompt,
-              context,
-            ),
+            content: systemPrompt,
           },
           {
             role: 'user',
-            content: `The user's transcript: ${transcript}`,
+            content: userPrompt,
           },
         ],
-        model: 'openai/gpt-oss-120b',
-        temperature: 0.1,
+        model,
+        temperature,
       })
 
-      return completion.choices[0]?.message?.content?.trim() || transcript
+      // Return a space to enable emptying the document
+      return completion.choices[0]?.message?.content?.trim() || ' '
     } catch (error: any) {
       console.error('An error occurred during transcript adjustment:', error)
-      return transcript
+      return userPrompt
     }
   }
 
   /**
    * Transcribes an audio buffer using the Groq API.
    * @param audioBuffer The audio data as a Node.js Buffer.
-   * @param fileType The extension of the audio file type (e.g., 'webm', 'wav').
-   * @param vocabulary Optional custom vocabulary to improve transcription accuracy.
-   * @param asrModel The ASR model to use for transcription (required).
+   * @param options Optional transcription configuration.
    * @returns The transcribed text as a string.
    */
   public async transcribeAudio(
     audioBuffer: Buffer,
-    fileType: string = 'webm',
-    asrModel: string,
-    vocabulary?: string[],
+    options?: TranscriptionOptions,
   ): Promise<string> {
+    const fileType = options?.fileType || 'webm'
+    const asrModel = options?.asrModel
+    const vocabulary = options?.vocabulary
+    const noSpeechThreshold =
+      options?.noSpeechThreshold ?? DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold
+    const lowQualityThreshold =
+      options?.lowQualityThreshold ??
+      DEFAULT_ADVANCED_SETTINGS.lowQualityThreshold
+
     const file = await toFile(audioBuffer, `audio.${fileType}`)
     if (!this.isAvailable) {
       throw new ClientUnavailableError(ClientProvider.GROQ)
@@ -132,12 +138,12 @@ class GroqClient {
       const segments = (transcription as any).segments
       if (segments && segments.length > 0) {
         const segment = segments[0]
-        if (segment.no_speech_prob > NO_SPEECH_THRESHOLD) {
+        if (segment.no_speech_prob > noSpeechThreshold) {
           throw new ClientNoSpeechError(
             ClientProvider.GROQ,
             segment.no_speech_prob,
           )
-        } else if (segment.avg_logprob < LOW_QUALITY_THRESHOLD) {
+        } else if (segment.avg_logprob < lowQualityThreshold) {
           throw new ClientTranscriptionQualityError(
             ClientProvider.GROQ,
             segment.avg_logprob,

@@ -5,6 +5,17 @@ import {
   updateAnalyticsFromSettings,
 } from '@/app/components/analytics'
 import { STORE_KEYS } from '../../lib/constants/store-keys'
+import type { KeyboardShortcutConfig } from '@/lib/main/store'
+import { ItoMode } from '../generated/ito_pb'
+
+import { ITO_MODE_SHORTCUT_DEFAULTS } from '@/lib/constants/keyboard-defaults'
+import {
+  normalizeChord,
+  ShortcutResult,
+  validateShortcutForDuplicate,
+  isReservedCombination,
+} from '../utils/keyboard'
+import { KeyName } from '@/lib/types/keyboard'
 
 interface SettingsState {
   shareAnalytics: boolean
@@ -15,7 +26,7 @@ interface SettingsState {
   muteAudioWhenDictating: boolean
   microphoneDeviceId: string
   microphoneName: string
-  keyboardShortcut: string[]
+  keyboardShortcuts: KeyboardShortcutConfig[]
   setShareAnalytics: (share: boolean) => void
   setLaunchAtLogin: (launch: boolean) => void
   setShowItoBarAlways: (show: boolean) => void
@@ -23,7 +34,13 @@ interface SettingsState {
   setInteractionSounds: (enabled: boolean) => void
   setMuteAudioWhenDictating: (enabled: boolean) => void
   setMicrophoneDeviceId: (deviceId: string, name: string) => void
-  setKeyboardShortcut: (shortcut: string[]) => void
+  createKeyboardShortcut: (mode: ItoMode) => ShortcutResult
+  removeKeyboardShortcut: (shortcutId: string) => void
+  getItoModeShortcuts: (mode: ItoMode) => KeyboardShortcutConfig[]
+  updateKeyboardShortcut: (
+    shortcutId: string,
+    keys: KeyName[],
+  ) => ShortcutResult
 }
 
 type SettingCategory = 'general' | 'audio&mic' | 'keyboard' | 'account'
@@ -41,7 +58,18 @@ const getInitialState = () => {
     muteAudioWhenDictating: storedSettings?.muteAudioWhenDictating ?? false,
     microphoneDeviceId: storedSettings?.microphoneDeviceId ?? 'default',
     microphoneName: storedSettings?.microphoneName ?? 'Default Microphone',
-    keyboardShortcut: storedSettings?.keyboardShortcut ?? ['fn'], // This fallback is key
+    keyboardShortcuts: storedSettings?.keyboardShortcuts ?? [
+      {
+        keys: ITO_MODE_SHORTCUT_DEFAULTS[ItoMode.EDIT],
+        mode: ItoMode.EDIT,
+        id: crypto.randomUUID(),
+      },
+      {
+        keys: ITO_MODE_SHORTCUT_DEFAULTS[ItoMode.TRANSCRIBE],
+        mode: ItoMode.TRANSCRIBE,
+        id: crypto.randomUUID(),
+      },
+    ],
     firstName: storedSettings?.firstName ?? '',
     lastName: storedSettings?.lastName ?? '',
     email: storedSettings?.email ?? '',
@@ -154,23 +182,121 @@ export const useSettingsStore = create<SettingsState>(set => {
       set(partialState)
       syncToStore(partialState)
     },
-    setKeyboardShortcut: (shortcut: string[]) => {
-      const currentShortcut = useSettingsStore.getState().keyboardShortcut
-      const partialState = { keyboardShortcut: [...shortcut].sort() }
+    createKeyboardShortcut: (mode: ItoMode): ShortcutResult => {
+      const currentShortcuts = useSettingsStore.getState().keyboardShortcuts
+
+      const newShortcut = {
+        keys: [],
+        mode,
+        id: crypto.randomUUID(),
+      }
+
+      const newShortcuts = [...currentShortcuts, newShortcut]
+      const partialState = {
+        keyboardShortcuts: newShortcuts,
+      }
       // Track keyboard shortcut change
-      analytics.trackSettings(ANALYTICS_EVENTS.KEYBOARD_SHORTCUT_CHANGED, {
-        setting_name: 'keyboardShortcut',
-        old_value: currentShortcut,
-        new_value: shortcut,
+      analytics.trackSettings(ANALYTICS_EVENTS.KEYBOARD_SHORTCUTS_CHANGED, {
+        setting_name: 'keyboardShortcuts',
+        old_value: currentShortcuts,
+        new_value: newShortcuts,
         setting_category: 'input',
       })
 
       // Update user properties
       analytics.updateUserProperties({
-        keyboard_shortcut: shortcut,
+        keyboard_shortcuts: newShortcuts.map(ks => JSON.stringify(ks)),
       })
       set(partialState)
       syncToStore(partialState)
+      return { success: true }
+    },
+    removeKeyboardShortcut: (shortcutId: string) => {
+      const currentShortcuts = useSettingsStore.getState().keyboardShortcuts
+      const newShortcuts = currentShortcuts.filter(ks => ks.id !== shortcutId)
+      const partialState = {
+        keyboardShortcuts: newShortcuts,
+      }
+      // Track keyboard shortcut change
+      analytics.trackSettings(ANALYTICS_EVENTS.KEYBOARD_SHORTCUTS_CHANGED, {
+        setting_name: 'keyboardShortcuts',
+        old_value: currentShortcuts,
+        new_value: newShortcuts,
+        setting_category: 'input',
+      })
+
+      // Update user properties
+      analytics.updateUserProperties({
+        keyboard_shortcuts: newShortcuts.map(ks => JSON.stringify(ks)),
+      })
+      set(partialState)
+      syncToStore(partialState)
+    },
+    getItoModeShortcuts: (mode: ItoMode) => {
+      const { keyboardShortcuts } = useSettingsStore.getState()
+      return keyboardShortcuts.filter(ks => ks.mode === mode)
+    },
+    updateKeyboardShortcut: (
+      shortcutId: string,
+      keys: KeyName[],
+    ): ShortcutResult => {
+      const currentShortcuts = useSettingsStore.getState()
+        .keyboardShortcuts as KeyboardShortcutConfig[]
+
+      const shortcut = currentShortcuts.find(ks => ks.id === shortcutId)
+
+      if (!shortcut) {
+        return { success: false, error: 'not-found' }
+      }
+
+      const normalizedKeys = normalizeChord(keys)
+
+      // Check for reserved combinations
+      const reservedCheck = isReservedCombination(normalizedKeys)
+      if (reservedCheck.isReserved) {
+        return {
+          success: false,
+          error: 'reserved-combination',
+          errorMessage: reservedCheck.reason,
+        }
+      }
+
+      const newShortcut = {
+        ...shortcut,
+        keys: normalizedKeys,
+      }
+
+      const duplicateError = validateShortcutForDuplicate(
+        currentShortcuts,
+        newShortcut,
+        shortcut.mode,
+      )
+      if (duplicateError) {
+        return duplicateError
+      }
+
+      const updatedShortcuts = currentShortcuts.map(ks =>
+        ks.id === shortcutId ? { ...ks, keys: normalizedKeys } : ks,
+      )
+      const partialState = {
+        keyboardShortcuts: updatedShortcuts,
+      }
+      // Track keyboard shortcut change
+      analytics.trackSettings(ANALYTICS_EVENTS.KEYBOARD_SHORTCUTS_CHANGED, {
+        setting_name: 'keyboardShortcuts',
+        old_value: currentShortcuts,
+        new_value: updatedShortcuts,
+        setting_category: 'input',
+      })
+
+      // Update user properties
+      analytics.updateUserProperties({
+        keyboard_shortcuts: updatedShortcuts.map(ks => JSON.stringify(ks)),
+      })
+      set(partialState)
+      syncToStore(partialState)
+
+      return { success: true }
     },
   }
 })

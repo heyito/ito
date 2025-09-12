@@ -71,6 +71,7 @@ beforeEach(() => {
 
 import { voiceInputService } from './voiceInputService'
 import { STORE_KEYS } from '../constants/store-keys'
+import { ItoMode } from '@/app/generated/ito_pb'
 
 describe('VoiceInputService Integration Tests', () => {
   beforeEach(() => {
@@ -112,7 +113,7 @@ describe('VoiceInputService Integration Tests', () => {
         muteAudioWhenDictating: false,
       })
 
-      voiceInputService.startSTTService(true)
+      voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
 
       // Verify transcription service started
       expect(mockTranscriptionService.startTranscription).toHaveBeenCalledTimes(
@@ -130,6 +131,7 @@ describe('VoiceInputService Integration Tests', () => {
         {
           isRecording: true,
           deviceId: testDeviceId,
+          mode: ItoMode.TRANSCRIBE,
         },
       )
 
@@ -143,7 +145,7 @@ describe('VoiceInputService Integration Tests', () => {
         muteAudioWhenDictating: true,
       })
 
-      voiceInputService.startSTTService()
+      voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
 
       // System audio should be muted
       expect(mockMuteSystemAudio).toHaveBeenCalledTimes(1)
@@ -156,7 +158,7 @@ describe('VoiceInputService Integration Tests', () => {
         muteAudioWhenDictating: true,
       })
 
-      voiceInputService.startSTTService()
+      voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
 
       // Reset mocks to track stop calls
       mockStore.get.mockClear()
@@ -298,7 +300,7 @@ describe('VoiceInputService Integration Tests', () => {
         muteAudioWhenDictating: false,
       })
 
-      voiceInputService.startSTTService()
+      voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
 
       expect(mockAudioRecorderService.startRecording).toHaveBeenCalledWith(
         customDeviceId,
@@ -317,7 +319,7 @@ describe('VoiceInputService Integration Tests', () => {
         muteAudioWhenDictating: false,
       })
 
-      voiceInputService.startSTTService()
+      voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
 
       // Should still start recording (with undefined device ID)
       expect(mockAudioRecorderService.startRecording).toHaveBeenCalledWith(
@@ -329,7 +331,7 @@ describe('VoiceInputService Integration Tests', () => {
       // Return empty object instead of null to avoid accessing properties on null
       mockStore.get.mockReturnValue({})
 
-      voiceInputService.startSTTService()
+      voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
 
       // Should still start recording (with undefined device ID)
       expect(mockAudioRecorderService.startRecording).toHaveBeenCalledWith(
@@ -353,7 +355,7 @@ describe('VoiceInputService Integration Tests', () => {
       voiceInputService.setUpAudioRecorderListeners()
 
       // Start recording session
-      voiceInputService.startSTTService(true)
+      voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
 
       // Simulate audio events during recording
       const audioChunkHandler = mockAudioRecorderService.on.mock.calls.find(
@@ -413,7 +415,9 @@ describe('VoiceInputService Integration Tests', () => {
       })
 
       // Should not crash when window is unavailable (optional chaining handles this)
-      expect(() => voiceInputService.startSTTService()).not.toThrow()
+      expect(() =>
+        voiceInputService.startSTTService(ItoMode.TRANSCRIBE),
+      ).not.toThrow()
 
       // Core audio services should still work
       expect(mockAudioRecorderService.startRecording).toHaveBeenCalledWith(
@@ -452,9 +456,9 @@ describe('VoiceInputService Integration Tests', () => {
 
       // Should not crash when starting multiple times
       expect(() => {
-        voiceInputService.startSTTService()
-        voiceInputService.startSTTService()
-        voiceInputService.startSTTService()
+        voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
+        voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
+        voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
       }).not.toThrow()
 
       // Each start should call the services
@@ -471,8 +475,8 @@ describe('VoiceInputService Integration Tests', () => {
       })
 
       // Start multiple times, then stop once
-      voiceInputService.startSTTService()
-      voiceInputService.startSTTService()
+      voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
+      voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
 
       // Reset mocks to track stop behavior
       mockStore.get.mockClear()

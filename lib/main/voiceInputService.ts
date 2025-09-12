@@ -40,7 +40,10 @@ export class VoiceInputService {
       deviceId,
       mode,
     }
-    getPillWindow()?.webContents.send(IPC_EVENTS.RECORDING_STATE_UPDATE, recordingStatePayload)
+    getPillWindow()?.webContents.send(
+      IPC_EVENTS.RECORDING_STATE_UPDATE,
+      recordingStatePayload,
+    )
   }
 
   public stopSTTService = () => {
@@ -66,7 +69,10 @@ export class VoiceInputService {
       isRecording: false,
       deviceId: '',
     }
-    getPillWindow()?.webContents.send(IPC_EVENTS.RECORDING_STATE_UPDATE, recordingStatePayload)
+    getPillWindow()?.webContents.send(
+      IPC_EVENTS.RECORDING_STATE_UPDATE,
+      recordingStatePayload,
+    )
   }
 
   public setUpAudioRecorderListeners = () => {

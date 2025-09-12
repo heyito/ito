@@ -315,9 +315,9 @@ const Pill = () => {
             tooltip="Cancel"
           />
 
-          <AudioBars 
-            volumeHistory={volumeHistory} 
-            barColor={getAudioBarColor(recordingMode)} 
+          <AudioBars
+            volumeHistory={volumeHistory}
+            barColor={getAudioBarColor(recordingMode)}
           />
 
           <TooltipButton
@@ -331,9 +331,9 @@ const Pill = () => {
 
     if (anyRecording) {
       return (
-        <AudioBars 
-          volumeHistory={volumeHistory} 
-          barColor={getAudioBarColor(recordingMode)} 
+        <AudioBars
+          volumeHistory={volumeHistory}
+          barColor={getAudioBarColor(recordingMode)}
         />
       )
     }

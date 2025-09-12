@@ -6,6 +6,7 @@ import { STORE_KEYS } from '../constants/store-keys'
 import { transcriptionService } from './transcriptionService'
 import { traceLogger } from './traceLogger'
 import { ItoMode } from '@/app/generated/ito_pb'
+import { IPC_EVENTS, RecordingStatePayload } from '../types/ipc'
 
 export class VoiceInputService {
   public startSTTService = (mode: ItoMode) => {
@@ -34,10 +35,12 @@ export class VoiceInputService {
     transcriptionService.startTranscription(mode)
     audioRecorderService.startRecording(deviceId)
 
-    getPillWindow()?.webContents.send('recording-state-update', {
+    const recordingStatePayload: RecordingStatePayload = {
       isRecording: true,
       deviceId,
-    })
+      mode,
+    }
+    getPillWindow()?.webContents.send(IPC_EVENTS.RECORDING_STATE_UPDATE, recordingStatePayload)
   }
 
   public stopSTTService = () => {
@@ -59,10 +62,11 @@ export class VoiceInputService {
       unmuteSystemAudio()
     }
 
-    getPillWindow()?.webContents.send('recording-state-update', {
+    const recordingStatePayload: RecordingStatePayload = {
       isRecording: false,
       deviceId: '',
-    })
+    }
+    getPillWindow()?.webContents.send(IPC_EVENTS.RECORDING_STATE_UPDATE, recordingStatePayload)
   }
 
   public setUpAudioRecorderListeners = () => {
@@ -79,13 +83,13 @@ export class VoiceInputService {
     })
 
     audioRecorderService.on('volume-update', volume => {
-      getPillWindow()?.webContents.send('volume-update', volume)
+      getPillWindow()?.webContents.send(IPC_EVENTS.VOLUME_UPDATE, volume)
       if (
         mainWindow &&
         !mainWindow.isDestroyed() &&
         !mainWindow.webContents.isDestroyed()
       ) {
-        mainWindow.webContents.send('volume-update', volume)
+        mainWindow.webContents.send(IPC_EVENTS.VOLUME_UPDATE, volume)
       }
     })
 

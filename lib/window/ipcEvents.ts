@@ -37,6 +37,7 @@ import {
   getSelectedTextString,
   hasSelectedText,
 } from '../media/selected-text-reader'
+import { IPC_EVENTS } from '../types/ipc'
 
 const handleIPC = (channel: string, handler: (...args: any[]) => any) => {
   ipcMain.handle(channel, handler)
@@ -61,9 +62,9 @@ export function registerIPC() {
       !mainWindow.isDestroyed() &&
       !mainWindow.webContents.isDestroyed()
     ) {
-      mainWindow.webContents.send('force-device-list-reload')
+      mainWindow.webContents.send(IPC_EVENTS.FORCE_DEVICE_LIST_RELOAD)
     }
-    getPillWindow()?.webContents.send('force-device-list-reload')
+    getPillWindow()?.webContents.send(IPC_EVENTS.FORCE_DEVICE_LIST_RELOAD)
   })
 
   ipcMain.on('install-update', () => {
@@ -743,13 +744,13 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
 }
 
 // Forwards volume data from the main window to the pill window
-ipcMain.on('volume-update', (_event, volume: number) => {
-  getPillWindow()?.webContents.send('volume-update', volume)
+ipcMain.on(IPC_EVENTS.VOLUME_UPDATE, (_event, volume: number) => {
+  getPillWindow()?.webContents.send(IPC_EVENTS.VOLUME_UPDATE, volume)
 })
 
 // Forwards settings updates from the main window to the pill window
-ipcMain.on('settings-update', (_event, settings: any) => {
-  getPillWindow()?.webContents.send('settings-update', settings)
+ipcMain.on(IPC_EVENTS.SETTINGS_UPDATE, (_event, settings: any) => {
+  getPillWindow()?.webContents.send(IPC_EVENTS.SETTINGS_UPDATE, settings)
 
   // If microphone selection changed, ensure TranscriptionService config is set
   if (settings && typeof settings.microphoneDeviceId === 'string') {
@@ -759,11 +760,11 @@ ipcMain.on('settings-update', (_event, settings: any) => {
 })
 
 // Forwards onboarding updates from the main window to the pill window
-ipcMain.on('onboarding-update', (_event, onboarding: any) => {
-  getPillWindow()?.webContents.send('onboarding-update', onboarding)
+ipcMain.on(IPC_EVENTS.ONBOARDING_UPDATE, (_event, onboarding: any) => {
+  getPillWindow()?.webContents.send(IPC_EVENTS.ONBOARDING_UPDATE, onboarding)
 })
 
 // Forwards user authentication updates from the main window to the pill window
-ipcMain.on('user-auth-update', (_event, authUser: any) => {
-  getPillWindow()?.webContents.send('user-auth-update', authUser)
+ipcMain.on(IPC_EVENTS.USER_AUTH_UPDATE, (_event, authUser: any) => {
+  getPillWindow()?.webContents.send(IPC_EVENTS.USER_AUTH_UPDATE, authUser)
 })

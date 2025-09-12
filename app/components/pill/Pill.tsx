@@ -11,6 +11,8 @@ import { PreviewAudioBars } from './contents/PreviewAudioBars'
 import { useAudioStore } from '@/app/store/useAudioStore'
 import { TooltipButton } from './contents/TooltipButton'
 import { analytics, ANALYTICS_EVENTS } from '../analytics'
+import type { RecordingStatePayload } from '@/lib/types/ipc'
+import { ItoMode } from '@/app/generated/ito_pb'
 
 const globalStyles = `
   html, body, #app {
@@ -41,6 +43,18 @@ const globalStyles = `
 
 const BAR_UPDATE_INTERVAL = 64
 
+// Color mapping for different recording modes
+const getAudioBarColor = (mode: ItoMode | undefined): string => {
+  switch (mode) {
+    case ItoMode.TRANSCRIBE:
+      return 'white'
+    case ItoMode.EDIT:
+      return '#FFCF40'
+    default:
+      return 'white' // Default to white for transcribe mode
+  }
+}
+
 const Pill = () => {
   // Get initial values from store using separate selectors to avoid infinite re-renders
   const initialShowItoBarAlways = useSettingsStore(
@@ -57,6 +71,7 @@ const Pill = () => {
   const [isRecording, setIsRecording] = useState(false)
   const [isManualRecording, setIsManualRecording] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  const [recordingMode, setRecordingMode] = useState<ItoMode | undefined>()
   const isManualRecordingRef = useRef(false)
   const [showItoBarAlways, setShowItoBarAlways] = useState(
     initialShowItoBarAlways,
@@ -75,9 +90,10 @@ const Pill = () => {
     // Listen for recording state changes from the main process
     const unsubRecording = window.api.on(
       'recording-state-update',
-      (state: { isRecording: boolean }) => {
+      (state: RecordingStatePayload) => {
         // Update recording state - this is for global hotkey triggered recording
         setIsRecording(state.isRecording)
+        setRecordingMode(state.mode)
 
         // Only track general recording analytics if it's not a manual recording
         if (!isManualRecordingRef.current) {
@@ -86,6 +102,7 @@ const Pill = () => {
             : ANALYTICS_EVENTS.RECORDING_COMPLETED
           analytics.track(analyticsEvent, {
             is_recording: state.isRecording,
+            mode: state.mode,
           })
         }
 
@@ -93,6 +110,7 @@ const Pill = () => {
         if (!state.isRecording) {
           setIsManualRecording(false)
           isManualRecordingRef.current = false
+          setRecordingMode(undefined)
         }
         setVolumeHistory([])
       },
@@ -297,7 +315,10 @@ const Pill = () => {
             tooltip="Cancel"
           />
 
-          <AudioBars volumeHistory={volumeHistory} />
+          <AudioBars 
+            volumeHistory={volumeHistory} 
+            barColor={getAudioBarColor(recordingMode)} 
+          />
 
           <TooltipButton
             onClick={handleStop}
@@ -309,7 +330,12 @@ const Pill = () => {
     }
 
     if (anyRecording) {
-      return <AudioBars volumeHistory={volumeHistory} />
+      return (
+        <AudioBars 
+          volumeHistory={volumeHistory} 
+          barColor={getAudioBarColor(recordingMode)} 
+        />
+      )
     }
 
     if (isHovered) {

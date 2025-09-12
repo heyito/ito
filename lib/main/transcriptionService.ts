@@ -22,6 +22,8 @@ export class TranscriptionService {
   private hasStartedGrpc = false
   private bufferedAudioBytes = 0
   private currentMode: ItoMode | null = null
+  // 16-bit PCM mono -> 2 bytes per sample, write_audio_chunk in audio-recorder converts samples to 16-bit mono
+  private bytesPerSample = 2
 
   private async *streamAudioChunks() {
     while (this.isStreaming) {
@@ -114,7 +116,7 @@ export class TranscriptionService {
       }
 
       // Start gRPC once we have buffered at least the minimum duration
-      this.maybeStartGrpc()
+      this.startGrpcIfReady()
     }
 
     // if not streaming, do nothing
@@ -122,13 +124,12 @@ export class TranscriptionService {
 
   private getBufferedDurationMs(): number {
     // 16-bit PCM mono -> 2 bytes per sample
-    const bytesPerSample = 2
-    const totalSamples = this.bufferedAudioBytes / bytesPerSample
+    const totalSamples = this.bufferedAudioBytes / this.bytesPerSample
     const durationSeconds = totalSamples / (this.currentSampleRate || 16000)
     return Math.floor(durationSeconds * 1000)
   }
 
-  private maybeStartGrpc() {
+  private startGrpcIfReady() {
     if (
       this.hasStartedGrpc ||
       !this.isStreaming ||

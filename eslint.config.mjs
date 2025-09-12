@@ -4,62 +4,36 @@ import reactPlugin from 'eslint-plugin-react'
 import reactHooksPlugin from 'eslint-plugin-react-hooks'
 
 export default [
+  // Global ignores must be in their own config object
   {
     ignores: [
-      // Dependencies
-      'node_modules/**',
-      '.pnpm-store/**',
-
-      // Build outputs
-      'dist/**',
-      'build/**',
-      'out/**',
+      '**/node_modules',
+      '**/node_modules/**',
+      '.pnpm-store',
+      'dist',
+      'build',
+      'out',
+      '.vite',
+      'server/infra/cdk.out',
+      'resources/binaries',
       '**/*.min.js',
       '**/*.bundle.js',
-      '**/dist/**',
-
-      // CDK outputs
-      'server/infra/cdk.out/**',
-      'server/infra/**/*.d.ts',
-      'server/infra/**/*.js',
-
-      // Generated files
-      '**/generated/**',
-      'lib/generated/**',
-      'app/generated/**',
-      'server/src/generated/**',
-      'server/src/ito_*',
+      '**/dist',
+      '**/generated',
       '**/*.pb.ts',
       '**/*_pb.ts',
       '**/*_connect.ts',
-
-      // Electron
-      '.vite/**',
-
-      // Config files
-      '.gitignore',
-      '.eslintignore',
-      '.eslintrc',
-      '.prettierrc',
+      'server/src/ito_*',
+      'server/src/migrations',
+      'scripts',
+      'native',
+      '**/target',
+      '*.config.js',
       'commitlint.config.js',
       'electron-builder.config.js',
       'tailwind.config.js',
-      'vite.config.ts',
-      'electron.config.ts',
-      'jest.config.js',
-      'server/infra/jest.config.js',
-
-      // Migration files
-      'server/src/migrations/**',
-
-      // Binary files
-      'resources/binaries/**',
-
-      // Utility scripts
-      'scripts/**',
-
-      // Other
       'shared-constants.js',
+      'server/infra/jest.config.js',
     ],
   },
   eslint.configs.recommended,

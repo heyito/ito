@@ -18,6 +18,12 @@ export class TranscriptionService {
   private audioChunksForInteraction: Buffer[] = []
   private interactionStartTime: number | null = null
   private currentSampleRate: number = 16000
+  private readonly MINIMUM_AUDIO_DURATION_MS = 100
+  private hasStartedGrpc = false
+  private bufferedAudioBytes = 0
+  private currentMode: ItoMode | null = null
+  // 16-bit PCM mono -> 2 bytes per sample, write_audio_chunk in audio-recorder converts samples to 16-bit mono
+  private bytesPerSample = 2
 
   private async *streamAudioChunks() {
     while (this.isStreaming) {
@@ -47,6 +53,9 @@ export class TranscriptionService {
     this.audioChunksForInteraction = []
     this.currentInteractionId = uuidv4()
     this.interactionStartTime = Date.now() // Record start time
+    this.hasStartedGrpc = false
+    this.bufferedAudioBytes = 0
+    this.currentMode = mode
     log.info('[gRPC Service] Starting new transcription stream.')
 
     // Get current interaction ID for trace logging
@@ -58,8 +67,85 @@ export class TranscriptionService {
       })
     }
 
+    // Do not start gRPC yet; wait until enough audio has been buffered.
+  }
+
+  public stopStreaming() {
+    if (!this.isStreaming) {
+      return
+    }
+    this.isStreaming = false
+    if (this.resolveNewChunk) {
+      this.resolveNewChunk()
+    }
+    log.info('[gRPC Service] Stream has been marked for closing.')
+
+    // If gRPC never started, perform cleanup now
+    if (!this.hasStartedGrpc) {
+      const globalInteractionId = (globalThis as any).currentInteractionId
+      if (globalInteractionId) {
+        traceLogger.logStep(globalInteractionId, 'TRANSCRIPTION_TOO_SHORT', {
+          localInteractionId: this.currentInteractionId,
+          bufferedMs: this.getBufferedDurationMs(),
+        })
+        traceLogger.endInteraction(
+          globalInteractionId,
+          'TRANSCRIPTION_SKIPPED',
+          {
+            reason: 'insufficient_audio_duration',
+            localInteractionId: this.currentInteractionId,
+          },
+        )
+        ;(globalThis as any).currentInteractionId = null
+      }
+
+      this.resetState()
+    }
+  }
+
+  public forwardAudioChunk(chunk: Buffer) {
+    if (this.isStreaming) {
+      this.audioChunkQueue.push(chunk)
+      // Also store for interaction saving
+      this.audioChunksForInteraction.push(chunk)
+      this.bufferedAudioBytes += chunk.length
+
+      if (this.resolveNewChunk) {
+        this.resolveNewChunk()
+        this.resolveNewChunk = null
+      }
+
+      // Start gRPC once we have buffered at least the minimum duration
+      this.startGrpcIfReady()
+    }
+
+    // if not streaming, do nothing
+  }
+
+  private getBufferedDurationMs(): number {
+    // 16-bit PCM mono -> 2 bytes per sample
+    const totalSamples = this.bufferedAudioBytes / this.bytesPerSample
+    const durationSeconds = totalSamples / (this.currentSampleRate || 16000)
+    return Math.floor(durationSeconds * 1000)
+  }
+
+  private startGrpcIfReady() {
+    if (
+      this.hasStartedGrpc ||
+      !this.isStreaming ||
+      this.currentMode === null ||
+      this.getBufferedDurationMs() < this.MINIMUM_AUDIO_DURATION_MS
+    ) {
+      return
+    }
+
+    this.hasStartedGrpc = true
+
+    // Get current interaction ID for trace logging
+    const globalInteractionId = (globalThis as any).currentInteractionId
+
     grpcClient
-      .transcribeStream(this.streamAudioChunks(), mode)
+      .transcribeStream(this.streamAudioChunks(), this.currentMode)
       .then(response => {
         // Add debugging to see what we received
         console.log(
@@ -154,10 +240,10 @@ export class TranscriptionService {
       })
       .finally(() => {
         // Ensure interaction is ended if it hasn't been ended yet
-        const globalInteractionId = (globalThis as any).currentInteractionId
-        if (globalInteractionId) {
+        const finalInteractionId = (globalThis as any).currentInteractionId
+        if (finalInteractionId) {
           traceLogger.endInteraction(
-            globalInteractionId,
+            finalInteractionId,
             'TRANSCRIPTION_FINALLY',
             {
               localInteractionId: this.currentInteractionId,
@@ -167,38 +253,19 @@ export class TranscriptionService {
           ;(globalThis as any).currentInteractionId = null
         }
 
-        this.isStreaming = false
-        this.currentInteractionId = null
-        this.audioChunksForInteraction = []
-        this.interactionStartTime = null // Reset timing
+        this.resetState()
         log.info('[gRPC Service] Stream has fully terminated.')
       })
   }
 
-  public stopStreaming() {
-    if (!this.isStreaming) {
-      return
-    }
+  private resetState() {
     this.isStreaming = false
-    if (this.resolveNewChunk) {
-      this.resolveNewChunk()
-    }
-    log.info('[gRPC Service] Stream has been marked for closing.')
-  }
-
-  public forwardAudioChunk(chunk: Buffer) {
-    if (this.isStreaming) {
-      this.audioChunkQueue.push(chunk)
-      // Also store for interaction saving
-      this.audioChunksForInteraction.push(chunk)
-
-      if (this.resolveNewChunk) {
-        this.resolveNewChunk()
-        this.resolveNewChunk = null
-      }
-    }
-
-    // if not streaming, do nothing
+    this.currentInteractionId = null
+    this.audioChunksForInteraction = []
+    this.interactionStartTime = null
+    this.hasStartedGrpc = false
+    this.bufferedAudioBytes = 0
+    this.currentMode = null
   }
 
   private async createInteraction(transcript: string, errorMessage?: string) {

@@ -1,0 +1,22 @@
+import { ItoMode } from '@/app/generated/ito_pb'
+
+// IPC Event Constants
+export const IPC_EVENTS = {
+  RECORDING_STATE_UPDATE: 'recording-state-update',
+  VOLUME_UPDATE: 'volume-update',
+  FORCE_DEVICE_LIST_RELOAD: 'force-device-list-reload',
+  SETTINGS_UPDATE: 'settings-update',
+  ONBOARDING_UPDATE: 'onboarding-update',
+  USER_AUTH_UPDATE: 'user-auth-update',
+} as const
+
+// IPC Payload Types
+export interface RecordingStatePayload {
+  isRecording: boolean
+  deviceId: string
+  mode?: ItoMode
+}
+
+export interface VolumeUpdatePayload {
+  volume: number
+}

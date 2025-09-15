@@ -7,13 +7,15 @@ import { createAppWindow, mainWindow } from './app'
 import { voiceInputService } from './voiceInputService'
 
 let tray: Tray | null = null
+const TRAY_GUID = '7c6b7a2e-0d7e-4a4a-9d3d-2a3d9b6f2b10' // This is a GUID for the tray icon, ensures that the icon maintains position across restarts
+const TRAY_HEIGHT = 16
 
 function getTrayIconPath(): string {
   // Use the repo resource path in dev and the app resources path in prod
   if (!app.isPackaged) {
-    return join(__dirname, '../../resources/build/icon.png')
+    return join(__dirname, '../../resources/build/ito-logo.png')
   }
-  return join(process.resourcesPath, 'build', 'icon.png')
+  return join(process.resourcesPath, 'build', 'ito-logo.png')
 }
 
 async function buildMicrophoneSubmenu(): Promise<
@@ -106,26 +108,33 @@ async function rebuildTrayMenu(): Promise<void> {
 export async function createAppTray(): Promise<void> {
   if (tray) return
 
-  const image = nativeImage.createFromPath(getTrayIconPath())
-  if (process.platform === 'darwin') {
-    image.setTemplateImage(true)
+  const iconPath = getTrayIconPath()
+
+  let image = nativeImage.createFromPath(iconPath)
+
+  if (image.isEmpty() && process.platform === 'darwin') {
+    image = nativeImage.createFromNamedImage('NSImageNameStatusAvailable')
   }
 
-  tray = new Tray(image)
+  const trayImage = image.resize({ height: TRAY_HEIGHT })
+
+  tray = new Tray(trayImage, TRAY_GUID)
   tray.setToolTip('Ito')
 
   await rebuildTrayMenu()
 
-  // On macOS, left-click should also show the menu for convenience
-  tray.on('click', async () => {
-    await rebuildTrayMenu()
-    tray?.popUpContextMenu()
-  })
+  // For Windows/Linux, manually pop the menu. On macOS, rely on native menu so the icon stays highlighted.
+  if (process.platform !== 'darwin') {
+    tray.on('click', async () => {
+      await rebuildTrayMenu()
+      tray?.popUpContextMenu()
+    })
 
-  tray.on('right-click', async () => {
-    await rebuildTrayMenu()
-    tray?.popUpContextMenu()
-  })
+    tray.on('right-click', async () => {
+      await rebuildTrayMenu()
+      tray?.popUpContextMenu()
+    })
+  }
 }
 
 export function destroyAppTray(): void {

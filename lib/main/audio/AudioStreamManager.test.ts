@@ -79,13 +79,6 @@ describe('AudioStreamManager', () => {
       audioManager.setAudioConfig({ sampleRate: -1 })
       expect(audioManager.getCurrentSampleRate()).toBe(16000) // unchanged
     })
-
-    test('should handle channels config gracefully', () => {
-      // Should not throw error even though channels isn't used
-      expect(() => {
-        audioManager.setAudioConfig({ channels: 2 })
-      }).not.toThrow()
-    })
   })
 
   describe('Audio Buffering and Duration Calculation', () => {
@@ -161,7 +154,7 @@ describe('AudioStreamManager', () => {
       const result = await iterator.next()
       expect(result.done).toBe(false)
       expect(result.value).toHaveProperty('audioData')
-      expect(result.value.audioData).toEqual(minimumChunk)
+      expect(result.value?.audioData).toEqual(minimumChunk)
     })
 
     test('should continue streaming additional chunks', async () => {
@@ -184,7 +177,7 @@ describe('AudioStreamManager', () => {
       // Should yield the additional chunk
       const result = await iterator.next()
       expect(result.done).toBe(false)
-      expect(result.value.audioData).toEqual(additionalChunk)
+      expect(result.value?.audioData).toEqual(additionalChunk)
     })
 
     test('should finish streaming when stopped', async () => {

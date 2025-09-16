@@ -36,22 +36,6 @@ interface CursorContextCommand {
   requestId: string
 }
 
-interface GetContextCommand {
-  command: 'get-context'
-  maxSelectedLength?: number
-  maxPrecursorLength?: number
-  requestId: string
-}
-
-interface GetContextResult {
-  success: boolean
-  selectedText: string | null
-  precursorText: string | null
-  selectedLength: number
-  precursorLength: number
-  error: string | null
-}
-
 const nativeModuleName = 'selected-text-reader'
 const MAXIUMUM_TEXT_LENGTH_DEFAULT = 10000 // Maximum length of text to return
 
@@ -208,9 +192,7 @@ class SelectedTextReaderService extends EventEmitter {
     })
   }
 
-  #sendCommand(
-    command: SelectedTextCommand | CursorContextCommand | GetContextCommand,
-  ): void {
+  #sendCommand(command: SelectedTextCommand | CursorContextCommand): void {
     if (!this.#selectedTextProcess) {
       log.error(
         '[SelectedTextService] Cannot send command, process not running',
@@ -286,46 +268,6 @@ class SelectedTextReaderService extends EventEmitter {
 
   public isRunning(): boolean {
     return this.#selectedTextProcess !== null
-  }
-
-  /**
-   * Sends a command to get both selected text and cursor context atomically.
-   */
-  public async getContext(
-    maxSelectedLength?: number,
-    maxPrecursorLength?: number,
-  ): Promise<GetContextResult> {
-    console.log('[SelectedTextService] getContext called:', {
-      maxSelectedLength,
-      maxPrecursorLength,
-      processRunning: this.isRunning(),
-    })
-
-    if (!this.#selectedTextProcess) {
-      throw new Error('Selected text reader process not running')
-    }
-
-    return new Promise((resolve, reject) => {
-      const requestId = `ctx_${++this.#requestIdCounter}_${Date.now()}`
-      this.#pendingRequests.set(requestId, { resolve, reject })
-
-      const command: GetContextCommand = {
-        command: 'get-context',
-        maxSelectedLength,
-        maxPrecursorLength,
-        requestId,
-      }
-
-      this.#sendCommand(command)
-
-      // Set timeout to avoid hanging requests
-      setTimeout(() => {
-        if (this.#pendingRequests.has(requestId)) {
-          this.#pendingRequests.delete(requestId)
-          reject(new Error('Get context request timed out'))
-        }
-      }, 5000) // 5 second timeout
-    })
   }
 }
 
@@ -422,17 +364,4 @@ export async function getCursorContext(contextLength: number): Promise<string> {
   }
 
   return preCursorText
-}
-
-/**
- * Get both selected text and cursor context atomically in a single operation
- */
-export function getContext(
-  maxSelectedLength?: number,
-  maxPrecursorLength?: number,
-): Promise<GetContextResult> {
-  return selectedTextReaderService.getContext(
-    maxSelectedLength,
-    maxPrecursorLength,
-  )
 }

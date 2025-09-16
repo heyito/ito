@@ -28,15 +28,6 @@ enum Command {
         #[serde(rename = "requestId")]
         request_id: String,
     },
-    #[serde(rename = "get-context")]
-    GetContext {
-        #[serde(rename = "maxSelectedLength")]
-        max_selected_length: Option<usize>,
-        #[serde(rename = "maxPrecursorLength")]
-        max_precursor_length: Option<usize>,
-        #[serde(rename = "requestId")]
-        request_id: String,
-    },
 }
 
 #[derive(Serialize)]
@@ -58,24 +49,6 @@ struct CursorContextResponse {
     context_text: Option<String>,
     error: Option<String>,
     length: usize,
-}
-
-
-
-#[derive(Serialize)]
-struct GetContextResponse {
-    #[serde(rename = "requestId")]
-    request_id: String,
-    success: bool,
-    #[serde(rename = "selectedText")]
-    selected_text: Option<String>,
-    #[serde(rename = "precursorText")]
-    precursor_text: Option<String>,
-    #[serde(rename = "selectedLength")]
-    selected_length: usize,
-    #[serde(rename = "precursorLength")]
-    precursor_length: usize,
-    error: Option<String>,
 }
 
 fn main() {
@@ -129,11 +102,6 @@ impl CommandProcessor {
                     cut_current_selection,
                     request_id,
                 } => self.handle_get_cursor_context(context_length, cut_current_selection, request_id),
-                Command::GetContext {
-                    max_selected_length,
-                    max_precursor_length,
-                    request_id,
-                } => self.handle_get_context(max_selected_length, max_precursor_length, request_id),
             }
         }
     }
@@ -229,67 +197,6 @@ impl CommandProcessor {
             }
         }
     }
-
-    fn handle_get_context(
-        &mut self,
-        max_selected_length: Option<usize>,
-        max_precursor_length: Option<usize>,
-        request_id: String,
-    ) {
-
-        // Use the new atomic get_context function
-        let context_result = get_context(max_selected_length, max_precursor_length);
-
-        let response = match context_result {
-            Ok((selected_text, precursor_text)) => {
-                let selected_length = selected_text.len();
-                let precursor_length = precursor_text.len();
-
-                GetContextResponse {
-                    request_id,
-                    success: true,
-                    selected_text: if selected_text.is_empty() {
-                        None
-                    } else {
-                        Some(selected_text)
-                    },
-                    precursor_text: if precursor_text.is_empty() {
-                        None
-                    } else {
-                        Some(precursor_text)
-                    },
-                    selected_length,
-                    precursor_length,
-                    error: None,
-                }
-            }
-            Err(e) => GetContextResponse {
-                request_id,
-                success: false,
-                selected_text: None,
-                precursor_text: None,
-                selected_length: 0,
-                precursor_length: 0,
-                error: Some(format!("Failed to get context: {}", e)),
-            },
-        };
-
-        // Always respond with JSON
-        match serde_json::to_string(&response) {
-            Ok(json) => {
-                println!("{}", json);
-                if let Err(e) = io::stdout().flush() {
-                    eprintln!("[selected-text-reader] Error flushing stdout: {}", e);
-                }
-            }
-            Err(e) => {
-                eprintln!(
-                    "[selected-text-reader] Error serializing get_context response to JSON: {}",
-                    e
-                );
-            }
-        }
-    }
 }
 
 // Platform-specific implementations
@@ -311,24 +218,4 @@ fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::erro
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::error::Error>> {
     cross_platform::get_cursor_context(context_length)
-}
-
-#[cfg(target_os = "macos")]
-fn get_context(
-    max_selected_length: Option<usize>,
-    max_precursor_length: Option<usize>,
-) -> Result<(String, String), Box<dyn std::error::Error>> {
-    macos::get_context(max_selected_length, max_precursor_length)
-}
-
-#[cfg(any(target_os = "windows", target_os = "linux"))]
-fn get_context(
-    max_selected_length: Option<usize>,
-    max_precursor_length: Option<usize>,
-) -> Result<(String, String), Box<dyn std::error::Error>> {
-    // For now, fallback to separate calls on non-macOS platforms
-    let selected_text = cross_platform::get_selected_text().unwrap_or_default();
-    let precursor_text =
-        cross_platform::get_cursor_context(max_precursor_length.unwrap_or(20)).unwrap_or_default();
-    Ok((selected_text, precursor_text))
 }

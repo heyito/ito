@@ -92,10 +92,6 @@ fn main() {
                     continue;
                 }
                 if let Ok(command) = serde_json::from_str::<Command>(&l) {
-                    eprintln!(
-                        "[selected-text-reader] Command received at: {:?}",
-                        std::time::SystemTime::now()
-                    );
                     if let Err(e) = cmd_tx.send(command) {
                         eprintln!(
                             "[selected-text-reader] Failed to send command to processor: {}",
@@ -122,10 +118,6 @@ impl CommandProcessor {
 
     fn run(&mut self) {
         while let Ok(command) = self.cmd_rx.recv() {
-            eprintln!(
-                "[selected-text-reader] Command processor received command at: {:?}",
-                std::time::SystemTime::now()
-            );
             match command {
                 Command::GetText {
                     format: _,
@@ -177,20 +169,12 @@ impl CommandProcessor {
         };
 
         // Always respond with JSON
-        eprintln!(
-            "[selected-text-reader] Sending response at: {:?}",
-            std::time::SystemTime::now()
-        );
         match serde_json::to_string(&response) {
             Ok(json) => {
                 println!("{}", json);
                 if let Err(e) = io::stdout().flush() {
                     eprintln!("[selected-text-reader] Error flushing stdout: {}", e);
                 }
-                eprintln!(
-                    "[selected-text-reader] Response sent at: {:?}",
-                    std::time::SystemTime::now()
-                );
             }
             Err(e) => {
                 eprintln!(
@@ -204,10 +188,6 @@ impl CommandProcessor {
     fn handle_get_cursor_context(&mut self, context_length: Option<usize>, cut_current_selection: Option<bool>, request_id: String) {
         let context_len = context_length.unwrap_or(10);
 
-        eprintln!(
-            "[selected-text-reader] Starting get_cursor_context at: {:?}",
-            std::time::SystemTime::now()
-        );
         let should_cut = cut_current_selection.unwrap_or(false);
         let response = match get_cursor_context(context_len, should_cut) {
             Ok(context_text) => {
@@ -235,20 +215,12 @@ impl CommandProcessor {
         };
 
         // Always respond with JSON
-        eprintln!(
-            "[selected-text-reader] Sending response at: {:?}",
-            std::time::SystemTime::now()
-        );
         match serde_json::to_string(&response) {
             Ok(json) => {
                 println!("{}", json);
                 if let Err(e) = io::stdout().flush() {
                     eprintln!("[selected-text-reader] Error flushing stdout: {}", e);
                 }
-                eprintln!(
-                    "[selected-text-reader] Response sent at: {:?}",
-                    std::time::SystemTime::now()
-                );
             }
             Err(e) => {
                 eprintln!(
@@ -259,18 +231,12 @@ impl CommandProcessor {
         }
     }
 
-
-
     fn handle_get_context(
         &mut self,
         max_selected_length: Option<usize>,
         max_precursor_length: Option<usize>,
         request_id: String,
     ) {
-        eprintln!(
-            "[selected-text-reader] Starting get_context at: {:?}",
-            std::time::SystemTime::now()
-        );
 
         // Use the new atomic get_context function
         let context_result = get_context(max_selected_length, max_precursor_length);
@@ -310,20 +276,12 @@ impl CommandProcessor {
         };
 
         // Always respond with JSON
-        eprintln!(
-            "[selected-text-reader] Sending get_context response at: {:?}",
-            std::time::SystemTime::now()
-        );
         match serde_json::to_string(&response) {
             Ok(json) => {
                 println!("{}", json);
                 if let Err(e) = io::stdout().flush() {
                     eprintln!("[selected-text-reader] Error flushing stdout: {}", e);
                 }
-                eprintln!(
-                    "[selected-text-reader] Get context response sent at: {:?}",
-                    std::time::SystemTime::now()
-                );
             }
             Err(e) => {
                 eprintln!(
@@ -355,8 +313,6 @@ fn get_cursor_context(context_length: usize, cut_current_selection: bool) -> Res
 fn get_cursor_context(context_length: usize, cut_current_selection: bool) -> Result<String, Box<dyn std::error::Error>> {
     cross_platform::get_cursor_context(context_length, cut_current_selection)
 }
-
-
 
 #[cfg(target_os = "macos")]
 fn get_context(

@@ -45,40 +45,26 @@ pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
     use std::time::Instant;
 
     let start_time = Instant::now();
-    eprintln!("[DEBUG TIMING] get_selected_text started");
 
     // Simple approach: use Cmd+X (cut) to get any selected text
     // This is much faster and more reliable than complex fallback methods
 
     let clipboard_init_start = Instant::now();
     let mut clipboard = Clipboard::new().map_err(|e| format!("Clipboard init failed: {}", e))?;
-    eprintln!(
-        "[DEBUG TIMING] Clipboard::new() took: {:?}",
-        clipboard_init_start.elapsed()
-    );
 
     // Store original clipboard contents
     let get_clipboard_start = Instant::now();
     let original_clipboard = clipboard.get_text().unwrap_or_default();
-    eprintln!(
-        "[DEBUG TIMING] clipboard.get_text() took: {:?}",
-        get_clipboard_start.elapsed()
-    );
 
     // Clear clipboard to detect if cut worked
     let clear_start = Instant::now();
     clipboard
         .clear()
         .map_err(|e| format!("Clipboard clear failed: {}", e))?;
-    eprintln!(
-        "[DEBUG TIMING] clipboard.clear() took: {:?}",
-        clear_start.elapsed()
-    );
 
     // Use Cmd+C to cut any selected text
     let copy_start = Instant::now();
     native_cmd_c()?;
-    eprintln!("[DEBUG TIMING] Cmd+C (copy) took: {:?}", copy_start.elapsed());
 
     // Small delay for copy operation to complete
     thread::sleep(Duration::from_millis(25));
@@ -86,60 +72,14 @@ pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
     // Get the copied text from clipboard (this is what was selected)
     let get_copy_text_start = Instant::now();
     let selected_text = clipboard.get_text().unwrap_or_default();
-    eprintln!(
-        "[DEBUG TIMING] Getting cut text took: {:?}",
-        get_copy_text_start.elapsed()
-    );
 
     // Always restore original clipboard contents - ITO is cutting on behalf of user for context
     let restore_start = Instant::now();
     let _ = clipboard.set_text(original_clipboard);
-    eprintln!(
-        "[DEBUG TIMING] Restoring clipboard took: {:?}",
-        restore_start.elapsed()
-    );
 
     let total_time = start_time.elapsed();
-    eprintln!(
-        "[DEBUG TIMING] get_selected_text TOTAL took: {:?}",
-        total_time
-    );
 
     Ok(selected_text)
-}
-
-// Direct accessibility framework method
-fn get_selected_text_by_ax() -> Result<String, Box<dyn std::error::Error>> {
-    let system_element = AXUIElement::system_wide();
-    let Some(selected_element) = system_element
-        .attribute(&AXAttribute::new(&CFString::from_static_string(
-            kAXFocusedUIElementAttribute,
-        )))
-        .map(|element| element.downcast_into::<AXUIElement>())
-        .ok()
-        .flatten()
-    else {
-        return Err(Box::new(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            "No selected element",
-        )));
-    };
-
-    let Some(selected_text) = selected_element
-        .attribute(&AXAttribute::new(&CFString::from_static_string(
-            kAXSelectedTextAttribute,
-        )))
-        .map(|text| text.downcast_into::<CFString>())
-        .ok()
-        .flatten()
-    else {
-        return Err(Box::new(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            "No selected text",
-        )));
-    };
-
-    Ok(selected_text.to_string())
 }
 
 // Fallback clipboard method for macOS with multiple copy strategies
@@ -299,69 +239,9 @@ fn double_copy_method(clipboard: &mut Clipboard) -> Result<String, Box<dyn std::
     }
 }
 
-// AppleScript fallback for macOS when both AX and clipboard methods fail
-const APPLE_SCRIPT: &str = r#"
-use AppleScript version "2.4"
-use scripting additions
-use framework "Foundation"
-use framework "AppKit"
-
-set savedAlertVolume to alert volume of (get volume settings)
-
--- Back up clipboard contents:
-set savedClipboard to the clipboard
-
-set thePasteboard to current application's NSPasteboard's generalPasteboard()
-set theCount to thePasteboard's changeCount()
-
-tell application "System Events"
-    set volume alert volume 0
-end tell
-
--- Copy selected text to clipboard:
-tell application "System Events" to keystroke "c" using {command down}
-delay 0.1 -- Without this, the clipboard may have stale data.
-
-tell application "System Events"
-    set volume alert volume savedAlertVolume
-end tell
-
-if thePasteboard's changeCount() is theCount then
-    return ""
-end if
-
-set theSelectedText to the clipboard
-
-set the clipboard to savedClipboard
-
-theSelectedText
-"#;
-
-fn get_selected_text_by_clipboard_using_applescript() -> Result<String, Box<dyn std::error::Error>>
-{
-    let output = std::process::Command::new("osascript")
-        .arg("-e")
-        .arg(APPLE_SCRIPT)
-        .output()?;
-    if output.status.success() {
-        let content = String::from_utf8(output.stdout)?;
-        let content = content.trim();
-        Ok(content.to_string())
-    } else {
-        let err = output
-            .stderr
-            .into_iter()
-            .map(|c| c as char)
-            .collect::<String>()
-            .into();
-        Err(err)
-    }
-}
-
 // Simple function to select previous N characters and copy them
 fn select_previous_chars_and_copy(char_count: usize, clipboard: &mut Clipboard) -> Result<String, Box<dyn std::error::Error>> {
     use std::time::Instant;
-    eprintln!("[DEBUG] Selecting {} previous characters with Shift+Left", char_count);
 
     // Clear clipboard before selection
     clipboard.clear().map_err(|e| format!("Clipboard clear failed: {}", e))?;
@@ -369,7 +249,6 @@ fn select_previous_chars_and_copy(char_count: usize, clipboard: &mut Clipboard) 
     // Send Shift+Left N times to select precursor text (copied from working get_context)
     for i in 0..char_count {
         if i == 0 || i % 5 == 0 || i == char_count - 1 {
-            eprintln!("[DEBUG] Sending Shift+Left #{}/{}", i + 1, char_count);
         }
 
         unsafe {
@@ -411,10 +290,8 @@ fn select_previous_chars_and_copy(char_count: usize, clipboard: &mut Clipboard) 
     thread::sleep(Duration::from_millis(10));
 
     // Copy the selected text
-    eprintln!("[DEBUG] Copying selected context with Cmd+C");
     let copy_start = Instant::now();
     native_cmd_c()?;
-    eprintln!("[DEBUG TIMING] Cmd+C for context took: {:?}", copy_start.elapsed());
     thread::sleep(Duration::from_millis(25)); // Wait for copy to complete (match working timing)
 
     // Adaptively wait for and get text from clipboard
@@ -432,19 +309,12 @@ fn select_previous_chars_and_copy(char_count: usize, clipboard: &mut Clipboard) 
         }
     }
     let copy_duration = copy_start.elapsed();
-    eprintln!("[DEBUG] Clipboard polling took: {:?}", copy_duration);
-    eprintln!(
-        "[DEBUG] Context text copied: '{}' (length: {})",
-        context_text,
-        context_text.len()
-    );
 
     // Move cursor right by the number of characters we captured to deselect
     // This prevents paste conflicts in applications that don't allow pasting over selections
     let max_chars_to_move = context_text.chars().count();
     let chars_to_move = std::cmp::min(max_chars_to_move, char_count);
     if chars_to_move > 0 {
-        eprintln!("[DEBUG] Moving cursor right {} characters to deselect text", chars_to_move);
 
         for i in 0..chars_to_move {
             unsafe {
@@ -475,16 +345,10 @@ fn select_previous_chars_and_copy(char_count: usize, clipboard: &mut Clipboard) 
             }
         }
     } else {
-        eprintln!("[DEBUG] No characters captured, not moving cursor");
     }
 
     // Debug: Let's also check if there's anything on the clipboard at all
     if context_text.is_empty() {
-        eprintln!("[DEBUG] WARNING: No context text found! This could mean:");
-        eprintln!("[DEBUG]   1. Cursor is at beginning of document/line");
-        eprintln!("[DEBUG]   2. Shift+Left selection didn't work");
-        eprintln!("[DEBUG]   3. Copy operation failed");
-        eprintln!("[DEBUG]   4. There are only whitespace characters");
     }
 
     Ok(context_text)
@@ -494,58 +358,34 @@ pub fn get_cursor_context(context_length: usize, cut_current_selection: bool) ->
     use std::time::Instant;
 
     let start_time = Instant::now();
-    eprintln!("[DEBUG TIMING] get_cursor_context started");
 
     // Use keyboard commands to get cursor context
     // This is more reliable across different applications than Accessibility API
 
     let clipboard_init_start = Instant::now();
     let mut clipboard = Clipboard::new().map_err(|e| format!("Clipboard init failed: {}", e))?;
-    eprintln!(
-        "[DEBUG TIMING] Clipboard::new() took: {:?}",
-        clipboard_init_start.elapsed()
-    );
 
     // Store original clipboard contents
     let get_clipboard_start = Instant::now();
     let original_clipboard = clipboard.get_text().unwrap_or_default();
-    eprintln!(
-        "[DEBUG TIMING] clipboard.get_text() took: {:?}",
-        get_clipboard_start.elapsed()
-    );
 
     // Conditionally cut selected text based on parameter
     if cut_current_selection {
-        eprintln!("[DEBUG] Cutting any selected text with Cmd+X to position cursor correctly");
         let cut_start = Instant::now();
         native_cmd_x()?;
         thread::sleep(Duration::from_millis(25)); // Wait for cut to complete
-        eprintln!("[DEBUG TIMING] Cmd+X cut operation took: {:?}", cut_start.elapsed());
     } else {
-        eprintln!("[DEBUG] Skipping cut operation - assumes no selected text or get_selected_text called first");
     }
 
     // Select previous context_length characters with Shift+Left and copy
     let select_context_start = Instant::now();
     let result = select_previous_chars_and_copy(context_length, &mut clipboard);
-    eprintln!(
-        "[DEBUG TIMING] select_previous_chars_and_copy() took: {:?}",
-        select_context_start.elapsed()
-    );
 
     // Always restore original clipboard
     let restore_clipboard_start = Instant::now();
     let _ = clipboard.set_text(original_clipboard);
-    eprintln!(
-        "[DEBUG TIMING] clipboard.set_text() took: {:?}",
-        restore_clipboard_start.elapsed()
-    );
 
     let total_time = start_time.elapsed();
-    eprintln!(
-        "[DEBUG TIMING] get_cursor_context TOTAL took: {:?}",
-        total_time
-    );
 
     // Return debug info if we got nothing
     match result {
@@ -561,10 +401,6 @@ fn select_line_and_get_context(
     use std::time::Instant;
 
     let start_time = Instant::now();
-    eprintln!(
-        "[DEBUG] Starting cursor context detection, context_length: {}",
-        context_length
-    );
 
     unsafe {
         // Key code for Left Arrow is 123 on macOS
@@ -588,7 +424,6 @@ fn select_line_and_get_context(
         CGEventSetFlags(key_up_event, flags);
 
         let keyboard_start = Instant::now();
-        eprintln!("[DEBUG] Sending Cmd+Shift+Left keyboard events");
 
         // Post the events
         CGEventPost(CG_SESSION_EVENT_TAP, key_down_event);
@@ -602,10 +437,8 @@ fn select_line_and_get_context(
         // Brief delay for selection to complete
         thread::sleep(Duration::from_millis(10));
         let keyboard_duration = keyboard_start.elapsed();
-        eprintln!("[DEBUG] Keyboard selection took: {:?}", keyboard_duration);
 
         let copy_start = Instant::now();
-        eprintln!("[DEBUG] Copying selection with Cmd+C");
 
         // Copy the selection
         native_cmd_c()?;
@@ -625,19 +458,11 @@ fn select_line_and_get_context(
             }
         }
         let copy_duration = copy_start.elapsed();
-        eprintln!("[DEBUG] Clipboard polling took: {:?}", copy_duration);
-        eprintln!(
-            "[DEBUG] Copied text: {:?} (length: {})",
-            line_text,
-            line_text.len()
-        );
 
         // Restore cursor position with optimized single-arrow approach
         let restore_start = Instant::now();
-        eprintln!("[DEBUG] Restoring cursor position");
         restore_cursor_position()?;
         let restore_duration = restore_start.elapsed();
-        eprintln!("[DEBUG] Cursor restoration took: {:?}", restore_duration);
 
         // Extract the last N characters from the line text (context before cursor)
         let context_text = if line_text.len() <= context_length {
@@ -655,8 +480,6 @@ fn select_line_and_get_context(
         };
 
         let total_duration = start_time.elapsed();
-        eprintln!("[DEBUG] Total cursor context took: {:?}", total_duration);
-        eprintln!("[DEBUG] Final context text: {:?}", context_text);
         Ok(context_text)
     }
 }
@@ -697,7 +520,6 @@ fn move_cursor_right(char_count: usize) -> Result<(), Box<dyn std::error::Error>
 
 // Optimized cursor restoration using single right-arrow press
 fn restore_cursor_position() -> Result<(), Box<dyn std::error::Error>> {
-    eprintln!("[DEBUG] Restoring cursor with single right-arrow press.");
     unsafe {
         let right_arrow_key_code: CGKeyCode = 124;
 
@@ -734,42 +556,24 @@ pub fn get_context(
     use std::time::Instant;
 
     let start_time = Instant::now();
-    eprintln!(
-        "[DEBUG] Starting get_context: max_selected={:?}, max_precursor={:?}",
-        max_selected_length, max_precursor_length
-    );
 
     let mut clipboard = Clipboard::new().map_err(|e| format!("Clipboard init failed: {}", e))?;
 
     // Store original clipboard contents
     let original_clipboard = clipboard.get_text().unwrap_or_default();
-    eprintln!(
-        "[DEBUG] Stored original clipboard (length: {})",
-        original_clipboard.len()
-    );
 
     // Step 1: Cut selected text with Cmd+X (removes text and positions cursor correctly)
     clipboard
         .clear()
         .map_err(|e| format!("Clipboard clear failed: {}", e))?;
-    eprintln!("[DEBUG] Step 1: Cutting selected text with Cmd+X");
 
     native_cmd_x()?;
     thread::sleep(Duration::from_millis(25)); // Wait for cut to complete
 
     let selected_text = clipboard.get_text().unwrap_or_default();
-    eprintln!(
-        "[DEBUG] Selected text cut: '{}' (length: {})",
-        selected_text,
-        selected_text.len()
-    );
 
     // Step 2: Move cursor to select precursor context with Shift+Left
     let precursor_length = max_precursor_length.unwrap_or(20);
-    eprintln!(
-        "[DEBUG] Step 2: Selecting {} characters of precursor context",
-        precursor_length
-    );
 
     // Clear clipboard for second copy operation
     clipboard
@@ -813,23 +617,16 @@ pub fn get_context(
         thread::sleep(Duration::from_millis(1));
 
         if i % 10 == 0 && i > 0 {
-            eprintln!("[DEBUG] Selected {} characters so far", i);
         }
     }
 
     // Step 3: Copy the precursor context with Cmd+C
-    eprintln!("[DEBUG] Step 3: Copying precursor context with Cmd+C");
     thread::sleep(Duration::from_millis(10)); // Allow selection to complete
 
     native_cmd_c()?;
     thread::sleep(Duration::from_millis(25)); // Wait for copy to complete
 
     let combined_text = clipboard.get_text().unwrap_or_default();
-    eprintln!(
-        "[DEBUG] Combined text copied: '{}' (length: {})",
-        combined_text,
-        combined_text.len()
-    );
 
     // Extract precursor by taking slice from 0 to (combined_length - selected_length)
     let precursor_length = combined_text.len().saturating_sub(selected_text.len());
@@ -837,14 +634,8 @@ pub fn get_context(
         .chars()
         .take(precursor_length)
         .collect::<String>();
-    eprintln!(
-        "[DEBUG] Extracted precursor text: '{}' (length: {})",
-        precursor_text,
-        precursor_text.len()
-    );
 
     // // Step 4: Restore cursor position by moving right to end of selection
-    // eprintln!("[DEBUG] Step 4: Restoring cursor position");
     // let restore_start = Instant::now();
 
     // unsafe {
@@ -865,11 +656,9 @@ pub fn get_context(
     //     }
     // }
 
-    // eprintln!("[DEBUG] Cursor restoration took: {:?}", restore_start.elapsed());
 
     // Step 5: Restore original clipboard
     let _ = clipboard.set_text(original_clipboard);
-    eprintln!("[DEBUG] Original clipboard restored");
 
     // Apply length limits if specified
     let final_selected = if let Some(max_len) = max_selected_length {
@@ -901,7 +690,6 @@ pub fn get_context(
     };
 
     let total_time = start_time.elapsed();
-    eprintln!("[DEBUG] get_context TOTAL took: {:?}", total_time);
 
     Ok((final_selected, final_precursor))
 }

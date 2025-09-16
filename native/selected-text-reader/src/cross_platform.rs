@@ -6,29 +6,24 @@ pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
     use std::time::Instant;
     
     let start_time = Instant::now();
-    eprintln!("[DEBUG TIMING] get_selected_text started");
     
     // Simple approach: use Ctrl+X (cut) to get any selected text
     // This is much faster and more reliable than copy-based methods
     
     let clipboard_init_start = Instant::now();
     let mut clipboard = Clipboard::new().map_err(|e| format!("Clipboard init failed: {}", e))?;
-    eprintln!("[DEBUG TIMING] Clipboard::new() took: {:?}", clipboard_init_start.elapsed());
     
     // Store original clipboard contents
     let get_clipboard_start = Instant::now();
     let original_clipboard = clipboard.get_text().unwrap_or_default();
-    eprintln!("[DEBUG TIMING] clipboard.get_text() took: {:?}", get_clipboard_start.elapsed());
     
     // Clear clipboard to detect if cut worked
     let clear_start = Instant::now();
     clipboard.clear().map_err(|e| format!("Clipboard clear failed: {}", e))?;
-    eprintln!("[DEBUG TIMING] clipboard.clear() took: {:?}", clear_start.elapsed());
     
     // Use Ctrl+X to cut any selected text
     let cut_start = Instant::now();
     cut_selected_text()?;
-    eprintln!("[DEBUG TIMING] Ctrl+X (cut) took: {:?}", cut_start.elapsed());
     
     // Small delay for cut operation to complete
     thread::sleep(Duration::from_millis(25));
@@ -36,15 +31,12 @@ pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
     // Get the cut text from clipboard (this is what was selected)
     let get_cut_text_start = Instant::now();
     let selected_text = clipboard.get_text().unwrap_or_default();
-    eprintln!("[DEBUG TIMING] Getting cut text took: {:?}", get_cut_text_start.elapsed());
     
     // Always restore original clipboard contents - ITO is cutting on behalf of user for context
     let restore_start = Instant::now();
     let _ = clipboard.set_text(original_clipboard);
-    eprintln!("[DEBUG TIMING] Restoring clipboard took: {:?}", restore_start.elapsed());
     
     let total_time = start_time.elapsed();
-    eprintln!("[DEBUG TIMING] get_selected_text TOTAL took: {:?}", total_time);
     
     Ok(selected_text)
 }
@@ -97,43 +89,34 @@ pub fn get_cursor_context(context_length: usize, cut_current_selection: bool) ->
     use std::time::Instant;
     
     let start_time = Instant::now();
-    eprintln!("[DEBUG TIMING] get_cursor_context started");
     
     // Use keyboard commands to get cursor context
     // This is more reliable across different applications than Accessibility API
     
     let clipboard_init_start = Instant::now();
     let mut clipboard = Clipboard::new().map_err(|e| format!("Clipboard init failed: {}", e))?;
-    eprintln!("[DEBUG TIMING] Clipboard::new() took: {:?}", clipboard_init_start.elapsed());
     
     // Store original clipboard contents
     let get_clipboard_start = Instant::now();
     let original_clipboard = clipboard.get_text().unwrap_or_default();
-    eprintln!("[DEBUG TIMING] clipboard.get_text() took: {:?}", get_clipboard_start.elapsed());
     
     // Conditionally cut selected text based on parameter
     if cut_current_selection {
-        eprintln!("[DEBUG] Cutting any selected text with Ctrl+X to position cursor correctly");
         let cut_start = Instant::now();
         native_ctrl_x()?;
         thread::sleep(Duration::from_millis(25)); // Wait for cut to complete
-        eprintln!("[DEBUG TIMING] Ctrl+X cut operation took: {:?}", cut_start.elapsed());
     } else {
-        eprintln!("[DEBUG] Skipping cut operation - assumes no selected text or get_selected_text called first");
     }
     
     // Strategy: Use Ctrl+Shift+Left to select context, then copy WITHOUT restoring cursor position
     let select_context_start = Instant::now();
     let result = get_context_with_keyboard_selection(context_length, &mut clipboard);
-    eprintln!("[DEBUG TIMING] get_context_with_keyboard_selection() took: {:?}", select_context_start.elapsed());
     
     // Always restore original clipboard
     let restore_clipboard_start = Instant::now();
     let _ = clipboard.set_text(original_clipboard);
-    eprintln!("[DEBUG TIMING] clipboard.set_text() took: {:?}", restore_clipboard_start.elapsed());
     
     let total_time = start_time.elapsed();
-    eprintln!("[DEBUG TIMING] get_cursor_context TOTAL took: {:?}", total_time);
     
     // Return debug info if we got nothing
     match result {
@@ -150,7 +133,6 @@ fn get_cursor_context_windows(context_length: usize) -> Result<String, Box<dyn s
     // Use keyboard-based approach for Windows
     // This is more reliable and works across different applications
     
-    eprintln!("[DEBUG Windows] Starting cursor context detection, context_length: {}", context_length);
     
     let mut clipboard = Clipboard::new().map_err(|e| format!("Clipboard init failed: {}", e))?;
     
@@ -163,7 +145,6 @@ fn get_cursor_context_windows(context_length: usize) -> Result<String, Box<dyn s
         _ => None,
     };
     
-    eprintln!("[DEBUG Windows] Existing selection: {:?}", existing_selection);
     
     // Clear clipboard to detect if our operation worked
     clipboard.clear().map_err(|e| format!("Clipboard clear failed: {}", e))?;
@@ -191,10 +172,8 @@ fn get_context_with_keyboard_selection(
     use std::time::Instant;
     
     let start_time = Instant::now();
-    eprintln!("[DEBUG] Starting cursor context detection, context_length: {}", context_length);
     
     // Use Ctrl+Shift+Left to select text backwards from cursor
-    eprintln!("[DEBUG] Sending keyboard selection");
     
     #[cfg(target_os = "windows")]
     {
@@ -231,20 +210,16 @@ fn get_context_with_keyboard_selection(
     }
     
     let keyboard_time = start_time.elapsed();
-    eprintln!("[DEBUG] Keyboard selection took: {:?}", keyboard_time);
     
     // Copy the selection
-    eprintln!("[DEBUG] Copying selection with Ctrl+C");
     copy_selected_text()?;
     
     thread::sleep(Duration::from_millis(25));
     
     // Get the copied text
     let context_text = clipboard.get_text().unwrap_or_default();
-    eprintln!("[DEBUG] Copied text: {:?} (length: {})", context_text, context_text.len());
     
     // Restore cursor position by pressing Right Arrow once
-    eprintln!("[DEBUG] Restoring cursor position");
     
     #[cfg(target_os = "windows")]
     {
@@ -268,7 +243,6 @@ fn get_context_with_keyboard_selection(
     }
     
     let restore_time = start_time.elapsed();
-    eprintln!("[DEBUG] Cursor restoration took: {:?}", restore_time);
     
     // Take only the last context_length characters
     let final_context = if context_text.len() <= context_length {
@@ -285,8 +259,6 @@ fn get_context_with_keyboard_selection(
     };
     
     let total_time = start_time.elapsed();
-    eprintln!("[DEBUG] Total cursor context took: {:?}", total_time);
-    eprintln!("[DEBUG] Final context text: {:?}", final_context);
     
     Ok(final_context)
 }

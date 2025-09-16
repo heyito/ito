@@ -354,7 +354,7 @@ fn select_previous_chars_and_copy(char_count: usize, clipboard: &mut Clipboard) 
     Ok(context_text)
 }
 
-pub fn get_cursor_context(context_length: usize, cut_current_selection: bool) -> Result<String, Box<dyn std::error::Error>> {
+pub fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::error::Error>> {
     use std::time::Instant;
 
     let start_time = Instant::now();
@@ -369,13 +369,6 @@ pub fn get_cursor_context(context_length: usize, cut_current_selection: bool) ->
     let get_clipboard_start = Instant::now();
     let original_clipboard = clipboard.get_text().unwrap_or_default();
 
-    // Conditionally cut selected text based on parameter
-    if cut_current_selection {
-        let cut_start = Instant::now();
-        native_cmd_x()?;
-        thread::sleep(Duration::from_millis(25)); // Wait for cut to complete
-    } else {
-    }
 
     // Select previous context_length characters with Shift+Left and copy
     let select_context_start = Instant::now();
@@ -536,160 +529,4 @@ fn restore_cursor_position() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     Ok(())
-}
-
-fn restore_original_selection(
-    line_char_count: usize,
-    _original_selection: String,
-) -> Result<(), Box<dyn std::error::Error>> {
-    // For now, just move cursor to end of line and leave unselected
-    // TODO: Could implement more sophisticated selection restoration if needed
-    move_cursor_right(line_char_count)?;
-    Ok(())
-}
-
-// New comprehensive function that gets both selected text and cursor context atomically
-pub fn get_context(
-    max_selected_length: Option<usize>,
-    max_precursor_length: Option<usize>,
-) -> Result<(String, String), Box<dyn std::error::Error>> {
-    use std::time::Instant;
-
-    let start_time = Instant::now();
-
-    let mut clipboard = Clipboard::new().map_err(|e| format!("Clipboard init failed: {}", e))?;
-
-    // Store original clipboard contents
-    let original_clipboard = clipboard.get_text().unwrap_or_default();
-
-    // Step 1: Cut selected text with Cmd+X (removes text and positions cursor correctly)
-    clipboard
-        .clear()
-        .map_err(|e| format!("Clipboard clear failed: {}", e))?;
-
-    native_cmd_x()?;
-    thread::sleep(Duration::from_millis(25)); // Wait for cut to complete
-
-    let selected_text = clipboard.get_text().unwrap_or_default();
-
-    // Step 2: Move cursor to select precursor context with Shift+Left
-    let precursor_length = max_precursor_length.unwrap_or(20);
-
-    // Clear clipboard for second copy operation
-    clipboard
-        .clear()
-        .map_err(|e| format!("Clipboard clear failed: {}", e))?;
-
-    // Send Shift+Left N times to select precursor text
-    for i in 0..precursor_length {
-        unsafe {
-            let key_down_event = CGEventCreateKeyboardEvent(ptr::null_mut(), 123, true); // Left arrow
-            let key_up_event = CGEventCreateKeyboardEvent(ptr::null_mut(), 123, false);
-
-            if key_down_event.is_null() || key_up_event.is_null() {
-                if !key_down_event.is_null() {
-                    CFRelease(key_down_event as *const c_void);
-                }
-                if !key_up_event.is_null() {
-                    CFRelease(key_up_event as *const c_void);
-                }
-                return Err("Failed to create shift+left event".into());
-            }
-
-            // Set Shift flag for selection
-            CGEventSetFlags(key_down_event, CG_EVENT_FLAG_MASK_SHIFT);
-            CGEventSetFlags(key_up_event, CG_EVENT_FLAG_MASK_SHIFT);
-
-            // Mark as synthetic events
-            CGEventSetIntegerValueField(key_down_event, 121, 0x49544F);
-            CGEventSetIntegerValueField(key_up_event, 121, 0x49544F);
-
-            // Post events using session event tap to avoid interference
-            CGEventPost(CG_SESSION_EVENT_TAP, key_down_event);
-            thread::sleep(Duration::from_millis(2));
-            CGEventPost(CG_SESSION_EVENT_TAP, key_up_event);
-
-            CFRelease(key_down_event as *const c_void);
-            CFRelease(key_up_event as *const c_void);
-        }
-
-        // Brief pause between selections
-        thread::sleep(Duration::from_millis(1));
-
-        if i % 10 == 0 && i > 0 {
-        }
-    }
-
-    // Step 3: Copy the precursor context with Cmd+C
-    thread::sleep(Duration::from_millis(10)); // Allow selection to complete
-
-    native_cmd_c()?;
-    thread::sleep(Duration::from_millis(25)); // Wait for copy to complete
-
-    let combined_text = clipboard.get_text().unwrap_or_default();
-
-    // Extract precursor by taking slice from 0 to (combined_length - selected_length)
-    let precursor_length = combined_text.len().saturating_sub(selected_text.len());
-    let precursor_text = combined_text
-        .chars()
-        .take(precursor_length)
-        .collect::<String>();
-
-    // // Step 4: Restore cursor position by moving right to end of selection
-    // let restore_start = Instant::now();
-
-    // unsafe {
-    //     let right_arrow_key_code: CGKeyCode = 124;
-    //     let key_down = CGEventCreateKeyboardEvent(ptr::null_mut(), right_arrow_key_code, true);
-    //     let key_up = CGEventCreateKeyboardEvent(ptr::null_mut(), right_arrow_key_code, false);
-
-    //     if !key_down.is_null() && !key_up.is_null() {
-    //         // Mark as synthetic events
-    //         CGEventSetIntegerValueField(key_down, 121, 0x49544F);
-    //         CGEventSetIntegerValueField(key_up, 121, 0x49544F);
-
-    //         CGEventPost(CG_SESSION_EVENT_TAP, key_down);
-    //         CGEventPost(CG_SESSION_EVENT_TAP, key_up);
-
-    //         CFRelease(key_down as *const c_void);
-    //         CFRelease(key_up as *const c_void);
-    //     }
-    // }
-
-
-    // Step 5: Restore original clipboard
-    let _ = clipboard.set_text(original_clipboard);
-
-    // Apply length limits if specified
-    let final_selected = if let Some(max_len) = max_selected_length {
-        if selected_text.len() > max_len {
-            selected_text.chars().take(max_len).collect()
-        } else {
-            selected_text
-        }
-    } else {
-        selected_text
-    };
-
-    let final_precursor = if let Some(max_len) = max_precursor_length {
-        if precursor_text.len() > max_len {
-            // Take the last max_len characters for precursor context
-            precursor_text
-                .chars()
-                .rev()
-                .take(max_len)
-                .collect::<String>()
-                .chars()
-                .rev()
-                .collect()
-        } else {
-            precursor_text
-        }
-    } else {
-        precursor_text
-    };
-
-    let total_time = start_time.elapsed();
-
-    Ok((final_selected, final_precursor))
 }

@@ -185,11 +185,10 @@ impl CommandProcessor {
         }
     }
 
-    fn handle_get_cursor_context(&mut self, context_length: Option<usize>, cut_current_selection: Option<bool>, request_id: String) {
+    fn handle_get_cursor_context(&mut self, context_length: Option<usize>, _cut_current_selection: Option<bool>, request_id: String) {
         let context_len = context_length.unwrap_or(10);
 
-        let should_cut = cut_current_selection.unwrap_or(false);
-        let response = match get_cursor_context(context_len, should_cut) {
+        let response = match get_cursor_context(context_len) {
             Ok(context_text) => {
                 let text = if context_text.is_empty() {
                     None
@@ -305,13 +304,13 @@ fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
 }
 
 #[cfg(target_os = "macos")]
-fn get_cursor_context(context_length: usize, cut_current_selection: bool) -> Result<String, Box<dyn std::error::Error>> {
-    macos::get_cursor_context(context_length, cut_current_selection)
+fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::error::Error>> {
+    macos::get_cursor_context(context_length)
 }
 
 #[cfg(any(target_os = "windows", target_os = "linux"))]
-fn get_cursor_context(context_length: usize, cut_current_selection: bool) -> Result<String, Box<dyn std::error::Error>> {
-    cross_platform::get_cursor_context(context_length, cut_current_selection)
+fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::error::Error>> {
+    cross_platform::get_cursor_context(context_length)
 }
 
 #[cfg(target_os = "macos")]

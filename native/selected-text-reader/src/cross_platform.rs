@@ -85,7 +85,7 @@ fn cut_selected_text() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-pub fn get_cursor_context(context_length: usize, cut_current_selection: bool) -> Result<String, Box<dyn std::error::Error>> {
+pub fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::error::Error>> {
     use std::time::Instant;
     
     let start_time = Instant::now();
@@ -100,13 +100,6 @@ pub fn get_cursor_context(context_length: usize, cut_current_selection: bool) ->
     let get_clipboard_start = Instant::now();
     let original_clipboard = clipboard.get_text().unwrap_or_default();
     
-    // Conditionally cut selected text based on parameter
-    if cut_current_selection {
-        let cut_start = Instant::now();
-        native_ctrl_x()?;
-        thread::sleep(Duration::from_millis(25)); // Wait for cut to complete
-    } else {
-    }
     
     // Strategy: Use Ctrl+Shift+Left to select context, then copy WITHOUT restoring cursor position
     let select_context_start = Instant::now();

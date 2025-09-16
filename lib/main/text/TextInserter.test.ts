@@ -204,16 +204,25 @@ describe('TextInserter', () => {
       const testCases = [
         { transcript: 'Hi', expectedLength: 2 },
         { transcript: 'Hello world', expectedLength: 11 },
-        { transcript: 'This is a longer message with more content', expectedLength: 43 },
+        { transcript: 'This is a longer message with more content', expectedLength: 42 },
         { transcript: '123!@#', expectedLength: 6 },
         { transcript: 'Multi\nline\ntext', expectedLength: 15 },
       ]
 
-      for (const { transcript, expectedLength } of testCases) {
+      for (let i = 0; i < testCases.length; i++) {
+        const { transcript, expectedLength } = testCases[i]
         const interactionId = `test-${expectedLength}`
         await textInserter.insertText(transcript, interactionId)
+      }
 
-        expect(mockTraceLogger.logStep).toHaveBeenCalledWith(
+      // Check that all calls were made with correct parameters
+      expect(mockTraceLogger.logStep).toHaveBeenCalledTimes(testCases.length)
+
+      for (let i = 0; i < testCases.length; i++) {
+        const { expectedLength } = testCases[i]
+        const interactionId = `test-${expectedLength}`
+        expect(mockTraceLogger.logStep).toHaveBeenNthCalledWith(
+          i + 1,
           interactionId,
           'TEXT_INSERTION',
           expect.objectContaining({
@@ -221,8 +230,6 @@ describe('TextInserter', () => {
           }),
         )
       }
-
-      expect(mockTraceLogger.logStep).toHaveBeenCalledTimes(testCases.length)
     })
   })
 

@@ -36,7 +36,8 @@ export class InteractionManager {
     }
 
     try {
-      const userId = mainStore.get(STORE_KEYS.USER_PROFILE) as string | null
+      const userProfile = mainStore.get(STORE_KEYS.USER_PROFILE) as any
+      const userId = userProfile?.id
       if (!userId) {
         log.warn(
           '[InteractionManager] No user ID found, not creating interaction.',
@@ -51,6 +52,7 @@ export class InteractionManager {
         asr_output: transcript ? { transcript } : {},
         llm_output: errorMessage ? { error: errorMessage } : {},
         raw_audio: audioBuffer.length > 0 ? audioBuffer : null,
+        raw_audio_id: null,
         duration_ms: this.interactionStartTime
           ? Date.now() - this.interactionStartTime
           : 0,

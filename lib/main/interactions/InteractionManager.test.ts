@@ -178,7 +178,7 @@ describe('InteractionManager', () => {
 
       expect(mockDbRun).toHaveBeenCalled()
       const params = mockDbRun.mock.calls[0][1] as any[]
-      const durationParam = params[6] // duration_ms is at index 6
+      const durationParam = params[7] // duration_ms is at index 7
       expect(durationParam).toBeGreaterThan(0)
       expect(durationParam).toBeLessThan(1000) // Should be reasonable
     })
@@ -193,7 +193,7 @@ describe('InteractionManager', () => {
 
       expect(mockDbRun).toHaveBeenCalled()
       const params = mockDbRun.mock.calls[0][1] as any[]
-      const durationParam = params[6]
+      const durationParam = params[7]
       expect(durationParam).toBe(0)
     })
   })
@@ -230,10 +230,10 @@ describe('InteractionManager', () => {
 
       interactionManager.startInteraction()
 
-      // Should not throw
-      expect(async () => {
-        await interactionManager.createInteraction('test', Buffer.from('audio'), 16000)
-      }).not.toThrow()
+      // Should not throw - errors should be caught and logged
+      await expect(
+        interactionManager.createInteraction('test', Buffer.from('audio'), 16000)
+      ).resolves.toBeUndefined()
     })
   })
 })

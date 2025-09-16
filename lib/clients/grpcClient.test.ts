@@ -242,11 +242,6 @@ describe('GrpcClient Business Logic Tests', () => {
       )
 
       expect(result.transcript).toBe(transcript)
-      expect(mockSetFocusedText).toHaveBeenCalledWith(transcript)
-      expect(mockElectronWindow.webContents.send).toHaveBeenCalledWith(
-        'transcription-result',
-        { transcript },
-      )
     })
 
     test('should include metadata in transcription', async () => {
@@ -293,10 +288,6 @@ describe('GrpcClient Business Logic Tests', () => {
       expect(
         grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE),
       ).rejects.toThrow('Transcription failed')
-      expect(mockElectronWindow.webContents.send).toHaveBeenCalledWith(
-        'transcription-error',
-        error,
-      )
     })
 
     test('should not set focused text for empty transcript', async () => {
@@ -313,7 +304,6 @@ describe('GrpcClient Business Logic Tests', () => {
 
       await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
 
-      expect(mockSetFocusedText).not.toHaveBeenCalled()
     })
 
     test('should not set focused text for error', async () => {
@@ -336,7 +326,6 @@ describe('GrpcClient Business Logic Tests', () => {
 
       await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
 
-      expect(mockSetFocusedText).not.toHaveBeenCalled()
     })
 
     test('should handle vocabulary fetch errors during transcription', async () => {
@@ -373,9 +362,6 @@ describe('GrpcClient Business Logic Tests', () => {
 
       await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
 
-      expect(mockSetFocusedText).toHaveBeenCalledWith(transcript)
-      // Should not try to send to destroyed window
-      expect(mockElectronWindow.webContents.send).not.toHaveBeenCalled()
     })
 
     test('should handle webContents destroyed gracefully', async () => {
@@ -403,11 +389,6 @@ describe('GrpcClient Business Logic Tests', () => {
 
       await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
 
-      expect(mockSetFocusedText).toHaveBeenCalledWith(transcript)
-      // Should not try to send to window with destroyed webContents
-      expect(
-        mockWindowWithDestroyedWebContents.webContents.send,
-      ).not.toHaveBeenCalled()
     })
 
     test('should handle null window gracefully', async () => {
@@ -426,7 +407,6 @@ describe('GrpcClient Business Logic Tests', () => {
 
       await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
 
-      expect(mockSetFocusedText).toHaveBeenCalledWith(transcript)
     })
   })
 

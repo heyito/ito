@@ -9,33 +9,16 @@ import { WindowMessenger } from './messaging/WindowMessenger'
 import { TextInserter } from './text/TextInserter'
 import { getCursorContext } from '../media/selected-text-reader'
 import { grammarRulesService } from './grammar/GrammarRulesService'
-import { v4 as uuidv4 } from 'uuid'
 
 export class TranscriptionService {
-  // Use the newer manager-based approach but with audio buffering
   private audioStreamManager = new AudioStreamManager()
   private interactionManager = new InteractionManager()
   private windowMessenger = new WindowMessenger()
   private textInserter = new TextInserter()
 
-  // Audio buffering properties (from HEAD branch)
-  private isStreaming = false
-  private audioChunkQueue: Buffer[] = []
-  private resolveNewChunk: ((value: void | PromiseLike<void>) => void) | null = null
-  private currentInteractionId: string | null = null
-  private audioChunksForInteraction: Buffer[] = []
-  private interactionStartTime: number | null = null
-  private currentSampleRate: number = 16000
-  private readonly MINIMUM_AUDIO_DURATION_MS = 100
-  private hasStartedGrpc = false
-  private bufferedAudioBytes = 0
-  private currentMode: ItoMode | null = null
-  // 16-bit PCM mono -> 2 bytes per sample, write_audio_chunk in audio-recorder converts samples to 16-bit mono
-  private bytesPerSample = 2
-
   public async startTranscription(mode: ItoMode) {
     // Guard against multiple concurrent transcriptions
-    if (this.isStreaming) {
+    if (this.audioStreamManager.isCurrentlyStreaming()) {
       log.warn('[TranscriptionService] Stream already in progress.')
       return
     }
@@ -43,17 +26,6 @@ export class TranscriptionService {
     // Capture selected text and cursor context IMMEDIATELY when hotkey is pressed
     console.log('[TranscriptionService] Capturing context at hotkey press...')
 
-    // Initialize both old and new systems
-    this.isStreaming = true
-    this.audioChunkQueue = []
-    this.audioChunksForInteraction = []
-    this.currentInteractionId = uuidv4()
-    this.interactionStartTime = Date.now()
-    this.hasStartedGrpc = false
-    this.bufferedAudioBytes = 0
-    this.currentMode = mode
-
-    // Also initialize the manager-based system
     this.audioStreamManager.startStreaming()
     const interactionId = this.interactionManager.startInteraction()
     log.info('[TranscriptionService] Starting new transcription stream.')
@@ -73,94 +45,8 @@ export class TranscriptionService {
       })
     }
 
-    // Do not start gRPC yet; wait until enough audio has been buffered.
-  }
-
-  public stopStreaming() {
-    if (!this.isStreaming) {
-      return
-    }
-    this.isStreaming = false
-    if (this.resolveNewChunk) {
-      this.resolveNewChunk()
-    }
-    log.info('[TranscriptionService] Stream has been marked for closing.')
-
-    // If gRPC never started, perform cleanup now
-    if (!this.hasStartedGrpc) {
-      const globalInteractionId = (globalThis as any).currentInteractionId
-      if (globalInteractionId) {
-        traceLogger.logStep(globalInteractionId, 'TRANSCRIPTION_TOO_SHORT', {
-          localInteractionId: this.currentInteractionId,
-          bufferedMs: this.getBufferedDurationMs(),
-        })
-        traceLogger.endInteraction(
-          globalInteractionId,
-          'TRANSCRIPTION_SKIPPED',
-          {
-            reason: 'insufficient_audio_duration',
-            localInteractionId: this.currentInteractionId,
-          },
-        )
-        ;(globalThis as any).currentInteractionId = null
-      }
-
-      this.resetState()
-    }
-
-    // Also stop the manager-based system
-    this.audioStreamManager.stopStreaming()
-    this.interactionManager.clearCurrentInteraction()
-    ;(globalThis as any).currentInteractionId = null
-  }
-
-  public forwardAudioChunk(chunk: Buffer) {
-    if (this.isStreaming) {
-      this.audioChunkQueue.push(chunk)
-      // Also store for interaction saving
-      this.audioChunksForInteraction.push(chunk)
-      this.bufferedAudioBytes += chunk.length
-
-      // Also forward to the manager-based system
-      this.audioStreamManager.addAudioChunk(chunk)
-
-      if (this.resolveNewChunk) {
-        this.resolveNewChunk()
-        this.resolveNewChunk = null
-      }
-
-      // Start gRPC once we have buffered at least the minimum duration
-      this.startGrpcIfReady()
-    }
-
-    // if not streaming, do nothing
-  }
-
-  private getBufferedDurationMs(): number {
-    // 16-bit PCM mono -> 2 bytes per sample
-    const totalSamples = this.bufferedAudioBytes / this.bytesPerSample
-    const durationSeconds = totalSamples / (this.currentSampleRate || 16000)
-    return Math.floor(durationSeconds * 1000)
-  }
-
-  private startGrpcIfReady() {
-    if (
-      this.hasStartedGrpc ||
-      !this.isStreaming ||
-      this.currentMode === null ||
-      this.getBufferedDurationMs() < this.MINIMUM_AUDIO_DURATION_MS
-    ) {
-      return
-    }
-
-    this.hasStartedGrpc = true
-
-    // Get current interaction ID for trace logging
-    const globalInteractionId = (globalThis as any).currentInteractionId
-    const interactionId = this.interactionManager.getCurrentInteractionId()
-
     grpcClient
-      .transcribeStream(this.streamAudioChunks(), this.currentMode)
+      .transcribeStream(this.audioStreamManager.streamAudioChunks(), mode)
       .then(response => {
         this.handleTranscriptionResponse(
           response,
@@ -173,37 +59,16 @@ export class TranscriptionService {
           globalInteractionId || interactionId,
         )
       })
-      .finally(() => {
-        // Ensure interaction is ended if it hasn't been ended yet
-        const finalInteractionId = (globalThis as any).currentInteractionId
-        if (finalInteractionId) {
-          traceLogger.endInteraction(
-            finalInteractionId,
-            'TRANSCRIPTION_FINALLY',
-            {
-              localInteractionId: this.currentInteractionId,
-              reason: 'finally_block',
-            },
-          )
-          ;(globalThis as any).currentInteractionId = null
-        }
-
-        this.resetState()
-        log.info('[TranscriptionService] Stream has fully terminated.')
-      })
   }
 
-  private async *streamAudioChunks(): AsyncIterable<Buffer> {
-    while (this.isStreaming || this.audioChunkQueue.length > 0) {
-      if (this.audioChunkQueue.length > 0) {
-        yield this.audioChunkQueue.shift()!
-      } else if (this.isStreaming) {
-        // Wait for a new chunk to arrive
-        await new Promise<void>(resolve => {
-          this.resolveNewChunk = resolve
-        })
-      }
-    }
+  public stopStreaming() {
+    this.audioStreamManager.stopStreaming()
+    this.interactionManager.clearCurrentInteraction()
+    ;(globalThis as any).currentInteractionId = null
+  }
+
+  public forwardAudioChunk(chunk: Buffer) {
+    this.audioStreamManager.addAudioChunk(chunk)
   }
 
   private async handleTranscriptionResponse(
@@ -252,7 +117,7 @@ export class TranscriptionService {
           'TRANSCRIPTION_FAILED',
           {
             error: response.error.message,
-            localInteractionId: this.currentInteractionId,
+            localInteractionId: this.interactionManager.getCurrentInteractionId(),
           },
         )
         ;(globalThis as any).currentInteractionId = null
@@ -336,19 +201,10 @@ export class TranscriptionService {
     ;(globalThis as any).currentInteractionId = null
   }
 
-  private resetState() {
-    this.isStreaming = false
-    this.currentInteractionId = null
-    this.audioChunksForInteraction = []
-    this.interactionStartTime = null
-    this.hasStartedGrpc = false
-    this.bufferedAudioBytes = 0
-    this.currentMode = null
-  }
-
   public stopTranscription() {
-    this.stopStreaming()
-    this.resetState()
+    this.audioStreamManager.stopStreaming()
+    this.interactionManager.clearCurrentInteraction()
+    this.audioStreamManager.clearInteractionAudio()
   }
 
   public handleAudioChunk(chunk: Buffer) {
@@ -358,9 +214,6 @@ export class TranscriptionService {
   public setAudioConfig(config: { sampleRate?: number; channels?: number }) {
     console.log('[TranscriptionService] Setting audio config:', config)
     this.audioStreamManager.setAudioConfig(config)
-    if (config.sampleRate) {
-      this.currentSampleRate = config.sampleRate
-    }
   }
 
   public setMainWindow(mainWindow: BrowserWindow | null) {

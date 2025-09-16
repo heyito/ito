@@ -57,7 +57,6 @@ const mockTranscriptionService = {
   startTranscription: mock(),
   stopTranscription: mock(),
   handleAudioChunk: mock(),
-  setAudioConfig: mock(),
 }
 mock.module('./transcriptionService', () => ({
   transcriptionService: mockTranscriptionService,
@@ -93,7 +92,6 @@ describe('VoiceInputService Integration Tests', () => {
     mockTranscriptionService.startTranscription.mockClear()
     mockTranscriptionService.stopTranscription.mockClear()
     mockTranscriptionService.handleAudioChunk.mockClear()
-    mockTranscriptionService.setAudioConfig.mockClear()
 
     // Setup default store values
     mockStore.get.mockImplementation((key: string) => {

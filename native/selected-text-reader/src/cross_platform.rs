@@ -22,8 +22,6 @@ pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
     let restore_start = Instant::now();
     let _ = clipboard.set_text(original_clipboard);
     
-    let total_time = start_time.elapsed();
-    
     Ok(selected_text)
 }
 
@@ -174,5 +172,19 @@ fn get_context_with_keyboard_selection(
         }
     }
 
-    Ok(context_text)
+    // Take only the last context_length characters
+    let final_context = if context_text.len() <= context_length {
+        context_text
+    } else {
+        context_text
+            .chars()
+            .rev()
+            .take(context_length)
+            .collect::<String>()
+            .chars()
+            .rev()
+            .collect()
+    };
+
+    Ok(final_context)
 }

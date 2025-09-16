@@ -2,15 +2,9 @@ use arboard::Clipboard;
 use libc::c_void;
 use lru::LruCache;
 use parking_lot::Mutex;
-use std::num::NonZeroUsize;
 use std::ptr;
 use std::thread;
 use std::time::Duration;
-
-use accessibility_ng::{AXAttribute, AXUIElement};
-use accessibility_sys_ng::{kAXFocusedUIElementAttribute, kAXSelectedTextAttribute};
-use active_win_pos_rs::get_active_window;
-use core_foundation::string::CFString;
 
 static GET_SELECTED_TEXT_METHOD: Mutex<Option<LruCache<String, u8>>> = Mutex::new(None);
 
@@ -42,90 +36,29 @@ extern "C" {
 }
 
 pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
-    use std::time::Instant;
-
-    let start_time = Instant::now();
-
-    // Simple approach: use Cmd+X (cut) to get any selected text
-    // This is much faster and more reliable than complex fallback methods
-
-    let clipboard_init_start = Instant::now();
+    // Simple approach: use Cmd+C (copy) to get any selected text
     let mut clipboard = Clipboard::new().map_err(|e| format!("Clipboard init failed: {}", e))?;
 
     // Store original clipboard contents
-    let get_clipboard_start = Instant::now();
     let original_clipboard = clipboard.get_text().unwrap_or_default();
 
-    // Clear clipboard to detect if cut worked
-    let clear_start = Instant::now();
     clipboard
         .clear()
         .map_err(|e| format!("Clipboard clear failed: {}", e))?;
 
     // Use Cmd+C to cut any selected text
-    let copy_start = Instant::now();
     native_cmd_c()?;
 
     // Small delay for copy operation to complete
     thread::sleep(Duration::from_millis(25));
 
     // Get the copied text from clipboard (this is what was selected)
-    let get_copy_text_start = Instant::now();
     let selected_text = clipboard.get_text().unwrap_or_default();
 
     // Always restore original clipboard contents - ITO is cutting on behalf of user for context
-    let restore_start = Instant::now();
     let _ = clipboard.set_text(original_clipboard);
-
-    let total_time = start_time.elapsed();
 
     Ok(selected_text)
-}
-
-// Fallback clipboard method for macOS with multiple copy strategies
-fn get_selected_text_by_clipboard_macos() -> Result<String, Box<dyn std::error::Error>> {
-    let mut clipboard = Clipboard::new()?;
-
-    // Store original clipboard contents
-    let original_clipboard = clipboard.get_text().unwrap_or_default();
-
-    // Try different copy methods
-    let copy_methods: Vec<fn(&mut Clipboard) -> Result<String, Box<dyn std::error::Error>>> =
-        vec![single_copy_method, double_copy_method];
-
-    for copy_method in copy_methods {
-        match copy_method(&mut clipboard) {
-            Ok(text) if !text.is_empty() => {
-                // Restore original clipboard contents
-                let _ = clipboard.set_text(original_clipboard);
-                return Ok(text);
-            }
-            Ok(_) => continue,  // Empty text, try next method
-            Err(_) => continue, // Method failed, try next
-        }
-    }
-
-    // All methods failed, restore clipboard and return empty
-    let _ = clipboard.set_text(original_clipboard);
-    Ok(String::new())
-}
-
-// Standard single Cmd+C copy using native macOS events
-fn single_copy_method(clipboard: &mut Clipboard) -> Result<String, Box<dyn std::error::Error>> {
-    // Clear clipboard to detect if copy operation worked
-    clipboard.clear()?;
-
-    // Use native macOS keyboard events for better compatibility
-    native_cmd_c()?;
-
-    // Small delay to ensure copy operation completes
-    thread::sleep(Duration::from_millis(25));
-
-    // Try to get the copied text
-    match clipboard.get_text() {
-        Ok(text) => Ok(text),
-        Err(_) => Ok(String::new()),
-    }
 }
 
 // Native macOS Cmd+C implementation using raw Quartz C API - matching Python exactly
@@ -241,8 +174,6 @@ fn double_copy_method(clipboard: &mut Clipboard) -> Result<String, Box<dyn std::
 
 // Simple function to select previous N characters and copy them
 fn select_previous_chars_and_copy(char_count: usize, clipboard: &mut Clipboard) -> Result<String, Box<dyn std::error::Error>> {
-    use std::time::Instant;
-
     // Clear clipboard before selection
     clipboard.clear().map_err(|e| format!("Clipboard clear failed: {}", e))?;
 
@@ -289,8 +220,6 @@ fn select_previous_chars_and_copy(char_count: usize, clipboard: &mut Clipboard) 
     // Allow selection to complete (match working get_context timing)
     thread::sleep(Duration::from_millis(10));
 
-    // Copy the selected text
-    let copy_start = Instant::now();
     native_cmd_c()?;
     thread::sleep(Duration::from_millis(25)); // Wait for copy to complete (match working timing)
 
@@ -308,7 +237,6 @@ fn select_previous_chars_and_copy(char_count: usize, clipboard: &mut Clipboard) 
             }
         }
     }
-    let copy_duration = copy_start.elapsed();
 
     // Move cursor right by the number of characters we captured to deselect
     // This prevents paste conflicts in applications that don't allow pasting over selections
@@ -355,125 +283,23 @@ fn select_previous_chars_and_copy(char_count: usize, clipboard: &mut Clipboard) 
 }
 
 pub fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::error::Error>> {
-    use std::time::Instant;
-
-    let start_time = Instant::now();
-
     // Use keyboard commands to get cursor context
     // This is more reliable across different applications than Accessibility API
-
-    let clipboard_init_start = Instant::now();
     let mut clipboard = Clipboard::new().map_err(|e| format!("Clipboard init failed: {}", e))?;
 
     // Store original clipboard contents
-    let get_clipboard_start = Instant::now();
     let original_clipboard = clipboard.get_text().unwrap_or_default();
 
-
     // Select previous context_length characters with Shift+Left and copy
-    let select_context_start = Instant::now();
     let result = select_previous_chars_and_copy(context_length, &mut clipboard);
 
     // Always restore original clipboard
-    let restore_clipboard_start = Instant::now();
     let _ = clipboard.set_text(original_clipboard);
-
-    let total_time = start_time.elapsed();
 
     // Return debug info if we got nothing
     match result {
         Ok(text) => Ok(text),
         Err(e) => Ok(format!("[ERROR] {}", e)),
-    }
-}
-
-fn select_line_and_get_context(
-    context_length: usize,
-    clipboard: &mut Clipboard,
-) -> Result<String, Box<dyn std::error::Error>> {
-    use std::time::Instant;
-
-    let start_time = Instant::now();
-
-    unsafe {
-        // Key code for Left Arrow is 123 on macOS
-        let left_arrow_key_code: CGKeyCode = 123;
-
-        // Use Cmd+Shift+Left to select from cursor to beginning of line
-        let key_down_event = CGEventCreateKeyboardEvent(ptr::null_mut(), left_arrow_key_code, true);
-        if key_down_event.is_null() {
-            return Err("Failed to create key event".into());
-        }
-
-        let key_up_event = CGEventCreateKeyboardEvent(ptr::null_mut(), left_arrow_key_code, false);
-        if key_up_event.is_null() {
-            CFRelease(key_down_event as *const c_void);
-            return Err("Failed to create key event".into());
-        }
-
-        // Set Cmd+Shift flags (Shift: 0x20000, Cmd: 0x100000)
-        let flags = 0x20000 | 0x100000;
-        CGEventSetFlags(key_down_event, flags);
-        CGEventSetFlags(key_up_event, flags);
-
-        let keyboard_start = Instant::now();
-
-        // Post the events
-        CGEventPost(CG_SESSION_EVENT_TAP, key_down_event);
-        thread::sleep(Duration::from_millis(5));
-        CGEventPost(CG_SESSION_EVENT_TAP, key_up_event);
-
-        // Clean up
-        CFRelease(key_down_event as *const c_void);
-        CFRelease(key_up_event as *const c_void);
-
-        // Brief delay for selection to complete
-        thread::sleep(Duration::from_millis(10));
-        let keyboard_duration = keyboard_start.elapsed();
-
-        let copy_start = Instant::now();
-
-        // Copy the selection
-        native_cmd_c()?;
-
-        // Adaptively wait for and get text from clipboard
-        let mut line_text = String::new();
-        let max_retries = 20; // Poll for a maximum of 20 * 10ms = 200ms
-        for _ in 0..max_retries {
-            // Give a tiny bit of time for the clipboard to update
-            thread::sleep(Duration::from_millis(10));
-
-            if let Ok(text) = clipboard.get_text() {
-                if !text.is_empty() {
-                    line_text = text;
-                    break; // Success! We got the text.
-                }
-            }
-        }
-        let copy_duration = copy_start.elapsed();
-
-        // Restore cursor position with optimized single-arrow approach
-        let restore_start = Instant::now();
-        restore_cursor_position()?;
-        let restore_duration = restore_start.elapsed();
-
-        // Extract the last N characters from the line text (context before cursor)
-        let context_text = if line_text.len() <= context_length {
-            line_text.clone()
-        } else {
-            // Take the last context_length characters
-            line_text
-                .chars()
-                .rev()
-                .take(context_length)
-                .collect::<String>()
-                .chars()
-                .rev()
-                .collect()
-        };
-
-        let total_duration = start_time.elapsed();
-        Ok(context_text)
     }
 }
 

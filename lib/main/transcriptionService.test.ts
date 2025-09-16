@@ -329,8 +329,13 @@ describe('TranscriptionService Orchestration Tests', () => {
       // Wait for error handling
       await new Promise(resolve => setTimeout(resolve, 10))
 
-      // Should not create interaction or insert text for too-short audio
-      expect(mockInteractionManager.createInteraction).not.toHaveBeenCalled()
+      // Should create interaction even for too-short audio (to save failed attempts)
+      expect(mockInteractionManager.createInteraction).toHaveBeenCalledWith(
+        '',
+        expect.any(Buffer),
+        16000,
+        'Audio too short',
+      )
       expect(mockTextInserter.insertText).not.toHaveBeenCalled()
       expect(mockTraceLogger.logStep).toHaveBeenCalledWith(
         'test-interaction-123',
@@ -361,7 +366,10 @@ describe('TranscriptionService Orchestration Tests', () => {
       transcriptionService.stopStreaming()
 
       expect(mockAudioStreamManager.stopStreaming).toHaveBeenCalled()
-      expect(mockInteractionManager.clearCurrentInteraction).toHaveBeenCalled()
+      // Note: clearCurrentInteraction is no longer called in stopStreaming to preserve ID for database save
+      expect(
+        mockInteractionManager.clearCurrentInteraction,
+      ).not.toHaveBeenCalled()
     })
 
     test('should forward audio chunks to audio manager', async () => {
@@ -491,7 +499,10 @@ describe('TranscriptionService Orchestration Tests', () => {
       transcriptionService.stopTranscription()
 
       expect(mockAudioStreamManager.stopStreaming).toHaveBeenCalled()
-      expect(mockInteractionManager.clearCurrentInteraction).toHaveBeenCalled()
+      // Note: clearCurrentInteraction is no longer called in stopTranscription to preserve ID for database save
+      expect(
+        mockInteractionManager.clearCurrentInteraction,
+      ).not.toHaveBeenCalled()
       expect(mockAudioStreamManager.clearInteractionAudio).toHaveBeenCalled()
     })
 

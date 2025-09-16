@@ -36,7 +36,6 @@ interface CursorContextCommand {
   requestId: string
 }
 
-
 interface GetContextCommand {
   command: 'get-context'
   maxSelectedLength?: number
@@ -210,10 +209,7 @@ class SelectedTextReaderService extends EventEmitter {
   }
 
   #sendCommand(
-    command:
-      | SelectedTextCommand
-      | CursorContextCommand
-      | GetContextCommand,
+    command: SelectedTextCommand | CursorContextCommand | GetContextCommand,
   ): void {
     if (!this.#selectedTextProcess) {
       log.error(
@@ -291,8 +287,6 @@ class SelectedTextReaderService extends EventEmitter {
   public isRunning(): boolean {
     return this.#selectedTextProcess !== null
   }
-
-
 
   /**
    * Sends a command to get both selected text and cursor context atomically.
@@ -429,7 +423,6 @@ export async function getCursorContext(contextLength: number): Promise<string> {
 
   return preCursorText
 }
-
 
 /**
  * Get both selected text and cursor context atomically in a single operation

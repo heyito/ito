@@ -72,9 +72,10 @@ export class InteractionManager {
       }
 
       // Generate a meaningful title from the transcript
-      const title = transcript && transcript.length > 50
-        ? transcript.substring(0, 50) + '...'
-        : transcript || 'Voice interaction'
+      const title =
+        transcript && transcript.length > 50
+          ? transcript.substring(0, 50) + '...'
+          : transcript || 'Voice interaction'
 
       // Create interaction using upsert to specify our own ID
       const now = new Date().toISOString()
@@ -93,11 +94,16 @@ export class InteractionManager {
         deleted_at: null,
       }
 
-      console.log('[InteractionManager] About to upsert interaction data:', interactionData)
+      console.log(
+        '[InteractionManager] About to upsert interaction data:',
+        interactionData,
+      )
 
       await InteractionsTable.upsert(interactionData)
 
-      console.log('[InteractionManager] Successfully created interaction in database')
+      console.log(
+        '[InteractionManager] Successfully created interaction in database',
+      )
       log.info(
         `[InteractionManager] Created interaction: ${this.currentInteractionId} for user: ${userId} (duration: ${durationMs}ms)`,
       )

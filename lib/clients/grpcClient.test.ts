@@ -303,7 +303,6 @@ describe('GrpcClient Business Logic Tests', () => {
       })()
 
       await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
-
     })
 
     test('should not set focused text for error', async () => {
@@ -325,7 +324,6 @@ describe('GrpcClient Business Logic Tests', () => {
       })()
 
       await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
-
     })
 
     test('should handle vocabulary fetch errors during transcription', async () => {
@@ -361,7 +359,6 @@ describe('GrpcClient Business Logic Tests', () => {
       })()
 
       await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
-
     })
 
     test('should handle webContents destroyed gracefully', async () => {
@@ -388,7 +385,6 @@ describe('GrpcClient Business Logic Tests', () => {
       })()
 
       await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
-
     })
 
     test('should handle null window gracefully', async () => {
@@ -406,7 +402,6 @@ describe('GrpcClient Business Logic Tests', () => {
       })()
 
       await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
-
     })
   })
 

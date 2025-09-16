@@ -15,10 +15,12 @@ mock.module('../sqlite/utils', () => ({
 mock.module('electron-store', () => {
   return {
     default: class MockStore {
-      get() { return null }
+      get() {
+        return null
+      }
       set() {}
       delete() {}
-    }
+    },
   }
 })
 
@@ -99,7 +101,11 @@ describe('InteractionManager', () => {
       const sampleRate = 16000
 
       interactionManager.startInteraction()
-      await interactionManager.createInteraction(transcript, audioBuffer, sampleRate)
+      await interactionManager.createInteraction(
+        transcript,
+        audioBuffer,
+        sampleRate,
+      )
 
       expect(mockDbRun).toHaveBeenCalled()
       // Check the SQL call parameters
@@ -115,7 +121,11 @@ describe('InteractionManager', () => {
 
     test('should skip creation when no current interaction ID', async () => {
       // Don't start interaction
-      await interactionManager.createInteraction('test', Buffer.from('audio'), 16000)
+      await interactionManager.createInteraction(
+        'test',
+        Buffer.from('audio'),
+        16000,
+      )
 
       expect(mockDbRun).not.toHaveBeenCalled()
     })
@@ -124,7 +134,11 @@ describe('InteractionManager', () => {
       mockMainStore.get.mockReturnValue(null)
 
       interactionManager.startInteraction()
-      await interactionManager.createInteraction('test', Buffer.from('audio'), 16000)
+      await interactionManager.createInteraction(
+        'test',
+        Buffer.from('audio'),
+        16000,
+      )
 
       expect(mockMainStore.get).toHaveBeenCalledWith(STORE_KEYS.USER_PROFILE)
       expect(mockDbRun).not.toHaveBeenCalled()
@@ -135,7 +149,11 @@ describe('InteractionManager', () => {
     test('should use transcript as title for short transcripts', async () => {
       const transcript = 'Short message'
       interactionManager.startInteraction()
-      await interactionManager.createInteraction(transcript, Buffer.from('audio'), 16000)
+      await interactionManager.createInteraction(
+        transcript,
+        Buffer.from('audio'),
+        16000,
+      )
 
       expect(mockDbRun).toHaveBeenCalled()
       const params = mockDbRun.mock.calls[0][1] as any[]
@@ -144,21 +162,32 @@ describe('InteractionManager', () => {
     })
 
     test('should truncate long transcripts at 50 characters', async () => {
-      const longTranscript = 'This is a very long transcript that should be truncated because it exceeds fifty characters'
+      const longTranscript =
+        'This is a very long transcript that should be truncated because it exceeds fifty characters'
 
       interactionManager.startInteraction()
-      await interactionManager.createInteraction(longTranscript, Buffer.from('audio'), 16000)
+      await interactionManager.createInteraction(
+        longTranscript,
+        Buffer.from('audio'),
+        16000,
+      )
 
       expect(mockDbRun).toHaveBeenCalled()
       const params = mockDbRun.mock.calls[0][1] as any[]
       const titleParam = params[2]
-      expect(titleParam).toBe('This is a very long transcript that should be trun')
+      expect(titleParam).toBe(
+        'This is a very long transcript that should be trun',
+      )
       expect(titleParam.length).toBe(50)
     })
 
     test('should use fallback title for empty transcript', async () => {
       interactionManager.startInteraction()
-      await interactionManager.createInteraction('', Buffer.from('audio'), 16000)
+      await interactionManager.createInteraction(
+        '',
+        Buffer.from('audio'),
+        16000,
+      )
 
       expect(mockDbRun).toHaveBeenCalled()
       const params = mockDbRun.mock.calls[0][1] as any[]
@@ -174,7 +203,11 @@ describe('InteractionManager', () => {
       // Wait a bit to ensure measurable duration
       await new Promise(resolve => setTimeout(resolve, 10))
 
-      await interactionManager.createInteraction('test', Buffer.from('audio'), 16000)
+      await interactionManager.createInteraction(
+        'test',
+        Buffer.from('audio'),
+        16000,
+      )
 
       expect(mockDbRun).toHaveBeenCalled()
       const params = mockDbRun.mock.calls[0][1] as any[]
@@ -232,7 +265,11 @@ describe('InteractionManager', () => {
 
       // Should not throw - errors should be caught and logged
       await expect(
-        interactionManager.createInteraction('test', Buffer.from('audio'), 16000)
+        interactionManager.createInteraction(
+          'test',
+          Buffer.from('audio'),
+          16000,
+        ),
       ).resolves.toBeUndefined()
     })
   })

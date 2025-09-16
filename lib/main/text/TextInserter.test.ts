@@ -204,7 +204,10 @@ describe('TextInserter', () => {
       const testCases = [
         { transcript: 'Hi', expectedLength: 2 },
         { transcript: 'Hello world', expectedLength: 11 },
-        { transcript: 'This is a longer message with more content', expectedLength: 42 },
+        {
+          transcript: 'This is a longer message with more content',
+          expectedLength: 42,
+        },
         { transcript: '123!@#', expectedLength: 6 },
         { transcript: 'Multi\nline\ntext', expectedLength: 15 },
       ]

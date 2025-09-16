@@ -139,7 +139,9 @@ describe('AudioStreamManager', () => {
       audioManager.addAudioChunk(shortChunk)
 
       // Try to get next value with a timeout to avoid hanging
-      const timeoutPromise = new Promise(resolve => setTimeout(() => resolve('timeout'), 50))
+      const timeoutPromise = new Promise(resolve =>
+        setTimeout(() => resolve('timeout'), 50),
+      )
       const result = await Promise.race([iterator.next(), timeoutPromise])
 
       expect(result).toBe('timeout') // Should timeout waiting for minimum duration

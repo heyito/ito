@@ -112,14 +112,10 @@ export class TranscriptionService {
 
       // End the interaction after transcription error
       if (interactionId) {
-        traceLogger.endInteraction(
-          interactionId,
-          'TRANSCRIPTION_FAILED',
-          {
-            error: response.error.message,
-            localInteractionId: this.interactionManager.getCurrentInteractionId(),
-          },
-        )
+        traceLogger.endInteraction(interactionId, 'TRANSCRIPTION_FAILED', {
+          error: response.error.message,
+          localInteractionId: this.interactionManager.getCurrentInteractionId(),
+        })
         ;(globalThis as any).currentInteractionId = null
       }
     } else {

@@ -14,9 +14,11 @@ export class GrammarRulesService {
     if (!cursorContext) {
       const firstLetterIndex = transcript.search(/[a-zA-Z]/)
       if (firstLetterIndex >= 0) {
-        return transcript.substring(0, firstLetterIndex) +
-               transcript.charAt(firstLetterIndex).toUpperCase() +
-               transcript.substring(firstLetterIndex + 1)
+        return (
+          transcript.substring(0, firstLetterIndex) +
+          transcript.charAt(firstLetterIndex).toUpperCase() +
+          transcript.substring(firstLetterIndex + 1)
+        )
       }
       return transcript
     }
@@ -25,7 +27,10 @@ export class GrammarRulesService {
 
     // Check if we should capitalize the first letter
     const firstWord = correctedText.trim().split(/\s+/)[0] || ''
-    const shouldCapitalize = this.shouldCapitalizeBasedOnContext(cursorContext, firstWord)
+    const shouldCapitalize = this.shouldCapitalizeBasedOnContext(
+      cursorContext,
+      firstWord,
+    )
 
     if (shouldCapitalize && correctedText.length > 0) {
       // Find the first letter to capitalize
@@ -100,15 +105,20 @@ export class GrammarRulesService {
     if (!word || word.trim().length === 0) return false
 
     const doc = nlp(word.trim())
-    return doc.has('#ProperNoun') ||
-           doc.has('#Person') ||
-           doc.has('#Place') ||
-           doc.has('#Organization') ||
-           doc.has('#WeekDay') ||
-           doc.has('#Month')
+    return (
+      doc.has('#ProperNoun') ||
+      doc.has('#Person') ||
+      doc.has('#Place') ||
+      doc.has('#Organization') ||
+      doc.has('#WeekDay') ||
+      doc.has('#Month')
+    )
   }
 
-  private shouldCapitalizeBasedOnContext(context: string, firstWord: string): boolean {
+  private shouldCapitalizeBasedOnContext(
+    context: string,
+    firstWord: string,
+  ): boolean {
     // If the first word is a proper noun, ALWAYS capitalize
     if (this.isProperNoun(firstWord)) {
       return true

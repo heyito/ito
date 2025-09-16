@@ -84,7 +84,7 @@ describe('WindowMessenger', () => {
     test('should not send when webContents is null', () => {
       const mockWindow = {
         ...mockBrowserWindow,
-        webContents: null
+        webContents: null,
       } as any
 
       windowMessenger.setMainWindow(mockWindow)
@@ -105,19 +105,33 @@ describe('WindowMessenger', () => {
 
       windowMessenger.sendTranscriptionResult(response)
 
-      expect(mockWebContents.send).toHaveBeenCalledWith('transcription-result', response)
+      expect(mockWebContents.send).toHaveBeenCalledWith(
+        'transcription-result',
+        response,
+      )
     })
 
     test('should send different transcription results', () => {
       const response1 = { transcript: 'First message' }
-      const response2 = { transcript: 'Second message', metadata: { duration: 1000 } }
+      const response2 = {
+        transcript: 'Second message',
+        metadata: { duration: 1000 },
+      }
 
       windowMessenger.sendTranscriptionResult(response1)
       windowMessenger.sendTranscriptionResult(response2)
 
       expect(mockWebContents.send).toHaveBeenCalledTimes(2)
-      expect(mockWebContents.send).toHaveBeenNthCalledWith(1, 'transcription-result', response1)
-      expect(mockWebContents.send).toHaveBeenNthCalledWith(2, 'transcription-result', response2)
+      expect(mockWebContents.send).toHaveBeenNthCalledWith(
+        1,
+        'transcription-result',
+        response1,
+      )
+      expect(mockWebContents.send).toHaveBeenNthCalledWith(
+        2,
+        'transcription-result',
+        response2,
+      )
     })
 
     test('should handle empty transcription result', () => {
@@ -125,13 +139,19 @@ describe('WindowMessenger', () => {
 
       windowMessenger.sendTranscriptionResult(response)
 
-      expect(mockWebContents.send).toHaveBeenCalledWith('transcription-result', response)
+      expect(mockWebContents.send).toHaveBeenCalledWith(
+        'transcription-result',
+        response,
+      )
     })
 
     test('should handle null transcription result', () => {
       windowMessenger.sendTranscriptionResult(null)
 
-      expect(mockWebContents.send).toHaveBeenCalledWith('transcription-result', null)
+      expect(mockWebContents.send).toHaveBeenCalledWith(
+        'transcription-result',
+        null,
+      )
     })
 
     test('should handle transcription result sending error gracefully', () => {
@@ -159,7 +179,10 @@ describe('WindowMessenger', () => {
 
       windowMessenger.sendTranscriptionError(error)
 
-      expect(mockWebContents.send).toHaveBeenCalledWith('transcription-error', error)
+      expect(mockWebContents.send).toHaveBeenCalledWith(
+        'transcription-error',
+        error,
+      )
     })
 
     test('should send different error types', () => {
@@ -170,8 +193,16 @@ describe('WindowMessenger', () => {
       windowMessenger.sendTranscriptionError(error2)
 
       expect(mockWebContents.send).toHaveBeenCalledTimes(2)
-      expect(mockWebContents.send).toHaveBeenNthCalledWith(1, 'transcription-error', error1)
-      expect(mockWebContents.send).toHaveBeenNthCalledWith(2, 'transcription-error', error2)
+      expect(mockWebContents.send).toHaveBeenNthCalledWith(
+        1,
+        'transcription-error',
+        error1,
+      )
+      expect(mockWebContents.send).toHaveBeenNthCalledWith(
+        2,
+        'transcription-error',
+        error2,
+      )
     })
 
     test('should handle string error', () => {
@@ -179,13 +210,19 @@ describe('WindowMessenger', () => {
 
       windowMessenger.sendTranscriptionError(error)
 
-      expect(mockWebContents.send).toHaveBeenCalledWith('transcription-error', error)
+      expect(mockWebContents.send).toHaveBeenCalledWith(
+        'transcription-error',
+        error,
+      )
     })
 
     test('should handle null error', () => {
       windowMessenger.sendTranscriptionError(null)
 
-      expect(mockWebContents.send).toHaveBeenCalledWith('transcription-error', null)
+      expect(mockWebContents.send).toHaveBeenCalledWith(
+        'transcription-error',
+        null,
+      )
     })
 
     test('should not send error when window is invalid', () => {

@@ -36,18 +36,6 @@ interface CursorContextCommand {
   requestId: string
 }
 
-interface SelectBackwardsCommand {
-  command: 'select-backwards'
-  wordCount: number
-  charCount: number
-  requestId: string
-}
-
-interface UnselectCommand {
-  command: 'unselect'
-  charCount: number
-  requestId: string
-}
 
 interface GetContextCommand {
   command: 'get-context'
@@ -225,9 +213,7 @@ class SelectedTextReaderService extends EventEmitter {
     command:
       | SelectedTextCommand
       | CursorContextCommand
-      | SelectBackwardsCommand
-      | GetContextCommand
-      | UnselectCommand,
+      | GetContextCommand,
   ): void {
     if (!this.#selectedTextProcess) {
       log.error(
@@ -306,77 +292,7 @@ class SelectedTextReaderService extends EventEmitter {
     return this.#selectedTextProcess !== null
   }
 
-  public async unselect(charCount: number): Promise<any> {
-    console.log('[SelectedTextService] unselect called:', {
-      charCount,
-      processRunning: this.isRunning(),
-    })
 
-    if (!this.#selectedTextProcess) {
-      throw new Error('Selected text reader process not running')
-    }
-
-    return new Promise((resolve, reject) => {
-      const requestId = `sel_${++this.#requestIdCounter}_${Date.now()}`
-      this.#pendingRequests.set(requestId, { resolve, reject })
-
-      const command: UnselectCommand = {
-        command: 'unselect',
-        charCount,
-        requestId,
-      }
-
-      this.#sendCommand(command)
-
-      // Set timeout to avoid hanging requests
-      setTimeout(() => {
-        if (this.#pendingRequests.has(requestId)) {
-          this.#pendingRequests.delete(requestId)
-          reject(new Error('Select backwards request timed out'))
-        }
-      }, 5000) // 5 second timeout
-    })
-  }
-
-  /**
-   * Sends a command to select text backwards with optimized word/character selection.
-   */
-  public async selectBackwards(
-    wordCount: number,
-    charCount: number,
-  ): Promise<any> {
-    console.log('[SelectedTextService] selectBackwards called:', {
-      wordCount,
-      charCount,
-      processRunning: this.isRunning(),
-    })
-
-    if (!this.#selectedTextProcess) {
-      throw new Error('Selected text reader process not running')
-    }
-
-    return new Promise((resolve, reject) => {
-      const requestId = `sel_${++this.#requestIdCounter}_${Date.now()}`
-      this.#pendingRequests.set(requestId, { resolve, reject })
-
-      const command: SelectBackwardsCommand = {
-        command: 'select-backwards',
-        wordCount,
-        charCount,
-        requestId,
-      }
-
-      this.#sendCommand(command)
-
-      // Set timeout to avoid hanging requests
-      setTimeout(() => {
-        if (this.#pendingRequests.has(requestId)) {
-          this.#pendingRequests.delete(requestId)
-          reject(new Error('Select backwards request timed out'))
-        }
-      }, 5000) // 5 second timeout
-    })
-  }
 
   /**
    * Sends a command to get both selected text and cursor context atomically.
@@ -514,19 +430,6 @@ export async function getCursorContext(contextLength: number): Promise<string> {
   return preCursorText
 }
 
-/**
- * Select text backwards using optimized word/character selection
- */
-export function selectBackwards(
-  wordCount: number,
-  charCount: number,
-): Promise<any> {
-  return selectedTextReaderService.selectBackwards(wordCount, charCount)
-}
-
-export function unselect(charCount: number): Promise<any> {
-  return selectedTextReaderService.unselect(charCount)
-}
 
 /**
  * Get both selected text and cursor context atomically in a single operation

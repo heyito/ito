@@ -28,28 +28,12 @@ enum Command {
         #[serde(rename = "requestId")]
         request_id: String,
     },
-    #[serde(rename = "select-backwards")]
-    SelectBackwards {
-        #[serde(rename = "wordCount")]
-        word_count: usize,
-        #[serde(rename = "charCount")]
-        char_count: usize,
-        #[serde(rename = "requestId")]
-        request_id: String,
-    },
     #[serde(rename = "get-context")]
     GetContext {
         #[serde(rename = "maxSelectedLength")]
         max_selected_length: Option<usize>,
         #[serde(rename = "maxPrecursorLength")]
         max_precursor_length: Option<usize>,
-        #[serde(rename = "requestId")]
-        request_id: String,
-    },
-    #[serde()]
-    Unselect {
-        #[serde(rename = "charCount")]
-        char_count: usize,
         #[serde(rename = "requestId")]
         request_id: String,
     },
@@ -76,27 +60,7 @@ struct CursorContextResponse {
     length: usize,
 }
 
-#[derive(Serialize)]
-struct SelectBackwardsResponse {
-    #[serde(rename = "requestId")]
-    request_id: String,
-    success: bool,
-    #[serde(rename = "wordCount")]
-    word_count: usize,
-    #[serde(rename = "charCount")]
-    char_count: usize,
-    error: Option<String>,
-}
 
-#[derive(Serialize)]
-struct UnselectResponse {
-    #[serde(rename = "requestId")]
-    request_id: String,
-    success: bool,
-    #[serde(rename = "charCount")]
-    char_count: usize,
-    error: Option<String>,
-}
 
 #[derive(Serialize)]
 struct GetContextResponse {
@@ -173,15 +137,6 @@ impl CommandProcessor {
                     cut_current_selection,
                     request_id,
                 } => self.handle_get_cursor_context(context_length, cut_current_selection, request_id),
-                Command::SelectBackwards {
-                    word_count,
-                    char_count,
-                    request_id,
-                } => self.handle_select_backwards(word_count, char_count, request_id),
-                Command::Unselect {
-                    char_count,
-                    request_id,
-                } => self.handle_unselect(char_count, request_id),
                 Command::GetContext {
                     max_selected_length,
                     max_precursor_length,
@@ -304,101 +259,7 @@ impl CommandProcessor {
         }
     }
 
-    fn handle_unselect(&mut self, char_count: usize, request_id: String) {
-        eprintln!(
-            "[selected-text-reader] Starting select_backwards at: {:?}",
-            std::time::SystemTime::now()
-        );
 
-        let response = match unselect(char_count) {
-            Ok(_) => UnselectResponse {
-                request_id,
-                success: true,
-                char_count,
-                error: None,
-            },
-            Err(e) => UnselectResponse {
-                request_id,
-                success: false,
-                char_count: 0,
-                error: Some(format!("Failed to select backwards: {}", e)),
-            },
-        };
-
-        // Always respond with JSON
-        eprintln!(
-            "[selected-text-reader] Sending unselect response at: {:?}",
-            std::time::SystemTime::now()
-        );
-        match serde_json::to_string(&response) {
-            Ok(json) => {
-                println!("{}", json);
-                if let Err(e) = io::stdout().flush() {
-                    eprintln!("[selected-text-reader] Error flushing stdout: {}", e);
-                }
-                eprintln!(
-                    "[selected-text-reader] Unselect response sent at: {:?}",
-                    std::time::SystemTime::now()
-                );
-            }
-            Err(e) => {
-                eprintln!(
-                    "[selected-text-reader] Error serializing unselect response to JSON: {}",
-                    e
-                );
-            }
-        }
-    }
-
-    fn handle_select_backwards(
-        &mut self,
-        word_count: usize,
-        char_count: usize,
-        request_id: String,
-    ) {
-        eprintln!(
-            "[selected-text-reader] Starting select_backwards at: {:?}",
-            std::time::SystemTime::now()
-        );
-
-        let response = match select_backwards(word_count, char_count) {
-            Ok(_) => SelectBackwardsResponse {
-                request_id,
-                success: true,
-                word_count,
-                char_count,
-                error: None,
-            },
-            Err(e) => SelectBackwardsResponse {
-                request_id,
-                success: false,
-                word_count: 0,
-                char_count: 0,
-                error: Some(format!("Failed to select backwards: {}", e)),
-            },
-        };
-
-        // Always respond with JSON
-        eprintln!(
-            "[selected-text-reader] Sending select_backwards response at: {:?}",
-            std::time::SystemTime::now()
-        );
-        match serde_json::to_string(&response) {
-            Ok(json) => {
-                println!("{}", json);
-                if let Err(e) = io::stdout().flush() {
-                    eprintln!("[selected-text-reader] Error flushing stdout: {}", e);
-                }
-                eprintln!(
-                    "[selected-text-reader] Select backwards response sent at: {:?}",
-                    std::time::SystemTime::now()
-                );
-            }
-            Err(e) => {
-                eprintln!("[selected-text-reader] Error serializing select_backwards response to JSON: {}", e);
-            }
-        }
-    }
 
     fn handle_get_context(
         &mut self,
@@ -495,31 +356,7 @@ fn get_cursor_context(context_length: usize, cut_current_selection: bool) -> Res
     cross_platform::get_cursor_context(context_length, cut_current_selection)
 }
 
-#[cfg(target_os = "macos")]
-fn select_backwards(
-    word_count: usize,
-    char_count: usize,
-) -> Result<(), Box<dyn std::error::Error>> {
-    macos::select_backwards(word_count, char_count)
-}
 
-#[cfg(any(target_os = "windows", target_os = "linux"))]
-fn select_backwards(
-    word_count: usize,
-    char_count: usize,
-) -> Result<(), Box<dyn std::error::Error>> {
-    cross_platform::select_backwards(word_count, char_count)
-}
-
-#[cfg(target_os = "macos")]
-fn unselect(char_count: usize) -> Result<(), Box<dyn std::error::Error>> {
-    macos::unselect(char_count)
-}
-
-#[cfg(any(target_os = "windows", target_os = "linux"))]
-fn unselect(char_count: usize) -> Result<(), Box<dyn std::error::Error>> {
-    cross_platform::unselect(char_count)
-}
 
 #[cfg(target_os = "macos")]
 fn get_context(

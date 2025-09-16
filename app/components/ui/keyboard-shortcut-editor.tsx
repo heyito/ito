@@ -167,6 +167,26 @@ export default function KeyboardShortcutEditor({
     )
   }
 
+  function isDisplayKeyPressed(displayKey: string, pressed: string[]): boolean {
+    const key = displayKey.toLowerCase()
+    if (pressed.includes(key)) return true
+
+    const baseToDirectional: Record<string, [string, string]> = {
+      control: ['control-left', 'control-right'],
+      command: ['command-left', 'command-right'],
+      shift: ['shift-left', 'shift-right'],
+      option: ['option-left', 'option-right'],
+      alt: ['option-left', 'option-right'],
+    }
+
+    if (baseToDirectional[key]) {
+      const [left, right] = baseToDirectional[key]
+      return pressed.includes(left) || pressed.includes(right)
+    }
+
+    return false
+  }
+
   return (
     <div className={`bg-white rounded-lg ${className}`}>
       {isEditing ? (
@@ -236,7 +256,7 @@ export default function KeyboardShortcutEditor({
               <KeyboardKey
                 key={index}
                 keyboardKey={keyboardKey}
-                className={`${pressedKeys.includes(keyboardKey.toLowerCase()) ? 'bg-purple-50 border-2 border-purple-200' : 'bg-white border-2 border-neutral-300'}`}
+                className={`${isDisplayKeyPressed(String(keyboardKey), pressedKeys) ? 'bg-purple-50 border-2 border-purple-200' : 'bg-white border-2 border-neutral-300'}`}
                 style={{
                   width: `${keySize}px`,
                   height: `${keySize}px`,

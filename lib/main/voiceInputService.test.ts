@@ -6,7 +6,6 @@ const mockAudioRecorderService = {
   stopRecording: mock(),
   on: mock(),
   initialize: mock(),
-  requestDeviceConfig: mock(),
 }
 mock.module('../media/audio', () => ({
   audioRecorderService: mockAudioRecorderService,
@@ -58,7 +57,6 @@ const mockTranscriptionService = {
   startTranscription: mock(),
   stopTranscription: mock(),
   handleAudioChunk: mock(),
-  setMainWindow: mock(),
   setAudioConfig: mock(),
 }
 mock.module('./transcriptionService', () => ({
@@ -83,7 +81,6 @@ describe('VoiceInputService Integration Tests', () => {
     mockAudioRecorderService.stopRecording.mockClear()
     mockAudioRecorderService.on.mockClear()
     mockAudioRecorderService.initialize.mockClear()
-    mockAudioRecorderService.requestDeviceConfig.mockClear()
 
     mockMuteSystemAudio.mockClear()
     mockUnmuteSystemAudio.mockClear()
@@ -96,7 +93,6 @@ describe('VoiceInputService Integration Tests', () => {
     mockTranscriptionService.startTranscription.mockClear()
     mockTranscriptionService.stopTranscription.mockClear()
     mockTranscriptionService.handleAudioChunk.mockClear()
-    mockTranscriptionService.setMainWindow.mockClear()
     mockTranscriptionService.setAudioConfig.mockClear()
 
     // Setup default store values

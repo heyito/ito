@@ -60,9 +60,6 @@ export class TranscriptionService {
 
   public stopStreaming() {
     this.audioStreamManager.stopStreaming()
-    // Note: Don't clear interaction here - it will be cleared after saving to database
-    // this.interactionManager.clearCurrentInteraction()
-    // ;(globalThis as any).currentInteractionId = null
   }
 
   public forwardAudioChunk(chunk: Buffer) {
@@ -140,7 +137,7 @@ export class TranscriptionService {
 
         // Apply grammar rules with cursor context
         const context = cursorContext || ''
-        let correctedText = grammarRulesService.capitalizeFirstWordIfNeeded(
+        let correctedText = grammarRulesService.setCaseFirstWord(
           context,
           response.transcript,
         )

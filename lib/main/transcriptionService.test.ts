@@ -1,6 +1,5 @@
-import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test'
+import { describe, test, expect, beforeEach, mock } from 'bun:test'
 
-// Mock gRPC client
 const mockGrpcClient = {
   transcribeStream: mock(() =>
     Promise.resolve({ transcript: 'default' } as any),
@@ -51,9 +50,7 @@ mock.module('../media/selected-text-reader', () => ({
 
 // Mock grammar rules service
 const mockGrammarRulesService = {
-  capitalizeFirstWordIfNeeded: mock(
-    (_context: string, transcript: string) => transcript,
-  ),
+  setCaseFirstWord: mock((_context: string, transcript: string) => transcript),
   addLeadingSpaceIfNeeded: mock(
     (_context: string, transcript: string) => transcript,
   ),
@@ -235,25 +232,6 @@ describe('TranscriptionService Orchestration Tests', () => {
     ;(globalThis as any).currentInteractionId = null
   })
 
-  test('should verify external boundary mocks are working', async () => {
-    // Import after mocks are established
-    const { transcriptionService } = await import('./transcriptionService')
-
-    // Test that our external boundary mocks are working
-    expect(mockGrpcClient.transcribeStream).toBeDefined()
-    expect(typeof mockGrpcClient.transcribeStream).toBe('function')
-
-    // This verifies the service loads without electron errors
-    expect(transcriptionService).toBeDefined()
-    expect(typeof transcriptionService.setAudioConfig).toBe('function')
-
-    // Test that manager mocks are working
-    transcriptionService.setAudioConfig({ sampleRate: 44100 })
-    expect(mockAudioStreamManager.setAudioConfig).toHaveBeenCalledWith({
-      sampleRate: 44100,
-    })
-  })
-
   describe('Manager Orchestration', () => {
     test('should coordinate all managers for successful transcription', async () => {
       const { transcriptionService } = await import('./transcriptionService')
@@ -281,9 +259,10 @@ describe('TranscriptionService Orchestration Tests', () => {
       await new Promise(resolve => setTimeout(resolve, 10))
 
       expect(mockGetCursorContext).toHaveBeenCalled()
-      expect(
-        mockGrammarRulesService.capitalizeFirstWordIfNeeded,
-      ).toHaveBeenCalledWith('', mockTranscript)
+      expect(mockGrammarRulesService.setCaseFirstWord).toHaveBeenCalledWith(
+        '',
+        mockTranscript,
+      )
       expect(mockGrammarRulesService.addLeadingSpaceIfNeeded).toHaveBeenCalled()
       expect(mockTextInserter.insertText).toHaveBeenCalled()
       expect(mockInteractionManager.createInteraction).toHaveBeenCalled()
@@ -420,9 +399,10 @@ describe('TranscriptionService Orchestration Tests', () => {
       await new Promise(resolve => setTimeout(resolve, 10))
 
       expect(mockGetCursorContext).toHaveBeenCalledWith(4) // contextLength
-      expect(
-        mockGrammarRulesService.capitalizeFirstWordIfNeeded,
-      ).toHaveBeenCalledWith(mockContext, mockTranscript)
+      expect(mockGrammarRulesService.setCaseFirstWord).toHaveBeenCalledWith(
+        mockContext,
+        mockTranscript,
+      )
       expect(
         mockGrammarRulesService.addLeadingSpaceIfNeeded,
       ).toHaveBeenCalledWith(

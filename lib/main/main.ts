@@ -29,6 +29,7 @@ import { initializeMicrophoneSelection } from '../media/microphoneSetUp'
 import { validateStoredTokens, ensureValidTokens } from '../auth/events'
 import { Auth0Config, validateAuth0Config } from '../auth/config'
 import { createAppTray } from './tray'
+import { transcriptionService } from './transcriptionService'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -72,7 +73,7 @@ app.whenReady().then(async () => {
       | undefined
     if (accessToken) {
       grpcClient.setAuthToken(accessToken)
-      // syncService.start()
+      syncService.start()
     }
   }
 
@@ -112,6 +113,9 @@ app.whenReady().then(async () => {
 
   console.log('Microphone access granted, starting audio recorder.')
   voiceInputService.setUpAudioRecorderListeners()
+
+  // Set main window for transcription service so it can send messages
+  transcriptionService.setMainWindow(mainWindow)
 
   console.log('Starting selected text reader service.')
   selectedTextReaderService.initialize()

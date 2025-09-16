@@ -4,10 +4,10 @@ import { GrammarRulesService } from './GrammarRulesService'
 describe('GrammarRulesService', () => {
   const grammarService = new GrammarRulesService()
 
-  describe('capitalizeFirstWordIfNeeded', () => {
+  describe('setCaseFirstWord', () => {
     describe('Proper Noun Capitalization', () => {
       test('should always capitalize proper names regardless of context', () => {
-        const result = grammarService.capitalizeFirstWordIfNeeded(
+        const result = grammarService.setCaseFirstWord(
           'hello',
           'john went to the store',
         )
@@ -15,7 +15,7 @@ describe('GrammarRulesService', () => {
       })
 
       test('should always capitalize place names', () => {
-        const result = grammarService.capitalizeFirstWordIfNeeded(
+        const result = grammarService.setCaseFirstWord(
           'hello',
           'california is sunny',
         )
@@ -23,7 +23,7 @@ describe('GrammarRulesService', () => {
       })
 
       test('should always capitalize organization names', () => {
-        const result = grammarService.capitalizeFirstWordIfNeeded(
+        const result = grammarService.setCaseFirstWord(
           'hello',
           'microsoft released an update',
         )
@@ -31,7 +31,7 @@ describe('GrammarRulesService', () => {
       })
 
       test('should always capitalize days of the week', () => {
-        const result = grammarService.capitalizeFirstWordIfNeeded(
+        const result = grammarService.setCaseFirstWord(
           'hello',
           'monday is busy',
         )
@@ -39,7 +39,7 @@ describe('GrammarRulesService', () => {
       })
 
       test('should always capitalize months', () => {
-        const result = grammarService.capitalizeFirstWordIfNeeded(
+        const result = grammarService.setCaseFirstWord(
           'hello',
           'january is cold',
         )
@@ -49,7 +49,7 @@ describe('GrammarRulesService', () => {
 
     describe('Context-based Capitalization', () => {
       test('should capitalize after sentence endings', () => {
-        const result = grammarService.capitalizeFirstWordIfNeeded(
+        const result = grammarService.setCaseFirstWord(
           'Good morning.',
           'hello world',
         )
@@ -57,7 +57,7 @@ describe('GrammarRulesService', () => {
       })
 
       test('should capitalize after exclamation marks', () => {
-        const result = grammarService.capitalizeFirstWordIfNeeded(
+        const result = grammarService.setCaseFirstWord(
           'Great job!',
           'wow that is amazing',
         )
@@ -65,7 +65,7 @@ describe('GrammarRulesService', () => {
       })
 
       test('should capitalize after question marks', () => {
-        const result = grammarService.capitalizeFirstWordIfNeeded(
+        const result = grammarService.setCaseFirstWord(
           'How are you?',
           'yes it is',
         )
@@ -73,7 +73,7 @@ describe('GrammarRulesService', () => {
       })
 
       test('should not capitalize after commas', () => {
-        const result = grammarService.capitalizeFirstWordIfNeeded(
+        const result = grammarService.setCaseFirstWord(
           'We walked,',
           'and then we went',
         )
@@ -81,7 +81,7 @@ describe('GrammarRulesService', () => {
       })
 
       test('should not capitalize after semicolons', () => {
-        const result = grammarService.capitalizeFirstWordIfNeeded(
+        const result = grammarService.setCaseFirstWord(
           'We did this;',
           'but first this',
         )
@@ -89,7 +89,7 @@ describe('GrammarRulesService', () => {
       })
 
       test('should not capitalize mid-sentence', () => {
-        const result = grammarService.capitalizeFirstWordIfNeeded(
+        const result = grammarService.setCaseFirstWord(
           'We went',
           'and then we left',
         )
@@ -97,17 +97,14 @@ describe('GrammarRulesService', () => {
       })
 
       test('should capitalize with empty context', () => {
-        const result = grammarService.capitalizeFirstWordIfNeeded(
-          '',
-          'hello world',
-        )
+        const result = grammarService.setCaseFirstWord('', 'hello world')
         expect(result).toBe('Hello world')
       })
     })
 
     describe('Edge Cases', () => {
       test('should handle multi-word proper nouns', () => {
-        const result = grammarService.capitalizeFirstWordIfNeeded(
+        const result = grammarService.setCaseFirstWord(
           'hello',
           'new york is big',
         )
@@ -115,47 +112,32 @@ describe('GrammarRulesService', () => {
       })
 
       test('should handle transcript with leading/trailing whitespace', () => {
-        const result = grammarService.capitalizeFirstWordIfNeeded(
-          'Hi.',
-          '  hello world  ',
-        )
+        const result = grammarService.setCaseFirstWord('Hi.', '  hello world  ')
         expect(result).toBe('  Hello world  ')
       })
 
       test('should handle context with only whitespace', () => {
-        const result = grammarService.capitalizeFirstWordIfNeeded(
-          '   ',
-          'hello',
-        )
+        const result = grammarService.setCaseFirstWord('   ', 'hello')
         expect(result).toBe('Hello')
       })
 
       test('should handle very short words', () => {
-        const result = grammarService.capitalizeFirstWordIfNeeded(
-          'Hi.',
-          'i am here',
-        )
+        const result = grammarService.setCaseFirstWord('Hi.', 'i am here')
         expect(result).toBe('I am here')
       })
 
       test('should handle empty transcript', () => {
-        const result = grammarService.capitalizeFirstWordIfNeeded(
-          'Hello world',
-          '',
-        )
+        const result = grammarService.setCaseFirstWord('Hello world', '')
         expect(result).toBe('')
       })
 
       test('should handle transcript with only punctuation', () => {
-        const result = grammarService.capitalizeFirstWordIfNeeded(
-          'Hello.',
-          '...',
-        )
+        const result = grammarService.setCaseFirstWord('Hello.', '...')
         expect(result).toBe('...')
       })
 
       test('should handle transcript starting with numbers', () => {
-        const result = grammarService.capitalizeFirstWordIfNeeded(
+        const result = grammarService.setCaseFirstWord(
           'Hello.',
           '42 is the answer',
         )
@@ -223,28 +205,19 @@ describe('GrammarRulesService', () => {
 
   describe('Combined Usage Examples', () => {
     test('should capitalize proper noun and add space when used together', () => {
-      let result = grammarService.capitalizeFirstWordIfNeeded(
-        'Hi',
-        'john is here',
-      )
+      let result = grammarService.setCaseFirstWord('Hi', 'john is here')
       result = grammarService.addLeadingSpaceIfNeeded('Hi', result)
       expect(result).toBe(' John is here')
     })
 
     test('should capitalize after period and add space when used together', () => {
-      let result = grammarService.capitalizeFirstWordIfNeeded(
-        'Done.',
-        'this is great',
-      )
+      let result = grammarService.setCaseFirstWord('Done.', 'this is great')
       result = grammarService.addLeadingSpaceIfNeeded('Done.', result)
       expect(result).toBe(' This is great')
     })
 
     test('should handle proper noun without adding space (after whitespace)', () => {
-      let result = grammarService.capitalizeFirstWordIfNeeded(
-        'Hi ',
-        'mary called',
-      )
+      let result = grammarService.setCaseFirstWord('Hi ', 'mary called')
       result = grammarService.addLeadingSpaceIfNeeded('Hi ', result)
       expect(result).toBe('Mary called')
     })

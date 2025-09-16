@@ -2,12 +2,9 @@ import nlp from 'compromise'
 
 export class GrammarRulesService {
   /**
-   * Capitalize the first word if needed based on cursor context
+   * Set first word case (uppercase or lowercase) based on cursor context
    */
-  public capitalizeFirstWordIfNeeded(
-    cursorContext: string,
-    transcript: string,
-  ): string {
+  public setCaseFirstWord(cursorContext: string, transcript: string): string {
     if (!transcript) return transcript
 
     // If no cursor context available, just capitalize first letter

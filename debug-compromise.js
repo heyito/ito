@@ -1,6 +1,6 @@
 import nlp from 'compromise'
 
-const testWords = ['monday', 'january', 'john', 'microsoft', 'california', 'new york', 'Monday', 'January']
+const testWords = ['monday', 'january', 'john', 'microsoft', 'california', 'new york', 'Monday', 'January', 'green', 'Green']
 
 testWords.forEach(word => {
   const doc = nlp(word)

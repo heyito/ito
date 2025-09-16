@@ -34,6 +34,10 @@ export default [
       'tailwind.config.js',
       'shared-constants.js',
       'server/infra/jest.config.js',
+      // CDK outputs
+      'server/infra/cdk.out/**',
+      'server/infra/**/*.d.ts',
+      'server/infra/**/*.js',
     ],
   },
   eslint.configs.recommended,

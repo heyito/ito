@@ -28,6 +28,7 @@ import { voiceInputService } from './voiceInputService'
 import { initializeMicrophoneSelection } from '../media/microphoneSetUp'
 import { validateStoredTokens, ensureValidTokens } from '../auth/events'
 import { Auth0Config, validateAuth0Config } from '../auth/config'
+import { createAppTray } from './tray'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -117,6 +118,9 @@ app.whenReady().then(async () => {
 
   // Initialize microphone selection to prefer built-in microphone
   await initializeMicrophoneSelection()
+
+  // Create system tray after audio recorder is initialized and devices are available
+  await createAppTray()
 
   app.on('activate', function () {
     if (mainWindow === null) {

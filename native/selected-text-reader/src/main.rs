@@ -3,11 +3,10 @@ use std::io::{self, BufRead, Write};
 use std::thread;
 
 // Platform-specific modules
-#[cfg(target_os = "macos")]
-mod macos;
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 mod cross_platform;
-
+#[cfg(target_os = "macos")]
+mod macos;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "command")]
@@ -17,6 +16,40 @@ enum Command {
         format: Option<String>,
         #[serde(rename = "maxLength")]
         max_length: Option<usize>,
+        #[serde(rename = "requestId")]
+        request_id: String,
+    },
+    #[serde(rename = "get-cursor-context")]
+    GetCursorContext {
+        #[serde(rename = "contextLength")]
+        context_length: Option<usize>,
+        #[serde(rename = "cutCurrentSelection")]
+        cut_current_selection: Option<bool>,
+        #[serde(rename = "requestId")]
+        request_id: String,
+    },
+    #[serde(rename = "select-backwards")]
+    SelectBackwards {
+        #[serde(rename = "wordCount")]
+        word_count: usize,
+        #[serde(rename = "charCount")]
+        char_count: usize,
+        #[serde(rename = "requestId")]
+        request_id: String,
+    },
+    #[serde(rename = "get-context")]
+    GetContext {
+        #[serde(rename = "maxSelectedLength")]
+        max_selected_length: Option<usize>,
+        #[serde(rename = "maxPrecursorLength")]
+        max_precursor_length: Option<usize>,
+        #[serde(rename = "requestId")]
+        request_id: String,
+    },
+    #[serde()]
+    Unselect {
+        #[serde(rename = "charCount")]
+        char_count: usize,
         #[serde(rename = "requestId")]
         request_id: String,
     },
@@ -30,6 +63,55 @@ struct SelectedTextResponse {
     text: Option<String>,
     error: Option<String>,
     length: usize,
+}
+
+#[derive(Serialize)]
+struct CursorContextResponse {
+    #[serde(rename = "requestId")]
+    request_id: String,
+    success: bool,
+    #[serde(rename = "contextText")]
+    context_text: Option<String>,
+    error: Option<String>,
+    length: usize,
+}
+
+#[derive(Serialize)]
+struct SelectBackwardsResponse {
+    #[serde(rename = "requestId")]
+    request_id: String,
+    success: bool,
+    #[serde(rename = "wordCount")]
+    word_count: usize,
+    #[serde(rename = "charCount")]
+    char_count: usize,
+    error: Option<String>,
+}
+
+#[derive(Serialize)]
+struct UnselectResponse {
+    #[serde(rename = "requestId")]
+    request_id: String,
+    success: bool,
+    #[serde(rename = "charCount")]
+    char_count: usize,
+    error: Option<String>,
+}
+
+#[derive(Serialize)]
+struct GetContextResponse {
+    #[serde(rename = "requestId")]
+    request_id: String,
+    success: bool,
+    #[serde(rename = "selectedText")]
+    selected_text: Option<String>,
+    #[serde(rename = "precursorText")]
+    precursor_text: Option<String>,
+    #[serde(rename = "selectedLength")]
+    selected_length: usize,
+    #[serde(rename = "precursorLength")]
+    precursor_length: usize,
+    error: Option<String>,
 }
 
 fn main() {
@@ -46,8 +128,15 @@ fn main() {
                     continue;
                 }
                 if let Ok(command) = serde_json::from_str::<Command>(&l) {
+                    eprintln!(
+                        "[selected-text-reader] Command received at: {:?}",
+                        std::time::SystemTime::now()
+                    );
                     if let Err(e) = cmd_tx.send(command) {
-                        eprintln!("[selected-text-reader] Failed to send command to processor: {}", e);
+                        eprintln!(
+                            "[selected-text-reader] Failed to send command to processor: {}",
+                            e
+                        );
                         break;
                     }
                 }
@@ -69,12 +158,35 @@ impl CommandProcessor {
 
     fn run(&mut self) {
         while let Ok(command) = self.cmd_rx.recv() {
+            eprintln!(
+                "[selected-text-reader] Command processor received command at: {:?}",
+                std::time::SystemTime::now()
+            );
             match command {
                 Command::GetText {
                     format: _,
                     max_length,
                     request_id,
                 } => self.handle_get_text(max_length, request_id),
+                Command::GetCursorContext {
+                    context_length,
+                    cut_current_selection,
+                    request_id,
+                } => self.handle_get_cursor_context(context_length, cut_current_selection, request_id),
+                Command::SelectBackwards {
+                    word_count,
+                    char_count,
+                    request_id,
+                } => self.handle_select_backwards(word_count, char_count, request_id),
+                Command::Unselect {
+                    char_count,
+                    request_id,
+                } => self.handle_unselect(char_count, request_id),
+                Command::GetContext {
+                    max_selected_length,
+                    max_precursor_length,
+                    request_id,
+                } => self.handle_get_context(max_selected_length, max_precursor_length, request_id),
             }
         }
     }
@@ -110,15 +222,253 @@ impl CommandProcessor {
         };
 
         // Always respond with JSON
+        eprintln!(
+            "[selected-text-reader] Sending response at: {:?}",
+            std::time::SystemTime::now()
+        );
         match serde_json::to_string(&response) {
             Ok(json) => {
                 println!("{}", json);
                 if let Err(e) = io::stdout().flush() {
                     eprintln!("[selected-text-reader] Error flushing stdout: {}", e);
                 }
+                eprintln!(
+                    "[selected-text-reader] Response sent at: {:?}",
+                    std::time::SystemTime::now()
+                );
             }
             Err(e) => {
-                eprintln!("[selected-text-reader] Error serializing response to JSON: {}", e);
+                eprintln!(
+                    "[selected-text-reader] Error serializing response to JSON: {}",
+                    e
+                );
+            }
+        }
+    }
+
+    fn handle_get_cursor_context(&mut self, context_length: Option<usize>, cut_current_selection: Option<bool>, request_id: String) {
+        let context_len = context_length.unwrap_or(10);
+
+        eprintln!(
+            "[selected-text-reader] Starting get_cursor_context at: {:?}",
+            std::time::SystemTime::now()
+        );
+        let should_cut = cut_current_selection.unwrap_or(false);
+        let response = match get_cursor_context(context_len, should_cut) {
+            Ok(context_text) => {
+                let text = if context_text.is_empty() {
+                    None
+                } else {
+                    Some(context_text.clone())
+                };
+
+                CursorContextResponse {
+                    request_id,
+                    success: true,
+                    context_text: text.clone(),
+                    error: None,
+                    length: text.as_ref().map(|t| t.len()).unwrap_or(0),
+                }
+            }
+            Err(e) => CursorContextResponse {
+                request_id,
+                success: false,
+                context_text: None,
+                error: Some(format!("Failed to get cursor context: {}", e)),
+                length: 0,
+            },
+        };
+
+        // Always respond with JSON
+        eprintln!(
+            "[selected-text-reader] Sending response at: {:?}",
+            std::time::SystemTime::now()
+        );
+        match serde_json::to_string(&response) {
+            Ok(json) => {
+                println!("{}", json);
+                if let Err(e) = io::stdout().flush() {
+                    eprintln!("[selected-text-reader] Error flushing stdout: {}", e);
+                }
+                eprintln!(
+                    "[selected-text-reader] Response sent at: {:?}",
+                    std::time::SystemTime::now()
+                );
+            }
+            Err(e) => {
+                eprintln!(
+                    "[selected-text-reader] Error serializing response to JSON: {}",
+                    e
+                );
+            }
+        }
+    }
+
+    fn handle_unselect(&mut self, char_count: usize, request_id: String) {
+        eprintln!(
+            "[selected-text-reader] Starting select_backwards at: {:?}",
+            std::time::SystemTime::now()
+        );
+
+        let response = match unselect(char_count) {
+            Ok(_) => UnselectResponse {
+                request_id,
+                success: true,
+                char_count,
+                error: None,
+            },
+            Err(e) => UnselectResponse {
+                request_id,
+                success: false,
+                char_count: 0,
+                error: Some(format!("Failed to select backwards: {}", e)),
+            },
+        };
+
+        // Always respond with JSON
+        eprintln!(
+            "[selected-text-reader] Sending unselect response at: {:?}",
+            std::time::SystemTime::now()
+        );
+        match serde_json::to_string(&response) {
+            Ok(json) => {
+                println!("{}", json);
+                if let Err(e) = io::stdout().flush() {
+                    eprintln!("[selected-text-reader] Error flushing stdout: {}", e);
+                }
+                eprintln!(
+                    "[selected-text-reader] Unselect response sent at: {:?}",
+                    std::time::SystemTime::now()
+                );
+            }
+            Err(e) => {
+                eprintln!(
+                    "[selected-text-reader] Error serializing unselect response to JSON: {}",
+                    e
+                );
+            }
+        }
+    }
+
+    fn handle_select_backwards(
+        &mut self,
+        word_count: usize,
+        char_count: usize,
+        request_id: String,
+    ) {
+        eprintln!(
+            "[selected-text-reader] Starting select_backwards at: {:?}",
+            std::time::SystemTime::now()
+        );
+
+        let response = match select_backwards(word_count, char_count) {
+            Ok(_) => SelectBackwardsResponse {
+                request_id,
+                success: true,
+                word_count,
+                char_count,
+                error: None,
+            },
+            Err(e) => SelectBackwardsResponse {
+                request_id,
+                success: false,
+                word_count: 0,
+                char_count: 0,
+                error: Some(format!("Failed to select backwards: {}", e)),
+            },
+        };
+
+        // Always respond with JSON
+        eprintln!(
+            "[selected-text-reader] Sending select_backwards response at: {:?}",
+            std::time::SystemTime::now()
+        );
+        match serde_json::to_string(&response) {
+            Ok(json) => {
+                println!("{}", json);
+                if let Err(e) = io::stdout().flush() {
+                    eprintln!("[selected-text-reader] Error flushing stdout: {}", e);
+                }
+                eprintln!(
+                    "[selected-text-reader] Select backwards response sent at: {:?}",
+                    std::time::SystemTime::now()
+                );
+            }
+            Err(e) => {
+                eprintln!("[selected-text-reader] Error serializing select_backwards response to JSON: {}", e);
+            }
+        }
+    }
+
+    fn handle_get_context(
+        &mut self,
+        max_selected_length: Option<usize>,
+        max_precursor_length: Option<usize>,
+        request_id: String,
+    ) {
+        eprintln!(
+            "[selected-text-reader] Starting get_context at: {:?}",
+            std::time::SystemTime::now()
+        );
+
+        // Use the new atomic get_context function
+        let context_result = get_context(max_selected_length, max_precursor_length);
+
+        let response = match context_result {
+            Ok((selected_text, precursor_text)) => {
+                let selected_length = selected_text.len();
+                let precursor_length = precursor_text.len();
+
+                GetContextResponse {
+                    request_id,
+                    success: true,
+                    selected_text: if selected_text.is_empty() {
+                        None
+                    } else {
+                        Some(selected_text)
+                    },
+                    precursor_text: if precursor_text.is_empty() {
+                        None
+                    } else {
+                        Some(precursor_text)
+                    },
+                    selected_length,
+                    precursor_length,
+                    error: None,
+                }
+            }
+            Err(e) => GetContextResponse {
+                request_id,
+                success: false,
+                selected_text: None,
+                precursor_text: None,
+                selected_length: 0,
+                precursor_length: 0,
+                error: Some(format!("Failed to get context: {}", e)),
+            },
+        };
+
+        // Always respond with JSON
+        eprintln!(
+            "[selected-text-reader] Sending get_context response at: {:?}",
+            std::time::SystemTime::now()
+        );
+        match serde_json::to_string(&response) {
+            Ok(json) => {
+                println!("{}", json);
+                if let Err(e) = io::stdout().flush() {
+                    eprintln!("[selected-text-reader] Error flushing stdout: {}", e);
+                }
+                eprintln!(
+                    "[selected-text-reader] Get context response sent at: {:?}",
+                    std::time::SystemTime::now()
+                );
+            }
+            Err(e) => {
+                eprintln!(
+                    "[selected-text-reader] Error serializing get_context response to JSON: {}",
+                    e
+                );
             }
         }
     }
@@ -133,4 +483,60 @@ fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
     cross_platform::get_selected_text()
+}
+
+#[cfg(target_os = "macos")]
+fn get_cursor_context(context_length: usize, cut_current_selection: bool) -> Result<String, Box<dyn std::error::Error>> {
+    macos::get_cursor_context(context_length, cut_current_selection)
+}
+
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+fn get_cursor_context(context_length: usize, cut_current_selection: bool) -> Result<String, Box<dyn std::error::Error>> {
+    cross_platform::get_cursor_context(context_length, cut_current_selection)
+}
+
+#[cfg(target_os = "macos")]
+fn select_backwards(
+    word_count: usize,
+    char_count: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    macos::select_backwards(word_count, char_count)
+}
+
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+fn select_backwards(
+    word_count: usize,
+    char_count: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    cross_platform::select_backwards(word_count, char_count)
+}
+
+#[cfg(target_os = "macos")]
+fn unselect(char_count: usize) -> Result<(), Box<dyn std::error::Error>> {
+    macos::unselect(char_count)
+}
+
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+fn unselect(char_count: usize) -> Result<(), Box<dyn std::error::Error>> {
+    cross_platform::unselect(char_count)
+}
+
+#[cfg(target_os = "macos")]
+fn get_context(
+    max_selected_length: Option<usize>,
+    max_precursor_length: Option<usize>,
+) -> Result<(String, String), Box<dyn std::error::Error>> {
+    macos::get_context(max_selected_length, max_precursor_length)
+}
+
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+fn get_context(
+    max_selected_length: Option<usize>,
+    max_precursor_length: Option<usize>,
+) -> Result<(String, String), Box<dyn std::error::Error>> {
+    // For now, fallback to separate calls on non-macOS platforms
+    let selected_text = cross_platform::get_selected_text().unwrap_or_default();
+    let precursor_text =
+        cross_platform::get_cursor_context(max_precursor_length.unwrap_or(20)).unwrap_or_default();
+    Ok((selected_text, precursor_text))
 }

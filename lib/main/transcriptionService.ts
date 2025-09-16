@@ -1,19 +1,27 @@
 import { grpcClient } from '../clients/grpcClient'
-import mainStore from './store'
-import { STORE_KEYS } from '../constants/store-keys'
 import log from 'electron-log'
-import { AudioChunkSchema, ItoMode } from '@/app/generated/ito_pb'
-import { create } from '@bufbuild/protobuf'
-import { InteractionsTable } from './sqlite/repo'
-import { v4 as uuidv4 } from 'uuid'
+import { ItoMode } from '@/app/generated/ito_pb'
 import { BrowserWindow } from 'electron'
 import { traceLogger } from './traceLogger'
+import { AudioStreamManager } from './audio/AudioStreamManager'
+import { InteractionManager } from './interactions/InteractionManager'
+import { WindowMessenger } from './messaging/WindowMessenger'
+import { TextInserter } from './text/TextInserter'
+import { getCursorContext } from '../media/selected-text-reader'
+import { grammarRulesService } from './grammar/GrammarRulesService'
+import { v4 as uuidv4 } from 'uuid'
 
 export class TranscriptionService {
+  // Use the newer manager-based approach but with audio buffering
+  private audioStreamManager = new AudioStreamManager()
+  private interactionManager = new InteractionManager()
+  private windowMessenger = new WindowMessenger()
+  private textInserter = new TextInserter()
+
+  // Audio buffering properties (from HEAD branch)
   private isStreaming = false
   private audioChunkQueue: Buffer[] = []
-  private resolveNewChunk: ((value: void | PromiseLike<void>) => void) | null =
-    null
+  private resolveNewChunk: ((value: void | PromiseLike<void>) => void) | null = null
   private currentInteractionId: string | null = null
   private audioChunksForInteraction: Buffer[] = []
   private interactionStartTime: number | null = null
@@ -25,45 +33,43 @@ export class TranscriptionService {
   // 16-bit PCM mono -> 2 bytes per sample, write_audio_chunk in audio-recorder converts samples to 16-bit mono
   private bytesPerSample = 2
 
-  private async *streamAudioChunks() {
-    while (this.isStreaming) {
-      if (this.audioChunkQueue.length === 0) {
-        await new Promise<void>(resolve => {
-          this.resolveNewChunk = resolve
-        })
-      }
-
-      while (this.audioChunkQueue.length > 0) {
-        const chunk = this.audioChunkQueue.shift()
-        if (chunk) {
-          yield create(AudioChunkSchema, { audioData: chunk })
-        }
-      }
-    }
-  }
-
-  public startTranscription(mode: ItoMode) {
+  public async startTranscription(mode: ItoMode) {
+    // Guard against multiple concurrent transcriptions
     if (this.isStreaming) {
       log.warn('[TranscriptionService] Stream already in progress.')
       return
     }
 
+    // Capture selected text and cursor context IMMEDIATELY when hotkey is pressed
+    console.log('[TranscriptionService] Capturing context at hotkey press...')
+
+    // Initialize both old and new systems
     this.isStreaming = true
     this.audioChunkQueue = []
     this.audioChunksForInteraction = []
     this.currentInteractionId = uuidv4()
-    this.interactionStartTime = Date.now() // Record start time
+    this.interactionStartTime = Date.now()
     this.hasStartedGrpc = false
     this.bufferedAudioBytes = 0
     this.currentMode = mode
-    log.info('[gRPC Service] Starting new transcription stream.')
 
-    // Get current interaction ID for trace logging
+    // Also initialize the manager-based system
+    this.audioStreamManager.startStreaming()
+    const interactionId = this.interactionManager.startInteraction()
+    log.info('[TranscriptionService] Starting new transcription stream.')
+
+    // Set global interaction ID for trace logging
     const globalInteractionId = (globalThis as any).currentInteractionId
-    if (globalInteractionId) {
-      traceLogger.logStep(globalInteractionId, 'TRANSCRIPTION_START', {
-        localInteractionId: this.currentInteractionId,
-        startTime: this.interactionStartTime,
+    if (!globalInteractionId) {
+      ;(globalThis as any).currentInteractionId = interactionId
+    }
+
+    // Log transcription start
+    if (globalInteractionId || interactionId) {
+      const logId = globalInteractionId || interactionId
+      traceLogger.logStep(logId, 'TRANSCRIPTION_START', {
+        localInteractionId: interactionId,
+        startTime: this.interactionManager.getInteractionStartTime(),
       })
     }
 
@@ -78,7 +84,7 @@ export class TranscriptionService {
     if (this.resolveNewChunk) {
       this.resolveNewChunk()
     }
-    log.info('[gRPC Service] Stream has been marked for closing.')
+    log.info('[TranscriptionService] Stream has been marked for closing.')
 
     // If gRPC never started, perform cleanup now
     if (!this.hasStartedGrpc) {
@@ -101,6 +107,11 @@ export class TranscriptionService {
 
       this.resetState()
     }
+
+    // Also stop the manager-based system
+    this.audioStreamManager.stopStreaming()
+    this.interactionManager.clearCurrentInteraction()
+    ;(globalThis as any).currentInteractionId = null
   }
 
   public forwardAudioChunk(chunk: Buffer) {
@@ -109,6 +120,9 @@ export class TranscriptionService {
       // Also store for interaction saving
       this.audioChunksForInteraction.push(chunk)
       this.bufferedAudioBytes += chunk.length
+
+      // Also forward to the manager-based system
+      this.audioStreamManager.addAudioChunk(chunk)
 
       if (this.resolveNewChunk) {
         this.resolveNewChunk()
@@ -143,100 +157,21 @@ export class TranscriptionService {
 
     // Get current interaction ID for trace logging
     const globalInteractionId = (globalThis as any).currentInteractionId
+    const interactionId = this.interactionManager.getCurrentInteractionId()
 
     grpcClient
       .transcribeStream(this.streamAudioChunks(), this.currentMode)
       .then(response => {
-        // Add debugging to see what we received
-        console.log(
-          '[TranscriptionService] Processing transcription response:',
-          {
-            transcript: response.transcript,
-            transcriptLength: response.transcript?.length || 0,
-            hasTranscript: !!response.transcript,
-            hasError: !!response.error,
-            errorCode: response.error?.code,
-            errorType: response.error?.type,
-            errorProvider: response.error?.provider,
-            interactionId: this.currentInteractionId,
-          },
+        this.handleTranscriptionResponse(
+          response,
+          globalInteractionId || interactionId,
         )
-
-        const errorMessage = response.error ? response.error.message : undefined
-        if (response.error && response.error.code == 'CLIENT_AUDIO_TOO_SHORT') {
-          if (globalInteractionId) {
-            traceLogger.logStep(
-              globalInteractionId,
-              'TRANSCRIPTION_TOO_SHORT',
-              {
-                transcript: response.transcript,
-                transcriptLength: response.transcript?.length || 0,
-                localInteractionId: this.currentInteractionId,
-              },
-            )
-          }
-          log.info(
-            '[TranscriptionService] Audio too short, skipping interaction.',
-          )
-        } else {
-          if (globalInteractionId) {
-            traceLogger.logStep(globalInteractionId, 'TRANSCRIPTION_SUCCESS', {
-              transcript: response.transcript,
-              transcriptLength: response.transcript?.length || 0,
-              localInteractionId: this.currentInteractionId,
-            })
-          }
-          this.createInteraction(response.transcript, errorMessage)
-        }
-
-        // End the interaction after successful transcription
-        if (globalInteractionId) {
-          traceLogger.endInteraction(
-            globalInteractionId,
-            'TRANSCRIPTION_COMPLETED',
-            {
-              transcript: response.transcript,
-              transcriptLength: response.transcript?.length || 0,
-              localInteractionId: this.currentInteractionId,
-            },
-          )
-          ;(globalThis as any).currentInteractionId = null
-        }
       })
       .catch(error => {
-        log.error(
-          '[TranscriptionService] An unexpected error occurred during transcription:',
+        this.handleTranscriptionError(
           error,
+          globalInteractionId || interactionId,
         )
-
-        // Log transcription error
-        if (globalInteractionId) {
-          traceLogger.logError(
-            globalInteractionId,
-            'TRANSCRIPTION_ERROR',
-            error.message,
-            {
-              localInteractionId: this.currentInteractionId,
-              error: error.message,
-            },
-          )
-        }
-
-        // Still create interaction even if transcription failed
-        this.createInteraction('', error.message)
-
-        // End the interaction after transcription error
-        if (globalInteractionId) {
-          traceLogger.endInteraction(
-            globalInteractionId,
-            'TRANSCRIPTION_FAILED',
-            {
-              error: error.message,
-              localInteractionId: this.currentInteractionId,
-            },
-          )
-          ;(globalThis as any).currentInteractionId = null
-        }
       })
       .finally(() => {
         // Ensure interaction is ended if it hasn't been ended yet
@@ -254,8 +189,151 @@ export class TranscriptionService {
         }
 
         this.resetState()
-        log.info('[gRPC Service] Stream has fully terminated.')
+        log.info('[TranscriptionService] Stream has fully terminated.')
       })
+  }
+
+  private async *streamAudioChunks(): AsyncIterable<Buffer> {
+    while (this.isStreaming || this.audioChunkQueue.length > 0) {
+      if (this.audioChunkQueue.length > 0) {
+        yield this.audioChunkQueue.shift()!
+      } else if (this.isStreaming) {
+        // Wait for a new chunk to arrive
+        await new Promise<void>(resolve => {
+          this.resolveNewChunk = resolve
+        })
+      }
+    }
+  }
+
+  private async handleTranscriptionResponse(
+    response: any,
+    interactionId: string,
+  ) {
+    // Add debugging to see what we received
+    console.log('[TranscriptionService] Processing transcription response:', {
+      transcript: response.transcript,
+      transcriptLength: response.transcript?.length || 0,
+      hasTranscript: !!response.transcript,
+      hasError: !!response.error,
+      errorCode: response.error?.code,
+      errorType: response.error?.type,
+      errorProvider: response.error?.provider,
+      interactionId: this.interactionManager.getCurrentInteractionId(),
+    })
+
+    const errorMessage = response.error ? response.error.message : undefined
+
+    // Handle any transcription error
+    if (response.error) {
+      if (response.error.code == 'CLIENT_AUDIO_TOO_SHORT') {
+        if (interactionId) {
+          traceLogger.logStep(interactionId, 'TRANSCRIPTION_TOO_SHORT', {
+            transcript: response.transcript,
+            transcriptLength: response.transcript?.length || 0,
+            localInteractionId:
+              this.interactionManager.getCurrentInteractionId(),
+          })
+        }
+        log.info(
+          '[TranscriptionService] Audio too short, restoring selected text.',
+        )
+      } else {
+        log.error(
+          '[TranscriptionService] Transcription error, restoring selected text:',
+          response.error,
+        )
+      }
+
+      // End the interaction after transcription error
+      if (interactionId) {
+        traceLogger.endInteraction(
+          interactionId,
+          'TRANSCRIPTION_FAILED',
+          {
+            error: response.error.message,
+            localInteractionId: this.currentInteractionId,
+          },
+        )
+        ;(globalThis as any).currentInteractionId = null
+      }
+    } else {
+      if (interactionId) {
+        traceLogger.logStep(interactionId, 'TRANSCRIPTION_SUCCESS', {
+          transcript: response.transcript,
+          transcriptLength: response.transcript?.length || 0,
+          localInteractionId: this.interactionManager.getCurrentInteractionId(),
+        })
+      }
+
+      // Handle text insertion with grammar-corrected text
+      if (response.transcript && !response.error) {
+        const contextLength = 4 // Number of chars to consider for context
+        const cursorContext = await getCursorContext(contextLength)
+
+        // Apply grammar rules with cursor context
+        const context = cursorContext || ''
+        let correctedText = grammarRulesService.capitalizeFirstWordIfNeeded(
+          context,
+          response.transcript,
+        )
+        correctedText = grammarRulesService.addLeadingSpaceIfNeeded(
+          context,
+          correctedText,
+        )
+
+        await this.textInserter.insertText(correctedText, interactionId)
+
+        // Create interaction in database
+        await this.interactionManager.createInteraction(
+          response.transcript,
+          this.audioStreamManager.getInteractionAudioBuffer(),
+          this.audioStreamManager.getCurrentSampleRate(),
+          errorMessage,
+        )
+      }
+
+      // Send transcription result to main window
+      this.windowMessenger.sendTranscriptionResult(response)
+
+      // End the interaction after successful transcription
+      if (interactionId) {
+        traceLogger.endInteraction(interactionId, 'TRANSCRIPTION_COMPLETED', {
+          transcript: response.transcript,
+          transcriptLength: response.transcript?.length || 0,
+          localInteractionId: this.interactionManager.getCurrentInteractionId(),
+        })
+        ;(globalThis as any).currentInteractionId = null
+      }
+    }
+  }
+
+  private async handleTranscriptionError(error: any, interactionId: string) {
+    log.error(
+      '[TranscriptionService] An unexpected error occurred during transcription:',
+      error,
+    )
+
+    // Send transcription error to main window
+    this.windowMessenger.sendTranscriptionError(error)
+
+    // Log transcription error
+    if (interactionId) {
+      traceLogger.logError(
+        interactionId,
+        'TRANSCRIPTION_ERROR',
+        error.message,
+        {
+          localInteractionId: this.interactionManager.getCurrentInteractionId(),
+          error: error.message,
+        },
+      )
+    }
+
+    // Clear current interaction on error
+    this.interactionManager.clearCurrentInteraction()
+    this.audioStreamManager.clearInteractionAudio()
+    ;(globalThis as any).currentInteractionId = null
   }
 
   private resetState() {
@@ -268,113 +346,9 @@ export class TranscriptionService {
     this.currentMode = null
   }
 
-  private async createInteraction(transcript: string, errorMessage?: string) {
-    try {
-      // Save to database
-      const userProfile = mainStore.get(STORE_KEYS.USER_PROFILE) as any
-      const userId = userProfile?.id
-
-      if (!userId) {
-        log.warn(
-          '[TranscriptionService] No user ID found, skipping interaction save.',
-        )
-        return
-      }
-
-      if (!this.currentInteractionId) {
-        log.warn(
-          '[TranscriptionService] No current interaction ID, skipping interaction save.',
-        )
-        return
-      }
-
-      // Calculate interaction duration
-      const interactionEndTime = Date.now()
-      const durationMs = this.interactionStartTime
-        ? interactionEndTime - this.interactionStartTime
-        : 0
-
-      // Create ASR output object
-      const asrOutput = {
-        transcript,
-        audioChunkCount: this.audioChunksForInteraction.length,
-        totalAudioBytes: this.audioChunksForInteraction.reduce(
-          (sum, chunk) => sum + chunk.length,
-          0,
-        ),
-        error: errorMessage || null,
-        timestamp: new Date().toISOString(),
-        durationMs, // Add duration to ASR output for backwards compatibility
-      }
-
-      // Concatenate all audio chunks into a single buffer
-      const rawAudio =
-        this.audioChunksForInteraction.length > 0
-          ? Buffer.concat(this.audioChunksForInteraction)
-          : null
-
-      // Generate a meaningful title from the transcript
-      const title =
-        transcript.length > 50
-          ? transcript.substring(0, 50) + '...'
-          : transcript || 'Voice interaction'
-
-      // Create interaction locally using upsert to specify our own ID
-      const now = new Date().toISOString()
-      await InteractionsTable.upsert({
-        id: this.currentInteractionId,
-        user_id: userId,
-        title,
-        asr_output: asrOutput,
-        llm_output: null, // No LLM processing yet
-        raw_audio: rawAudio,
-        duration_ms: durationMs, // Add duration as separate field
-        sample_rate: this.currentSampleRate || null,
-        created_at: now,
-        updated_at: now,
-        deleted_at: null,
-      })
-
-      log.info(
-        `[TranscriptionService] Created interaction: ${this.currentInteractionId} (duration: ${durationMs}ms)`,
-      )
-      console.log(
-        '[TranscriptionService] Successfully saved interaction to database',
-      )
-
-      // Notify all windows about the new interaction
-      BrowserWindow.getAllWindows().forEach(window => {
-        window.webContents.send('interaction-created', {
-          id: this.currentInteractionId,
-          transcript,
-          timestamp: new Date().toISOString(),
-          durationMs,
-        })
-      })
-    } catch (error) {
-      log.error('[TranscriptionService] Failed to create interaction:', error)
-      console.error('[TranscriptionService] Database save error:', error)
-    }
-  }
-
   public stopTranscription() {
-    // Get current interaction ID for trace logging
-    const globalInteractionId = (globalThis as any).currentInteractionId
-    if (globalInteractionId) {
-      traceLogger.logStep(globalInteractionId, 'TRANSCRIPTION_STOP', {
-        localInteractionId: this.currentInteractionId,
-        audioChunkCount: this.audioChunksForInteraction.length,
-        totalAudioBytes: this.audioChunksForInteraction.reduce(
-          (sum, chunk) => sum + chunk.length,
-          0,
-        ),
-      })
-
-      // Don't end the interaction here - let it end when transcription completes or fails
-      // The interaction will be ended in the .then() or .catch() blocks of the transcription promise
-    }
-
-    return this.stopStreaming()
+    this.stopStreaming()
+    this.resetState()
   }
 
   public handleAudioChunk(chunk: Buffer) {
@@ -383,9 +357,14 @@ export class TranscriptionService {
 
   public setAudioConfig(config: { sampleRate?: number; channels?: number }) {
     console.log('[TranscriptionService] Setting audio config:', config)
-    if (typeof config.sampleRate === 'number' && config.sampleRate > 0) {
+    this.audioStreamManager.setAudioConfig(config)
+    if (config.sampleRate) {
       this.currentSampleRate = config.sampleRate
     }
+  }
+
+  public setMainWindow(mainWindow: BrowserWindow | null) {
+    this.windowMessenger.setMainWindow(mainWindow)
   }
 }
 

@@ -22,18 +22,60 @@ interface SelectedTextCommand {
   requestId: string
 }
 
+export interface CursorContextResult {
+  success: boolean
+  contextText: string | null
+  error: string | null
+  length: number
+}
+
+interface CursorContextCommand {
+  command: 'get-cursor-context'
+  cutCurrentSelection?: boolean // Whether to cut current selection to position cursor correctly
+  contextLength?: number
+  requestId: string
+}
+
+interface SelectBackwardsCommand {
+  command: 'select-backwards'
+  wordCount: number
+  charCount: number
+  requestId: string
+}
+
+interface UnselectCommand {
+  command: 'unselect'
+  charCount: number
+  requestId: string
+}
+
+interface GetContextCommand {
+  command: 'get-context'
+  maxSelectedLength?: number
+  maxPrecursorLength?: number
+  requestId: string
+}
+
+interface GetContextResult {
+  success: boolean
+  selectedText: string | null
+  precursorText: string | null
+  selectedLength: number
+  precursorLength: number
+  error: string | null
+}
+
 const nativeModuleName = 'selected-text-reader'
 const MAXIUMUM_TEXT_LENGTH_DEFAULT = 10000 // Maximum length of text to return
 
+type PendingRequest = {
+  resolve: (value: any) => void
+  reject: (reason?: any) => void
+}
+
 class SelectedTextReaderService extends EventEmitter {
   #selectedTextProcess: ReturnType<typeof spawn> | null = null
-  #pendingRequests = new Map<
-    string,
-    {
-      resolve: (value: SelectedTextResult) => void
-      reject: (reason?: any) => void
-    }
-  >()
+  #pendingRequests = new Map<string, PendingRequest>()
   #requestIdCounter = 0
 
   constructor() {
@@ -140,7 +182,53 @@ class SelectedTextReaderService extends EventEmitter {
     })
   }
 
-  #sendCommand(command: SelectedTextCommand): void {
+  /**
+   * Sends a command to get cursor context.
+   */
+  public async getCursorContext(
+    contextLength: number,
+    cutCurrentSelection: boolean = false,
+  ): Promise<CursorContextResult> {
+    console.log(
+      '[SelectedTextService] getCursorContext called, process running:',
+      this.isRunning(),
+    )
+
+    if (!this.#selectedTextProcess) {
+      throw new Error('Selected text reader process not running')
+    }
+
+    return new Promise((resolve, reject) => {
+      const requestId = `ctx_${++this.#requestIdCounter}_${Date.now()}`
+      this.#pendingRequests.set(requestId, { resolve, reject })
+
+      const command: CursorContextCommand = {
+        command: 'get-cursor-context',
+        contextLength: contextLength,
+        cutCurrentSelection,
+        requestId,
+      }
+
+      this.#sendCommand(command)
+
+      // Set timeout to avoid hanging requests
+      setTimeout(() => {
+        if (this.#pendingRequests.has(requestId)) {
+          this.#pendingRequests.delete(requestId)
+          reject(new Error('Cursor context request timed out'))
+        }
+      }, 5000) // 5 second timeout
+    })
+  }
+
+  #sendCommand(
+    command:
+      | SelectedTextCommand
+      | CursorContextCommand
+      | SelectBackwardsCommand
+      | GetContextCommand
+      | UnselectCommand,
+  ): void {
     if (!this.#selectedTextProcess) {
       log.error(
         '[SelectedTextService] Cannot send command, process not running',
@@ -172,7 +260,7 @@ class SelectedTextReaderService extends EventEmitter {
         ) {
           const { resolve } = this.#pendingRequests.get(response.requestId)!
           this.#pendingRequests.delete(response.requestId)
-          resolve(response as SelectedTextResult)
+          resolve(response)
         } else {
           log.warn(
             '[SelectedTextService] Received response for unknown request:',
@@ -216,6 +304,118 @@ class SelectedTextReaderService extends EventEmitter {
 
   public isRunning(): boolean {
     return this.#selectedTextProcess !== null
+  }
+
+  public async unselect(charCount: number): Promise<any> {
+    console.log('[SelectedTextService] unselect called:', {
+      charCount,
+      processRunning: this.isRunning(),
+    })
+
+    if (!this.#selectedTextProcess) {
+      throw new Error('Selected text reader process not running')
+    }
+
+    return new Promise((resolve, reject) => {
+      const requestId = `sel_${++this.#requestIdCounter}_${Date.now()}`
+      this.#pendingRequests.set(requestId, { resolve, reject })
+
+      const command: UnselectCommand = {
+        command: 'unselect',
+        charCount,
+        requestId,
+      }
+
+      this.#sendCommand(command)
+
+      // Set timeout to avoid hanging requests
+      setTimeout(() => {
+        if (this.#pendingRequests.has(requestId)) {
+          this.#pendingRequests.delete(requestId)
+          reject(new Error('Select backwards request timed out'))
+        }
+      }, 5000) // 5 second timeout
+    })
+  }
+
+  /**
+   * Sends a command to select text backwards with optimized word/character selection.
+   */
+  public async selectBackwards(
+    wordCount: number,
+    charCount: number,
+  ): Promise<any> {
+    console.log('[SelectedTextService] selectBackwards called:', {
+      wordCount,
+      charCount,
+      processRunning: this.isRunning(),
+    })
+
+    if (!this.#selectedTextProcess) {
+      throw new Error('Selected text reader process not running')
+    }
+
+    return new Promise((resolve, reject) => {
+      const requestId = `sel_${++this.#requestIdCounter}_${Date.now()}`
+      this.#pendingRequests.set(requestId, { resolve, reject })
+
+      const command: SelectBackwardsCommand = {
+        command: 'select-backwards',
+        wordCount,
+        charCount,
+        requestId,
+      }
+
+      this.#sendCommand(command)
+
+      // Set timeout to avoid hanging requests
+      setTimeout(() => {
+        if (this.#pendingRequests.has(requestId)) {
+          this.#pendingRequests.delete(requestId)
+          reject(new Error('Select backwards request timed out'))
+        }
+      }, 5000) // 5 second timeout
+    })
+  }
+
+  /**
+   * Sends a command to get both selected text and cursor context atomically.
+   */
+  public async getContext(
+    maxSelectedLength?: number,
+    maxPrecursorLength?: number,
+  ): Promise<GetContextResult> {
+    console.log('[SelectedTextService] getContext called:', {
+      maxSelectedLength,
+      maxPrecursorLength,
+      processRunning: this.isRunning(),
+    })
+
+    if (!this.#selectedTextProcess) {
+      throw new Error('Selected text reader process not running')
+    }
+
+    return new Promise((resolve, reject) => {
+      const requestId = `ctx_${++this.#requestIdCounter}_${Date.now()}`
+      this.#pendingRequests.set(requestId, { resolve, reject })
+
+      const command: GetContextCommand = {
+        command: 'get-context',
+        maxSelectedLength,
+        maxPrecursorLength,
+        requestId,
+      }
+
+      this.#sendCommand(command)
+
+      // Set timeout to avoid hanging requests
+      setTimeout(() => {
+        if (this.#pendingRequests.has(requestId)) {
+          this.#pendingRequests.delete(requestId)
+          reject(new Error('Get context request timed out'))
+        }
+      }, 5000) // 5 second timeout
+    })
   }
 }
 
@@ -263,4 +463,80 @@ export async function hasSelectedText(): Promise<boolean> {
     log.error('Error checking for selected text:', error)
     return false
   }
+}
+
+/**
+ * Get cursor context using the new getCursorContext functionality
+ */
+export async function getCursorContext(contextLength: number): Promise<string> {
+  // find out if we have a highlighted selection already
+  const selectedText = (await getSelectedTextString(100)) || ''
+
+  console.log('[SelectedTextService] getCursorContext called:', {
+    contextLength,
+    selectedText,
+  })
+
+  const cursorContextResult = await selectedTextReaderService.getCursorContext(
+    contextLength,
+    false,
+  )
+  let preCursorText = cursorContextResult.contextText || ''
+
+  // No selected text, just get cursor context
+  if (selectedText.length === 0) {
+    console.log(
+      '[SelectedTextService] No selected text, returning cursor context only',
+    )
+    return preCursorText
+  }
+
+  // If the pre-cursor text includes the selected text,
+  // we probably extended the highlighted portion, and can simply return the difference
+  // between the pre-cursor text and the selected text
+  const selectedTextIndex = preCursorText.indexOf(selectedText)
+  if (selectedTextIndex !== -1) {
+    console.log('[SelectedTextService] Selected text found in pre-cursor text')
+    preCursorText = preCursorText.slice(0, selectedTextIndex)
+    return preCursorText
+  }
+
+  // If the pre-cursor text is a subsection of selectedText, we probably deselected some text instead
+  // of getting actual pre-cursor text. Rather than trying to cut the selected text and get the
+  // pre-cursor text again, just return an empty string.
+  if (selectedText.includes(preCursorText)) {
+    console.log(
+      '[SelectedTextService] Pre-cursor text is a subsection of selected text, returning empty string',
+    )
+    return ''
+  }
+
+  return preCursorText
+}
+
+/**
+ * Select text backwards using optimized word/character selection
+ */
+export function selectBackwards(
+  wordCount: number,
+  charCount: number,
+): Promise<any> {
+  return selectedTextReaderService.selectBackwards(wordCount, charCount)
+}
+
+export function unselect(charCount: number): Promise<any> {
+  return selectedTextReaderService.unselect(charCount)
+}
+
+/**
+ * Get both selected text and cursor context atomically in a single operation
+ */
+export function getContext(
+  maxSelectedLength?: number,
+  maxPrecursorLength?: number,
+): Promise<GetContextResult> {
+  return selectedTextReaderService.getContext(
+    maxSelectedLength,
+    maxPrecursorLength,
+  )
 }

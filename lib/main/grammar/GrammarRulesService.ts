@@ -1,0 +1,148 @@
+import nlp from 'compromise'
+
+export class GrammarRulesService {
+  /**
+   * Capitalize the first word if needed based on cursor context
+   */
+  public capitalizeFirstWordIfNeeded(
+    cursorContext: string,
+    transcript: string,
+  ): string {
+    if (!transcript) return transcript
+
+    // If no cursor context available, just capitalize first letter
+    if (!cursorContext) {
+      const firstLetterIndex = transcript.search(/[a-zA-Z]/)
+      if (firstLetterIndex >= 0) {
+        return transcript.substring(0, firstLetterIndex) +
+               transcript.charAt(firstLetterIndex).toUpperCase() +
+               transcript.substring(firstLetterIndex + 1)
+      }
+      return transcript
+    }
+
+    let correctedText = transcript
+
+    // Check if we should capitalize the first letter
+    const firstWord = correctedText.trim().split(/\s+/)[0] || ''
+    const shouldCapitalize = this.shouldCapitalizeBasedOnContext(cursorContext, firstWord)
+
+    if (shouldCapitalize && correctedText.length > 0) {
+      // Find the first letter to capitalize
+      const firstLetterIndex = correctedText.search(/[a-zA-Z]/)
+      if (firstLetterIndex >= 0) {
+        correctedText =
+          correctedText.substring(0, firstLetterIndex) +
+          correctedText.charAt(firstLetterIndex).toUpperCase() +
+          correctedText.substring(firstLetterIndex + 1)
+      }
+    }
+
+    return correctedText
+  }
+
+  /**
+   * Add leading space if needed based on cursor context
+   */
+  public addLeadingSpaceIfNeeded(
+    cursorContext: string,
+    transcript: string,
+  ): string {
+    if (!transcript) return transcript
+
+    // Check if we need to add a space before the text
+    const needsLeadingSpace = this.needsLeadingSpace(cursorContext)
+    if (needsLeadingSpace) {
+      return ' ' + transcript
+    }
+
+    return transcript
+  }
+
+  private needsLeadingSpace(context: string): boolean {
+    if (!context || context.length === 0) {
+      return false // No space needed if no context
+    }
+
+    // Don't add space if context already ends with whitespace
+    if (
+      context.endsWith(' ') ||
+      context.endsWith('\t') ||
+      context.endsWith('\n')
+    ) {
+      return false
+    }
+
+    // Get the last non-whitespace character for other checks
+    const trimmedContext = context.trim()
+    if (trimmedContext.length === 0) {
+      return false
+    }
+
+    const lastChar = trimmedContext.charAt(trimmedContext.length - 1)
+
+    // Don't add space after opening punctuation
+    const openingPunctuation = ['(', '[', '{', '"', "'", '`']
+    if (openingPunctuation.includes(lastChar)) {
+      return false
+    }
+
+    // Add space if context ends with a letter, number, or closing punctuation
+    if (/[a-zA-Z0-9)\]}"'`.,;:!?]$/.test(trimmedContext)) {
+      return true
+    }
+
+    // For other cases, don't add space
+    return false
+  }
+
+  private isProperNoun(word: string): boolean {
+    if (!word || word.trim().length === 0) return false
+
+    const doc = nlp(word.trim())
+    return doc.has('#ProperNoun') ||
+           doc.has('#Person') ||
+           doc.has('#Place') ||
+           doc.has('#Organization') ||
+           doc.has('#WeekDay') ||
+           doc.has('#Month')
+  }
+
+  private shouldCapitalizeBasedOnContext(context: string, firstWord: string): boolean {
+    // If the first word is a proper noun, ALWAYS capitalize
+    if (this.isProperNoun(firstWord)) {
+      return true
+    }
+
+    if (!context || context.trim().length === 0) {
+      return true // Default to capitalize if no context
+    }
+
+    const trimmedContext = context.trim()
+
+    // Capitalize after sentence endings (period, exclamation, question mark)
+    const sentenceEndings = ['.', '!', '?']
+    const lastChar = trimmedContext.charAt(trimmedContext.length - 1)
+
+    if (sentenceEndings.includes(lastChar)) {
+      return true
+    }
+
+    // Don't capitalize after commas, semicolons, colons, or within sentences
+    const continuationPunctuation = [',', ';', ':', '-', '–', '—']
+    if (continuationPunctuation.includes(lastChar)) {
+      return false
+    }
+
+    // If context ends with a letter or number, don't capitalize (continuing a sentence)
+    if (/[a-zA-Z0-9]$/.test(trimmedContext)) {
+      return false
+    }
+
+    // Default to capitalize for other cases
+    return true
+  }
+}
+
+// Export singleton instance
+export const grammarRulesService = new GrammarRulesService()

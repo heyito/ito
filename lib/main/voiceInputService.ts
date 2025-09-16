@@ -105,6 +105,9 @@ export class VoiceInputService {
     })
 
     audioRecorderService.initialize()
+
+    // Set main window for transcription service so it can send messages
+    transcriptionService.setMainWindow(mainWindow)
   }
 
   /**

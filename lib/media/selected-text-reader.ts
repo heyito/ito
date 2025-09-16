@@ -160,11 +160,6 @@ class SelectedTextReaderService extends EventEmitter {
     contextLength: number,
     cutCurrentSelection: boolean = false,
   ): Promise<CursorContextResult> {
-    console.log(
-      '[SelectedTextService] getCursorContext called, process running:',
-      this.isRunning(),
-    )
-
     if (!this.#selectedTextProcess) {
       throw new Error('Selected text reader process not running')
     }
@@ -203,7 +198,6 @@ class SelectedTextReaderService extends EventEmitter {
     try {
       const commandStr = JSON.stringify(command) + '\n'
       this.#selectedTextProcess.stdin?.write(commandStr)
-      log.debug(`[SelectedTextService] Sent command: ${commandStr.trim()}`)
     } catch (error) {
       log.error('[SelectedTextService] Error sending command:', error)
     }
@@ -324,11 +318,6 @@ export async function getCursorContext(contextLength: number): Promise<string> {
   // find out if we have a highlighted selection already
   const selectedText = (await getSelectedTextString(100)) || ''
 
-  console.log('[SelectedTextService] getCursorContext called:', {
-    contextLength,
-    selectedText,
-  })
-
   const cursorContextResult = await selectedTextReaderService.getCursorContext(
     contextLength,
     false,
@@ -337,9 +326,6 @@ export async function getCursorContext(contextLength: number): Promise<string> {
 
   // No selected text, just get cursor context
   if (selectedText.length === 0) {
-    console.log(
-      '[SelectedTextService] No selected text, returning cursor context only',
-    )
     return preCursorText
   }
 
@@ -357,9 +343,6 @@ export async function getCursorContext(contextLength: number): Promise<string> {
   // of getting actual pre-cursor text. Rather than trying to cut the selected text and get the
   // pre-cursor text again, just return an empty string.
   if (selectedText.includes(preCursorText)) {
-    console.log(
-      '[SelectedTextService] Pre-cursor text is a subsection of selected text, returning empty string',
-    )
     return ''
   }
 

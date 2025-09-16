@@ -325,9 +325,6 @@ class AnalyticsService {
    */
   track(eventName: AnalyticsEvent, properties: BaseEventProperties = {}) {
     if (!this.shouldTrack()) {
-      log.info(
-        `[Analytics] Event '${eventName}' skipped - analytics disabled or self-hosted user`,
-      )
       return
     }
 

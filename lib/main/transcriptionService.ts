@@ -23,9 +23,6 @@ export class TranscriptionService {
       return
     }
 
-    // Capture selected text and cursor context IMMEDIATELY when hotkey is pressed
-    console.log('[TranscriptionService] Capturing context at hotkey press...')
-
     this.audioStreamManager.startStreaming()
     const interactionId = this.interactionManager.startInteraction()
     log.info('[TranscriptionService] Starting new transcription stream.')
@@ -101,9 +98,6 @@ export class TranscriptionService {
               this.interactionManager.getCurrentInteractionId(),
           })
         }
-        log.info(
-          '[TranscriptionService] Audio too short, restoring selected text.',
-        )
       } else {
         log.error(
           '[TranscriptionService] Transcription error, restoring selected text:',

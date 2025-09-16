@@ -29,14 +29,6 @@ export class InteractionManager {
     sampleRate: number,
     errorMessage?: string,
   ) {
-    console.log('[InteractionManager] createInteraction called with:', {
-      transcript: transcript?.substring(0, 50),
-      audioBufferLength: audioBuffer?.length,
-      sampleRate,
-      errorMessage,
-      currentInteractionId: this.currentInteractionId,
-    })
-
     if (!this.currentInteractionId) {
       log.warn(
         '[InteractionManager] No current interaction ID, skipping interaction creation.',
@@ -47,7 +39,6 @@ export class InteractionManager {
     try {
       const userProfile = mainStore.get(STORE_KEYS.USER_PROFILE) as any
       const userId = userProfile?.id
-      console.log('[InteractionManager] User profile:', { userProfile, userId })
 
       if (!userId) {
         log.warn(
@@ -94,19 +85,7 @@ export class InteractionManager {
         deleted_at: null,
       }
 
-      console.log(
-        '[InteractionManager] About to upsert interaction data:',
-        interactionData,
-      )
-
       await InteractionsTable.upsert(interactionData)
-
-      console.log(
-        '[InteractionManager] Successfully created interaction in database',
-      )
-      log.info(
-        `[InteractionManager] Created interaction: ${this.currentInteractionId} for user: ${userId} (duration: ${durationMs}ms)`,
-      )
 
       // Notify all windows about the new interaction
       BrowserWindow.getAllWindows().forEach(window => {

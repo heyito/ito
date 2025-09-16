@@ -176,9 +176,9 @@ describe('InteractionManager', () => {
       const params = mockDbRun.mock.calls[0][1] as any[]
       const titleParam = params[2]
       expect(titleParam).toBe(
-        'This is a very long transcript that should be trun',
+        'This is a very long transcript that should be trun...',
       )
-      expect(titleParam.length).toBe(50)
+      expect(titleParam.length).toBe(53)
     })
 
     test('should use fallback title for empty transcript', async () => {
@@ -192,7 +192,7 @@ describe('InteractionManager', () => {
       expect(mockDbRun).toHaveBeenCalled()
       const params = mockDbRun.mock.calls[0][1] as any[]
       const titleParam = params[2]
-      expect(titleParam).toBe('No transcript')
+      expect(titleParam).toBe('Voice interaction')
     })
   })
 
@@ -211,7 +211,7 @@ describe('InteractionManager', () => {
 
       expect(mockDbRun).toHaveBeenCalled()
       const params = mockDbRun.mock.calls[0][1] as any[]
-      const durationParam = params[7] // duration_ms is at index 7
+      const durationParam = params[6] // duration_ms is at index 6 in upsert
       expect(durationParam).toBeGreaterThan(0)
       expect(durationParam).toBeLessThan(1000) // Should be reasonable
     })
@@ -226,7 +226,7 @@ describe('InteractionManager', () => {
 
       expect(mockDbRun).toHaveBeenCalled()
       const params = mockDbRun.mock.calls[0][1] as any[]
-      const durationParam = params[7]
+      const durationParam = params[6] // duration_ms is at index 6 in upsert
       expect(durationParam).toBe(0)
     })
   })

@@ -3,6 +3,7 @@ import mainStore from '../store'
 import { STORE_KEYS } from '../../constants/store-keys'
 import log from 'electron-log'
 import { v4 as uuidv4 } from 'uuid'
+import { BrowserWindow } from 'electron'
 
 export class InteractionManager {
   private currentInteractionId: string | null = null
@@ -45,24 +46,57 @@ export class InteractionManager {
         return
       }
 
+      // Calculate interaction duration
+      const interactionEndTime = Date.now()
+      const durationMs = this.interactionStartTime
+        ? interactionEndTime - this.interactionStartTime
+        : 0
+
+      // Create ASR output object with comprehensive information
+      const asrOutput = {
+        transcript,
+        totalAudioBytes: audioBuffer.length,
+        error: errorMessage || null,
+        timestamp: new Date().toISOString(),
+        durationMs,
+      }
+
+      // Generate a meaningful title from the transcript
+      const title = transcript && transcript.length > 50
+        ? transcript.substring(0, 50) + '...'
+        : transcript || 'Voice interaction'
+
+      // Create interaction using upsert to specify our own ID
+      const now = new Date().toISOString()
       const interactionData = {
         id: this.currentInteractionId,
         user_id: userId,
-        title: transcript ? transcript.substring(0, 50) : 'No transcript',
-        asr_output: transcript ? { transcript } : {},
+        title,
+        asr_output: asrOutput,
         llm_output: errorMessage ? { error: errorMessage } : {},
         raw_audio: audioBuffer.length > 0 ? audioBuffer : null,
         raw_audio_id: null,
-        duration_ms: this.interactionStartTime
-          ? Date.now() - this.interactionStartTime
-          : 0,
+        duration_ms: durationMs,
         sample_rate: sampleRate,
+        created_at: now,
+        updated_at: now,
+        deleted_at: null,
       }
 
-      await InteractionsTable.insert(interactionData)
+      await InteractionsTable.upsert(interactionData)
       log.info(
-        `[InteractionManager] Created interaction: ${this.currentInteractionId} for user: ${userId}`,
+        `[InteractionManager] Created interaction: ${this.currentInteractionId} for user: ${userId} (duration: ${durationMs}ms)`,
       )
+
+      // Notify all windows about the new interaction
+      BrowserWindow.getAllWindows().forEach(window => {
+        window.webContents.send('interaction-created', {
+          id: this.currentInteractionId,
+          transcript,
+          timestamp: now,
+          durationMs,
+        })
+      })
     } catch (error) {
       log.error('[InteractionManager] Failed to create interaction:', error)
     }

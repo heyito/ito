@@ -32,15 +32,20 @@ export class GrammarRulesService {
       firstWord,
     )
 
-    if (shouldCapitalize && correctedText.length > 0) {
-      // Find the first letter to capitalize
-      const firstLetterIndex = correctedText.search(/[a-zA-Z]/)
-      if (firstLetterIndex >= 0) {
-        correctedText =
-          correctedText.substring(0, firstLetterIndex) +
-          correctedText.charAt(firstLetterIndex).toUpperCase() +
-          correctedText.substring(firstLetterIndex + 1)
-      }
+    const firstLetterIndex = correctedText.search(/[a-zA-Z]/)
+    if (firstLetterIndex < 0) {
+      return correctedText // No letters to capitalize
+    }
+    if (shouldCapitalize) {
+      correctedText =
+        correctedText.substring(0, firstLetterIndex) +
+        correctedText.charAt(firstLetterIndex).toUpperCase() +
+        correctedText.substring(firstLetterIndex + 1)
+    } else {
+      correctedText =
+        correctedText.substring(0, firstLetterIndex) +
+        correctedText.charAt(firstLetterIndex).toLowerCase() +
+        correctedText.substring(firstLetterIndex + 1)
     }
 
     return correctedText
@@ -78,13 +83,7 @@ export class GrammarRulesService {
       return false
     }
 
-    // Get the last non-whitespace character for other checks
-    const trimmedContext = context.trim()
-    if (trimmedContext.length === 0) {
-      return false
-    }
-
-    const lastChar = trimmedContext.charAt(trimmedContext.length - 1)
+    const lastChar = context.charAt(context.length - 1)
 
     // Don't add space after opening punctuation
     const openingPunctuation = ['(', '[', '{', '"', "'", '`']
@@ -93,12 +92,12 @@ export class GrammarRulesService {
     }
 
     // Add space if context ends with a letter, number, or closing punctuation
-    if (/[a-zA-Z0-9)\]}"'`.,;:!?]$/.test(trimmedContext)) {
+    if (/[a-zA-Z0-9)\]}"'`.,;:!?]$/.test(context)) {
       return true
     }
 
     // For other cases, don't add space
-    return false
+    return true
   }
 
   private isProperNoun(word: string): boolean {

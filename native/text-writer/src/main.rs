@@ -3,13 +3,18 @@ use std::process;
 use std::thread;
 use std::time::Duration;
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "linux")]
 use enigo::{Enigo, Key, Keyboard, Settings};
 
 #[cfg(target_os = "macos")]
 mod macos_writer;
 #[cfg(target_os = "macos")]
 use macos_writer::type_text_macos;
+
+#[cfg(target_os = "windows")]
+mod windows_writer;
+#[cfg(target_os = "windows")]
+use windows_writer::type_text_windows;
 
 #[derive(Parser)]
 #[command(name = "text-writer")]
@@ -57,7 +62,15 @@ fn main() {
         }
     }
 
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "windows")]
+    {
+        if let Err(e) = type_text_windows(&args.text, args.char_delay) {
+            eprintln!("Error typing text: {}", e);
+            process::exit(1);
+        }
+    }
+
+    #[cfg(target_os = "linux")]
     {
         let mut enigo = match Enigo::new(&Settings::default()) {
             Ok(enigo) => enigo,

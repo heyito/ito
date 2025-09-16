@@ -134,26 +134,71 @@ bun run dev
 
 **Required Setup:**
 
+This setup uses git bash for shell operations. Download from [git](https://git-scm.com/downloads)
+
 1. **Install Docker Desktop**: Download from [docker.com](https://www.docker.com/products/docker-desktop/) and ensure it's running
 
-2. **Install Rust with GNU toolchain** (for native component development):
+2. **Install Rust** (with GNU target)
 
-   ```bash
-   # Install rustup (Rust installer)
-   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+Download and run the official [Rust installer for Windows](https://rustup.rs/).  
+This installs `rustup` and the MSVC toolchain by default.
 
-   # Install the GNU toolchain (required for native components)
-   rustup toolchain install stable-x86_64-pc-windows-gnu
-   rustup target add x86_64-pc-windows-gnu
-   ```
+Add the GNU target (needed for our native components):
 
-3. **Install 7-Zip**: `winget install 7zip.7zip`
+    rustup toolchain install stable-x86_64-pc-windows-gnu
+    rustup target add x86_64-pc-windows-gnu
 
-4. **Download and install GCC & MinGW-w64 but DO NOT add to path**:
-   https://code.visualstudio.com/docs/cpp/config-mingw
-   a. Do not add C:\msys64\ucrt64\bin to your path -- the rust build will automatically select the correct linker, and adding this to your path will cause the incorrect linking library to be used, causing compilation failures.
+---
 
-5. **Restart your terminal** to pick up PATH changes
+3. **Install 7-Zip**
+
+    winget install 7zip.7zip
+
+---
+
+4. **Install GCC & MinGW-w64 via MSYS2**
+
+Install [MSYS2](https://www.msys2.org/).
+
+Open the **MSYS2 MinGW x64** shell (from the Start Menu).
+
+Update and install the toolchain:
+
+    pacman -Syu       # run twice if asked to restart
+    pacman -S --needed mingw-w64-x86_64-toolchain
+
+Verify the tools exist:
+
+    ls /mingw64/bin/gcc.exe /mingw64/bin/dlltool.exe
+
+---
+
+5. **Use the MinGW tools when building** (Git Bash)
+
+You normally develop and build in **Git Bash**. Before building, prepend the MinGW path:
+
+    export PATH="/c/msys64/mingw64/bin:$PATH"
+    export DLLTOOL="/c/msys64/mingw64/bin/dlltool.exe"
+    export CC_x86_64_pc_windows_gnu="/c/msys64/mingw64/bin/x86_64-w64-mingw32-gcc.exe"
+    export AR_x86_64_pc_windows_gnu="/c/msys64/mingw64/bin/ar.exe"
+    export CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER="/c/msys64/mingw64/bin/x86_64-w64-mingw32-gcc.exe"
+
+Check you’re picking up the right ones:
+
+    which gcc       # -> /c/msys64/mingw64/bin/gcc.exe
+    which dlltool   # -> /c/msys64/mingw64/bin/dlltool.exe
+
+⚠️ **Do not add `C:\msys64\ucrt64\bin` to PATH.** That’s the wrong runtime and will break linking.
+
+💡 To avoid running these exports every session, add the lines above to your Git Bash `~/.bashrc` file. They will be applied automatically whenever you open a new Git Bash window.
+
+
+---
+
+ 6. **Restart Git Bash if you update MSYS2**
+
+Whenever you update MSYS2 packages with `pacman -Syu`, restart Git Bash so the changes take effect.
+
 
 > **Note**: Windows builds use Docker for cross-compilation to ensure consistent builds. The Docker container handles the Windows build environment automatically.
 

@@ -72,7 +72,7 @@ app.whenReady().then(async () => {
       | undefined
     if (accessToken) {
       grpcClient.setAuthToken(accessToken)
-      syncService.start()
+      // syncService.start()
     }
   }
 

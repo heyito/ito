@@ -63,8 +63,9 @@ export class TranscriptionService {
 
   public stopStreaming() {
     this.audioStreamManager.stopStreaming()
-    this.interactionManager.clearCurrentInteraction()
-    ;(globalThis as any).currentInteractionId = null
+    // Note: Don't clear interaction here - it will be cleared after saving to database
+    // this.interactionManager.clearCurrentInteraction()
+    // ;(globalThis as any).currentInteractionId = null
   }
 
   public forwardAudioChunk(chunk: Buffer) {
@@ -110,6 +111,14 @@ export class TranscriptionService {
         )
       }
 
+      // Save failed interaction to database
+      await this.interactionManager.createInteraction(
+        response.transcript || '',
+        this.audioStreamManager.getInteractionAudioBuffer(),
+        this.audioStreamManager.getCurrentSampleRate(),
+        errorMessage,
+      )
+
       // End the interaction after transcription error
       if (interactionId) {
         traceLogger.endInteraction(interactionId, 'TRANSCRIPTION_FAILED', {
@@ -118,6 +127,9 @@ export class TranscriptionService {
         })
         ;(globalThis as any).currentInteractionId = null
       }
+
+      // Clear the interaction AFTER saving to database
+      this.interactionManager.clearCurrentInteraction()
     } else {
       if (interactionId) {
         traceLogger.logStep(interactionId, 'TRANSCRIPTION_SUCCESS', {
@@ -166,6 +178,9 @@ export class TranscriptionService {
         })
         ;(globalThis as any).currentInteractionId = null
       }
+
+      // Clear the interaction AFTER saving to database
+      this.interactionManager.clearCurrentInteraction()
     }
   }
 
@@ -199,7 +214,8 @@ export class TranscriptionService {
 
   public stopTranscription() {
     this.audioStreamManager.stopStreaming()
-    this.interactionManager.clearCurrentInteraction()
+    // Note: Don't clear interaction here - wait for transcription response to save it first
+    // this.interactionManager.clearCurrentInteraction()
     this.audioStreamManager.clearInteractionAudio()
   }
 

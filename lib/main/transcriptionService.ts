@@ -205,8 +205,6 @@ export class TranscriptionService {
 
   public stopTranscription() {
     this.audioStreamManager.stopStreaming()
-    // Note: Don't clear interaction here - wait for transcription response to save it first
-    // this.interactionManager.clearCurrentInteraction()
     this.audioStreamManager.clearInteractionAudio()
   }
 

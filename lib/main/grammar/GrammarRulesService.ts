@@ -93,7 +93,7 @@ export class GrammarRulesService {
       return true
     }
 
-    // For other cases, don't add space
+    // For other cases, do add space
     return true
   }
 

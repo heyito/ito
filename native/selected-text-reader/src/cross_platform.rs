@@ -19,7 +19,6 @@ pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
     let selected_text = clipboard.get_text().unwrap_or_default();
     
     // Always restore original clipboard contents - ITO is copying on behalf of user for context
-    let restore_start = Instant::now();
     let _ = clipboard.set_text(original_clipboard);
     
     Ok(selected_text)
@@ -80,7 +79,6 @@ pub fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::
     let result = get_context_with_keyboard_selection(context_length, &mut clipboard);
     
     // Always restore original clipboard
-    let restore_clipboard_start = Instant::now();
     let _ = clipboard.set_text(original_clipboard);
     
     // Return debug info if we got nothing
@@ -130,8 +128,6 @@ fn get_context_with_keyboard_selection(
         }
     }
     
-    let keyboard_time = start_time.elapsed();
-    
     // Copy the selection
     copy_selected_text()?;
     
@@ -157,7 +153,7 @@ fn get_context_with_keyboard_selection(
         );
         
         let _output = Command::new("powershell")
-            .args(&["-Command", restore_script])
+            .args(&["-Command", &restore_script])
             .output()?;
     }
     

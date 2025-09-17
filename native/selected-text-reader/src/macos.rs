@@ -273,9 +273,6 @@ fn select_previous_chars_and_copy(char_count: usize, clipboard: &mut Clipboard) 
     } else {
     }
 
-    // Debug: Let's also check if there's anything on the clipboard at all
-    if context_text.is_empty() {
-    }
 
     Ok(context_text)
 }

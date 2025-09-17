@@ -179,8 +179,6 @@ fn select_previous_chars_and_copy(char_count: usize, clipboard: &mut Clipboard) 
 
     // Send Shift+Left N times to select precursor text (copied from working get_context)
     for i in 0..char_count {
-        if i == 0 || i % 5 == 0 || i == char_count - 1 {
-        }
 
         unsafe {
             let key_down_event = CGEventCreateKeyboardEvent(ptr::null_mut(), 123, true); // Left arrow

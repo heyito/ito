@@ -1,8 +1,5 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 
-// Mock external boundaries only - let internal logic run naturally
-
-// Mock gRPC client
 const mockGrpcClient = {
   transcribeStream: mock(() =>
     Promise.resolve({ transcript: 'default' } as any),
@@ -25,18 +22,6 @@ mock.module('./store', () => ({
   })),
 }))
 
-// Mock electron BrowserWindow
-const mockBrowserWindow = {
-  webContents: {
-    send: mock(),
-  },
-}
-mock.module('electron', () => ({
-  BrowserWindow: {
-    getAllWindows: mock(() => [mockBrowserWindow]),
-  },
-}))
-
 // Mock database utilities (same pattern as repo.test.ts to avoid conflicts)
 const mockDbRun = mock(() => Promise.resolve())
 const mockDbGet = mock(() => Promise.resolve(undefined))
@@ -57,517 +42,456 @@ mock.module('electron-log', () => ({
   },
 }))
 
+// Mock cursor context reader
+const mockGetCursorContext = mock(() => Promise.resolve(''))
+mock.module('../media/selected-text-reader', () => ({
+  getCursorContext: mockGetCursorContext,
+}))
+
+// Mock grammar rules service
+const mockGrammarRulesService = {
+  setCaseFirstWord: mock((_context: string, transcript: string) => transcript),
+  addLeadingSpaceIfNeeded: mock(
+    (_context: string, transcript: string) => transcript,
+  ),
+}
+mock.module('./grammar/GrammarRulesService', () => ({
+  grammarRulesService: mockGrammarRulesService,
+}))
+
+// Mock manager classes
+const mockAudioStreamManager = {
+  isCurrentlyStreaming: mock(() => false),
+  startStreaming: mock(),
+  stopStreaming: mock(),
+  addAudioChunk: mock(),
+  streamAudioChunks: mock(
+    () =>
+      async function* () {
+        yield Buffer.from('test')
+      },
+  ),
+  getInteractionAudioBuffer: mock(() => Buffer.from('audio-data')),
+  getCurrentSampleRate: mock(() => 16000),
+  clearInteractionAudio: mock(),
+  setAudioConfig: mock(),
+}
+mock.module('./audio/AudioStreamManager', () => ({
+  AudioStreamManager: class MockAudioStreamManager {
+    isCurrentlyStreaming = mockAudioStreamManager.isCurrentlyStreaming
+    startStreaming = mockAudioStreamManager.startStreaming
+    stopStreaming = mockAudioStreamManager.stopStreaming
+    addAudioChunk = mockAudioStreamManager.addAudioChunk
+    streamAudioChunks = mockAudioStreamManager.streamAudioChunks
+    getInteractionAudioBuffer = mockAudioStreamManager.getInteractionAudioBuffer
+    getCurrentSampleRate = mockAudioStreamManager.getCurrentSampleRate
+    clearInteractionAudio = mockAudioStreamManager.clearInteractionAudio
+    setAudioConfig = mockAudioStreamManager.setAudioConfig
+  },
+}))
+
+const mockInteractionManager = {
+  startInteraction: mock(() => 'test-interaction-123'),
+  clearCurrentInteraction: mock(),
+  createInteraction: mock(() => Promise.resolve()),
+  getCurrentInteractionId: mock(() => 'test-interaction-123'),
+  getInteractionStartTime: mock(() => Date.now()),
+}
+mock.module('./interactions/InteractionManager', () => ({
+  InteractionManager: class MockInteractionManager {
+    startInteraction = mockInteractionManager.startInteraction
+    clearCurrentInteraction = mockInteractionManager.clearCurrentInteraction
+    createInteraction = mockInteractionManager.createInteraction
+    getCurrentInteractionId = mockInteractionManager.getCurrentInteractionId
+    getInteractionStartTime = mockInteractionManager.getInteractionStartTime
+  },
+}))
+
+const mockWindowMessenger = {
+  setMainWindow: mock(),
+  sendTranscriptionResult: mock(),
+  sendTranscriptionError: mock(),
+}
+mock.module('./messaging/WindowMessenger', () => ({
+  WindowMessenger: class MockWindowMessenger {
+    setMainWindow = mockWindowMessenger.setMainWindow
+    sendTranscriptionResult = mockWindowMessenger.sendTranscriptionResult
+    sendTranscriptionError = mockWindowMessenger.sendTranscriptionError
+  },
+}))
+
+const mockTextInserter = {
+  insertText: mock(() => Promise.resolve(true)),
+}
+mock.module('./text/TextInserter', () => ({
+  TextInserter: class MockTextInserter {
+    insertText = mockTextInserter.insertText
+  },
+}))
+
+// Mock trace logger
+const mockTraceLogger = {
+  logStep: mock(),
+  logError: mock(),
+  endInteraction: mock(),
+}
+mock.module('./traceLogger', () => ({
+  traceLogger: mockTraceLogger,
+}))
+
 // Mock console to avoid noise
 beforeEach(() => {
   console.log = mock()
   console.error = mock()
 })
 
-import { transcriptionService } from './transcriptionService'
-import { STORE_KEYS } from '../constants/store-keys'
 import { ItoMode } from '@/app/generated/ito_pb'
 
-// Helper function to wait for database interaction to be created
-const waitForInteractionCreation = async () => {
-  const start = Date.now()
-  const maxWait = 500 // 500ms timeout
-
-  while (mockDbRun.mock.calls.length === 0) {
-    if (Date.now() - start > maxWait) {
-      throw new Error('Timed out waiting for interaction creation')
-    }
-    await new Promise(resolve => setTimeout(resolve, 5))
-  }
-}
-
-describe('TranscriptionService Integration Tests', () => {
+describe('TranscriptionService Orchestration Tests', () => {
   beforeEach(() => {
-    // Reset all mocks
-    mockGrpcClient.transcribeStream.mockReset()
-    // Default behavior for any test that does not override
-    mockGrpcClient.transcribeStream.mockImplementation(() =>
-      Promise.resolve({ transcript: 'default' } as any),
+    // Re-apply manager class mocks (needed because global setup clears them)
+    mock.module('./audio/AudioStreamManager', () => ({
+      AudioStreamManager: class MockAudioStreamManager {
+        isCurrentlyStreaming = mockAudioStreamManager.isCurrentlyStreaming
+        startStreaming = mockAudioStreamManager.startStreaming
+        stopStreaming = mockAudioStreamManager.stopStreaming
+        addAudioChunk = mockAudioStreamManager.addAudioChunk
+        streamAudioChunks = mockAudioStreamManager.streamAudioChunks
+        getInteractionAudioBuffer =
+          mockAudioStreamManager.getInteractionAudioBuffer
+        getCurrentSampleRate = mockAudioStreamManager.getCurrentSampleRate
+        clearInteractionAudio = mockAudioStreamManager.clearInteractionAudio
+        setAudioConfig = mockAudioStreamManager.setAudioConfig
+      },
+    }))
+
+    mock.module('./interactions/InteractionManager', () => ({
+      InteractionManager: class MockInteractionManager {
+        startInteraction = mockInteractionManager.startInteraction
+        clearCurrentInteraction = mockInteractionManager.clearCurrentInteraction
+        createInteraction = mockInteractionManager.createInteraction
+        getCurrentInteractionId = mockInteractionManager.getCurrentInteractionId
+        getInteractionStartTime = mockInteractionManager.getInteractionStartTime
+      },
+    }))
+
+    mock.module('./messaging/WindowMessenger', () => ({
+      WindowMessenger: class MockWindowMessenger {
+        setMainWindow = mockWindowMessenger.setMainWindow
+        sendTranscriptionResult = mockWindowMessenger.sendTranscriptionResult
+        sendTranscriptionError = mockWindowMessenger.sendTranscriptionError
+      },
+    }))
+
+    mock.module('./text/TextInserter', () => ({
+      TextInserter: class MockTextInserter {
+        insertText = mockTextInserter.insertText
+      },
+    }))
+
+    mock.module('./grammar/GrammarRulesService', () => ({
+      grammarRulesService: mockGrammarRulesService,
+    }))
+
+    mock.module('./traceLogger', () => ({
+      traceLogger: mockTraceLogger,
+    }))
+
+    mock.module('../media/selected-text-reader', () => ({
+      getCursorContext: mockGetCursorContext,
+    }))
+
+    mock.module('../clients/grpcClient', () => ({
+      grpcClient: mockGrpcClient,
+    }))
+
+    // Reset all manager mocks
+    Object.values(mockAudioStreamManager).forEach(mock => mock.mockClear())
+    Object.values(mockInteractionManager).forEach(mock => mock.mockClear())
+    Object.values(mockWindowMessenger).forEach(mock => mock.mockClear())
+    Object.values(mockTextInserter).forEach(mock => mock.mockClear())
+    Object.values(mockGrammarRulesService).forEach(mock => mock.mockClear())
+    Object.values(mockTraceLogger).forEach(mock => mock.mockClear())
+
+    // Reset gRPC client
+    mockGrpcClient.transcribeStream.mockClear()
+    mockGrpcClient.transcribeStream.mockResolvedValue({ transcript: 'default' })
+
+    // Reset cursor context
+    mockGetCursorContext.mockClear()
+    mockGetCursorContext.mockResolvedValue('')
+
+    // Reset default manager behaviors
+    mockAudioStreamManager.isCurrentlyStreaming.mockReturnValue(false)
+    mockInteractionManager.startInteraction.mockReturnValue(
+      'test-interaction-123',
     )
-    mockMainStore.get.mockClear()
-    mockBrowserWindow.webContents.send.mockClear()
+    mockTextInserter.insertText.mockResolvedValue(true)
 
-    // Reset database utility mocks
-    mockDbRun.mockClear()
-    mockDbGet.mockClear()
-    mockDbAll.mockClear()
-
-    // Setup default user profile
-    mockMainStore.get.mockImplementation((key: string) => {
-      if (key === STORE_KEYS.USER_PROFILE) {
-        return { id: 'test-user-123' }
-      }
-      return null
-    })
-
-    // Reduce buffering threshold so gRPC starts with tiny chunks
-    transcriptionService.setAudioConfig({ sampleRate: 1 })
+    // Clear global interaction ID
+    ;(globalThis as any).currentInteractionId = null
   })
 
-  describe('Complete Transcription Workflow', () => {
-    test('should handle successful transcription end-to-end', async () => {
-      // Mock successful gRPC response
-      const mockTranscript = 'Hello world, this is a test transcription'
+  describe('Manager Orchestration', () => {
+    test('should coordinate all managers for successful transcription', async () => {
+      const { transcriptionService } = await import('./transcriptionService')
+
+      const mockTranscript = 'Hello world'
       mockGrpcClient.transcribeStream.mockResolvedValueOnce({
         transcript: mockTranscript,
       })
-      mockDbRun.mockResolvedValue(undefined)
 
-      // Start streaming and trigger gRPC start
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
-      transcriptionService.forwardAudioChunk(Buffer.from('x'))
+      // Start transcription
+      await transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
 
-      // Simulate audio chunks
-      const audioChunk1 = Buffer.from('audio-data-1')
-      const audioChunk2 = Buffer.from('audio-data-2')
-      transcriptionService.forwardAudioChunk(audioChunk1)
-      transcriptionService.forwardAudioChunk(audioChunk2)
+      // Wait for async operations
+      await new Promise(resolve => setTimeout(resolve, 10))
 
-      // Stop streaming
-      transcriptionService.stopStreaming()
-
-      // Wait for interaction creation to complete
-      await waitForInteractionCreation()
-
-      // Verify interaction was created in database
-      expect(mockDbRun).toHaveBeenCalled()
-
-      // Verify window notification
-      expect(mockBrowserWindow.webContents.send).toHaveBeenCalledWith(
-        'interaction-created',
-        expect.objectContaining({
-          transcript: mockTranscript,
-          durationMs: expect.any(Number),
-        }),
+      // Verify manager coordination
+      expect(mockAudioStreamManager.startStreaming).toHaveBeenCalled()
+      expect(mockInteractionManager.startInteraction).toHaveBeenCalled()
+      expect(mockGrpcClient.transcribeStream).toHaveBeenCalledWith(
+        expect.any(Function), // audio stream generator
+        ItoMode.TRANSCRIBE,
       )
+
+      // Wait for transcription response handling
+      await new Promise(resolve => setTimeout(resolve, 10))
+
+      expect(mockGetCursorContext).toHaveBeenCalled()
+      expect(mockGrammarRulesService.setCaseFirstWord).toHaveBeenCalledWith(
+        '',
+        mockTranscript,
+      )
+      expect(mockGrammarRulesService.addLeadingSpaceIfNeeded).toHaveBeenCalled()
+      expect(mockTextInserter.insertText).toHaveBeenCalled()
+      expect(mockInteractionManager.createInteraction).toHaveBeenCalled()
+      expect(mockWindowMessenger.sendTranscriptionResult).toHaveBeenCalledWith({
+        transcript: mockTranscript,
+      })
     })
 
-    test('should handle transcription errors gracefully', async () => {
-      // Mock gRPC error
+    test('should coordinate error handling across managers', async () => {
+      const { transcriptionService } = await import('./transcriptionService')
+
       const errorMessage = 'Network timeout'
       mockGrpcClient.transcribeStream.mockRejectedValueOnce(
         new Error(errorMessage),
       )
-      mockDbRun.mockResolvedValue(undefined)
 
-      // Start and process
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
-      // Trigger gRPC start by adding a small chunk
-      transcriptionService.forwardAudioChunk(Buffer.from('x'))
-      transcriptionService.forwardAudioChunk(Buffer.from('audio-data'))
-      transcriptionService.stopStreaming()
+      await transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
 
-      // Wait for interaction creation to complete
-      await waitForInteractionCreation()
+      // Wait for error handling
+      await new Promise(resolve => setTimeout(resolve, 10))
 
-      // Should still create interaction with error info
-      expect(mockDbRun).toHaveBeenCalled()
-    })
-
-    test('should skip interaction creation when no user profile', async () => {
-      // Mock no user profile
-      mockMainStore.get.mockReturnValue(null)
-      mockGrpcClient.transcribeStream.mockResolvedValueOnce({
-        transcript: 'test',
-      })
-
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
-      transcriptionService.stopStreaming()
-
-      // Wait a reasonable amount of time for any potential processing
-      await new Promise(resolve => setTimeout(resolve, 50))
-
-      // Should not create interaction
-      expect(mockDbRun).not.toHaveBeenCalled()
-      expect(mockBrowserWindow.webContents.send).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('Streaming State Management', () => {
-    test('should prevent multiple simultaneous streams', () => {
-      // Start first stream
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
-      const firstCallCount = mockGrpcClient.transcribeStream.mock.calls.length
-
-      // Try to start again - should be ignored
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
-      const secondCallCount = mockGrpcClient.transcribeStream.mock.calls.length
-
-      // Should not increase call count
-      expect(secondCallCount).toBe(firstCallCount)
-    })
-
-    test('should handle stop when not streaming', () => {
-      // Should not throw error
-      expect(() => transcriptionService.stopStreaming()).not.toThrow()
-    })
-
-    test('should ignore audio chunks when not streaming', () => {
-      // Don't start streaming
-      transcriptionService.forwardAudioChunk(Buffer.from('audio'))
-
-      // Should not cause any side effects
-      expect(mockGrpcClient.transcribeStream).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('Audio Processing', () => {
-    test('should accumulate audio chunks correctly', async () => {
-      mockGrpcClient.transcribeStream.mockResolvedValueOnce({
-        transcript: 'test',
-      })
-      mockDbRun.mockResolvedValue(undefined)
-
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
-      // Trigger gRPC start by adding a small chunk
-      transcriptionService.forwardAudioChunk(Buffer.from('x'))
-
-      // Add multiple chunks of different sizes
-      const chunks = [
-        Buffer.from('chunk1'),
-        Buffer.from('chunk2-longer'),
-        Buffer.from('c3'),
-      ]
-
-      chunks.forEach(chunk => {
-        transcriptionService.forwardAudioChunk(chunk)
-      })
-
-      transcriptionService.stopStreaming()
-      await waitForInteractionCreation()
-
-      // Verify correct accumulation and database save
-      expect(mockDbRun).toHaveBeenCalled()
-    })
-
-    test('should handle empty audio stream', async () => {
-      mockGrpcClient.transcribeStream.mockResolvedValueOnce({
-        transcript: 'silence detected',
-      })
-      mockDbRun.mockResolvedValue(undefined)
-
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
-      // Don't add any chunks
-      transcriptionService.stopStreaming()
-
-      // With buffered start threshold, no interaction is created
-      await new Promise(resolve => setTimeout(resolve, 50))
-      expect(mockDbRun).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('Timing and Duration', () => {
-    test('should calculate interaction duration accurately', async () => {
-      // Create a promise that resolves after a delay to simulate real transcription timing
-      let resolveTranscription: (value: { transcript: string }) => void
-      const transcriptionPromise = new Promise<{ transcript: string }>(
-        resolve => {
-          resolveTranscription = resolve
-        },
+      // Verify error coordination
+      expect(mockWindowMessenger.sendTranscriptionError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: errorMessage }),
       )
-
-      mockGrpcClient.transcribeStream.mockReturnValueOnce(transcriptionPromise)
-      mockDbRun.mockResolvedValue(undefined)
-
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
-      // Trigger gRPC start by adding a small chunk
-      transcriptionService.forwardAudioChunk(Buffer.from('x'))
-
-      // Simulate some processing time before resolving
-      await new Promise(resolve => setTimeout(resolve, 50))
-
-      // Now resolve the transcription
-      resolveTranscription!({ transcript: 'test' })
-
-      transcriptionService.stopStreaming()
-      await waitForInteractionCreation()
-
-      // Verify that mockDbRun was called and get the call details
-      expect(mockDbRun.mock.calls.length).toBeGreaterThan(0)
-      const call = mockDbRun.mock.calls[0] as any
-      expect(call).toBeDefined()
-      expect(call[1]).toBeDefined() // parameters array should exist
-
-      const durationParam = call[1][6] // duration_ms is at index 6 in the parameters array
-
-      expect(durationParam).toBeGreaterThanOrEqual(0)
-      expect(durationParam).toBeLessThan(2000)
-    })
-  })
-
-  describe('Database Error Handling', () => {
-    test('should handle database save failures gracefully', async () => {
-      mockGrpcClient.transcribeStream.mockResolvedValueOnce({
-        transcript: 'test',
-      })
-      // Mock database error
-      mockDbRun.mockRejectedValueOnce(new Error('Database error'))
-
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
-      // Trigger gRPC start by adding a small chunk
-      transcriptionService.forwardAudioChunk(Buffer.from('x'))
-      transcriptionService.stopStreaming()
-
-      // Wait for the error handling to complete
-      await new Promise(resolve => setTimeout(resolve, 50))
-
-      // Should not crash - error should be logged
-      expect(true).toBe(true) // Test passes if no exception thrown
-    })
-  })
-
-  describe('Title Generation Business Logic', () => {
-    test('should truncate long transcripts at 50 characters', async () => {
-      const longTranscript =
-        'This is a very long transcript that should be truncated because it exceeds fifty characters'
-      mockGrpcClient.transcribeStream.mockResolvedValueOnce({
-        transcript: longTranscript,
-      })
-      mockDbRun.mockResolvedValue(undefined)
-
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
-      transcriptionService.forwardAudioChunk(Buffer.from('x'))
-      // Trigger gRPC start by adding a small chunk
-      transcriptionService.forwardAudioChunk(Buffer.from('x'))
-      transcriptionService.stopStreaming()
-      await waitForInteractionCreation()
-
-      // Get the database call arguments
-      expect(mockDbRun).toHaveBeenCalled()
-      const dbCall = mockDbRun.mock.calls[0] as any
-      const titleParam = dbCall[1][2] // title is at index 2
-
-      // Title comes from the transcript provided by gRPC
-      expect(titleParam).toBe(
-        'This is a very long transcript that should be trun...',
-      )
-      expect(titleParam.length).toBe(53) // 50 + '...'
+      expect(mockInteractionManager.clearCurrentInteraction).toHaveBeenCalled()
+      expect(mockAudioStreamManager.clearInteractionAudio).toHaveBeenCalled()
     })
 
-    test('should preserve short transcripts as-is', async () => {
-      const shortTranscript = 'Short message'
-      mockGrpcClient.transcribeStream.mockResolvedValueOnce({
-        transcript: shortTranscript,
-      })
-      mockDbRun.mockResolvedValue(undefined)
+    test('should handle short audio error properly', async () => {
+      const { transcriptionService } = await import('./transcriptionService')
 
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
-      transcriptionService.forwardAudioChunk(Buffer.from('x'))
-      // Trigger gRPC start by adding a small chunk
-      transcriptionService.forwardAudioChunk(Buffer.from('x'))
-      transcriptionService.stopStreaming()
-      await waitForInteractionCreation()
-
-      const dbCall = mockDbRun.mock.calls[0] as any
-      const titleParam = dbCall[1][2]
-
-      expect(titleParam).toBe(shortTranscript)
-    })
-
-    test('should use fallback title for empty transcript', async () => {
-      mockGrpcClient.transcribeStream.mockResolvedValueOnce({
-        transcript: '',
-      })
-      mockDbRun.mockResolvedValue(undefined)
-
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
-      transcriptionService.forwardAudioChunk(Buffer.from('x'))
-      // Trigger gRPC start by adding a small chunk
-      transcriptionService.forwardAudioChunk(Buffer.from('x'))
-      transcriptionService.stopStreaming()
-      await waitForInteractionCreation()
-
-      const dbCall = mockDbRun.mock.calls[0] as any
-      const titleParam = dbCall[1][2]
-
-      expect(titleParam).toBe('Voice interaction')
-    })
-
-    test('should handle exactly 50 character transcript', async () => {
-      const exactTranscript = 'A'.repeat(50) // Exactly 50 characters
-      mockGrpcClient.transcribeStream.mockResolvedValueOnce({
-        transcript: exactTranscript,
-      })
-      mockDbRun.mockResolvedValue(undefined)
-
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
-      transcriptionService.forwardAudioChunk(Buffer.from('x'))
-      // Trigger gRPC start by adding a small chunk
-      transcriptionService.forwardAudioChunk(Buffer.from('x'))
-      transcriptionService.stopStreaming()
-      await waitForInteractionCreation()
-
-      const dbCall = mockDbRun.mock.calls[0] as any
-      const titleParam = dbCall[1][2]
-
-      expect(titleParam).toBe(exactTranscript) // Should not be truncated
-      expect(titleParam.length).toBe(50)
-    })
-  })
-
-  describe('ASR Output Calculations Business Logic', () => {
-    test('should correctly count audio chunks and calculate total bytes', async () => {
-      mockGrpcClient.transcribeStream.mockResolvedValueOnce({
-        transcript: 'test',
-      })
-      mockDbRun.mockResolvedValue(undefined)
-
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
-      // Trigger gRPC start by adding a small chunk
-      transcriptionService.forwardAudioChunk(Buffer.from('x'))
-
-      // Add chunks of known sizes
-      const chunk1 = Buffer.from('12345') // 5 bytes
-      const chunk2 = Buffer.from('abcdefgh') // 8 bytes
-      const chunk3 = Buffer.from('xy') // 2 bytes
-
-      // One tiny chunk was already sent to trigger gRPC
-      transcriptionService.forwardAudioChunk(chunk1)
-      transcriptionService.forwardAudioChunk(chunk2)
-      transcriptionService.forwardAudioChunk(chunk3)
-
-      transcriptionService.stopStreaming()
-      await waitForInteractionCreation()
-
-      // Get ASR output from database call
-      const dbCall = mockDbRun.mock.calls[0] as any
-      const asrOutputParam = JSON.parse(dbCall[1][3]) // asr_output is at index 3
-
-      // Count includes the initial trigger chunk
-      expect(asrOutputParam.audioChunkCount).toBe(4)
-      expect(asrOutputParam.totalAudioBytes).toBe(16) // 1 + 5 + 8 + 2
-    })
-
-    test('should handle zero audio chunks correctly', async () => {
-      mockGrpcClient.transcribeStream.mockResolvedValueOnce({
-        transcript: 'test',
-      })
-      mockDbRun.mockResolvedValue(undefined)
-
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
-      // Don't add any chunks; nothing should be saved
-      transcriptionService.stopStreaming()
-      await new Promise(resolve => setTimeout(resolve, 50))
-      expect(mockDbRun).not.toHaveBeenCalled()
-    })
-
-    test('should not create interaction when transcription fails due to short audio', async () => {
       mockGrpcClient.transcribeStream.mockResolvedValueOnce({
         transcript: '',
         error: {
           code: 'CLIENT_AUDIO_TOO_SHORT',
-          type: 'audio',
-          message: 'Audio file is too short for transcription.',
-          provider: 'groq',
+          message: 'Audio too short',
         },
       })
-      mockDbRun.mockResolvedValue(undefined)
 
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
-      // Do not send enough audio to trigger gRPC
-      transcriptionService.stopStreaming()
+      await transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
 
-      // No interaction should be created
-      await new Promise(resolve => setTimeout(resolve, 50))
-      expect(mockDbRun).not.toHaveBeenCalled()
-    })
+      // Wait for error handling
+      await new Promise(resolve => setTimeout(resolve, 10))
 
-    test('should include error information in ASR output when transcription fails', async () => {
-      const errorMessage = 'Transcription service unavailable'
-      mockGrpcClient.transcribeStream.mockRejectedValueOnce(
-        new Error(errorMessage),
+      // Should create interaction even for too-short audio (to save failed attempts)
+      expect(mockInteractionManager.createInteraction).toHaveBeenCalledWith(
+        '',
+        expect.any(Buffer),
+        16000,
+        'Audio too short',
       )
-      mockDbRun.mockResolvedValue(undefined)
-
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
-      // Trigger gRPC start and send one chunk
-      transcriptionService.forwardAudioChunk(Buffer.from('x'))
-      transcriptionService.forwardAudioChunk(Buffer.from('audio'))
-      transcriptionService.stopStreaming()
-      await waitForInteractionCreation()
-
-      const dbCall = mockDbRun.mock.calls[0] as any
-      const asrOutputParam = JSON.parse(dbCall[1][3])
-
-      expect(asrOutputParam.error).toBe(errorMessage)
-      expect(asrOutputParam.audioChunkCount).toBeGreaterThanOrEqual(1)
+      expect(mockTextInserter.insertText).not.toHaveBeenCalled()
+      expect(mockTraceLogger.logStep).toHaveBeenCalledWith(
+        'test-interaction-123',
+        'TRANSCRIPTION_TOO_SHORT',
+        expect.any(Object),
+      )
     })
   })
 
-  describe('Raw Audio Buffer Business Logic', () => {
-    test('should concatenate multiple audio chunks into single buffer', async () => {
-      mockGrpcClient.transcribeStream.mockResolvedValueOnce({
-        transcript: 'test',
-      })
-      mockDbRun.mockResolvedValue(undefined)
+  describe('Streaming State Management', () => {
+    test('should prevent multiple simultaneous streams', async () => {
+      // Import after mocks are established
+      const { transcriptionService } = await import('./transcriptionService')
 
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
+      mockAudioStreamManager.isCurrentlyStreaming.mockReturnValue(true)
 
-      const chunk1 = Buffer.from([1, 2, 3])
-      const chunk2 = Buffer.from([4, 5])
-      const chunk3 = Buffer.from([6, 7, 8, 9])
+      await transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
 
-      // trigger start
-      transcriptionService.forwardAudioChunk(Buffer.from([0]))
-      transcriptionService.forwardAudioChunk(chunk1)
-      transcriptionService.forwardAudioChunk(chunk2)
-      transcriptionService.forwardAudioChunk(chunk3)
-
-      transcriptionService.stopStreaming()
-      await waitForInteractionCreation()
-
-      // Get raw audio from database call
-      const dbCall = mockDbRun.mock.calls[0] as any
-      const rawAudioParam = dbCall[1][5] // raw_audio is at index 5
-
-      expect(rawAudioParam).toBeInstanceOf(Buffer)
-      expect(rawAudioParam).toEqual(Buffer.from([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]))
+      // Should not start new interaction when already streaming
+      expect(mockInteractionManager.startInteraction).not.toHaveBeenCalled()
+      expect(mockGrpcClient.transcribeStream).not.toHaveBeenCalled()
     })
 
-    test('should return null for raw audio when no chunks provided', async () => {
-      mockGrpcClient.transcribeStream.mockResolvedValueOnce({
-        transcript: 'test',
-      })
-      mockDbRun.mockResolvedValue(undefined)
+    test('should coordinate stop operations across managers', async () => {
+      // Import after mocks are established
+      const { transcriptionService } = await import('./transcriptionService')
 
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
-      // Don't add any chunks
       transcriptionService.stopStreaming()
-      // Nothing saved when no audio buffered
-      await new Promise(resolve => setTimeout(resolve, 50))
-      expect(mockDbRun).not.toHaveBeenCalled()
+
+      expect(mockAudioStreamManager.stopStreaming).toHaveBeenCalled()
+      // Note: clearCurrentInteraction is no longer called in stopStreaming to preserve ID for database save
+      expect(
+        mockInteractionManager.clearCurrentInteraction,
+      ).not.toHaveBeenCalled()
     })
 
-    test('should maintain audio data integrity during concatenation', async () => {
-      mockGrpcClient.transcribeStream.mockResolvedValueOnce({
-        transcript: 'test',
-      })
-      mockDbRun.mockResolvedValue(undefined)
+    test('should forward audio chunks to audio manager', async () => {
+      const { transcriptionService } = await import('./transcriptionService')
 
-      transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
+      const audioChunk = Buffer.from('audio-data')
+      transcriptionService.forwardAudioChunk(audioChunk)
 
-      // Use binary data that could be corrupted if concatenation is wrong
-      const chunk1 = Buffer.from([0xff, 0x00, 0xff])
-      const chunk2 = Buffer.from([0x00, 0xff, 0x00])
-
-      transcriptionService.forwardAudioChunk(Buffer.from([0]))
-      transcriptionService.forwardAudioChunk(chunk1)
-      transcriptionService.forwardAudioChunk(chunk2)
-
-      transcriptionService.stopStreaming()
-      await waitForInteractionCreation()
-
-      const dbCall = mockDbRun.mock.calls[0] as any
-      const rawAudioParam = dbCall[1][5]
-
-      expect(rawAudioParam).toEqual(
-        Buffer.from([0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00]),
+      expect(mockAudioStreamManager.addAudioChunk).toHaveBeenCalledWith(
+        audioChunk,
       )
-      expect(rawAudioParam.length).toBe(7)
+    })
+  })
+
+  describe('Audio Configuration', () => {
+    test('should delegate audio configuration to audio manager', async () => {
+      const { transcriptionService } = await import('./transcriptionService')
+
+      const config = { sampleRate: 44100, channels: 2 }
+      transcriptionService.setAudioConfig(config)
+
+      expect(mockAudioStreamManager.setAudioConfig).toHaveBeenCalledWith(config)
+    })
+
+    test('should delegate window management to window messenger', async () => {
+      const { transcriptionService } = await import('./transcriptionService')
+
+      const mockWindow = { isDestroyed: () => false } as any
+      transcriptionService.setMainWindow(mockWindow)
+
+      expect(mockWindowMessenger.setMainWindow).toHaveBeenCalledWith(mockWindow)
+    })
+  })
+
+  describe('Grammar Processing Integration', () => {
+    test('should apply grammar rules with cursor context', async () => {
+      const { transcriptionService } = await import('./transcriptionService')
+      const mockTranscript = 'hello world'
+      const mockContext = 'Some text before. '
+      mockGetCursorContext.mockResolvedValueOnce(mockContext)
+      mockGrpcClient.transcribeStream.mockResolvedValueOnce({
+        transcript: mockTranscript,
+      })
+
+      await transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
+
+      // Wait for processing
+      await new Promise(resolve => setTimeout(resolve, 10))
+
+      expect(mockGetCursorContext).toHaveBeenCalledWith(4) // contextLength
+      expect(mockGrammarRulesService.setCaseFirstWord).toHaveBeenCalledWith(
+        mockContext,
+        mockTranscript,
+      )
+      expect(
+        mockGrammarRulesService.addLeadingSpaceIfNeeded,
+      ).toHaveBeenCalledWith(
+        mockContext,
+        mockTranscript, // or the result of capitalization
+      )
+    })
+  })
+
+  describe('Interaction Data Flow', () => {
+    test('should pass correct data between managers', async () => {
+      const { transcriptionService } = await import('./transcriptionService')
+      const mockTranscript = 'test transcript'
+      const mockAudioBuffer = Buffer.from('audio-data')
+      const mockSampleRate = 16000
+
+      mockAudioStreamManager.getInteractionAudioBuffer.mockReturnValue(
+        mockAudioBuffer,
+      )
+      mockAudioStreamManager.getCurrentSampleRate.mockReturnValue(
+        mockSampleRate,
+      )
+      mockGrpcClient.transcribeStream.mockResolvedValueOnce({
+        transcript: mockTranscript,
+      })
+
+      await transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
+
+      // Wait for processing
+      await new Promise(resolve => setTimeout(resolve, 10))
+
+      expect(mockInteractionManager.createInteraction).toHaveBeenCalledWith(
+        mockTranscript,
+        mockAudioBuffer,
+        mockSampleRate,
+        undefined, // no error
+      )
+    })
+  })
+
+  describe('Trace Logging Integration', () => {
+    test('should log interaction lifecycle events', async () => {
+      const { transcriptionService } = await import('./transcriptionService')
+      mockGrpcClient.transcribeStream.mockResolvedValueOnce({
+        transcript: 'test',
+      })
+
+      await transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
+
+      // Wait for processing
+      await new Promise(resolve => setTimeout(resolve, 10))
+
+      expect(mockTraceLogger.logStep).toHaveBeenCalledWith(
+        'test-interaction-123',
+        'TRANSCRIPTION_START',
+        expect.any(Object),
+      )
+      expect(mockTraceLogger.logStep).toHaveBeenCalledWith(
+        'test-interaction-123',
+        'TRANSCRIPTION_SUCCESS',
+        expect.any(Object),
+      )
+      expect(mockTraceLogger.endInteraction).toHaveBeenCalledWith(
+        'test-interaction-123',
+        'TRANSCRIPTION_COMPLETED',
+        expect.any(Object),
+      )
+    })
+  })
+
+  describe('Alternative Methods', () => {
+    test('stopTranscription should coordinate cleanup', async () => {
+      const { transcriptionService } = await import('./transcriptionService')
+      transcriptionService.stopTranscription()
+
+      expect(mockAudioStreamManager.stopStreaming).toHaveBeenCalled()
+      // Note: clearCurrentInteraction is no longer called in stopTranscription to preserve ID for database save
+      expect(
+        mockInteractionManager.clearCurrentInteraction,
+      ).not.toHaveBeenCalled()
+      expect(mockAudioStreamManager.clearInteractionAudio).toHaveBeenCalled()
+    })
+
+    test('handleAudioChunk should delegate to forwardAudioChunk', async () => {
+      const { transcriptionService } = await import('./transcriptionService')
+      const chunk = Buffer.from('audio')
+      transcriptionService.handleAudioChunk(chunk)
+
+      expect(mockAudioStreamManager.addAudioChunk).toHaveBeenCalledWith(chunk)
     })
   })
 })

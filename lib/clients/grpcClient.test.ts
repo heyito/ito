@@ -242,11 +242,6 @@ describe('GrpcClient Business Logic Tests', () => {
       )
 
       expect(result.transcript).toBe(transcript)
-      expect(mockSetFocusedText).toHaveBeenCalledWith(transcript)
-      expect(mockElectronWindow.webContents.send).toHaveBeenCalledWith(
-        'transcription-result',
-        { transcript },
-      )
     })
 
     test('should include metadata in transcription', async () => {
@@ -293,50 +288,6 @@ describe('GrpcClient Business Logic Tests', () => {
       expect(
         grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE),
       ).rejects.toThrow('Transcription failed')
-      expect(mockElectronWindow.webContents.send).toHaveBeenCalledWith(
-        'transcription-error',
-        error,
-      )
-    })
-
-    test('should not set focused text for empty transcript', async () => {
-      const { grpcClient } = await import('./grpcClient')
-      grpcClient.setAuthToken('test-token')
-
-      mockGrpcClientMethods.transcribeStream.mockResolvedValueOnce({
-        transcript: '',
-      })
-
-      const audioStream = (async function* () {
-        yield { data: new Uint8Array([1, 2, 3]) } as any
-      })()
-
-      await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
-
-      expect(mockSetFocusedText).not.toHaveBeenCalled()
-    })
-
-    test('should not set focused text for error', async () => {
-      const { grpcClient } = await import('./grpcClient')
-      grpcClient.setAuthToken('test-token')
-
-      mockGrpcClientMethods.transcribeStream.mockResolvedValueOnce({
-        transcript: 'Some transcript',
-        error: {
-          code: 'CLIENT_NO_SPEECH_DETECTED',
-          type: 'audio',
-          message: 'No speech detected in audio.',
-          provider: 'groq',
-        },
-      })
-
-      const audioStream = (async function* () {
-        yield { data: new Uint8Array([1, 2, 3]) } as any
-      })()
-
-      await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
-
-      expect(mockSetFocusedText).not.toHaveBeenCalled()
     })
 
     test('should handle vocabulary fetch errors during transcription', async () => {
@@ -353,80 +304,6 @@ describe('GrpcClient Business Logic Tests', () => {
 
       await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
       expect(mockGrpcClientMethods.transcribeStream).toHaveBeenCalled()
-    })
-
-    test('should handle window operations when window is destroyed', async () => {
-      const { grpcClient } = await import('./grpcClient')
-      grpcClient.setAuthToken('test-token')
-      grpcClient.setMainWindow(mockElectronWindow)
-
-      mockElectronWindow.isDestroyed.mockReturnValue(true)
-
-      const transcript = 'Test transcript'
-      mockGrpcClientMethods.transcribeStream.mockResolvedValueOnce({
-        transcript,
-      })
-
-      const audioStream = (async function* () {
-        yield { data: new Uint8Array([1, 2, 3]) } as any
-      })()
-
-      await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
-
-      expect(mockSetFocusedText).toHaveBeenCalledWith(transcript)
-      // Should not try to send to destroyed window
-      expect(mockElectronWindow.webContents.send).not.toHaveBeenCalled()
-    })
-
-    test('should handle webContents destroyed gracefully', async () => {
-      const { grpcClient } = await import('./grpcClient')
-      grpcClient.setAuthToken('test-token')
-
-      const mockWindowWithDestroyedWebContents = {
-        ...mockElectronWindow,
-        isDestroyed: mock(() => false),
-        webContents: {
-          ...mockElectronWindow.webContents,
-          isDestroyed: mock(() => true),
-        },
-      }
-      grpcClient.setMainWindow(mockWindowWithDestroyedWebContents)
-
-      const transcript = 'Test transcript'
-      mockGrpcClientMethods.transcribeStream.mockResolvedValueOnce({
-        transcript,
-      })
-
-      const audioStream = (async function* () {
-        yield { data: new Uint8Array([1, 2, 3]) } as any
-      })()
-
-      await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
-
-      expect(mockSetFocusedText).toHaveBeenCalledWith(transcript)
-      // Should not try to send to window with destroyed webContents
-      expect(
-        mockWindowWithDestroyedWebContents.webContents.send,
-      ).not.toHaveBeenCalled()
-    })
-
-    test('should handle null window gracefully', async () => {
-      const { grpcClient } = await import('./grpcClient')
-      grpcClient.setAuthToken('test-token')
-      grpcClient.setMainWindow(null as any)
-
-      const transcript = 'Test transcript'
-      mockGrpcClientMethods.transcribeStream.mockResolvedValueOnce({
-        transcript,
-      })
-
-      const audioStream = (async function* () {
-        yield { data: new Uint8Array([1, 2, 3]) } as any
-      })()
-
-      await grpcClient.transcribeStream(audioStream, ItoMode.TRANSCRIBE)
-
-      expect(mockSetFocusedText).toHaveBeenCalledWith(transcript)
     })
   })
 
@@ -460,7 +337,6 @@ describe('GrpcClient Business Logic Tests', () => {
 
       // Mock authentication error
       const authError = new Error('Unauthenticated')
-      authError.code = 'UNAUTHENTICATED'
       mockGrpcClientMethods.transcribeStream.mockRejectedValueOnce(authError)
 
       const audioStream = (async function* () {

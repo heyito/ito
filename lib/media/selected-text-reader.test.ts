@@ -301,9 +301,6 @@ describe('Selected Text Reader Functions', () => {
     const result = await getSelectedTextString(1000)
 
     expect(result).toBe('hello world')
-    expect(mockLog.debug).toHaveBeenCalledWith(
-      expect.stringContaining('[SelectedTextService] Sent command:'),
-    )
   })
 
   test('getSelectedTextString should return null on failure', async () => {

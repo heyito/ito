@@ -27,12 +27,6 @@ Main development branch: `dev`
 - Type check: `bun type-check`
 - Format: `bun format` (check) or `bun format:fix` (fix)
 
-## Recent Changes
-
-- Command Mode UI implementation
-- Bug fixes for lastSyncedOn and main window interactions
-- Test failures related to prompt suffix removal
-
 ## Code Style Preferences
 
 - Keep code as simple as possible
@@ -44,6 +38,7 @@ Main development branch: `dev`
 ## Tech Stack
 
 - TypeScript
+- bun
 - gRPC with Protocol Buffers
 - React (for UI components)
 - Various LLM providers (Groq, etc.)

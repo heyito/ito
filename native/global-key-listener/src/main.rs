@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::io::{self, BufRead, Write};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 mod key_codes;
 

@@ -169,7 +169,8 @@ class GrpcClient {
       headers.set('mode', mode.toString())
 
       try {
-        if (mode === ItoMode.EDIT) {
+        // We currently only support context gathering on mac
+        if (mode === ItoMode.EDIT && process?.platform === 'darwin') {
           const contextText = await getSelectedTextString(10000)
           if (contextText && contextText.trim().length > 0) {
             headers.set('context-text', flattenHeaderValue(contextText))

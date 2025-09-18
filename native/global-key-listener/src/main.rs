@@ -5,8 +5,6 @@ use serde_json::json;
 use std::io::{self, BufRead, Write};
 use std::thread;
 use std::time::{Duration, Instant};
-use std::fs::OpenOptions;
-use std::sync::Mutex;
 
 mod key_codes;
 
@@ -19,55 +17,37 @@ enum Command {
     Unblock { key: String },
     #[serde(rename = "get_blocked")]
     GetBlocked,
-    #[serde(rename = "set_hotkey_active")]
-    SetHotkeyActive,
-    #[serde(rename = "set_hotkey_inactive")]
-    SetHotkeyInactive,
 }
 
 // Global state for blocked keys
 static mut BLOCKED_KEYS: Vec<String> = Vec::new();
 
-// Global state for hotkey activity (controlled by Electron)
-static mut HOTKEY_ACTIVE: bool = false;
-
-// Global log file for debugging
-lazy_static::lazy_static! {
-    static ref LOG_FILE: Mutex<std::fs::File> = {
-        let log_path = std::env::current_dir()
-            .unwrap_or_else(|_| std::path::PathBuf::from("."))
-            .join("global-key-listener-debug.log");
-
-        let file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&log_path)
-            .expect("Failed to create log file");
-
-        println!("🚀 Debug log file created at: {}", log_path.display());
-        Mutex::new(file)
-    };
-}
-
 // Global state for tracking modifier keys to detect Cmd+C/Ctrl+C combinations
 static mut CMD_PRESSED: bool = false;
 static mut CTRL_PRESSED: bool = false;
+static mut COPY_IN_PROGRESS: bool = false;
 static mut SHIFT_PRESSED: bool = false;
 static mut TEXT_SELECTION_IN_PROGRESS: bool = false;
 static mut LAST_ARROW_KEY_TIME: Option<std::time::Instant> = None;
+static mut COPY_OPERATION_END_TIME: Option<std::time::Instant> = None;
 
-// Helper function to write to log file
-fn log_to_file(message: &str) {
-    if let Ok(mut file) = LOG_FILE.lock() {
-        let timestamp = Utc::now().to_rfc3339();
-        let _ = writeln!(file, "[{}] {}", timestamp, message);
-        let _ = file.flush();
+// Helper function to check if we're still in the copy protection window
+fn is_copy_protection_active() -> bool {
+    unsafe {
+        if COPY_IN_PROGRESS {
+            return true;
+        }
+
+        // Also protect for 100ms after copy operation ends (reduced to avoid blocking legitimate paste operations)
+        if let Some(end_time) = COPY_OPERATION_END_TIME {
+            return Instant::now().duration_since(end_time) < Duration::from_millis(100);
+        }
+
+        false
     }
 }
 
 fn main() {
-    log_to_file("🚀 Global key listener starting up...");
-
     // Spawn a thread to read commands from stdin
     thread::spawn(|| {
         let stdin = io::stdin();
@@ -122,32 +102,6 @@ fn handle_command(command: Command) {
                 })
             );
         },
-        Command::SetHotkeyActive => unsafe {
-            HOTKEY_ACTIVE = true;
-            log_to_file("✅ COMMAND: SetHotkeyActive - Hotkey is now ACTIVE, will ignore copy operations");
-            #[cfg(target_os = "windows")]
-            {
-                let debug_json = json!({
-                    "type": "debug_log",
-                    "message": "Hotkey set to ACTIVE - will ignore copy operations"
-                });
-                println!("{}", debug_json);
-                io::stdout().flush().unwrap();
-            }
-        },
-        Command::SetHotkeyInactive => unsafe {
-            HOTKEY_ACTIVE = false;
-            log_to_file("❌ COMMAND: SetHotkeyInactive - Hotkey is now INACTIVE, will process copy operations normally");
-            #[cfg(target_os = "windows")]
-            {
-                let debug_json = json!({
-                    "type": "debug_log",
-                    "message": "Hotkey set to INACTIVE - will process copy operations normally"
-                });
-                println!("{}", debug_json);
-                io::stdout().flush().unwrap();
-            }
-        },
     }
     io::stdout().flush().unwrap();
 }
@@ -158,38 +112,54 @@ fn callback(event: Event) -> Option<Event> {
             let key_name = format!("{:?}", key);
             let should_block = unsafe { BLOCKED_KEYS.contains(&key_name) };
 
-            // Log ALL key events to file for debugging
-            log_to_file(&format!("⬇️ KEY PRESS: {:?} | HOTKEY_ACTIVE={} | CTRL_PRESSED={} | CMD_PRESSED={} | should_block={}",
-                key, unsafe { HOTKEY_ACTIVE }, unsafe { CTRL_PRESSED }, unsafe { CMD_PRESSED }, should_block));
-
             // Debug: Log ALL key press events on Windows to track everything
             #[cfg(target_os = "windows")]
             {
                 let debug_json = json!({
                     "type": "debug_log",
-                    "message": format!("KEY PRESS: {:?} | HOTKEY_ACTIVE={} | CTRL_PRESSED={} | CMD_PRESSED={} | should_block={}",
-                        key, unsafe { HOTKEY_ACTIVE }, unsafe { CTRL_PRESSED }, unsafe { CMD_PRESSED }, should_block)
+                    "message": format!("KEY PRESS: {:?} | CTRL_PRESSED={} | CMD_PRESSED={} | COPY_IN_PROGRESS={} | should_block={}",
+                        key, unsafe { CTRL_PRESSED }, unsafe { CMD_PRESSED }, unsafe { COPY_IN_PROGRESS }, should_block)
                 });
                 println!("{}", debug_json);
                 io::stdout().flush().unwrap();
             }
 
-            // If hotkey is active, ignore copy operations (don't send to hotkey detection)
-            let is_copy_operation = (matches!(key, Key::KeyC) || matches!(key, Key::KeyV)) && unsafe { CMD_PRESSED || CTRL_PRESSED };
-            let should_ignore_copy = unsafe { HOTKEY_ACTIVE } && is_copy_operation;
+            // Check for copy/paste combinations before updating modifier states
+            // Ignore Cmd+C/Ctrl+C (copy) and Cmd+V/Ctrl+V (paste) combinations to prevent feedback loops
+            if (matches!(key, Key::KeyC) || matches!(key, Key::KeyV)) && unsafe { CMD_PRESSED || CTRL_PRESSED } {
+                // Send debug log through stdout so Electron can see it
+                #[cfg(target_os = "windows")]
+                let debug_json = json!({
+                    "type": "debug_log",
+                    "message": format!("Detected Ctrl+{:?} on Windows, ignoring to prevent feedback loop (CMD_PRESSED={}, CTRL_PRESSED={})", key, unsafe { CMD_PRESSED }, unsafe { CTRL_PRESSED })
+                });
+                #[cfg(not(target_os = "windows"))]
+                let debug_json = json!({
+                    "type": "debug_log",
+                    "message": format!("Detected Ctrl+{:?}/Cmd+{:?}, ignoring to prevent feedback loop", key, key)
+                });
+                println!("{}", debug_json);
+                io::stdout().flush().unwrap();
 
-            if should_ignore_copy {
-                log_to_file(&format!("🚫 HOTKEY ACTIVE: Ignoring Ctrl+{:?} copy operation (not sending to hotkey detection)", key));
+                unsafe {
+                    COPY_IN_PROGRESS = true;
+                }
+                // Still pass through the event to the system but don't output it to our listener
+                return Some(event);
+            }
+
+            // Ignore Control key events during copy operations to prevent interference
+            if matches!(key, Key::ControlLeft | Key::ControlRight) && is_copy_protection_active() {
                 #[cfg(target_os = "windows")]
                 {
                     let debug_json = json!({
                         "type": "debug_log",
-                        "message": format!("Hotkey is ACTIVE - ignoring Ctrl+{:?} copy operation (not sending to hotkey detection)", key)
+                        "message": format!("Ignoring Control key PRESS during copy protection window: {:?} (COPY_IN_PROGRESS={}, protection_active={})", key, unsafe { COPY_IN_PROGRESS }, is_copy_protection_active())
                     });
                     println!("{}", debug_json);
                     io::stdout().flush().unwrap();
                 }
-                // Don't send to hotkey detection, but always pass to OS
+                // Don't update CTRL_PRESSED state and don't output this event
                 return Some(event);
             }
 
@@ -252,13 +222,6 @@ fn callback(event: Event) -> Option<Event> {
                 }
             }
 
-            // Log copy operations that are being sent to hotkey detection
-            if is_copy_operation {
-                log_to_file(&format!("📋 HOTKEY INACTIVE: Sending Ctrl+{:?} to hotkey detection (normal behavior)", key));
-            }
-
-            // Always send to hotkey detection (copy operations are handled above)
-            log_to_file(&format!("📤 SENDING TO HOTKEY: keydown {:?}", key));
             output_event("keydown", &key);
 
             match should_block {
@@ -270,38 +233,56 @@ fn callback(event: Event) -> Option<Event> {
             let key_name = format!("{:?}", key);
             let should_block = unsafe { BLOCKED_KEYS.contains(&key_name) };
 
-            // Log ALL key events to file for debugging
-            log_to_file(&format!("⬆️ KEY RELEASE: {:?} | HOTKEY_ACTIVE={} | CTRL_PRESSED={} | CMD_PRESSED={} | should_block={}",
-                key, unsafe { HOTKEY_ACTIVE }, unsafe { CTRL_PRESSED }, unsafe { CMD_PRESSED }, should_block));
-
             // Debug: Log ALL key release events on Windows to track everything
             #[cfg(target_os = "windows")]
             {
                 let debug_json = json!({
                     "type": "debug_log",
-                    "message": format!("KEY RELEASE: {:?} | HOTKEY_ACTIVE={} | CTRL_PRESSED={} | CMD_PRESSED={} | should_block={}",
-                        key, unsafe { HOTKEY_ACTIVE }, unsafe { CTRL_PRESSED }, unsafe { CMD_PRESSED }, should_block)
+                    "message": format!("KEY RELEASE: {:?} | CTRL_PRESSED={} | CMD_PRESSED={} | COPY_IN_PROGRESS={} | should_block={}",
+                        key, unsafe { CTRL_PRESSED }, unsafe { CMD_PRESSED }, unsafe { COPY_IN_PROGRESS }, should_block)
                 });
                 println!("{}", debug_json);
                 io::stdout().flush().unwrap();
             }
 
-            // If hotkey is active, ignore copy operations (don't send to hotkey detection)
-            let is_copy_operation = (matches!(key, Key::KeyC) || matches!(key, Key::KeyV)) && unsafe { CMD_PRESSED || CTRL_PRESSED };
-            let should_ignore_copy = unsafe { HOTKEY_ACTIVE } && is_copy_operation;
+            // Check for C/V key release while copy/paste is in progress or modifiers are still held
+            if matches!(key, Key::KeyC) || matches!(key, Key::KeyV) {
+                if unsafe { COPY_IN_PROGRESS || CMD_PRESSED || CTRL_PRESSED } {
+                    // Send debug log for C/V key release during copy/paste operation
+                    #[cfg(target_os = "windows")]
+                    let debug_json = json!({
+                        "type": "debug_log",
+                        "message": format!("{:?} key RELEASE during copy/paste operation - ignoring (COPY_IN_PROGRESS={}, CMD_PRESSED={}, CTRL_PRESSED={})", key, unsafe { COPY_IN_PROGRESS }, unsafe { CMD_PRESSED }, unsafe { CTRL_PRESSED })
+                    });
+                    #[cfg(not(target_os = "windows"))]
+                    let debug_json = json!({
+                        "type": "debug_log",
+                        "message": format!("{:?} key RELEASE during copy/paste operation - ignoring", key)
+                    });
+                    println!("{}", debug_json);
+                    io::stdout().flush().unwrap();
 
-            if should_ignore_copy {
-                log_to_file(&format!("🚫 HOTKEY ACTIVE: Ignoring Ctrl+{:?} RELEASE copy operation (not sending to hotkey detection)", key));
+                    unsafe {
+                        COPY_IN_PROGRESS = false;
+                        COPY_OPERATION_END_TIME = Some(Instant::now());
+                    }
+                    // Don't output this C key release event
+                    return Some(event);
+                }
+            }
+
+            // Ignore Control key release events during copy operations to prevent interference
+            if matches!(key, Key::ControlLeft | Key::ControlRight) && is_copy_protection_active() {
                 #[cfg(target_os = "windows")]
                 {
                     let debug_json = json!({
                         "type": "debug_log",
-                        "message": format!("Hotkey is ACTIVE - ignoring Ctrl+{:?} RELEASE copy operation (not sending to hotkey detection)", key)
+                        "message": format!("Ignoring Control key RELEASE during copy protection window: {:?} (COPY_IN_PROGRESS={}, protection_active={})", key, unsafe { COPY_IN_PROGRESS }, is_copy_protection_active())
                     });
                     println!("{}", debug_json);
                     io::stdout().flush().unwrap();
                 }
-                // Don't send to hotkey detection, but always pass to OS
+                // Don't update CTRL_PRESSED state and don't output this event
                 return Some(event);
             }
 
@@ -346,13 +327,6 @@ fn callback(event: Event) -> Option<Event> {
                 }
             }
 
-            // Log copy operations that are being sent to hotkey detection
-            if is_copy_operation {
-                log_to_file(&format!("📋 HOTKEY INACTIVE: Sending Ctrl+{:?} RELEASE to hotkey detection (normal behavior)", key));
-            }
-
-            // Always send to hotkey detection (copy operations are handled above)
-            log_to_file(&format!("📤 SENDING TO HOTKEY: keyup {:?}", key));
             output_event("keyup", &key);
 
             // CRITICAL: Always allow key release events to reach the OS
@@ -373,8 +347,8 @@ fn output_event(event_type: &str, key: &Key) {
     {
         let debug_json = json!({
             "type": "debug_log",
-            "message": format!("OUTPUTTING to keyboard.ts: {} {:?} | CTRL_PRESSED={} | HOTKEY_ACTIVE={}",
-                event_type, key, unsafe { CTRL_PRESSED }, unsafe { HOTKEY_ACTIVE })
+            "message": format!("OUTPUTTING to keyboard.ts: {} {:?} | CTRL_PRESSED={} | COPY_IN_PROGRESS={}",
+                event_type, key, unsafe { CTRL_PRESSED }, unsafe { COPY_IN_PROGRESS })
         });
         println!("{}", debug_json);
         io::stdout().flush().unwrap();

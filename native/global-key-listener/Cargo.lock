@@ -259,7 +259,6 @@ dependencies = [
  "core-foundation 0.9.4",
  "core-graphics 0.22.3",
  "evdev",
- "lazy_static",
  "rdev",
  "serde",
  "serde_json",

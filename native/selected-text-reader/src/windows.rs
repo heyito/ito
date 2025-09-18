@@ -1,148 +1,118 @@
-use std::fs::OpenOptions;
-use std::io::Write;
-use chrono::Utc;
+use arboard::Clipboard;
+use enigo::{Enigo, Key, Direction, Settings, Keyboard};
+use std::thread;
+use std::time::Duration;
 
-#[cfg(target_os = "windows")]
-use windows::{
-    core::*,
-    Win32::System::Com::*,
-    Win32::UI::Accessibility::*,
-};
+pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
+    let mut clipboard = Clipboard::new().map_err(|e| format!("Clipboard init failed: {}", e))?;
 
-// Helper function to write to log file
-fn log_to_file(message: &str) {
-    let log_path = std::env::current_dir()
-        .unwrap_or_else(|_| std::path::PathBuf::from("."))
-        .join("selected-text-reader-debug.log");
+    // Store original clipboard contents
+    let original_clipboard = clipboard.get_text().unwrap_or_default();
 
-    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_path) {
-        let timestamp = Utc::now().to_rfc3339();
-        let _ = writeln!(file, "[{}] {}", timestamp, message);
-        let _ = file.flush();
+    // Clear clipboard to detect if copy worked
+    clipboard.clear().map_err(|e| format!("Clipboard clear failed: {}", e))?;
+
+    // Use Ctrl+C directly - this works with existing guard rails in global-key-listener
+    copy_selected_text_enigo()?;
+
+    // Small delay for copy operation (reduced for better responsiveness)
+    thread::sleep(Duration::from_millis(50));
+
+    // Get the copied text from clipboard
+    let selected_text = clipboard.get_text().unwrap_or_default();
+
+    // Always restore original clipboard
+    let _ = clipboard.set_text(original_clipboard);
+
+    Ok(selected_text)
+}
+
+// Use enigo for native keyboard input (Ctrl+C)
+fn copy_selected_text_enigo() -> Result<(), Box<dyn std::error::Error>> {
+    let settings = Settings::default();
+    let mut enigo = Enigo::new(&settings).map_err(|e| format!("Failed to create Enigo: {:?}", e))?;
+
+    // Use standard Ctrl+C (enigo 0.3.0 uses Key::Control)
+    enigo.key(Key::Control, Direction::Press).map_err(|e| format!("Failed to press Ctrl: {:?}", e))?;
+    thread::sleep(Duration::from_millis(10));
+    enigo.key(Key::Unicode('c'), Direction::Click).map_err(|e| format!("Failed to click C: {:?}", e))?;
+    thread::sleep(Duration::from_millis(10));
+    enigo.key(Key::Control, Direction::Release).map_err(|e| format!("Failed to release Ctrl: {:?}", e))?;
+
+    Ok(())
+}
+
+// Last resort: PowerShell
+fn copy_selected_text_powershell() -> Result<(), Box<dyn std::error::Error>> {
+    use std::process::Command;
+
+    Command::new("powershell")
+        .args(&["-Command", "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^c')"])
+        .output()?;
+
+    Ok(())
+}
+
+pub fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::error::Error>> {
+    let mut clipboard = Clipboard::new().map_err(|e| format!("Clipboard init failed: {}", e))?;
+
+    // Store original clipboard contents
+    let original_clipboard = clipboard.get_text().unwrap_or_default();
+
+    // Clear clipboard
+    clipboard.clear().map_err(|e| format!("Clipboard clear failed: {}", e))?;
+
+    // Select previous context_length characters using enigo
+    let settings = Settings::default();
+    let mut enigo = Enigo::new(&settings).map_err(|e| format!("Failed to create Enigo: {:?}", e))?;
+
+    // Hold shift and press left arrow context_length times
+    enigo.key(Key::Shift, Direction::Press).map_err(|e| format!("Failed to press Shift: {:?}", e))?;
+    for _ in 0..context_length {
+        enigo.key(Key::LeftArrow, Direction::Click).map_err(|e| format!("Failed to click Left Arrow: {:?}", e))?;
+        thread::sleep(Duration::from_millis(1));
     }
-}
+    enigo.key(Key::Shift, Direction::Release).map_err(|e| format!("Failed to release Shift: {:?}", e))?;
 
-// Use UI Automation API only (no keyboard simulation)
-pub fn get_selected_text() -> std::result::Result<String, Box<dyn std::error::Error>> {
-    get_selected_text_ui_automation()
-}
+    // Small delay to ensure selection is complete
+    thread::sleep(Duration::from_millis(10));
 
-#[cfg(target_os = "windows")]
-fn get_selected_text_ui_automation() -> std::result::Result<String, Box<dyn std::error::Error>> {
-    log_to_file("🔍 Starting UI Automation selected text reading");
+    // Copy the selection using Ctrl+C only
+    copy_selected_text_enigo()?;
 
-    unsafe {
-        // Initialize COM
-        log_to_file("⚙️ Initializing COM");
-        let com_result = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
-        if com_result.is_err() {
-            log_to_file(&format!("❌ COM initialization failed: {:?}", com_result));
-            return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("COM initialization failed: {:?}", com_result))));
+    // Wait for clipboard to update
+    thread::sleep(Duration::from_millis(25));
+
+    // Get the copied text
+    let context_text = clipboard.get_text().unwrap_or_default();
+
+    // Restore cursor position by moving right
+    let chars_to_restore = std::cmp::min(context_text.chars().count(), context_length);
+    if chars_to_restore > 0 {
+        enigo.key(Key::Shift, Direction::Press).map_err(|e| format!("Failed to press Shift for restore: {:?}", e))?;
+        for _ in 0..chars_to_restore {
+            enigo.key(Key::RightArrow, Direction::Click).map_err(|e| format!("Failed to click Right Arrow: {:?}", e))?;
+            thread::sleep(Duration::from_millis(1));
         }
-        log_to_file("✅ COM initialized successfully");
-
-        // Create UI Automation instance
-        log_to_file("⚙️ Creating UI Automation instance");
-        let automation: IUIAutomation = match CoCreateInstance(&CUIAutomation, None, CLSCTX_INPROC_SERVER) {
-            Ok(a) => {
-                log_to_file("✅ UI Automation instance created");
-                a
-            },
-            Err(e) => {
-                log_to_file(&format!("❌ Failed to create UI Automation instance: {:?}", e));
-                CoUninitialize();
-                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to create UI Automation instance: {:?}", e))));
-            }
-        };
-
-        // Get the focused element
-        log_to_file("🎯 Getting focused element");
-        let focused_element = match automation.GetFocusedElement() {
-            Ok(element) => {
-                log_to_file("✅ Focused element retrieved");
-                element
-            },
-            Err(e) => {
-                log_to_file(&format!("❌ Failed to get focused element: {:?}", e));
-                CoUninitialize();
-                return Err(format!("Failed to get focused element: {:?}", e).into());
-            }
-        };
-
-        // Try to get selection pattern
-        log_to_file("🔍 Trying selection pattern");
-        if let Ok(selection_pattern) = focused_element.GetCurrentPattern(UIA_SelectionPatternId) {
-            log_to_file("✅ Selection pattern found");
-            let selection: IUIAutomationSelectionPattern = selection_pattern.cast().map_err(|e| format!("Failed to cast to selection pattern: {:?}", e))?;
-            let selections = selection.GetCurrentSelection().map_err(|e| format!("Failed to get current selection: {:?}", e))?;
-            let selection_count = selections.Length().map_err(|e| format!("Failed to get selection count: {:?}", e))?;
-            log_to_file(&format!("📊 Found {} selections", selection_count));
-
-            let mut selected_text = String::new();
-            for i in 0..selection_count {
-                log_to_file(&format!("🔍 Processing selection {}", i));
-                if let Ok(element) = selections.GetElement(i) {
-                    if let Ok(text_pattern) = element.GetCurrentPattern(UIA_TextPatternId) {
-                        log_to_file("✅ Text pattern found on selection element");
-                        let text: IUIAutomationTextPattern = text_pattern.cast().map_err(|e| format!("Failed to cast to text pattern: {:?}", e))?;
-                        let selection_ranges = text.GetSelection().map_err(|e| format!("Failed to get text selection: {:?}", e))?;
-                        let range_count = selection_ranges.Length().map_err(|e| format!("Failed to get range count: {:?}", e))?;
-                        log_to_file(&format!("📊 Found {} text ranges", range_count));
-
-                        for j in 0..range_count {
-                            if let Ok(range) = selection_ranges.GetElement(j) {
-                                if let Ok(text_value) = range.GetText(-1) {
-                                    let text_str = text_value.to_string();
-                                    log_to_file(&format!("📝 Found text: '{}'", text_str));
-                                    selected_text.push_str(&text_str);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if !selected_text.is_empty() {
-                log_to_file(&format!("✅ Selection pattern successful, returning: '{}'", selected_text));
-                CoUninitialize();
-                return Ok(selected_text);
-            }
-            log_to_file("⚠️ Selection pattern found but no text extracted");
-        } else {
-            log_to_file("❌ No selection pattern available");
-        }
-
-        // Try Value pattern for text inputs
-        log_to_file("🔍 Trying value pattern");
-        if let Ok(value_pattern) = focused_element.GetCurrentPattern(UIA_ValuePatternId) {
-            log_to_file("✅ Value pattern found");
-            let value: IUIAutomationValuePattern = value_pattern.cast().map_err(|e| format!("Failed to cast to value pattern: {:?}", e))?;
-            if let Ok(text) = value.CurrentValue() {
-                let text_str = text.to_string();
-                log_to_file(&format!("✅ Value pattern successful, returning: '{}'", text_str));
-                CoUninitialize();
-                return Ok(text_str);
-            } else {
-                log_to_file("❌ Value pattern found but no text available");
-            }
-        } else {
-            log_to_file("❌ No value pattern available");
-        }
-
-        log_to_file("❌ No text found via any UI Automation pattern");
-        CoUninitialize();
-        Err("No selected text found via UI Automation".into())
+        enigo.key(Key::Shift, Direction::Release).map_err(|e| format!("Failed to release Shift for restore: {:?}", e))?;
     }
-}
 
-#[cfg(not(target_os = "windows"))]
-fn get_selected_text_ui_automation() -> std::result::Result<String, Box<dyn std::error::Error>> {
-    Err("UI Automation only available on Windows".into())
-}
+    // Always restore original clipboard
+    let _ = clipboard.set_text(original_clipboard);
 
-pub fn get_cursor_context(context_length: usize) -> std::result::Result<String, Box<dyn std::error::Error>> {
-    log_to_file(&format!("🔍 Cursor context requested (length: {})", context_length));
-    // For now, return empty string to avoid keyboard simulation during hotkey testing
-    log_to_file("⚠️ Cursor context disabled during UI Automation testing");
-    Ok(String::new())
+    // Take only the last context_length characters if we got more
+    let final_context = if context_text.len() <= context_length {
+        context_text
+    } else {
+        context_text
+            .chars()
+            .rev()
+            .take(context_length)
+            .collect::<String>()
+            .chars()
+            .rev()
+            .collect()
+    };
+
+    Ok(final_context)
 }

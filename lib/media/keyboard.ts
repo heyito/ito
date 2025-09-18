@@ -212,10 +212,6 @@ function handleKeyEventInMain(event: KeyEvent) {
       // Shortcut released
       isShortcutActive = false
       console.info('Shortcut DEACTIVATED, stopping recording...')
-
-      // Tell Rust process that hotkey is now inactive
-      setHotkeyInactive()
-
       audioRecorderService.stopRecording()
     }
     return
@@ -290,9 +286,6 @@ function handleKeyEventInMain(event: KeyEvent) {
           isShortcutActive = true
           console.info('lib Shortcut ACTIVATED, starting recording...')
 
-          // Tell Rust process that hotkey is now active
-          setHotkeyActive()
-
           // Start trace logging for new interaction
           const interactionId = traceLogger.startInteraction(
             'HOTKEY_ACTIVATED',
@@ -331,9 +324,6 @@ function handleKeyEventInMain(event: KeyEvent) {
       // Shortcut released - deactivate immediately (no debounce on release)
       isShortcutActive = false
       console.info('lib Shortcut DEACTIVATED, stopping recording...')
-
-      // Tell Rust process that hotkey is now inactive
-      setHotkeyInactive()
 
       // Don't end the interaction yet - let the transcription service handle it
       // The interaction will be ended when transcription completes or fails
@@ -442,9 +432,6 @@ export const startKeyListener = () => {
 
     console.log('[Key listener] started successfully.')
 
-    // Initialize hotkey state to inactive on startup
-    setHotkeyInactive()
-
     // Start the stuck key checker
     startStuckKeyChecker()
 
@@ -475,26 +462,6 @@ export const unblockKey = (key: string) => {
   }
   KeyListenerProcess.stdin?.write(
     JSON.stringify({ command: 'unblock', key }) + '\n',
-  )
-}
-
-export const setHotkeyActive = () => {
-  if (!KeyListenerProcess) {
-    console.warn('Key listener not running, cannot set hotkey active.')
-    return
-  }
-  KeyListenerProcess.stdin?.write(
-    JSON.stringify({ command: 'set_hotkey_active' }) + '\n',
-  )
-}
-
-export const setHotkeyInactive = () => {
-  if (!KeyListenerProcess) {
-    console.warn('Key listener not running, cannot set hotkey inactive.')
-    return
-  }
-  KeyListenerProcess.stdin?.write(
-    JSON.stringify({ command: 'set_hotkey_inactive' }) + '\n',
   )
 }
 

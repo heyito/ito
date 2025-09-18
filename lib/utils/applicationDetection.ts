@@ -72,10 +72,6 @@ export function isTerminalApplication(appName: string): boolean {
 
 export async function canGetContextFromCurrentApp(): Promise<boolean> {
   try {
-    // We omly support context gathering on mac
-    if (process?.platform !== 'darwin') {
-      return false
-    }
     const window = await getActiveWindow()
     if (!window?.appName) {
       return false // Default to disallowing context if we can't determine

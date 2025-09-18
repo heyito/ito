@@ -8,6 +8,7 @@ import { InteractionManager } from './interactions/InteractionManager'
 import { WindowMessenger } from './messaging/WindowMessenger'
 import { TextInserter } from './text/TextInserter'
 import { getCursorContext } from '../media/selected-text-reader'
+import { canGetContextFromCurrentApp } from '../utils/applicationDetection'
 import { grammarRulesService } from './grammar/GrammarRulesService'
 
 export class TranscriptionService {
@@ -133,7 +134,10 @@ export class TranscriptionService {
       // Handle text insertion with grammar-corrected text
       if (response.transcript && !response.error) {
         const contextLength = 4 // Number of chars to consider for context
-        const cursorContext = await getCursorContext(contextLength)
+        const canGetContext = await canGetContextFromCurrentApp()
+        const cursorContext = canGetContext
+          ? await getCursorContext(contextLength)
+          : ''
 
         // Apply grammar rules with cursor context
         const context = cursorContext || ''

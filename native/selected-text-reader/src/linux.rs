@@ -1,6 +1,6 @@
 use arboard::Clipboard;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
     let mut clipboard = Clipboard::new().map_err(|e| format!("Clipboard init failed: {}", e))?;
@@ -25,19 +25,7 @@ pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
     Ok(selected_text)
 }
 
-#[cfg(target_os = "windows")]
-fn copy_selected_text() -> Result<(), Box<dyn std::error::Error>> {
-    use std::process::Command;
-
-    // Use PowerShell to send Ctrl+C on Windows
-    Command::new("powershell")
-        .args(&["-Command", "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^c')"])
-        .output()?;
-
-    Ok(())
-}
-
-#[cfg(target_os = "linux")]
+// Linux-specific implementation using xdotool
 fn copy_selected_text() -> Result<(), Box<dyn std::error::Error>> {
     use std::process::Command;
 
@@ -47,19 +35,6 @@ fn copy_selected_text() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[cfg(target_os = "windows")]
-fn cut_selected_text() -> Result<(), Box<dyn std::error::Error>> {
-    use std::process::Command;
-
-    // Use PowerShell to send Ctrl+X on Windows
-    Command::new("powershell")
-        .args(&["-Command", "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^x')"])
-        .output()?;
-
-    Ok(())
-}
-
-#[cfg(target_os = "linux")]
 fn cut_selected_text() -> Result<(), Box<dyn std::error::Error>> {
     use std::process::Command;
 
@@ -97,39 +72,18 @@ fn get_context_with_keyboard_selection(
     context_length: usize,
     clipboard: &mut Clipboard,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    #[cfg(target_os = "windows")]
-    {
-        // Use PowerShell to send Shift+Left repeatedly to select context
-        use std::process::Command;
-        let selection_script = format!(
-            r#"
-            Add-Type -AssemblyName System.Windows.Forms
-            for ($i = 0; $i -lt {}; $i++) {{
-                [System.Windows.Forms.SendKeys]::SendWait("+{{LEFT}}")
-                Start-Sleep -Milliseconds 1
-            }}
-            "#,
-            context_length
-        );
-        
-        let _output = Command::new("powershell")
-            .args(&["-Command", &selection_script])
-            .output()?;
+    let start_time = Instant::now();
+
+    // Use xdotool to send Shift+Left repeatedly for Linux
+    use std::process::Command;
+
+    for _ in 0..context_length {
+        let _ = Command::new("xdotool")
+            .args(&["key", "shift+Left"])
+            .output();
+        thread::sleep(Duration::from_millis(2));
     }
-    
-    #[cfg(target_os = "linux")]
-    {
-        // Use xdotool to send Shift+Left repeatedly
-        use std::process::Command;
-        
-        for _ in 0..context_length {
-            let _ = Command::new("xdotool")
-                .args(&["key", "shift+Left"])
-                .output();
-            thread::sleep(Duration::from_millis(2));
-        }
-    }
-    
+
     let keyboard_time = start_time.elapsed();
     
     // Copy the selection
@@ -141,35 +95,11 @@ fn get_context_with_keyboard_selection(
     let context_text = clipboard.get_text().unwrap_or_default();
     
     // Restore cursor position by pressing shift + Right Arrow character times
-    
-    #[cfg(target_os = "windows")]
-    {
-        use std::process::Command;
-        let restore_script = format!(
-            r#"
-            Add-Type -AssemblyName System.Windows.Forms
-            for ($i = 0; $i -lt {}; $i++) {{
-                [System.Windows.Forms.SendKeys]::SendWait("+{{RIGHT}}")
-                Start-Sleep -Milliseconds 1
-            }}
-            "#,
-            context_length
-        );
-        
-        let _output = Command::new("powershell")
-            .args(&["-Command", restore_script])
-            .output()?;
-    }
-    
-    #[cfg(target_os = "linux")]
-    {
-        use std::process::Command;
-        for _ in 0..context_length {
-            let _ = Command::new("xdotool")
-                .args(&["key", "shift+Right"])
-                .output();
-            thread::sleep(Duration::from_millis(2));
-        }
+    for _ in 0..context_length {
+        let _ = Command::new("xdotool")
+            .args(&["key", "shift+Right"])
+            .output();
+        thread::sleep(Duration::from_millis(2));
     }
 
     // Take only the last context_length characters

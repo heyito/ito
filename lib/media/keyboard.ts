@@ -9,10 +9,11 @@ import { traceLogger } from '../main/traceLogger'
 import { KeyName, keyNameMap, normalizeLegacyKey } from '../types/keyboard'
 
 interface KeyEvent {
-  type: 'keydown' | 'keyup'
-  key: string
-  timestamp: string
-  raw_code: number
+  type: 'keydown' | 'keyup' | 'debug_log'
+  key?: string
+  timestamp?: string
+  raw_code?: number
+  message?: string // For debug_log events
 }
 
 interface HeartbeatEvent {
@@ -187,6 +188,20 @@ function stopStuckKeyChecker() {
 }
 
 function handleKeyEventInMain(event: KeyEvent) {
+  if (event.type === 'debug_log') {
+    console.log('[KeyListener] DEBUG LOG: ', event.message)
+    return // Early return for debug log events
+  }
+
+  // Ensure we have required fields for key events
+  if (!event.key || !event.timestamp) {
+    console.error(
+      '[KeyListener] Invalid key event - missing key or timestamp:',
+      event,
+    )
+    return
+  }
+
   const { isShortcutGloballyEnabled, keyboardShortcuts } = store.get(
     STORE_KEYS.SETTINGS,
   )
@@ -213,9 +228,15 @@ function handleKeyEventInMain(event: KeyEvent) {
     if (!keyPressTimestamps.has(normalizedKey)) {
       keyPressTimestamps.set(normalizedKey, Date.now())
     }
+    console.log(
+      `[KeyListener] Key DOWN: ${normalizedKey} | pressedKeys: [${Array.from(pressedKeys).join(', ')}]`,
+    )
   } else {
     pressedKeys.delete(normalizedKey)
     keyPressTimestamps.delete(normalizedKey)
+    console.log(
+      `[KeyListener] Key UP: ${normalizedKey} | pressedKeys: [${Array.from(pressedKeys).join(', ')}]`,
+    )
   }
 
   // Check if any of the configured shortcuts are currently held

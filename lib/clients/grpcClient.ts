@@ -168,8 +168,16 @@ class GrpcClient {
 
       headers.set('mode', mode.toString())
 
-      try {
-        if (mode === ItoMode.EDIT) {
+      // For EDIT mode, get selected text with a delay to avoid interfering with hotkey
+      if (mode === ItoMode.EDIT) {
+        console.log('[gRPC Client] EDIT mode - waiting for hotkey to stabilize before text selection...')
+
+        // Add a 300ms delay to let the hotkey state stabilize
+        // This prevents our Ctrl+C from interfering with the user's held hotkey
+        await new Promise(resolve => setTimeout(resolve, 300))
+
+        try {
+          console.log('[gRPC Client] Getting selected text...')
           const contextText = await getSelectedTextString(10000)
           if (contextText && contextText.trim().length > 0) {
             headers.set('context-text', flattenHeaderValue(contextText))
@@ -177,12 +185,13 @@ class GrpcClient {
               '[gRPC Client] Adding context text to headers:',
               contextText.length,
               'characters',
-              contextText,
             )
+          } else {
+            console.log('[gRPC Client] No selected text found')
           }
+        } catch (error) {
+          console.error('[gRPC Client] Error getting context text:', error)
         }
-      } catch (error) {
-        console.error('[gRPC Client] Error getting context text:', error)
       }
     } catch (error) {
       console.error(

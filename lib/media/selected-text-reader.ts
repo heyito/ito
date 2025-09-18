@@ -149,7 +149,7 @@ class SelectedTextReaderService extends EventEmitter {
           this.#pendingRequests.delete(requestId)
           reject(new Error('Selected text request timed out'))
         }
-      }, 1000) // 1 second timeout - fast for native implementation
+      }, 5000) // 5 second timeout
     })
   }
 
@@ -183,7 +183,7 @@ class SelectedTextReaderService extends EventEmitter {
           this.#pendingRequests.delete(requestId)
           reject(new Error('Cursor context request timed out'))
         }
-      }, 1000) // 1 second timeout - fast for native implementation
+      }, 5000) // 5 second timeout
     })
   }
 

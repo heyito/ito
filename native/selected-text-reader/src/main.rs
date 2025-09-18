@@ -3,10 +3,8 @@ use std::io::{self, BufRead, Write};
 use std::thread;
 
 // Platform-specific modules
-#[cfg(target_os = "linux")]
-mod linux;
-#[cfg(target_os = "windows")]
-mod windows;
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+mod cross_platform;
 #[cfg(target_os = "macos")]
 mod macos;
 
@@ -207,14 +205,9 @@ fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
     macos::get_selected_text()
 }
 
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "windows", target_os = "linux"))]
 fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
-    windows::get_selected_text()
-}
-
-#[cfg(target_os = "linux")]
-fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
-    linux::get_selected_text()
+    cross_platform::get_selected_text()
 }
 
 #[cfg(target_os = "macos")]
@@ -222,12 +215,7 @@ fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::erro
     macos::get_cursor_context(context_length)
 }
 
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "windows", target_os = "linux"))]
 fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::error::Error>> {
-    windows::get_cursor_context(context_length)
-}
-
-#[cfg(target_os = "linux")]
-fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::error::Error>> {
-    linux::get_cursor_context(context_length)
+    cross_platform::get_cursor_context(context_length)
 }

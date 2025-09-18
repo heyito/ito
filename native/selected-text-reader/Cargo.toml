@@ -11,9 +11,6 @@ arboard = "3.4"
 lru = "0.12"
 parking_lot = "0.12"
 
-[target.'cfg(target_os = "windows")'.dependencies]
-enigo = "0.3.0"
-
 [target.'cfg(target_os = "macos")'.dependencies]
 accessibility-ng = "0.1.6"
 accessibility-sys-ng = "0.1"

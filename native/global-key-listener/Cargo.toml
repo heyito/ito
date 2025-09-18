@@ -7,6 +7,7 @@ edition = "2021"
 serde_json = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
+lazy_static = "1.4"
 
 [dependencies.rdev]
 git = "https://github.com/heyito/rdev"

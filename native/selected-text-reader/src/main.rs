@@ -203,31 +203,31 @@ impl CommandProcessor {
 
 // Platform-specific implementations
 #[cfg(target_os = "macos")]
-fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
+fn get_selected_text() -> std::result::Result<String, Box<dyn std::error::Error>> {
     macos::get_selected_text()
 }
 
 #[cfg(target_os = "windows")]
-fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
+fn get_selected_text() -> std::result::Result<String, Box<dyn std::error::Error>> {
     windows::get_selected_text()
 }
 
 #[cfg(target_os = "linux")]
-fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
+fn get_selected_text() -> std::result::Result<String, Box<dyn std::error::Error>> {
     linux::get_selected_text()
 }
 
 #[cfg(target_os = "macos")]
-fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::error::Error>> {
+fn get_cursor_context(context_length: usize) -> std::result::Result<String, Box<dyn std::error::Error>> {
     macos::get_cursor_context(context_length)
 }
 
 #[cfg(target_os = "windows")]
-fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::error::Error>> {
+fn get_cursor_context(context_length: usize) -> std::result::Result<String, Box<dyn std::error::Error>> {
     windows::get_cursor_context(context_length)
 }
 
 #[cfg(target_os = "linux")]
-fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::error::Error>> {
+fn get_cursor_context(context_length: usize) -> std::result::Result<String, Box<dyn std::error::Error>> {
     linux::get_cursor_context(context_length)
 }

@@ -10,9 +10,17 @@ crossbeam-channel = "0.5"
 arboard = "3.4"
 lru = "0.12"
 parking_lot = "0.12"
+chrono = { version = "0.4", features = ["serde"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 enigo = "0.3.0"
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_System_Com",
+    "Win32_UI_Accessibility",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Gdi"
+] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 accessibility-ng = "0.1.6"

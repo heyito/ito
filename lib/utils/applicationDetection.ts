@@ -23,9 +23,9 @@ const TERMINAL_APPS = new Set([
   'git bash',
   'msys2',
   'cygwin',
-  'ubuntu',           // WSL Ubuntu
-  'debian',           // WSL Debian
-  'kali',             // WSL Kali
+  'ubuntu', // WSL Ubuntu
+  'debian', // WSL Debian
+  'kali', // WSL Kali
 
   // IDEs with integrated terminals (cross-platform)
   'visual studio code',
@@ -59,7 +59,9 @@ const TERMINAL_APPS = new Set([
 
 export function isTerminalApplication(appName: string): boolean {
   const lowerAppName = appName.toLowerCase()
-  return Array.from(TERMINAL_APPS).some(termApp => lowerAppName.includes(termApp))
+  return Array.from(TERMINAL_APPS).some(termApp =>
+    lowerAppName.includes(termApp),
+  )
 }
 
 export async function canGetContextFromCurrentApp(): Promise<boolean> {

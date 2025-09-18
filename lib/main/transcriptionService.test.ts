@@ -48,6 +48,12 @@ mock.module('../media/selected-text-reader', () => ({
   getCursorContext: mockGetCursorContext,
 }))
 
+// Mock application detection
+const mockCanGetContextFromCurrentApp = mock(() => Promise.resolve(true))
+mock.module('../utils/applicationDetection', () => ({
+  canGetContextFromCurrentApp: mockCanGetContextFromCurrentApp,
+}))
+
 // Mock grammar rules service
 const mockGrammarRulesService = {
   setCaseFirstWord: mock((_context: string, transcript: string) => transcript),

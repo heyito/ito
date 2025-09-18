@@ -73,7 +73,6 @@ export function isTerminalApplication(appName: string): boolean {
 export async function canGetContextFromCurrentApp(): Promise<boolean> {
   try {
     const window = await getActiveWindow()
-    console.log('Active window:', window)
     if (!window?.appName) {
       return false // Default to disallowing context if we can't determine
     }

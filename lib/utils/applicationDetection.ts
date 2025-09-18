@@ -29,11 +29,19 @@ const TERMINAL_APPS = new Set([
 
   // IDEs with integrated terminals (cross-platform)
   'visual studio code',
+  'visual studio code - insiders',
   'code',
+  'code - insiders',
   'visual studio',
+  'visual studio 2022',
+  'visual studio 2019',
   'intellij idea',
+  'intellij idea ultimate',
+  'intellij idea community edition',
   'webstorm',
   'pycharm',
+  'pycharm professional',
+  'pycharm community edition',
   'clion',
   'phpstorm',
   'rubymine',
@@ -59,9 +67,7 @@ const TERMINAL_APPS = new Set([
 
 export function isTerminalApplication(appName: string): boolean {
   const lowerAppName = appName.toLowerCase()
-  return Array.from(TERMINAL_APPS).some(termApp =>
-    lowerAppName.includes(termApp),
-  )
+  return TERMINAL_APPS.has(lowerAppName)
 }
 
 export async function canGetContextFromCurrentApp(): Promise<boolean> {

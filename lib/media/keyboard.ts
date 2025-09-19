@@ -187,6 +187,15 @@ function stopStuckKeyChecker() {
 }
 
 function handleKeyEventInMain(event: KeyEvent) {
+  // Ignore keydown-driven hotkey detection while programmatic typing/pasting is in progress,
+  // but still process keyup to clear state and avoid stuck keys.
+  if (
+    (globalThis as any).isProgrammaticTyping === true &&
+    event.type === 'keydown'
+  ) {
+    return
+  }
+
   const { isShortcutGloballyEnabled, keyboardShortcuts } = store.get(
     STORE_KEYS.SETTINGS,
   )

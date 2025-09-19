@@ -150,10 +150,7 @@ fn callback(event: Event) -> Option<Event> {
 
             output_event("keyup", &key);
 
-            match should_block {
-                true => None,
-                false => Some(event),
-            }
+            Some(event)
         }
         _ => Some(event), // Allow all other events
     }

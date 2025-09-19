@@ -74,7 +74,10 @@ module.exports = {
       NSMicrophoneUsageDescription:
         'Ito requires microphone access to transcribe your speech.',
     },
-    extraResources: getMacResources(),
+    extraResources: [
+      ...getMacResources(),
+      { from: 'resources/build/ito-logo.png', to: 'build/ito-logo.png' },
+    ],
   },
   dmg: {
     artifactName: 'Ito-Installer.${ext}',
@@ -89,7 +92,10 @@ module.exports = {
     icon: 'resources/build/icon.ico',
     executableName: 'Ito',
     requestedExecutionLevel: 'asInvoker',
-    extraResources: getWindowsResources(),
+    extraResources: [
+      ...getWindowsResources(),
+      { from: 'resources/build/ito-logo.png', to: 'build/ito-logo.png' },
+    ],
     forceCodeSigning: false,
     asarUnpack: [
       'resources/**',

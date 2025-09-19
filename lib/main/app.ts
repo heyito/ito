@@ -139,7 +139,12 @@ export function startPillPositioner() {
     updatePillPosition()
   })
 
-  setInterval(updatePillPosition, 100) // Update position 10 times per second.
+  // Initial position on start
+  updatePillPosition()
+
+  // Throttle updates (Windows needs less frequent updates to avoid jitter)
+  const intervalMs = process.platform === 'win32' ? 750 : 250
+  setInterval(updatePillPosition, intervalMs)
 }
 
 function updatePillPosition() {
@@ -155,16 +160,25 @@ function updatePillPosition() {
     const { x, y, width, height } = display.workArea
     const screenBounds = display.bounds
 
-    // Calculate position: Horizontally centered, positioned above dock
-    const newX = Math.round(x + width / 2 - pillWidth / 2)
+    const scale = display.scaleFactor || 1
+    const roundToDeviceDip = (v: number) =>
+      Math.round(Math.round(v * scale) / scale)
 
-    // Position just above the work area bottom (which excludes dock)
-    // Add small margin to avoid touching the dock
-    const newY = Math.round(y + height - pillHeight - 10)
+    // Calculate position: Horizontally centered, positioned above taskbar
+    const newX = roundToDeviceDip(x + width / 2 - pillWidth / 2)
+
+    // Position just above the work area bottom
+    const newY = roundToDeviceDip(y + height - pillHeight - 10)
 
     // Ensure we don't go below the screen bounds
     const maxY = screenBounds.y + screenBounds.height - pillHeight - 10
     const finalY = Math.min(newY, maxY)
+
+    // Only move if position actually changed (>= 1 DIP)
+    const [currX, currY] = pillWindow.getPosition()
+    if (Math.abs(currX - newX) < 1 && Math.abs(currY - finalY) < 1) {
+      return
+    }
 
     // Set the position of the pill window.
     pillWindow.setPosition(newX, finalY, false) // `false` = not animated

@@ -13,7 +13,7 @@ import { initializeLogging } from './logger'
 import { registerIPC } from '../window/ipcEvents'
 import { registerDevIPC } from '../window/ipcDev'
 import { initializeDatabase } from './sqlite/db'
-import { setupProtocolHandling } from '../protocol'
+import { setupProtocolHandling, processStartupProtocolUrl } from '../protocol'
 import { startKeyListener, stopKeyListener } from '../media/keyboard'
 // Import the grpcClient singleton
 import { grpcClient } from '../clients/grpcClient'
@@ -99,6 +99,9 @@ app.whenReady().then(async () => {
   createAppWindow()
   createPillWindow()
   startPillPositioner()
+
+  // Handle protocol URL if the app was started by a deep link (Windows/Linux first instance)
+  processStartupProtocolUrl()
 
   // --- ADDED: Give the gRPC client a reference to the main window ---
   // This allows it to send transcription results back to the renderer.

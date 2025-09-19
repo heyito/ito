@@ -228,6 +228,7 @@ const Pill = () => {
     // Show/hide animation using opacity and scale instead of display none/flex
     opacity: shouldShow ? 1 : 0,
     transform: shouldShow ? 'scale(1)' : 'scale(0.8)',
+    transformOrigin: 'bottom center',
     visibility: shouldShow ? 'visible' : 'hidden',
 
     // Static styles

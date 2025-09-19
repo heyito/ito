@@ -35,7 +35,6 @@ module.exports = {
     '!.eslintrc.cjs',
     '!.prettierignore',
     '!.prettierrc.yaml',
-    '!dev-app-update.yml',
     '!README.md',
     '!.env',
     '!.env.*',
@@ -82,6 +81,10 @@ module.exports = {
   win: {
     target: [
       {
+        target: 'zip',
+        arch: ['x64'],
+      },
+      {
         target: 'nsis',
         arch: ['x64'],
       },
@@ -100,7 +103,6 @@ module.exports = {
   nodeGypRebuild: false,
   buildDependenciesFromSource: false,
   nsis: {
-    artifactName: 'Ito-Installer.${ext}',
     shortcutName: '${productName}',
     uninstallDisplayName: '${productName}',
     createDesktopShortcut: false,

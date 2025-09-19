@@ -19,7 +19,7 @@ Main development branch: `dev`
 
 - Dev: `bun dev` (starts electron-vite dev with watch)
 - Server: `docker compose up --build` (run from server directory)
-- Build: `bun build:app` or `bun vite:build:app`
+- Build: `bun build:app:mac` or `bun build:app:windows`
 - Test: `bun runAllTests` (runs both lib and server tests)
   - Lib tests: `bun runLibTests`
   - Server tests: `bun runServerTests`

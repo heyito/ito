@@ -14,11 +14,14 @@ export function setFocusedText(
   options: TextWriterOptions = { delay: 0, charDelay: 0 },
 ): Promise<boolean> {
   return new Promise(resolve => {
+    // Signal to the rest of the app that programmatic typing is active
+    ;(globalThis as any).isProgrammaticTyping = true
     const binaryPath = getNativeBinaryPath(nativeModuleName)
     if (!binaryPath) {
       console.error(
         `Cannot determine ${nativeModuleName} binary path for platform ${platform()} and arch ${arch()}`,
       )
+      ;(globalThis as any).isProgrammaticTyping = false
       return resolve(false)
     }
 
@@ -38,9 +41,10 @@ export function setFocusedText(
     execFile(binaryPath, args, (err, _stdout, stderr) => {
       if (err) {
         console.error('text-writer error:', stderr)
+        ;(globalThis as any).isProgrammaticTyping = false
         return resolve(false)
       }
-
+      ;(globalThis as any).isProgrammaticTyping = false
       resolve(true)
     })
   })

@@ -152,7 +152,7 @@ Add the GNU target (needed for our native components):
 
 3. **Install 7-Zip**
 
-    winget install 7zip.7zip
+   winget install 7zip.7zip
 
 ---
 
@@ -192,13 +192,11 @@ Check you’re picking up the right ones:
 
 💡 To avoid running these exports every session, add the lines above to your Git Bash `~/.bashrc` file. They will be applied automatically whenever you open a new Git Bash window.
 
-
 ---
 
- 6. **Restart Git Bash if you update MSYS2**
+6.  **Restart Git Bash if you update MSYS2**
 
 Whenever you update MSYS2 packages with `pacman -Syu`, restart Git Bash so the changes take effect.
-
 
 > **Note**: Windows builds use Docker for cross-compilation to ensure consistent builds. The Docker container handles the Windows build environment automatically.
 

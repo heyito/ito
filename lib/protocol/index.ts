@@ -1,4 +1,5 @@
 import { app, BrowserWindow } from 'electron'
+import path from 'path'
 import { mainWindow } from '../main/app'
 
 // Protocol handling for deep links
@@ -24,7 +25,23 @@ function handleProtocolUrl(url: string) {
           !mainWindow.isDestroyed() &&
           !mainWindow.webContents.isDestroyed()
         ) {
-          mainWindow.webContents.send('auth-code-received', authCode, state)
+          const sendToRenderer = () => {
+            if (
+              mainWindow &&
+              !mainWindow.isDestroyed() &&
+              !mainWindow.webContents.isDestroyed()
+            ) {
+              mainWindow.webContents.send('auth-code-received', authCode, state)
+            }
+          }
+
+          if (mainWindow.webContents.isLoadingMainFrame()) {
+            mainWindow.webContents.once('did-finish-load', () => {
+              sendToRenderer()
+            })
+          } else {
+            sendToRenderer()
+          }
 
           // Focus and show the window with more aggressive methods
           mainWindow.show()
@@ -61,8 +78,24 @@ function handleProtocolUrl(url: string) {
 // Setup protocol handling
 export function setupProtocolHandling(): void {
   // Register protocol handler
-  if (!app.isDefaultProtocolClient(PROTOCOL)) {
-    app.setAsDefaultProtocolClient(PROTOCOL)
+  if (process.defaultApp || !app.isPackaged) {
+    const appPath = app.getAppPath()
+    const registered = app.setAsDefaultProtocolClient(
+      PROTOCOL,
+      process.execPath,
+      [appPath],
+    )
+    if (!registered) {
+      // Fallback to using argv[1] when available
+      const target = process.argv[1] ? path.resolve(process.argv[1]) : undefined
+      if (target) {
+        app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [target])
+      }
+    }
+  } else {
+    if (!app.isDefaultProtocolClient(PROTOCOL)) {
+      app.setAsDefaultProtocolClient(PROTOCOL)
+    }
   }
 
   // Handle protocol on Windows/Linux
@@ -99,3 +132,11 @@ export function setupProtocolHandling(): void {
 
 // Export the protocol name for use in other modules if needed
 export { PROTOCOL }
+
+// Process deep link if the app was started via protocol (first instance)
+export function processStartupProtocolUrl(): void {
+  const urlArg = process.argv.find(arg => arg.startsWith(`${PROTOCOL}://`))
+  if (urlArg) {
+    handleProtocolUrl(urlArg)
+  }
+}

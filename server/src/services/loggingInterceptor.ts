@@ -6,7 +6,7 @@ export const loggingInterceptor: Interceptor = next => async req => {
   } catch (err) {
     console.error(
       `❌ [${new Date().toISOString()}] RPC failed: ${req.url}`,
-      err
+      err,
     )
     throw err
   }

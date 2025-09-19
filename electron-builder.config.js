@@ -89,6 +89,7 @@ module.exports = {
         arch: ['x64'],
       },
     ],
+    artifactName: '${productName}-Setup-${version}.${ext}',
     icon: 'resources/build/icon.ico',
     executableName: 'Ito',
     requestedExecutionLevel: 'asInvoker',

@@ -68,6 +68,7 @@ export function registerIPC() {
   })
 
   ipcMain.on('install-update', () => {
+    // Call quitAndInstall without parameters (they were for older versions)
     autoUpdater.quitAndInstall()
   })
 

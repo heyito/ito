@@ -240,6 +240,12 @@ create_windows_installer() {
         
         # Run electron-builder
         bunx electron-builder --config electron-builder.config.js --win --x64 --publish=never
+
+        # Copy versioned installer to static name for CDN
+        if ls dist/Ito-Setup-*.exe 1> /dev/null 2>&1; then
+          echo 'Copying versioned installer to static Ito-Installer.exe for CDN'
+          cp dist/Ito-Setup-*.exe dist/Ito-Installer.exe
+        fi
       "
     
     print_status "Windows installer created successfully!"

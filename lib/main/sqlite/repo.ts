@@ -4,13 +4,23 @@ import { v4 as uuidv4 } from 'uuid'
 
 // Helper function to parse JSON fields and handle double encoding
 function parseJsonField(value: any): any {
-  if (!value || typeof value !== 'string') {
+  if (value === null || value === undefined) {
     return value
   }
-
   try {
-    let parsed = JSON.parse(value)
-    // Check if it's double-encoded (parsed result is still a string)
+    const stringValue =
+      typeof value === 'string'
+        ? value
+        : Buffer.isBuffer(value)
+          ? value.toString('utf8')
+          : null
+
+    if (stringValue === null) {
+      // Already an object or unsupported type; return as-is
+      return value
+    }
+
+    let parsed = JSON.parse(stringValue)
     if (typeof parsed === 'string') {
       parsed = JSON.parse(parsed)
     }

@@ -20,4 +20,15 @@ Sentry.init({
   environment,
   tracesSampleRate,
   profilesSampleRate,
+  beforeBreadcrumb: breadcrumb =>
+    breadcrumb?.category === 'console' ? null : breadcrumb,
+  integrations: integrations =>
+    integrations.filter(integration =>
+      typeof (integration as any).name === 'string'
+        ? !(
+            (integration as any).name.toLowerCase().includes('console') ||
+            (integration as any).name.toLowerCase() === 'breadcrumbs'
+          )
+        : true,
+    ),
 })

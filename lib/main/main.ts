@@ -28,7 +28,7 @@ import { voiceInputService } from './voiceInputService'
 import { initializeMicrophoneSelection } from '../media/microphoneSetUp'
 import { validateStoredTokens, ensureValidTokens } from '../auth/events'
 import { Auth0Config, validateAuth0Config } from '../auth/config'
-import { createAppTray } from './tray'
+import { createAppTray, destroyAppTray } from './tray'
 import { transcriptionService } from './transcriptionService'
 
 protocol.registerSchemesAsPrivileged([
@@ -144,6 +144,8 @@ app.whenReady().then(async () => {
     stopKeyListener()
     audioRecorderService.terminate()
     selectedTextReaderService.terminate()
+    syncService.stop()
+    destroyAppTray()
     allowAppNap()
   })
 

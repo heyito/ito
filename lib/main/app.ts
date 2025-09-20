@@ -64,6 +64,10 @@ export function createAppWindow(): BrowserWindow {
   // Clean up the reference when the window is closed.
   mainWindow.on('closed', () => {
     mainWindow = null
+    // On Windows, closing the main window should quit the entire app
+    if (process.platform === 'win32') {
+      app.quit()
+    }
   })
 
   // HMR for renderer base on electron-vite cli.

@@ -151,13 +151,11 @@ export default function MultiShortcutEditor({
   useEffect(() => {
     return () => {
       if (editingId) {
-        try {
-          window.api.send(
-            'electron-store-set',
-            'settings.isShortcutGloballyEnabled',
-            true,
-          )
-        } catch {}
+        window.api.send(
+          'electron-store-set',
+          'settings.isShortcutGloballyEnabled',
+          true,
+        )
         stop(editorKey)
       }
     }

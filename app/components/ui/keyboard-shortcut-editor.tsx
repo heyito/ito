@@ -138,13 +138,11 @@ export default function KeyboardShortcutEditor({
   useEffect(() => {
     return () => {
       if (isEditing) {
-        try {
-          window.api.send(
-            'electron-store-set',
-            'settings.isShortcutGloballyEnabled',
-            true,
-          )
-        } catch {}
+        window.api.send(
+          'electron-store-set',
+          'settings.isShortcutGloballyEnabled',
+          true,
+        )
         stop(editorKey)
       }
     }

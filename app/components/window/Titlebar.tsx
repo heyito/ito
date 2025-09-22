@@ -210,13 +210,13 @@ const TitlebarControls = () => {
 
   return (
     <div className="window-titlebar-controls">
-      {wcontext?.minimizable && (
-        <TitlebarControlButton label="minimize" svgPath={minimizePath} />
-      )}
+      <TitlebarControlButton label="close" svgPath={closePath} />
       {wcontext?.maximizable && (
         <TitlebarControlButton label="maximize" svgPath={maximizePath} />
       )}
-      <TitlebarControlButton label="close" svgPath={closePath} />
+      {wcontext?.minimizable && (
+        <TitlebarControlButton label="minimize" svgPath={minimizePath} />
+      )}
     </div>
   )
 }

@@ -9,6 +9,7 @@ import {
 import { useAudioStore } from '@/app/store/useAudioStore'
 import { KeyboardShortcutConfig } from './multi-shortcut-editor'
 import { KeyName } from '@/lib/types/keyboard'
+import { usePlatform } from '@/app/hooks/usePlatform'
 
 interface KeyboardShortcutEditorProps {
   shortcut: KeyboardShortcutConfig
@@ -44,6 +45,7 @@ export default function KeyboardShortcutEditor({
   confirmButtonClassName = '',
 }: KeyboardShortcutEditorProps) {
   const shortcutKeys = shortcut.keys
+  const platform = usePlatform()
 
   const cleanupRef = useRef<(() => void) | null>(null)
   const keyStateRef = useRef<KeyState>(new KeyState(shortcutKeys))
@@ -78,7 +80,7 @@ export default function KeyboardShortcutEditor({
           }
 
           // Check for reserved combinations
-          const reservedCheck = isReservedCombination(updatedShortcut)
+          const reservedCheck = isReservedCombination(updatedShortcut, platform)
           if (reservedCheck.isReserved) {
             setValidationError(
               reservedCheck.reason || 'This key combination is reserved',
@@ -91,7 +93,7 @@ export default function KeyboardShortcutEditor({
         }
       }
     },
-    [isEditing, newShortcut],
+    [isEditing, newShortcut, platform],
   )
 
   useEffect(() => {

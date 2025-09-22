@@ -453,6 +453,11 @@ export function registerIPC() {
     return audioRecorderService.getDeviceList()
   })
 
+  // Platform info
+  handleIPC('get-platform', () => {
+    return process.platform
+  })
+
   // Selected Text Reader
   handleIPC('get-selected-text', async (_e, options) => {
     log.info('[IPC] Received get-selected-text with options:', options)

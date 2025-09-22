@@ -123,7 +123,7 @@ export async function createAppTray(): Promise<void> {
 
   await rebuildTrayMenu()
 
-  // For Windows/Linux, manually pop the menu. On macOS, rely on native menu so the icon stays highlighted.
+  // For Windows, manually pop the menu. On macOS, rely on native menu so the icon stays highlighted.
   if (process.platform !== 'darwin') {
     tray.on('click', async () => {
       await rebuildTrayMenu()

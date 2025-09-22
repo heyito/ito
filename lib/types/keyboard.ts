@@ -149,9 +149,7 @@ export interface KeyDisplayInfo {
 // Helper function to get display info for a key
 export function getKeyDisplayInfo(
   keyName: KeyName,
-  platform: 'darwin' | 'win32' | 'linux' = (typeof process !== 'undefined'
-    ? process.platform
-    : 'darwin') as any,
+  platform: 'darwin' | 'win32' = 'darwin',
 ): KeyDisplayInfo {
   // Handle directional modifiers
   const normalizedKey = normalizeLegacyKey(keyName)
@@ -159,7 +157,7 @@ export function getKeyDisplayInfo(
     const [baseKey, side] = keyName.split('-') as [string, 'left' | 'right']
 
     switch (baseKey) {
-      // Command doesn't exist on Windows/Linux
+      // Command doesn't exist on Windows
       case 'command':
         return {
           label: 'cmd',
@@ -183,7 +181,7 @@ export function getKeyDisplayInfo(
         }
       case 'fn':
       case 'option':
-        // Option key is Alt on Windows/Linux
+        // Option key is Alt on Windows
         if (platform === 'darwin') {
           return {
             label: 'option',

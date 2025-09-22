@@ -96,11 +96,11 @@ export default function MultiShortcutEditor({
     )
   }
 
-  const saveEdit = (original: KeyboardShortcutConfig) => {
+  const saveEdit = async (original: KeyboardShortcutConfig) => {
     if (!draftKeys.length) return
 
     // update existing
-    const result = updateKeyboardShortcut(original.id, draftKeys)
+    const result = await updateKeyboardShortcut(original.id, draftKeys)
     if (!result.success && result.error) {
       setError(getErrorMessage(result.error, result.errorMessage))
       return

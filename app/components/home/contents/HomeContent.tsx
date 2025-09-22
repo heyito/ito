@@ -26,6 +26,7 @@ import {
 import { ItoMode } from '@/app/generated/ito_pb'
 import { getKeyDisplay } from '@/app/utils/keyboard'
 import { KeyName } from '@/lib/types/keyboard'
+import { usePlatform } from '@/app/hooks/usePlatform'
 
 // Interface for interaction statistics
 interface InteractionStats {
@@ -64,6 +65,7 @@ export default function HomeContent() {
   const keyboardShortcut = getItoModeShortcuts(ItoMode.TRANSCRIBE)[0].keys
   const { user } = useAuthStore()
   const firstName = user?.name?.split(' ')[0]
+  const platform = usePlatform() || 'darwin'
   const [interactions, setInteractions] = useState<Interaction[]>([])
   const [loading, setLoading] = useState(true)
   const [playingAudio, setPlayingAudio] = useState<string | null>(null)
@@ -547,7 +549,7 @@ export default function HomeContent() {
               {keyboardShortcut.map((key, index) => (
                 <React.Fragment key={index}>
                   <span className="bg-slate-50 px-1 py-0.5 rounded text-xs font-mono shadow-sm">
-                    {getKeyDisplay(key as KeyName, {
+                    {getKeyDisplay(key as KeyName, platform, {
                       showDirectionalText: false,
                       format: 'label',
                     })}

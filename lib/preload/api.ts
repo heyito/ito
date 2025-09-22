@@ -174,6 +174,9 @@ const api = {
     installUpdate: () => ipcRenderer.send('install-update'),
   },
 
+  // Platform info
+  getPlatform: () => ipcRenderer.invoke('get-platform'),
+
   // Selected Text Reader
   selectedText: {
     get: (options?: any) => ipcRenderer.invoke('get-selected-text', options),

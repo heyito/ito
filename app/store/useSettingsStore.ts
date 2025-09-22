@@ -40,7 +40,7 @@ interface SettingsState {
   updateKeyboardShortcut: (
     shortcutId: string,
     keys: KeyName[],
-  ) => ShortcutResult
+  ) => Promise<ShortcutResult>
 }
 
 type SettingCategory = 'general' | 'audio&mic' | 'keyboard' | 'account'
@@ -236,10 +236,10 @@ export const useSettingsStore = create<SettingsState>(set => {
       const { keyboardShortcuts } = useSettingsStore.getState()
       return keyboardShortcuts.filter(ks => ks.mode === mode)
     },
-    updateKeyboardShortcut: (
+    updateKeyboardShortcut: async (
       shortcutId: string,
       keys: KeyName[],
-    ): ShortcutResult => {
+    ): Promise<ShortcutResult> => {
       const currentShortcuts = useSettingsStore.getState()
         .keyboardShortcuts as KeyboardShortcutConfig[]
 
@@ -251,8 +251,11 @@ export const useSettingsStore = create<SettingsState>(set => {
 
       const normalizedKeys = normalizeChord(keys)
 
+      // Get platform for validation
+      const platform = await window.api.getPlatform()
+
       // Check for reserved combinations
-      const reservedCheck = isReservedCombination(normalizedKeys)
+      const reservedCheck = isReservedCombination(normalizedKeys, platform)
       if (reservedCheck.isReserved) {
         return {
           success: false,

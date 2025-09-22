@@ -11,12 +11,14 @@ import { ArrowUp } from '@mynaui/icons-react'
 import React from 'react'
 import { ItoMode } from '@/app/generated/ito_pb'
 import { getKeyDisplay } from '@/app/utils/keyboard'
+import { usePlatform } from '@/app/hooks/usePlatform'
 
 export default function TryItOut() {
   const { decrementOnboardingStep, setOnboardingCompleted } =
     useOnboardingStore()
   const { getItoModeShortcuts } = useSettingsStore()
   const keyboardShortcut = getItoModeShortcuts(ItoMode.TRANSCRIBE)[0].keys
+  const platform = usePlatform() || 'darwin'
   const [selectedApp, setSelectedApp] = useState<
     'slack' | 'gmail' | 'cursor' | 'chatgpt' | 'notion'
   >('slack')
@@ -216,7 +218,7 @@ export default function TryItOut() {
                 keyboardShortcut.map((key, idx) => (
                   <React.Fragment key={`keyboard-shortcut-${idx}`}>
                     <span className="inline-flex items-center px-2 py-0.5 bg-neutral-100 border rounded text-xs font-mono mx-1">
-                      {getKeyDisplay(key, {
+                      {getKeyDisplay(key, platform, {
                         showDirectionalText: false,
                         format: 'label',
                       })}

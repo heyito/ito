@@ -149,9 +149,7 @@ export interface KeyDisplayInfo {
 // Helper function to get display info for a key
 export function getKeyDisplayInfo(
   keyName: KeyName,
-  platform: 'darwin' | 'win32' | 'linux' = (typeof process !== 'undefined'
-    ? process.platform
-    : 'darwin') as any,
+  platform: 'darwin' | 'win32' | 'linux' = 'darwin',
 ): KeyDisplayInfo {
   // Handle directional modifiers
   const normalizedKey = normalizeLegacyKey(keyName)

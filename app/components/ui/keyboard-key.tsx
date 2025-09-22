@@ -3,6 +3,7 @@ import clsx from 'clsx'
 import { cx } from 'class-variance-authority'
 import { KeyName, getKeyDisplayInfo } from '../../../lib/types/keyboard'
 import { getDirectionalIndicator, getKeyDisplay } from '../../utils/keyboard'
+import { usePlatform } from '../../hooks/usePlatform'
 
 const FnKey = () => (
   <svg
@@ -145,15 +146,17 @@ const DefaultKey = ({ keyboardKey }: { keyboardKey: string }) => {
 const KeyToRender = ({
   keyboardKey,
   showDirectionalText = false,
+  platform = 'darwin',
 }: {
   keyboardKey: KeyName
   showDirectionalText?: boolean
+  platform?: 'darwin' | 'win32' | 'linux'
 }) => {
   if (keyboardKey === 'fn' || keyboardKey === 'fn_fast') {
     return <FnKey />
   }
 
-  const displayInfo = getKeyDisplayInfo(keyboardKey)
+  const displayInfo = getKeyDisplayInfo(keyboardKey, platform)
 
   if (displayInfo.isModifier && displayInfo.symbol) {
     return (
@@ -188,8 +191,10 @@ export default function KeyboardKey({
   showDirectionalText = false,
   ...props
 }: KeyboardKeyProps) {
+  const platform = usePlatform() || 'darwin'
+
   if (variant === 'inline') {
-    const display = getKeyDisplay(keyboardKey, {
+    const display = getKeyDisplay(keyboardKey, platform, {
       showDirectionalText,
       format: 'symbol',
     })
@@ -213,6 +218,7 @@ export default function KeyboardKey({
       <KeyToRender
         keyboardKey={keyboardKey}
         showDirectionalText={showDirectionalText}
+        platform={platform}
       />
     </div>
   )

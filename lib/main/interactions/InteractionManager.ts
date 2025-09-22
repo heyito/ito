@@ -23,6 +23,11 @@ export class InteractionManager {
     return this.interactionStartTime
   }
 
+  adoptInteractionId(id: string) {
+    this.currentInteractionId = id
+    this.interactionStartTime = Date.now()
+  }
+
   async createInteraction(
     transcript: string,
     audioBuffer: Buffer,

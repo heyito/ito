@@ -7,6 +7,7 @@ import { audioRecorderService } from './audio'
 import { voiceInputService } from '../main/voiceInputService'
 import { traceLogger } from '../main/traceLogger'
 import { KeyName, keyNameMap, normalizeLegacyKey } from '../types/keyboard'
+import { getProgrammaticTyping } from './typingState'
 
 interface KeyEvent {
   type: 'keydown' | 'keyup'
@@ -187,6 +188,12 @@ function stopStuckKeyChecker() {
 }
 
 function handleKeyEventInMain(event: KeyEvent) {
+  // Ignore keydown-driven hotkey detection while programmatic typing/pasting is in progress,
+  // but still process keyup to clear state and avoid stuck keys.
+  if (getProgrammaticTyping() === true && event.type === 'keydown') {
+    return
+  }
+
   const { isShortcutGloballyEnabled, keyboardShortcuts } = store.get(
     STORE_KEYS.SETTINGS,
   )

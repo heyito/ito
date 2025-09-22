@@ -16,6 +16,7 @@ export class TranscriptionService {
   private interactionManager = new InteractionManager()
   private windowMessenger = new WindowMessenger()
   private textInserter = new TextInserter()
+  private isFinalizing: boolean = false
 
   public async startTranscription(mode: ItoMode) {
     // Guard against multiple concurrent transcriptions
@@ -23,39 +24,41 @@ export class TranscriptionService {
       log.warn('[TranscriptionService] Stream already in progress.')
       return
     }
+    // Guard while we are finalizing the previous interaction (creating DB rows, inserting text)
+    if (this.isFinalizing) {
+      log.warn(
+        '[TranscriptionService] Finalizing previous interaction, ignoring new start.',
+      )
+      return
+    }
 
     this.audioStreamManager.startStreaming()
-    const interactionId = this.interactionManager.startInteraction()
-    log.info('[TranscriptionService] Starting new transcription stream.')
 
-    // Set global interaction ID for trace logging
-    const globalInteractionId = (globalThis as any).currentInteractionId
-    if (!globalInteractionId) {
+    // Reuse existing global interaction ID if present, otherwise create a new one
+    const existingId = (globalThis as any).currentInteractionId as string | null
+    let interactionId: string
+    if (existingId) {
+      this.interactionManager.adoptInteractionId(existingId)
+      interactionId = existingId
+    } else {
+      interactionId = this.interactionManager.startInteraction()
       ;(globalThis as any).currentInteractionId = interactionId
     }
+    log.info('[TranscriptionService] Starting new transcription stream.')
 
     // Log transcription start
-    if (globalInteractionId || interactionId) {
-      const logId = globalInteractionId || interactionId
-      traceLogger.logStep(logId, 'TRANSCRIPTION_START', {
-        localInteractionId: interactionId,
-        startTime: this.interactionManager.getInteractionStartTime(),
-      })
-    }
+    traceLogger.logStep(interactionId, 'TRANSCRIPTION_START', {
+      localInteractionId: interactionId,
+      startTime: this.interactionManager.getInteractionStartTime(),
+    })
 
     grpcClient
       .transcribeStream(this.audioStreamManager.streamAudioChunks(), mode)
       .then(response => {
-        this.handleTranscriptionResponse(
-          response,
-          globalInteractionId || interactionId,
-        )
+        this.handleTranscriptionResponse(response, interactionId)
       })
       .catch(error => {
-        this.handleTranscriptionError(
-          error,
-          globalInteractionId || interactionId,
-        )
+        this.handleTranscriptionError(error, interactionId)
       })
   }
 
@@ -71,6 +74,8 @@ export class TranscriptionService {
     response: any,
     interactionId: string,
   ) {
+    // Prevent new streams while we finalize
+    this.isFinalizing = true
     // Add debugging to see what we received
     console.log('[TranscriptionService] Processing transcription response:', {
       transcript: response.transcript,
@@ -122,6 +127,7 @@ export class TranscriptionService {
 
       // Clear the interaction AFTER saving to database
       this.interactionManager.clearCurrentInteraction()
+      this.isFinalizing = false
     } else {
       if (interactionId) {
         traceLogger.logStep(interactionId, 'TRANSCRIPTION_SUCCESS', {
@@ -176,6 +182,7 @@ export class TranscriptionService {
 
       // Clear the interaction AFTER saving to database
       this.interactionManager.clearCurrentInteraction()
+      this.isFinalizing = false
     }
   }
 
@@ -205,9 +212,12 @@ export class TranscriptionService {
     this.interactionManager.clearCurrentInteraction()
     this.audioStreamManager.clearInteractionAudio()
     ;(globalThis as any).currentInteractionId = null
+    this.isFinalizing = false
   }
 
   public stopTranscription() {
+    // Mark as finalizing to ignore accidental restarts during paste/DB save
+    this.isFinalizing = true
     this.audioStreamManager.stopStreaming()
     this.audioStreamManager.clearInteractionAudio()
   }

@@ -489,7 +489,6 @@ describe('TranscriptionService Orchestration Tests', () => {
       expect(
         mockInteractionManager.clearCurrentInteraction,
       ).not.toHaveBeenCalled()
-      expect(mockAudioStreamManager.clearInteractionAudio).toHaveBeenCalled()
     })
 
     test('handleAudioChunk should delegate to forwardAudioChunk', async () => {

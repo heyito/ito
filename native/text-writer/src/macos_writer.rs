@@ -26,7 +26,6 @@ pub fn type_text_macos(text: &str, _char_delay: u64) -> Result<(), String> {
         pasteboard.setString_forType(ns_string, NSPasteboardTypeString);
 
         // Verify clipboard was actually set by reading it back
-        // This ensures macOS has processed the clipboard change
         let mut attempts = 0;
         loop {
             let current_content = pasteboard.stringForType(NSPasteboardTypeString);
@@ -64,11 +63,10 @@ pub fn type_text_macos(text: &str, _char_delay: u64) -> Result<(), String> {
 
         // Post the events
         key_v_down.post(core_graphics::event::CGEventTapLocation::HID);
-        thread::sleep(Duration::from_millis(5)); // Minimal delay between press and release
+        thread::sleep(Duration::from_millis(10));
         key_v_up.post(core_graphics::event::CGEventTapLocation::HID);
 
-        // Restore old clipboard contents in background after generous delay
-        // This prevents blocking while giving ample time for paste to complete
+        // Restore old clipboard contents in background after delay in separate thread to not block 
         if old_contents != nil {
             thread::spawn(move || unsafe {
                 thread::sleep(Duration::from_secs(1));

@@ -15,7 +15,6 @@ pub fn type_text_windows(text: &str, _char_delay: u64) -> Result<(), String> {
         .map_err(|e| format!("Failed to set clipboard: {:?}", e))?;
 
     // Verify clipboard was actually set by reading it back
-    // This ensures Windows has processed the clipboard change
     let mut attempts = 0;
     loop {
         match get_clipboard::<String, _>(formats::Unicode) {
@@ -43,8 +42,8 @@ pub fn type_text_windows(text: &str, _char_delay: u64) -> Result<(), String> {
     enigo.key(Key::Unicode('v'), enigo::Direction::Press)
         .map_err(|e| format!("Failed to press V: {}", e))?;
 
-    // Small delay between press and release to ensure it's registered
-    thread::sleep(Duration::from_millis(5));
+    // Small delay to ensure the key press is registered
+    thread::sleep(Duration::from_millis(20));
 
     // Release V
     enigo.key(Key::Unicode('v'), enigo::Direction::Release)
@@ -54,9 +53,6 @@ pub fn type_text_windows(text: &str, _char_delay: u64) -> Result<(), String> {
     enigo.key(Key::Control, enigo::Direction::Release)
         .map_err(|e| format!("Failed to release Ctrl: {}", e))?;
 
-    // Restore old clipboard contents in background after generous delay
-    // This prevents blocking while giving ample time for paste to complete
-    // and reduces chance of user interference
     if let Ok(old_text) = old_contents {
         thread::spawn(move || {
             thread::sleep(Duration::from_secs(1));

@@ -14,8 +14,21 @@ pub fn type_text_windows(text: &str, _char_delay: u64) -> Result<(), String> {
     set_clipboard(formats::Unicode, text)
         .map_err(|e| format!("Failed to set clipboard: {:?}", e))?;
 
-    // Small delay to ensure clipboard is set
-    thread::sleep(Duration::from_millis(20));
+    // Verify clipboard was actually set by reading it back
+    // This ensures Windows has processed the clipboard change
+    let mut attempts = 0;
+    loop {
+        match get_clipboard::<String, _>(formats::Unicode) {
+            Ok(content) if content == text => break,
+            _ => {
+                attempts += 1;
+                if attempts > 50 {
+                    return Err("Failed to verify clipboard content was set".to_string());
+                }
+                thread::sleep(Duration::from_millis(2));
+            }
+        }
+    }
 
     // Initialize enigo for keyboard simulation
     let mut enigo = Enigo::new(&Settings::default())
@@ -30,8 +43,8 @@ pub fn type_text_windows(text: &str, _char_delay: u64) -> Result<(), String> {
     enigo.key(Key::Unicode('v'), enigo::Direction::Press)
         .map_err(|e| format!("Failed to press V: {}", e))?;
 
-    // Small delay to ensure the key press is registered
-    thread::sleep(Duration::from_millis(20));
+    // Small delay between press and release to ensure it's registered
+    thread::sleep(Duration::from_millis(5));
 
     // Release V
     enigo.key(Key::Unicode('v'), enigo::Direction::Release)
@@ -41,12 +54,14 @@ pub fn type_text_windows(text: &str, _char_delay: u64) -> Result<(), String> {
     enigo.key(Key::Control, enigo::Direction::Release)
         .map_err(|e| format!("Failed to release Ctrl: {}", e))?;
 
-    // Wait a bit for paste to complete
-    thread::sleep(Duration::from_millis(30));
-
-    // Restore old clipboard contents if there were any
+    // Restore old clipboard contents in background after generous delay
+    // This prevents blocking while giving ample time for paste to complete
+    // and reduces chance of user interference
     if let Ok(old_text) = old_contents {
-        let _ = set_clipboard(formats::Unicode, &old_text);
+        thread::spawn(move || {
+            thread::sleep(Duration::from_secs(1));
+            let _ = set_clipboard(formats::Unicode, &old_text);
+        });
     }
 
     Ok(())

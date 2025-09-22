@@ -125,7 +125,7 @@ export class TranscriptionService {
         ;(globalThis as any).currentInteractionId = null
       }
 
-      // Clear the interaction AFTER saving to database
+      this.audioStreamManager.clearInteractionAudio()
       this.interactionManager.clearCurrentInteraction()
       this.isFinalizing = false
     } else {
@@ -180,7 +180,7 @@ export class TranscriptionService {
         ;(globalThis as any).currentInteractionId = null
       }
 
-      // Clear the interaction AFTER saving to database
+      this.audioStreamManager.clearInteractionAudio()
       this.interactionManager.clearCurrentInteraction()
       this.isFinalizing = false
     }
@@ -219,7 +219,6 @@ export class TranscriptionService {
     // Mark as finalizing to ignore accidental restarts during paste/DB save
     this.isFinalizing = true
     this.audioStreamManager.stopStreaming()
-    this.audioStreamManager.clearInteractionAudio()
   }
 
   public handleAudioChunk(chunk: Buffer) {

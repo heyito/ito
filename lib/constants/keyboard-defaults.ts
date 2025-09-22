@@ -1,5 +1,4 @@
 import { ItoMode } from '@/app/generated/ito_pb'
-import { getPlatform } from '../utils/crossPlatform'
 
 // Platform-specific keyboard shortcut defaults
 export const ITO_MODE_SHORTCUT_DEFAULTS_MAC = {
@@ -10,6 +9,15 @@ export const ITO_MODE_SHORTCUT_DEFAULTS_MAC = {
 export const ITO_MODE_SHORTCUT_DEFAULTS_WIN = {
   [ItoMode.TRANSCRIBE]: ['option-left'],
   [ItoMode.EDIT]: ['option-left', 'control-left'],
+}
+
+// Helper to detect platform - works in both main and renderer process
+export function getPlatform(): 'darwin' | 'win32' {
+  if (typeof process !== 'undefined' && process.platform) {
+    return process.platform as 'darwin' | 'win32'
+  }
+  // Fallback if process is not available
+  return 'darwin'
 }
 
 // Get platform-specific defaults

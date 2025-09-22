@@ -185,7 +185,11 @@ function modifierVariants(modifier: string): string[] {
 }
 
 // Helper to create reserved combinations for all variants of a modifier
-function createReservedCombos(modifier: string, key: string | null, reason: string) {
+function createReservedCombos(
+  modifier: string,
+  key: string | null,
+  reason: string,
+) {
   return modifierVariants(modifier).map(mod => ({
     keys: key ? [mod as KeyName, key as KeyName] : [mod as KeyName],
     reason,

@@ -37,3 +37,12 @@ export async function checkMicrophonePermission(
   // and don't require explicit permission checks in Electron apps
   return true
 }
+
+// Helper to detect platform - works in both main and renderer process
+export function getPlatform(): 'darwin' | 'win32' {
+  if (typeof process !== 'undefined' && process.platform) {
+    return process.platform as 'darwin' | 'win32'
+  }
+  // Fallback if process is not available
+  return 'darwin'
+}

@@ -6,6 +6,7 @@ import { useSettingsStore } from '@/app/store/useSettingsStore'
 import { Check, Pencil } from '@mynaui/icons-react'
 import { cx } from 'class-variance-authority'
 import { KeyName } from '@/lib/types/keyboard'
+import { useShortcutEditingStore } from '@/app/store/useShortcutEditingStore'
 
 export interface KeyboardShortcutConfig {
   id: string
@@ -35,6 +36,10 @@ export default function MultiShortcutEditor({
     updateKeyboardShortcut,
   } = useSettingsStore()
 
+  // global editing lock
+  const editorKey = useMemo(() => `multi-shortcut-editor:${mode}`, [mode])
+  const { start, stop, activeEditor } = useShortcutEditingStore()
+
   const rows = useMemo(
     () => (mode == null ? shortcuts : shortcuts.filter(s => s.mode === mode)),
     [shortcuts, mode],
@@ -50,6 +55,10 @@ export default function MultiShortcutEditor({
   const cleanupRef = useRef<(() => void) | null>(null)
 
   const beginEditExisting = (row: KeyboardShortcutConfig) => {
+    if (!start(editorKey)) {
+      setError('Finish editing the other shortcut set first.')
+      return
+    }
     setEditingId(row.id)
     setDraftKeys([])
     setError('')
@@ -94,6 +103,7 @@ export default function MultiShortcutEditor({
       'settings.isShortcutGloballyEnabled',
       true,
     )
+    stop(editorKey)
   }
 
   const saveEdit = async (original: KeyboardShortcutConfig) => {
@@ -137,9 +147,25 @@ export default function MultiShortcutEditor({
     }
   }, [handleKeyEvent, editingId])
 
+  // Ensure lock is released and global shortcuts re-enabled on unmount
+  useEffect(() => {
+    return () => {
+      if (editingId) {
+        window.api.send(
+          'electron-store-set',
+          'settings.isShortcutGloballyEnabled',
+          true,
+        )
+        stop(editorKey)
+      }
+    }
+  }, [editingId, stop, editorKey])
+
   const base =
     'inline-flex items-center justify-center rounded-xl border border-neutral-300 ' +
     'px-3 py-1.5 text-neutral-700 hover:bg-neutral-50 h-9 min-w-[48px] border-0'
+
+  const isLockedByOther = activeEditor !== null && activeEditor !== editorKey
 
   return (
     <div className={cx('w-82', className)}>
@@ -176,7 +202,10 @@ export default function MultiShortcutEditor({
                   <button
                     type="button"
                     onClick={() => beginEditExisting(row)}
-                    className={base}
+                    className={
+                      base + ' disabled:opacity-50 disabled:cursor-not-allowed'
+                    }
+                    disabled={isLockedByOther}
                   >
                     <Pencil className="h-4 w-4" />
                   </button>
@@ -200,7 +229,8 @@ export default function MultiShortcutEditor({
             }
           }}
           hidden={isMinimum}
-          className="ml-auto text-red-400 hover:underline text-sm"
+          className="ml-auto text-red-400 hover:underline text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={isLockedByOther}
         >
           Delete
         </button>
@@ -210,9 +240,13 @@ export default function MultiShortcutEditor({
       <div className="mt-2 flex justify-end">
         <button
           type="button"
-          onClick={addNew}
+          onClick={() => {
+            if (isLockedByOther) return
+            addNew()
+          }}
           hidden={isAtLimit}
-          className="rounded-md border border-neutral-300 py-1 px-2 text-md text-neutral-800 disabled:opacity-50 hover:bg-neutral-50"
+          className="rounded-md border border-neutral-300 py-1 px-2 text-md text-neutral-800 disabled:opacity-50 hover:bg-neutral-50 disabled:cursor-not-allowed"
+          disabled={isLockedByOther}
         >
           Add another
         </button>

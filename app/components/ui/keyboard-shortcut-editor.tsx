@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef, useState } from 'react'
+import { useEffect, useCallback, useRef, useState, useMemo } from 'react'
 import { Button } from '@/app/components/ui/button'
 import KeyboardKey from '@/app/components/ui/keyboard-key'
 import {
@@ -10,6 +10,7 @@ import { useAudioStore } from '@/app/store/useAudioStore'
 import { KeyboardShortcutConfig } from './multi-shortcut-editor'
 import { KeyName } from '@/lib/types/keyboard'
 import { usePlatform } from '@/app/hooks/usePlatform'
+import { useShortcutEditingStore } from '@/app/store/useShortcutEditingStore'
 
 interface KeyboardShortcutEditorProps {
   shortcut: KeyboardShortcutConfig
@@ -46,6 +47,11 @@ export default function KeyboardShortcutEditor({
 }: KeyboardShortcutEditorProps) {
   const shortcutKeys = shortcut.keys
   const platform = usePlatform()
+  const editorKey = useMemo(
+    () => `keyboard-shortcut-editor:${shortcut.id}`,
+    [shortcut.id],
+  )
+  const { start, stop, activeEditor } = useShortcutEditingStore()
 
   const cleanupRef = useRef<(() => void) | null>(null)
   const keyStateRef = useRef<KeyState>(new KeyState(shortcutKeys))
@@ -129,7 +135,25 @@ export default function KeyboardShortcutEditor({
     }
   }, [handleKeyEvent, isEditing])
 
+  useEffect(() => {
+    return () => {
+      if (isEditing) {
+        try {
+          window.api.send(
+            'electron-store-set',
+            'settings.isShortcutGloballyEnabled',
+            true,
+          )
+        } catch {}
+        stop(editorKey)
+      }
+    }
+  }, [isEditing, stop, editorKey])
+
   const handleStartEditing = () => {
+    if (!start(editorKey)) {
+      return
+    }
     // Disable the shortcut in the main process via IPC
     window.api.send(
       'electron-store-set',
@@ -151,6 +175,7 @@ export default function KeyboardShortcutEditor({
     setIsShortcutEnabled(true)
     setIsEditing(false)
     setNewShortcut([])
+    stop(editorKey)
   }
 
   const handleSave = () => {
@@ -167,6 +192,7 @@ export default function KeyboardShortcutEditor({
       'settings.isShortcutGloballyEnabled',
       true,
     )
+    stop(editorKey)
   }
 
   function isDisplayKeyPressed(displayKey: string, pressed: string[]): boolean {
@@ -273,6 +299,7 @@ export default function KeyboardShortcutEditor({
               type="button"
               onClick={handleStartEditing}
               className={editButtonClassName}
+              disabled={activeEditor !== null && activeEditor !== editorKey}
             >
               {editButtonText}
             </Button>
@@ -282,6 +309,7 @@ export default function KeyboardShortcutEditor({
                 type="button"
                 onClick={onConfirm}
                 className={confirmButtonClassName}
+                disabled={activeEditor !== null && activeEditor !== editorKey}
               >
                 {confirmButtonText}
               </Button>

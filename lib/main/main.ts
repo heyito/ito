@@ -100,7 +100,7 @@ app.whenReady().then(async () => {
   createPillWindow()
   startPillPositioner()
 
-  // Handle protocol URL if the app was started by a deep link (Windows/Linux first instance)
+  // Handle protocol URL if the app was started by a deep link (Windows first instance)
   processStartupProtocolUrl()
 
   // --- ADDED: Give the gRPC client a reference to the main window ---

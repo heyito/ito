@@ -150,7 +150,7 @@ const KeyToRender = ({
 }: {
   keyboardKey: KeyName
   showDirectionalText?: boolean
-  platform?: 'darwin' | 'win32' | 'linux'
+  platform?: 'darwin' | 'win32'
 }) => {
   if (keyboardKey === 'fn' || keyboardKey === 'fn_fast') {
     return <FnKey />
@@ -191,7 +191,7 @@ export default function KeyboardKey({
   showDirectionalText = false,
   ...props
 }: KeyboardKeyProps) {
-  const platform = usePlatform() || 'darwin'
+  const platform = usePlatform()
 
   if (variant === 'inline') {
     const display = getKeyDisplay(keyboardKey, platform, {

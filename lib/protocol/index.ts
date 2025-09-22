@@ -98,7 +98,7 @@ export function setupProtocolHandling(): void {
     }
   }
 
-  // Handle protocol on Windows/Linux
+  // Handle protocol on Windows
   const gotTheLock = app.requestSingleInstanceLock()
 
   if (!gotTheLock) {
@@ -116,7 +116,7 @@ export function setupProtocolHandling(): void {
       mainWindow.focus()
     }
 
-    // Handle protocol URL on Windows/Linux
+    // Handle protocol URL on Windows
     const url = commandLine.find(arg => arg.startsWith(`${PROTOCOL}://`))
     if (url) {
       handleProtocolUrl(url)

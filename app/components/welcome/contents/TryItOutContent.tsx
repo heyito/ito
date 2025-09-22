@@ -18,7 +18,7 @@ export default function TryItOut() {
     useOnboardingStore()
   const { getItoModeShortcuts } = useSettingsStore()
   const keyboardShortcut = getItoModeShortcuts(ItoMode.TRANSCRIBE)[0].keys
-  const platform = usePlatform() || 'darwin'
+  const platform = usePlatform()
   const [selectedApp, setSelectedApp] = useState<
     'slack' | 'gmail' | 'cursor' | 'chatgpt' | 'notion'
   >('slack')

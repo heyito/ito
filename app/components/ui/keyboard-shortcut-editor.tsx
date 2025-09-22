@@ -45,7 +45,7 @@ export default function KeyboardShortcutEditor({
   confirmButtonClassName = '',
 }: KeyboardShortcutEditorProps) {
   const shortcutKeys = shortcut.keys
-  const platform = usePlatform() || 'darwin'
+  const platform = usePlatform()
 
   const cleanupRef = useRef<(() => void) | null>(null)
   const keyStateRef = useRef<KeyState>(new KeyState(shortcutKeys))

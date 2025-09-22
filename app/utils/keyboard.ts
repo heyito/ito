@@ -32,7 +32,7 @@ export function getDirectionalIndicator(
  */
 export function getKeyDisplay(
   keyboardKey: KeyName,
-  platform: 'darwin' | 'win32' | 'linux',
+  platform: 'darwin' | 'win32' | undefined = 'darwin',
   options: {
     showDirectionalText?: boolean
     format?: 'symbol' | 'label' | 'both'
@@ -185,16 +185,16 @@ function modifierVariants(modifier: string): string[] {
 }
 
 // Helper to create reserved combinations for all variants of a modifier
-function createReservedCombos(modifier: string, key: string, reason: string) {
+function createReservedCombos(modifier: string, key: string | null, reason: string) {
   return modifierVariants(modifier).map(mod => ({
-    keys: [mod as KeyName, key as KeyName],
+    keys: key ? [mod as KeyName, key as KeyName] : [mod as KeyName],
     reason,
   }))
 }
 
 // Get platform-specific reserved combinations
 function getReservedCombinations(
-  platform: 'darwin' | 'win32' | 'linux' = 'darwin',
+  platform: 'darwin' | 'win32' = 'darwin',
 ): { keys: KeyName[]; reason?: string }[] {
   // Common combinations across all platforms
   const common = [
@@ -213,7 +213,7 @@ function getReservedCombinations(
       ...createReservedCombos('command', 'tab', 'System app switching'),
     ]
   } else {
-    // Windows/Linux use Control for copy/paste, Alt (option) for app switching
+    // Windows uses Control for copy/paste, Alt (option) for app switching
     return [
       ...common,
       ...createReservedCombos('control', 'c', 'Reserved for copying'),
@@ -224,16 +224,12 @@ function getReservedCombinations(
         'tab',
         'System app switching (Alt+Tab)',
       ),
-      {
-        keys: ['command-left' as KeyName],
-        reason:
-          'Windows key triggers system menu and should not be used for shortcuts',
-      },
-      {
-        keys: ['command-right' as KeyName],
-        reason:
-          'Windows key triggers system menu and should not be used for shortcuts',
-      },
+      // Block the Windows key entirely (no specific key combination needed)
+      ...createReservedCombos(
+        'command',
+        null,
+        'Windows key triggers system menu and should not be used for shortcuts',
+      ),
     ]
   }
 }
@@ -241,7 +237,7 @@ function getReservedCombinations(
 // Check if a shortcut contains reserved key combinations
 export function isReservedCombination(
   keys: KeyName[],
-  platform: 'darwin' | 'win32' | 'linux' = 'darwin',
+  platform: 'darwin' | 'win32' = 'darwin',
 ): {
   isReserved: boolean
   reason?: string
@@ -252,7 +248,7 @@ export function isReservedCombination(
   // Get platform-specific reserved combinations
   const reservedCombinations = getReservedCombinations(platform)
 
-  // Special check for Windows/Linux: block ANY use of command keys
+  // Special check for Windows: block ANY use of command keys
   if (platform !== 'darwin') {
     const hasCommandKey = normalizedKeys.some(
       key => key === 'command-left' || key === 'command-right',

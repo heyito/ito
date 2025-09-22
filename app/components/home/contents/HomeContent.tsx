@@ -65,7 +65,7 @@ export default function HomeContent() {
   const keyboardShortcut = getItoModeShortcuts(ItoMode.TRANSCRIBE)[0].keys
   const { user } = useAuthStore()
   const firstName = user?.name?.split(' ')[0]
-  const platform = usePlatform() || 'darwin'
+  const platform = usePlatform()
   const [interactions, setInteractions] = useState<Interaction[]>([])
   const [loading, setLoading] = useState(true)
   const [playingAudio, setPlayingAudio] = useState<string | null>(null)

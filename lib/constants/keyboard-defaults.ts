@@ -12,9 +12,9 @@ export const ITO_MODE_SHORTCUT_DEFAULTS_WIN = {
 }
 
 // Helper to detect platform - works in both main and renderer process
-function getPlatform(): 'darwin' | 'win32' | 'linux' {
+function getPlatform(): 'darwin' | 'win32' {
   if (typeof process !== 'undefined' && process.platform) {
-    return process.platform as 'darwin' | 'win32' | 'linux'
+    return process.platform as 'darwin' | 'win32'
   }
   // Fallback for renderer process if process is not available
   return 'win32'
@@ -22,7 +22,7 @@ function getPlatform(): 'darwin' | 'win32' | 'linux' {
 
 // Get platform-specific defaults
 export function getItoModeShortcutDefaults(
-  platform?: 'darwin' | 'win32' | 'linux',
+  platform?: 'darwin' | 'win32',
 ): Record<ItoMode, string[]> {
   const currentPlatform = platform || getPlatform()
 

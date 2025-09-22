@@ -377,10 +377,10 @@ export const startKeyListener = () => {
               const isWindowsKey =
                 event.key === 'MetaLeft' || event.key === 'MetaRight'
 
-              // On Windows/Linux, don't broadcast Windows key events to UI
+              // On Windows, don't broadcast Windows key events to UI
               if (platform !== 'darwin' && isWindowsKey) {
                 // Silently ignore Windows key for UI components
-                return
+                continue
               }
 
               // 3. Continue to broadcast the raw event to all renderer windows for UI updates.

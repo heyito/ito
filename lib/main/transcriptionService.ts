@@ -17,6 +17,9 @@ export class TranscriptionService {
   private windowMessenger = new WindowMessenger()
   private textInserter = new TextInserter()
   private isFinalizing: boolean = false
+  private hasStartedGrpc = false
+  private currentMode: ItoMode | null = null
+  private interactionId: string | null = null
 
   public async startTranscription(mode: ItoMode) {
     // Guard against multiple concurrent transcriptions
@@ -33,47 +36,84 @@ export class TranscriptionService {
     }
 
     this.audioStreamManager.startStreaming()
+    this.hasStartedGrpc = false
+    this.currentMode = mode
+    log.info('[TranscriptionService] Starting new transcription stream.')
 
     // Reuse existing global interaction ID if present, otherwise create a new one
     const existingId = (globalThis as any).currentInteractionId as string | null
-    let interactionId: string
     if (existingId) {
       this.interactionManager.adoptInteractionId(existingId)
-      interactionId = existingId
+      this.interactionId = existingId
     } else {
-      interactionId = this.interactionManager.startInteraction()
-      ;(globalThis as any).currentInteractionId = interactionId
+      this.interactionId = this.interactionManager.startInteraction()
+      ;(globalThis as any).currentInteractionId = this.interactionId
     }
     log.info('[TranscriptionService] Starting new transcription stream.')
 
     // Log transcription start
-    traceLogger.logStep(interactionId, 'TRANSCRIPTION_START', {
-      localInteractionId: interactionId,
+    traceLogger.logStep(this.interactionId, 'TRANSCRIPTION_START', {
+      localInteractionId: this.interactionId,
       startTime: this.interactionManager.getInteractionStartTime(),
     })
-
-    grpcClient
-      .transcribeStream(this.audioStreamManager.streamAudioChunks(), mode)
-      .then(response => {
-        this.handleTranscriptionResponse(response, interactionId)
-      })
-      .catch(error => {
-        this.handleTranscriptionError(error, interactionId)
-      })
   }
 
   public stopStreaming() {
+    // If we never started gRPC due to insufficient audio, handle cleanup
+    if (!this.hasStartedGrpc) {
+      const globalInteractionId = (globalThis as any).currentInteractionId
+      const interactionId = this.interactionManager.getCurrentInteractionId()
+
+      if (globalInteractionId || interactionId) {
+        const logId = globalInteractionId || interactionId
+        traceLogger.logStep(logId, 'TRANSCRIPTION_TOO_SHORT', {
+          localInteractionId: interactionId,
+          bufferedMs: this.audioStreamManager.getBufferedDurationMs(),
+        })
+        traceLogger.endInteraction(logId, 'TRANSCRIPTION_SKIPPED', {
+          reason: 'insufficient_audio_duration',
+          localInteractionId: interactionId,
+        })
+        ;(globalThis as any).currentInteractionId = null
+      }
+
+      this.interactionManager.clearCurrentInteraction()
+    }
+
     this.audioStreamManager.stopStreaming()
   }
 
   public forwardAudioChunk(chunk: Buffer) {
     this.audioStreamManager.addAudioChunk(chunk)
+    this.startGrpcIfReady()
   }
 
-  private async handleTranscriptionResponse(
-    response: any,
-    interactionId: string,
-  ) {
+  private startGrpcIfReady() {
+    if (
+      this.hasStartedGrpc ||
+      !this.audioStreamManager.isCurrentlyStreaming() ||
+      !this.audioStreamManager.hasMinimumDuration() ||
+      this.currentMode === null
+    ) {
+      return
+    }
+
+    this.hasStartedGrpc = true
+
+    grpcClient
+      .transcribeStream(
+        this.audioStreamManager.streamAudioChunks(),
+        this.currentMode,
+      )
+      .then(response => {
+        this.handleTranscriptionResponse(response)
+      })
+      .catch(error => {
+        this.handleTranscriptionError(error)
+      })
+  }
+
+  private async handleTranscriptionResponse(response: any) {
     // Prevent new streams while we finalize
     this.isFinalizing = true
     // Add debugging to see what we received
@@ -93,19 +133,14 @@ export class TranscriptionService {
     // Handle any transcription error
     if (response.error) {
       if (response.error.code == 'CLIENT_AUDIO_TOO_SHORT') {
-        if (interactionId) {
-          traceLogger.logStep(interactionId, 'TRANSCRIPTION_TOO_SHORT', {
+        if (this.interactionId) {
+          traceLogger.logStep(this.interactionId, 'TRANSCRIPTION_TOO_SHORT', {
             transcript: response.transcript,
             transcriptLength: response.transcript?.length || 0,
             localInteractionId:
               this.interactionManager.getCurrentInteractionId(),
           })
         }
-      } else {
-        log.error(
-          '[TranscriptionService] Transcription error, restoring selected text:',
-          response.error,
-        )
       }
 
       // Save failed interaction to database
@@ -117,8 +152,8 @@ export class TranscriptionService {
       )
 
       // End the interaction after transcription error
-      if (interactionId) {
-        traceLogger.endInteraction(interactionId, 'TRANSCRIPTION_FAILED', {
+      if (this.interactionId) {
+        traceLogger.endInteraction(this.interactionId, 'TRANSCRIPTION_FAILED', {
           error: response.error.message,
           localInteractionId: this.interactionManager.getCurrentInteractionId(),
         })
@@ -129,8 +164,8 @@ export class TranscriptionService {
       this.interactionManager.clearCurrentInteraction()
       this.isFinalizing = false
     } else {
-      if (interactionId) {
-        traceLogger.logStep(interactionId, 'TRANSCRIPTION_SUCCESS', {
+      if (this.interactionId) {
+        traceLogger.logStep(this.interactionId, 'TRANSCRIPTION_SUCCESS', {
           transcript: response.transcript,
           transcriptLength: response.transcript?.length || 0,
           localInteractionId: this.interactionManager.getCurrentInteractionId(),
@@ -156,7 +191,7 @@ export class TranscriptionService {
           correctedText,
         )
 
-        await this.textInserter.insertText(correctedText, interactionId)
+        await this.textInserter.insertText(correctedText, this.interactionId)
 
         // Create interaction in database
         await this.interactionManager.createInteraction(
@@ -171,12 +206,17 @@ export class TranscriptionService {
       this.windowMessenger.sendTranscriptionResult(response)
 
       // End the interaction after successful transcription
-      if (interactionId) {
-        traceLogger.endInteraction(interactionId, 'TRANSCRIPTION_COMPLETED', {
-          transcript: response.transcript,
-          transcriptLength: response.transcript?.length || 0,
-          localInteractionId: this.interactionManager.getCurrentInteractionId(),
-        })
+      if (this.interactionId) {
+        traceLogger.endInteraction(
+          this.interactionId,
+          'TRANSCRIPTION_COMPLETED',
+          {
+            transcript: response.transcript,
+            transcriptLength: response.transcript?.length || 0,
+            localInteractionId:
+              this.interactionManager.getCurrentInteractionId(),
+          },
+        )
         ;(globalThis as any).currentInteractionId = null
       }
 
@@ -186,7 +226,7 @@ export class TranscriptionService {
     }
   }
 
-  private async handleTranscriptionError(error: any, interactionId: string) {
+  private async handleTranscriptionError(error: any) {
     log.error(
       '[TranscriptionService] An unexpected error occurred during transcription:',
       error,
@@ -196,9 +236,9 @@ export class TranscriptionService {
     this.windowMessenger.sendTranscriptionError(error)
 
     // Log transcription error
-    if (interactionId) {
+    if (this.interactionId) {
       traceLogger.logError(
-        interactionId,
+        this.interactionId,
         'TRANSCRIPTION_ERROR',
         error.message,
         {

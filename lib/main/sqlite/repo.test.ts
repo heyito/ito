@@ -356,10 +356,13 @@ describe('DictionaryTable - Business Logic', () => {
 
       const result = await DictionaryTable.insert(insertData)
 
-      expect(result.id).toBe('test-uuid-123')
-      expect(result.user_id).toBe(TEST_USER_ID)
-      expect(result.word).toBe('example')
-      expect(result.pronunciation).toBe('ig-ZAM-pul')
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.id).toBe('test-uuid-123')
+        expect(result.data.user_id).toBe(TEST_USER_ID)
+        expect(result.data.word).toBe('example')
+        expect(result.data.pronunciation).toBe('ig-ZAM-pul')
+      }
     })
 
     test('should set created_at and updated_at to sensible values', async () => {
@@ -376,23 +379,26 @@ describe('DictionaryTable - Business Logic', () => {
 
       const afterTime = Date.now()
 
-      // Verify timestamps are defined and valid ISO strings
-      expect(result.created_at).toBeDefined()
-      expect(result.updated_at).toBeDefined()
-      expect(() => new Date(result.created_at)).not.toThrow()
-      expect(() => new Date(result.updated_at)).not.toThrow()
+      expect(result.success).toBe(true)
+      if (result.success) {
+        // Verify timestamps are defined and valid ISO strings
+        expect(result.data.created_at).toBeDefined()
+        expect(result.data.updated_at).toBeDefined()
+        expect(() => new Date(result.data.created_at)).not.toThrow()
+        expect(() => new Date(result.data.updated_at)).not.toThrow()
 
-      // Verify timestamps are within reasonable time range
-      const createdTime = new Date(result.created_at).getTime()
-      const updatedTime = new Date(result.updated_at).getTime()
+        // Verify timestamps are within reasonable time range
+        const createdTime = new Date(result.data.created_at).getTime()
+        const updatedTime = new Date(result.data.updated_at).getTime()
 
-      expect(createdTime).toBeGreaterThanOrEqual(beforeTime)
-      expect(createdTime).toBeLessThanOrEqual(afterTime)
-      expect(updatedTime).toBeGreaterThanOrEqual(beforeTime)
-      expect(updatedTime).toBeLessThanOrEqual(afterTime)
+        expect(createdTime).toBeGreaterThanOrEqual(beforeTime)
+        expect(createdTime).toBeLessThanOrEqual(afterTime)
+        expect(updatedTime).toBeGreaterThanOrEqual(beforeTime)
+        expect(updatedTime).toBeLessThanOrEqual(afterTime)
 
-      // Verify deleted_at is null for new items
-      expect(result.deleted_at).toBeNull()
+        // Verify deleted_at is null for new items
+        expect(result.data.deleted_at).toBeNull()
+      }
     })
 
     test('should preserve all input fields correctly', async () => {
@@ -406,16 +412,19 @@ describe('DictionaryTable - Business Logic', () => {
 
       const result = await DictionaryTable.insert(insertData)
 
-      // Should preserve input data exactly
-      expect(result.user_id).toBe(TEST_USER_ID)
-      expect(result.word).toBe('preserve')
-      expect(result.pronunciation).toBe('pri-ZURV')
+      expect(result.success).toBe(true)
+      if (result.success) {
+        // Should preserve input data exactly
+        expect(result.data.user_id).toBe(TEST_USER_ID)
+        expect(result.data.word).toBe('preserve')
+        expect(result.data.pronunciation).toBe('pri-ZURV')
 
-      // Should add generated fields
-      expect(result.id).toBeDefined()
-      expect(result.created_at).toBeDefined()
-      expect(result.updated_at).toBeDefined()
-      expect(result.deleted_at).toBeNull()
+        // Should add generated fields
+        expect(result.data.id).toBeDefined()
+        expect(result.data.created_at).toBeDefined()
+        expect(result.data.updated_at).toBeDefined()
+        expect(result.data.deleted_at).toBeNull()
+      }
     })
 
     test('should handle null pronunciation correctly', async () => {
@@ -429,10 +438,56 @@ describe('DictionaryTable - Business Logic', () => {
 
       const result = await DictionaryTable.insert(insertData)
 
-      expect(result.word).toBe('simple')
-      expect(result.pronunciation).toBeNull()
-      expect(result.id).toBeDefined()
-      expect(result.created_at).toBeDefined()
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.word).toBe('simple')
+        expect(result.data.pronunciation).toBeNull()
+        expect(result.data.id).toBeDefined()
+        expect(result.data.created_at).toBeDefined()
+      }
+    })
+
+    test('should handle unique constraint error correctly', async () => {
+      const insertData = {
+        user_id: TEST_USER_ID,
+        word: 'duplicate',
+        pronunciation: null,
+      }
+
+      // Mock unique constraint error
+      const constraintError = new Error('UNIQUE constraint failed')
+      constraintError.code = 'SQLITE_CONSTRAINT_UNIQUE'
+      mockRun.mockRejectedValue(constraintError)
+
+      const result = await DictionaryTable.insert(insertData)
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe(
+          '"duplicate" already exists in your dictionary',
+        )
+        expect(result.errorType).toBe('DUPLICATE')
+      }
+    })
+
+    test('should handle general database error correctly', async () => {
+      const insertData = {
+        user_id: TEST_USER_ID,
+        word: 'error',
+        pronunciation: null,
+      }
+
+      // Mock general database error
+      const dbError = new Error('Database connection failed')
+      mockRun.mockRejectedValue(dbError)
+
+      const result = await DictionaryTable.insert(insertData)
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe('Database connection failed')
+        expect(result.errorType).toBe('UNKNOWN')
+      }
     })
   })
 
@@ -441,9 +496,15 @@ describe('DictionaryTable - Business Logic', () => {
       mockRun.mockResolvedValue(undefined)
       const beforeTime = Date.now()
 
-      await DictionaryTable.update('dict-1', 'updated', 'up-DAY-ted')
+      const result = await DictionaryTable.update(
+        'dict-1',
+        'updated',
+        'up-DAY-ted',
+      )
 
       const afterTime = Date.now()
+
+      expect(result.success).toBe(true)
 
       // Verify the call was made with correct parameters
       expect(mockRun).toHaveBeenCalledWith(
@@ -465,7 +526,9 @@ describe('DictionaryTable - Business Logic', () => {
     test('should handle null pronunciation in update', async () => {
       mockRun.mockResolvedValue(undefined)
 
-      await DictionaryTable.update('dict-1', 'updated', null)
+      const result = await DictionaryTable.update('dict-1', 'updated', null)
+
+      expect(result.success).toBe(true)
 
       expect(mockRun).toHaveBeenCalledWith(
         'UPDATE dictionary_items SET word = ?, pronunciation = ?, updated_at = ? WHERE id = ?',
@@ -476,7 +539,9 @@ describe('DictionaryTable - Business Logic', () => {
     test('should update timestamp even with same word and pronunciation', async () => {
       mockRun.mockResolvedValue(undefined)
 
-      await DictionaryTable.update('dict-1', 'same', 'same')
+      const result = await DictionaryTable.update('dict-1', 'same', 'same')
+
+      expect(result.success).toBe(true)
 
       const call = mockRun.mock.calls[0]
       const updatedAtTimestamp = call[1][2]
@@ -484,6 +549,22 @@ describe('DictionaryTable - Business Logic', () => {
       // Should still generate a new timestamp
       expect(updatedAtTimestamp).toBeDefined()
       expect(() => new Date(updatedAtTimestamp)).not.toThrow()
+    })
+
+    test('should handle unique constraint error in update', async () => {
+      const constraintError = new Error('UNIQUE constraint failed')
+      constraintError.code = 'SQLITE_CONSTRAINT_UNIQUE'
+      mockRun.mockRejectedValue(constraintError)
+
+      const result = await DictionaryTable.update('dict-1', 'duplicate', null)
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe(
+          '"duplicate" already exists in your dictionary',
+        )
+        expect(result.errorType).toBe('DUPLICATE')
+      }
     })
   })
 

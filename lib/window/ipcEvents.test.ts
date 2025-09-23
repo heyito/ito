@@ -120,7 +120,7 @@ describe('IPC Events Critical Business Logic Tests', () => {
         height: 800,
         minimizable: true,
         maximizable: false,
-        platform: 'darwin',
+        platform: process.platform,
       })
 
       mockBrowserWindow.fromWebContents = originalFromWebContents

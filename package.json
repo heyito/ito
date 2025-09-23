@@ -22,8 +22,7 @@
     ]
   },
   "scripts": {
-    "dev": "bash scripts/dev-with-cleanup.sh",
-    "dev:original": "electron-vite dev -w",
+    "dev": "electron-vite dev -w",
     "dev:rust": "bun build:rust:mac && bun dev",
     "format:fix:app": "prettier --write app lib",
     "format:fix": "prettier --write .",

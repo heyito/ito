@@ -2,6 +2,26 @@ import { run, get, all } from './utils'
 import type { Interaction, Note, DictionaryItem } from './models'
 import { v4 as uuidv4 } from 'uuid'
 
+// SQLite error codes (from better-sqlite3 and node-sqlite3)
+const SQLITE_CONSTRAINT_UNIQUE = 'SQLITE_CONSTRAINT_UNIQUE'
+
+// Helper function to check if error is a unique constraint violation
+function isUniqueConstraintError(error: any): boolean {
+  return (
+    error.code === SQLITE_CONSTRAINT_UNIQUE ||
+    error.message?.includes('UNIQUE constraint failed') ||
+    error.errno === 19 // SQLITE_CONSTRAINT
+  )
+}
+
+// Helper function to handle unique constraint errors for dictionary items
+function handleDictionaryConstraintError(error: any, word: string): Error {
+  if (isUniqueConstraintError(error)) {
+    return new Error(`"${word}" already exists in your dictionary`)
+  }
+  return error
+}
+
 // Helper function to parse JSON fields and handle double encoding
 function parseJsonField(value: any): any {
   if (!value || typeof value !== 'string') {
@@ -302,13 +322,7 @@ export class DictionaryTable {
       await run(query, params)
       return newItem
     } catch (error: any) {
-      if (
-        error.code === 'SQLITE_CONSTRAINT_UNIQUE' ||
-        error.message?.includes('UNIQUE constraint failed')
-      ) {
-        throw new Error(`"${newItem.word}" already exists in your dictionary`)
-      }
-      throw error
+      throw handleDictionaryConstraintError(error, newItem.word)
     }
   }
 
@@ -330,13 +344,7 @@ export class DictionaryTable {
     try {
       await run(query, [word, pronunciation, new Date().toISOString(), id])
     } catch (error: any) {
-      if (
-        error.code === 'SQLITE_CONSTRAINT_UNIQUE' ||
-        error.message?.includes('UNIQUE constraint failed')
-      ) {
-        throw new Error(`"${word}" already exists in your dictionary`)
-      }
-      throw error
+      throw handleDictionaryConstraintError(error, word)
     }
   }
 
@@ -383,13 +391,7 @@ export class DictionaryTable {
     try {
       await run(query, params)
     } catch (error: any) {
-      if (
-        error.code === 'SQLITE_CONSTRAINT_UNIQUE' ||
-        error.message?.includes('UNIQUE constraint failed')
-      ) {
-        throw new Error(`"${item.word}" already exists in your dictionary`)
-      }
-      throw error
+      throw handleDictionaryConstraintError(error, item.word)
     }
   }
 }

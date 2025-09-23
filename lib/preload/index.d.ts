@@ -94,6 +94,11 @@ declare global {
       notifyOnboardingUpdate: (onboarding: any) => void
       notifyUserAuthUpdate: (authUser: any) => void
 
+      getOnboardingState: () => Promise<{
+        onboardingStep?: number
+        onboardingCompleted?: boolean
+      } | null>
+
       // Analytics device ID methods
       'analytics:get-device-id': () => Promise<string | undefined>
 

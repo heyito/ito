@@ -21,18 +21,18 @@ export class TranscriptionService {
   private currentMode: ItoMode | null = null
   private interactionId: string | null = null
 
-  public async startTranscription(mode: ItoMode) {
+  public async startTranscription(mode: ItoMode): Promise<boolean> {
     // Guard against multiple concurrent transcriptions
     if (this.audioStreamManager.isCurrentlyStreaming()) {
       log.warn('[TranscriptionService] Stream already in progress.')
-      return
+      return false
     }
     // Guard while we are finalizing the previous interaction (creating DB rows, inserting text)
     if (this.isFinalizing) {
       log.warn(
         '[TranscriptionService] Finalizing previous interaction, ignoring new start.',
       )
-      return
+      return false
     }
 
     this.audioStreamManager.startStreaming()
@@ -56,6 +56,8 @@ export class TranscriptionService {
       localInteractionId: this.interactionId,
       startTime: this.interactionManager.getInteractionStartTime(),
     })
+
+    return true
   }
 
   public stopStreaming() {
@@ -259,6 +261,19 @@ export class TranscriptionService {
     // Mark as finalizing to ignore accidental restarts during paste/DB save
     this.isFinalizing = true
     this.audioStreamManager.stopStreaming()
+
+    // Fallback: if no streaming is active and no handler will reset the flag,
+    // clear the interaction and allow future starts after a short delay.
+    setTimeout(() => {
+      if (!this.audioStreamManager.isCurrentlyStreaming()) {
+        // If the interaction manager doesn't hold an interaction, clear global and unlock
+        const currentId = this.interactionManager.getCurrentInteractionId()
+        if (!currentId) {
+          ;(globalThis as any).currentInteractionId = null
+        }
+        this.isFinalizing = false
+      }
+    }, 750)
   }
 
   public handleAudioChunk(chunk: Buffer) {

@@ -191,6 +191,19 @@ export function registerIPC() {
     }
   })
 
+  // Onboarding state (per user)
+  handleIPC('get-onboarding-state', async () => {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) return null
+      const json = await KeyValueStore.get(`onboarding:${userId}`)
+      return json ? JSON.parse(json) : null
+    } catch (error) {
+      log.error('[IPC] Failed to get onboarding state:', error)
+      return null
+    }
+  })
+
   // Window Init & Controls
   const getWindowFromEvent = (event: Electron.IpcMainInvokeEvent) =>
     BrowserWindow.fromWebContents(event.sender)
@@ -766,8 +779,21 @@ ipcMain.on(IPC_EVENTS.SETTINGS_UPDATE, (_event, settings: any) => {
   }
 })
 
-// Forwards onboarding updates from the main window to the pill window
-ipcMain.on(IPC_EVENTS.ONBOARDING_UPDATE, (_event, onboarding: any) => {
+// Persist onboarding updates per-user and forward to the pill window
+ipcMain.on(IPC_EVENTS.ONBOARDING_UPDATE, async (_event, onboarding: any) => {
+  try {
+    const userId = getCurrentUserId()
+    if (userId && onboarding) {
+      const payload = {
+        onboardingStep: onboarding.onboardingStep,
+        onboardingCompleted: onboarding.onboardingCompleted,
+      }
+      await KeyValueStore.set(`onboarding:${userId}`, JSON.stringify(payload))
+    }
+  } catch (error) {
+    log.error('[IPC] Failed to persist onboarding update:', error)
+  }
+
   getPillWindow()?.webContents.send(IPC_EVENTS.ONBOARDING_UPDATE, onboarding)
 })
 

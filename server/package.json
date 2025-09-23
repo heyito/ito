@@ -44,6 +44,7 @@
     "local-services-up": "bun local-db-up && bun local-s3-up",
     "local-services-down": "bun local-db-down && bun local-s3-down",
     "dev": "tsx watch src/index.ts",
+    "dev:win": "bun --watch src/index.ts",
     "test-client": "tsx ./test-client.ts",
     "migrate-audio-to-s3": "tsx scripts/migrate-audio-to-s3.ts"
   },

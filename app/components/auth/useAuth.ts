@@ -6,6 +6,7 @@ import { type AuthUser, type AuthTokens } from '../../../lib/main/store'
 import { useMainStore } from '@/app/store/useMainStore'
 import { analytics, ANALYTICS_EVENTS } from '../analytics'
 import { STORE_KEYS } from '../../../lib/constants/store-keys'
+import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 
 export const useAuth = () => {
   const {
@@ -49,6 +50,23 @@ export const useAuth = () => {
 
   // Prioritize store user over Auth0 user
   const authUser = storeUser || auth0User
+
+  // Hydrate per-user onboarding state helper
+  async function hydrateOnboardingState(context?: string): Promise<void> {
+    try {
+      const saved = await window.api.getOnboardingState?.()
+      const onboarding = useOnboardingStore.getState()
+      if (saved?.onboardingCompleted) {
+        onboarding.setOnboardingCompleted()
+      } else {
+        onboarding.resetOnboarding()
+        onboarding.incrementOnboardingStep()
+      }
+    } catch (e) {
+      const suffix = context ? ` (${context})` : ''
+      console.warn(`[useAuth] Failed to hydrate onboarding state${suffix}:`, e)
+    }
+  }
 
   // Check for token expiration on startup
   useEffect(() => {
@@ -184,6 +202,9 @@ export const useAuth = () => {
               result.tokens.id_token,
               result.tokens.access_token,
             )
+
+            // Hydrate per-user onboarding state from SQLite for the now-authenticated user
+            await hydrateOnboardingState()
           } else {
             throw new Error('Missing tokens or user info in response')
           }
@@ -435,6 +456,9 @@ export const useAuth = () => {
           tokens.id_token ?? null,
           tokens.access_token ?? null,
         )
+
+        // Hydrate per-user onboarding state
+        await hydrateOnboardingState('email/password')
       } catch (error) {
         console.error('Email/password login failed:', error)
         analytics.track(ANALYTICS_EVENTS.AUTH_METHOD_FAILED, {
@@ -510,6 +534,9 @@ export const useAuth = () => {
         null, // No idToken for self-hosted
         null, // No accessToken for self-hosted
       )
+
+      // Hydrate per-user onboarding state
+      await hydrateOnboardingState('self-hosted')
 
       // Track successful self-hosted signin
       analytics.trackAuth(ANALYTICS_EVENTS.AUTH_SIGNIN_COMPLETED, {

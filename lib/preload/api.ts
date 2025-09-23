@@ -141,6 +141,9 @@ const api = {
   'analytics:get-device-id': () =>
     ipcRenderer.invoke('analytics:get-device-id'),
 
+  // Onboarding state for current user
+  getOnboardingState: () => ipcRenderer.invoke('get-onboarding-state'),
+
   notifyLoginSuccess: (
     profile: any,
     idToken: string | null,

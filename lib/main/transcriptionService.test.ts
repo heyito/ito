@@ -316,5 +316,4 @@ describe('TranscriptionService', () => {
     expect(mockAudioStreamManager.stopStreaming).toHaveBeenCalled()
     // clearInteractionAudio is no longer called in stopTranscription
   })
-
 })

@@ -180,6 +180,7 @@ app.whenReady().then(async () => {
       })
 
       autoUpdater.on('update-downloaded', () => {
+        console.log('update downloaded successfully')
         if (
           mainWindow &&
           !mainWindow.isDestroyed() &&
@@ -187,6 +188,10 @@ app.whenReady().then(async () => {
         ) {
           mainWindow.webContents.send('update-downloaded')
         }
+      })
+
+      autoUpdater.on('error', error => {
+        console.error('Auto updater error:', error)
       })
 
       autoUpdater.on('download-progress', progressObj => {

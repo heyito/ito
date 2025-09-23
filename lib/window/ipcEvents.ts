@@ -68,6 +68,8 @@ export function registerIPC() {
   })
 
   ipcMain.on('install-update', () => {
+    autoUpdater.updateAvailable = true
+    autoUpdater.updateDownloaded = true
     autoUpdater.quitAndInstall()
   })
 

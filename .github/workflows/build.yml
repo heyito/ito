@@ -161,6 +161,43 @@ jobs:
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
 
+      - name: Regenerate metadata after signing
+        run: |
+          # Get the signed executable file
+          SIGNED_EXE=$(find dist -name "Ito-Setup-*.exe" | head -1)
+          if [ -z "$SIGNED_EXE" ]; then
+            echo "Error: No signed executable found"
+            exit 1
+          fi
+
+          echo "Found signed executable: $SIGNED_EXE"
+
+          # Calculate new checksum and size
+          NEW_CHECKSUM=$(sha512sum "$SIGNED_EXE" | cut -d' ' -f1)
+          NEW_CHECKSUM_B64=$(echo -n "$NEW_CHECKSUM" | xxd -r -p | base64 -w 0)
+          FILE_SIZE=$(stat -c%s "$SIGNED_EXE")
+          FILENAME=$(basename "$SIGNED_EXE")
+
+          echo "New checksum (hex): $NEW_CHECKSUM"
+          echo "New checksum (base64): $NEW_CHECKSUM_B64"
+          echo "File size: $FILE_SIZE"
+          echo "Filename: $FILENAME"
+
+          # Update latest.yml with new checksum and size
+          if [ -f "dist/latest.yml" ]; then
+            echo "Updating latest.yml with new checksum after signing"
+            sed -i "s|url: .*|url: $FILENAME|" dist/latest.yml
+            sed -i "s|sha512: .*|sha512: $NEW_CHECKSUM_B64|" dist/latest.yml
+            sed -i "s|size: .*|size: $FILE_SIZE|" dist/latest.yml
+            sed -i "s|path: .*|path: $FILENAME|" dist/latest.yml
+
+            echo "Updated latest.yml contents:"
+            cat dist/latest.yml
+          else
+            echo "Warning: latest.yml not found in dist directory"
+            ls -la dist/
+          fi
+
       - name: Upload signed Windows artifacts
         uses: actions/upload-artifact@v4
         with:

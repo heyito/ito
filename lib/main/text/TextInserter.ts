@@ -4,7 +4,7 @@ import { traceLogger } from '../traceLogger'
 export class TextInserter {
   async insertText(
     transcript: string,
-    interactionId?: string,
+    interactionId: string | null,
   ): Promise<boolean> {
     if (!transcript) {
       return false

@@ -165,7 +165,7 @@ app.whenReady().then(async () => {
       autoUpdater.setFeedURL({
         provider: 's3',
         bucket,
-        path: 'manual-test/', // DO NOT LET THIS MERGE TO DEV
+        path: 'releases/',
         region: 'us-west-2',
       })
 

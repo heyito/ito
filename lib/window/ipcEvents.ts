@@ -492,32 +492,10 @@ export function registerIPC() {
     return DictionaryTable.findAll(user_id)
   })
   handleIPC('dictionary:add', async (_e, item) => {
-    try {
-      const result = await DictionaryTable.insert(item)
-      return { success: true, data: result }
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message || 'Failed to add dictionary item',
-        errorType: error.message?.includes('already exists')
-          ? 'DUPLICATE'
-          : 'UNKNOWN',
-      }
-    }
+    return await DictionaryTable.insert(item)
   })
   handleIPC('dictionary:update', async (_e, { id, word, pronunciation }) => {
-    try {
-      await DictionaryTable.update(id, word, pronunciation)
-      return { success: true, data: null }
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message || 'Failed to update dictionary item',
-        errorType: error.message?.includes('already exists')
-          ? 'DUPLICATE'
-          : 'UNKNOWN',
-      }
-    }
+    return await DictionaryTable.update(id, word, pronunciation)
   })
   handleIPC('dictionary:delete', async (_e, id) =>
     DictionaryTable.softDelete(id),

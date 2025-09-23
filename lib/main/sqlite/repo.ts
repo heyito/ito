@@ -14,12 +14,28 @@ function isUniqueConstraintError(error: any): boolean {
   )
 }
 
+// Result type for database operations
+export type DbResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string; errorType?: string }
+
 // Helper function to handle unique constraint errors for dictionary items
-function handleDictionaryConstraintError(error: any, word: string): Error {
+function handleDictionaryConstraintError(
+  error: any,
+  word: string,
+): DbResult<never> {
   if (isUniqueConstraintError(error)) {
-    return new Error(`"${word}" already exists in your dictionary`)
+    return {
+      success: false,
+      error: `"${word}" already exists in your dictionary`,
+      errorType: 'DUPLICATE',
+    }
   }
-  return error
+  return {
+    success: false,
+    error: error.message || 'Database operation failed',
+    errorType: 'UNKNOWN',
+  }
 }
 
 // Helper function to parse JSON fields and handle double encoding
@@ -295,7 +311,9 @@ type InsertDictionaryItem = Omit<
 >
 
 export class DictionaryTable {
-  static async insert(itemData: InsertDictionaryItem): Promise<DictionaryItem> {
+  static async insert(
+    itemData: InsertDictionaryItem,
+  ): Promise<DbResult<DictionaryItem>> {
     const newItem: DictionaryItem = {
       id: uuidv4(),
       ...itemData,
@@ -320,9 +338,9 @@ export class DictionaryTable {
 
     try {
       await run(query, params)
-      return newItem
+      return { success: true, data: newItem }
     } catch (error: any) {
-      throw handleDictionaryConstraintError(error, newItem.word)
+      return handleDictionaryConstraintError(error, newItem.word)
     }
   }
 
@@ -338,13 +356,14 @@ export class DictionaryTable {
     id: string,
     word: string,
     pronunciation: string | null,
-  ): Promise<void> {
+  ): Promise<DbResult<void>> {
     const query =
       'UPDATE dictionary_items SET word = ?, pronunciation = ?, updated_at = ? WHERE id = ?'
     try {
       await run(query, [word, pronunciation, new Date().toISOString(), id])
+      return { success: true, data: undefined }
     } catch (error: any) {
-      throw handleDictionaryConstraintError(error, word)
+      return handleDictionaryConstraintError(error, word)
     }
   }
 
@@ -369,7 +388,7 @@ export class DictionaryTable {
     )
   }
 
-  static async upsert(item: DictionaryItem): Promise<void> {
+  static async upsert(item: DictionaryItem): Promise<DbResult<void>> {
     const query = `
       INSERT INTO dictionary_items (id, user_id, word, pronunciation, created_at, updated_at, deleted_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -390,8 +409,9 @@ export class DictionaryTable {
     ]
     try {
       await run(query, params)
+      return { success: true, data: undefined }
     } catch (error: any) {
-      throw handleDictionaryConstraintError(error, item.word)
+      return handleDictionaryConstraintError(error, item.word)
     }
   }
 }

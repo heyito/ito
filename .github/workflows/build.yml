@@ -163,7 +163,8 @@ jobs:
 
       - name: Regenerate metadata after signing
         run: |
-          # Get the signed executable file
+          # Find the signed executable file in the dist directory
+          # This searches for any file matching the pattern "Ito-Setup-*.exe"
           SIGNED_EXE=$(find dist -name "Ito-Setup-*.exe" | head -1)
           if [ -z "$SIGNED_EXE" ]; then
             echo "Error: No signed executable found"
@@ -172,10 +173,19 @@ jobs:
 
           echo "Found signed executable: $SIGNED_EXE"
 
-          # Calculate new checksum and size
+          # Calculate the SHA512 checksum of the signed file
+          # cut -d' ' -f1 extracts just the hash part (before the filename)
           NEW_CHECKSUM=$(sha512sum "$SIGNED_EXE" | cut -d' ' -f1)
+
+          # Convert hex checksum to base64 format (required by electron-updater)
+          # xxd -r -p converts hex string to raw bytes
+          # base64 -w 0 encodes to base64 without line wrapping
           NEW_CHECKSUM_B64=$(echo -n "$NEW_CHECKSUM" | xxd -r -p | base64 -w 0)
+
+          # Get the file size in bytes using stat
           FILE_SIZE=$(stat -c%s "$SIGNED_EXE")
+
+          # Extract just the filename from the full path
           FILENAME=$(basename "$SIGNED_EXE")
 
           echo "New checksum (hex): $NEW_CHECKSUM"
@@ -183,13 +193,17 @@ jobs:
           echo "File size: $FILE_SIZE"
           echo "Filename: $FILENAME"
 
-          # Update latest.yml with new checksum and size
+          # Update the auto-updater metadata file with the signed file's information
+          # This is critical because signing changes the file's checksum
           if [ -f "dist/latest.yml" ]; then
             echo "Updating latest.yml with new checksum after signing"
-            sed -i "s|url: .*|url: $FILENAME|" dist/latest.yml
-            sed -i "s|sha512: .*|sha512: $NEW_CHECKSUM_B64|" dist/latest.yml
-            sed -i "s|size: .*|size: $FILE_SIZE|" dist/latest.yml
-            sed -i "s|path: .*|path: $FILENAME|" dist/latest.yml
+
+            # Update each field in latest.yml using sed (stream editor)
+            # The | delimiter is used instead of / to avoid conflicts with filenames
+            sed -i "s|url: .*|url: $FILENAME|" dist/latest.yml          # Update download URL
+            sed -i "s|sha512: .*|sha512: $NEW_CHECKSUM_B64|" dist/latest.yml  # Update checksum
+            sed -i "s|size: .*|size: $FILE_SIZE|" dist/latest.yml        # Update file size
+            sed -i "s|path: .*|path: $FILENAME|" dist/latest.yml         # Update path
 
             echo "Updated latest.yml contents:"
             cat dist/latest.yml

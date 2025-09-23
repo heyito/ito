@@ -15,6 +15,7 @@ import {
 } from '../../ui/dialog'
 import { Button } from '../../ui/button'
 import { ItoMode } from '@/app/generated/ito_pb'
+import { getKeyDisplayInfo } from '@/lib/types/keyboard'
 
 export default function NotesContent() {
   const { notes, loadNotes, addNote, deleteNote, updateNote } = useNotesStore()
@@ -356,7 +357,7 @@ export default function NotesContent() {
             onChange={e => updateNoteContent(e.target.value)}
             onClick={() => setCreatingNote(true)}
             onBlur={handleBlur}
-            placeholder={`${creatingNote ? `Press and hold ${keyboardShortcut.join(' + ')} and start speaking` : ''}`}
+            placeholder={`${creatingNote ? `Press and hold ${keyboardShortcut.map(k => getKeyDisplayInfo(k).label).join(' + ')} and start speaking` : ''}`}
           />
           {showAddNoteButton && (
             <div className="absolute bottom-3 right-3">

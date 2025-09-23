@@ -298,8 +298,18 @@ export class DictionaryTable {
       newItem.deleted_at,
     ]
 
-    await run(query, params)
-    return newItem
+    try {
+      await run(query, params)
+      return newItem
+    } catch (error: any) {
+      if (
+        error.code === 'SQLITE_CONSTRAINT_UNIQUE' ||
+        error.message?.includes('UNIQUE constraint failed')
+      ) {
+        throw new Error(`"${newItem.word}" already exists in your dictionary`)
+      }
+      throw error
+    }
   }
 
   static async findAll(user_id?: string): Promise<DictionaryItem[]> {
@@ -317,7 +327,17 @@ export class DictionaryTable {
   ): Promise<void> {
     const query =
       'UPDATE dictionary_items SET word = ?, pronunciation = ?, updated_at = ? WHERE id = ?'
-    await run(query, [word, pronunciation, new Date().toISOString(), id])
+    try {
+      await run(query, [word, pronunciation, new Date().toISOString(), id])
+    } catch (error: any) {
+      if (
+        error.code === 'SQLITE_CONSTRAINT_UNIQUE' ||
+        error.message?.includes('UNIQUE constraint failed')
+      ) {
+        throw new Error(`"${word}" already exists in your dictionary`)
+      }
+      throw error
+    }
   }
 
   static async softDelete(id: string): Promise<void> {
@@ -360,7 +380,17 @@ export class DictionaryTable {
       item.updated_at,
       item.deleted_at,
     ]
-    await run(query, params)
+    try {
+      await run(query, params)
+    } catch (error: any) {
+      if (
+        error.code === 'SQLITE_CONSTRAINT_UNIQUE' ||
+        error.message?.includes('UNIQUE constraint failed')
+      ) {
+        throw new Error(`"${item.word}" already exists in your dictionary`)
+      }
+      throw error
+    }
   }
 }
 

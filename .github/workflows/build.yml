@@ -162,6 +162,7 @@ jobs:
           timestamp-digest: SHA256
 
       - name: Regenerate metadata after signing
+        shell: bash
         run: |
           # Find the signed executable file in the dist directory
           # This searches for any file matching the pattern "Ito-Setup-*.exe"

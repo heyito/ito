@@ -9,7 +9,7 @@ import { ItoMode } from '@/app/generated/ito_pb'
 import { IPC_EVENTS, RecordingStatePayload } from '../types/ipc'
 
 export class VoiceInputService {
-  public startSTTService = (mode: ItoMode) => {
+  public startSTTService = async (mode: ItoMode) => {
     console.info(
       '[Audio] Starting STT service with mode:',
       mode,
@@ -32,7 +32,13 @@ export class VoiceInputService {
       })
     }
 
-    transcriptionService.startTranscription(mode)
+    const started = await transcriptionService.startTranscription(mode)
+    if (!started) {
+      console.warn(
+        '[Audio] Transcription did not start, skipping recorder start',
+      )
+      return
+    }
     audioRecorderService.startRecording(deviceId)
 
     const recordingStatePayload: RecordingStatePayload = {

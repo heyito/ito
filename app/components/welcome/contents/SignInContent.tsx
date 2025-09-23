@@ -461,10 +461,8 @@ export default function SignInContent() {
                 : 'Need to create an account?'}{' '}
               <button
                 onClick={() => {
-                  // Completely clear user data for new account creation
+                  // Clear auth to allow selecting a different account, but do not reset onboarding
                   clearAuth(false)
-                  // Reset all stores to their initial state
-                  resetOnboarding()
                   loadNotes()
                   loadEntries()
                   window.location.reload()

@@ -93,6 +93,9 @@ describe('VoiceInputService Integration Tests', () => {
     mockTranscriptionService.stopTranscription.mockClear()
     mockTranscriptionService.handleAudioChunk.mockClear()
 
+    // Default behavior: transcription starts successfully
+    mockTranscriptionService.startTranscription.mockResolvedValue(true)
+
     // Setup default store values
     mockStore.get.mockImplementation((key: string) => {
       if (key === STORE_KEYS.SETTINGS) {
@@ -106,14 +109,14 @@ describe('VoiceInputService Integration Tests', () => {
   })
 
   describe('STT Service Lifecycle', () => {
-    test('should start STT service with all components', () => {
+    test('should start STT service with all components', async () => {
       const testDeviceId = 'test-microphone-device'
       mockStore.get.mockReturnValue({
         microphoneDeviceId: testDeviceId,
         muteAudioWhenDictating: false,
       })
 
-      voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
+      await voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
 
       // Verify transcription service started
       expect(mockTranscriptionService.startTranscription).toHaveBeenCalledTimes(
@@ -139,26 +142,26 @@ describe('VoiceInputService Integration Tests', () => {
       expect(mockMuteSystemAudio).not.toHaveBeenCalled()
     })
 
-    test('should mute system audio when configured', () => {
+    test('should mute system audio when configured', async () => {
       mockStore.get.mockReturnValue({
         microphoneDeviceId: 'test-device',
         muteAudioWhenDictating: true,
       })
 
-      voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
+      await voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
 
       // System audio should be muted
       expect(mockMuteSystemAudio).toHaveBeenCalledTimes(1)
     })
 
-    test('should stop STT service and clean up resources', () => {
+    test('should stop STT service and clean up resources', async () => {
       // First start the service
       mockStore.get.mockReturnValue({
         microphoneDeviceId: 'test-device',
         muteAudioWhenDictating: true,
       })
 
-      voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
+      await voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
 
       // Reset mocks to track stop calls
       mockStore.get.mockClear()
@@ -293,14 +296,14 @@ describe('VoiceInputService Integration Tests', () => {
   })
 
   describe('Device Management', () => {
-    test('should use device ID from settings', () => {
+    test('should use device ID from settings', async () => {
       const customDeviceId = 'custom-microphone-device-456'
       mockStore.get.mockReturnValue({
         microphoneDeviceId: customDeviceId,
         muteAudioWhenDictating: false,
       })
 
-      voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
+      await voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
 
       expect(mockAudioRecorderService.startRecording).toHaveBeenCalledWith(
         customDeviceId,
@@ -313,13 +316,13 @@ describe('VoiceInputService Integration Tests', () => {
       )
     })
 
-    test('should handle missing device ID gracefully', () => {
+    test('should handle missing device ID gracefully', async () => {
       mockStore.get.mockReturnValue({
         // Missing microphoneDeviceId
         muteAudioWhenDictating: false,
       })
 
-      voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
+      await voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
 
       // Should still start recording (with undefined device ID)
       expect(mockAudioRecorderService.startRecording).toHaveBeenCalledWith(
@@ -327,11 +330,11 @@ describe('VoiceInputService Integration Tests', () => {
       )
     })
 
-    test('should handle missing settings gracefully', () => {
+    test('should handle missing settings gracefully', async () => {
       // Return empty object instead of null to avoid accessing properties on null
       mockStore.get.mockReturnValue({})
 
-      voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
+      await voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
 
       // Should still start recording (with undefined device ID)
       expect(mockAudioRecorderService.startRecording).toHaveBeenCalledWith(
@@ -344,7 +347,7 @@ describe('VoiceInputService Integration Tests', () => {
   })
 
   describe('Integration Scenarios', () => {
-    test('should coordinate complete recording session', () => {
+    test('should coordinate complete recording session', async () => {
       const deviceId = 'session-test-device'
       mockStore.get.mockReturnValue({
         microphoneDeviceId: deviceId,
@@ -355,7 +358,7 @@ describe('VoiceInputService Integration Tests', () => {
       voiceInputService.setUpAudioRecorderListeners()
 
       // Start recording session
-      voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
+      await voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
 
       // Simulate audio events during recording
       const audioChunkHandler = mockAudioRecorderService.on.mock.calls.find(
@@ -415,9 +418,7 @@ describe('VoiceInputService Integration Tests', () => {
       })
 
       // Should not crash when window is unavailable (optional chaining handles this)
-      expect(() =>
-        voiceInputService.startSTTService(ItoMode.TRANSCRIBE),
-      ).not.toThrow()
+      await voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
 
       // Core audio services should still work
       expect(mockAudioRecorderService.startRecording).toHaveBeenCalledWith(
@@ -448,18 +449,16 @@ describe('VoiceInputService Integration Tests', () => {
       )
     })
 
-    test('should handle multiple consecutive starts', () => {
+    test('should handle multiple consecutive starts', async () => {
       mockStore.get.mockReturnValue({
         microphoneDeviceId: 'test-device',
         muteAudioWhenDictating: false,
       })
 
       // Should not crash when starting multiple times
-      expect(() => {
-        voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
-        voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
-        voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
-      }).not.toThrow()
+      await voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
+      await voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
+      await voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
 
       // Each start should call the services
       expect(mockAudioRecorderService.startRecording).toHaveBeenCalledTimes(3)

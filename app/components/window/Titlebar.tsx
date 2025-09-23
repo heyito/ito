@@ -143,7 +143,7 @@ export const Titlebar = () => {
               onClick={() => {
                 if (
                   confirm(
-                    'Are you sure you want to install the update? The app will restart.',
+                    'Are you sure you want to install the update? The app will quit to install.',
                   )
                 ) {
                   window.api.updater.installUpdate()

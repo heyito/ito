@@ -555,7 +555,6 @@ export const useAuth = () => {
       const result = await window.api.invoke('refresh-tokens')
 
       if (result.success) {
-        console.log('Manual token refresh successful')
         return result
       } else {
         console.error('Manual token refresh failed:', result.error)

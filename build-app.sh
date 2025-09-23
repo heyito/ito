@@ -136,7 +136,7 @@ build_electron_app() {
     
     # Build the application using electron-vite
     print_info "Building application with Electron Vite..."
-    bun run vite:build:app
+    bun run electron-vite build
     
     print_status "Electron application built successfully!"
 }
@@ -157,7 +157,7 @@ create_dmg() {
     fi
     
     print_info "Packaging application with Electron Builder..."
-    bun run vite:build:app
+    bun run electron-vite build
     bun run electron-builder --config electron-builder.config.js --mac --universal --publish never
     
     print_status "macOS DMG installer created successfully!"
@@ -174,7 +174,7 @@ create_windows_installer() {
     print_status "Creating Windows installer..."
     
     print_info "Packaging application with Electron Builder..."
-    bun run vite:build:app
+    bun run electron-vite build
     
     # Set npm config to avoid symlink issues on Windows
     export npm_config_cache=$PWD/.npm-cache
@@ -213,6 +213,7 @@ create_windows_installer() {
     docker run --rm --platform linux/amd64 \
       --env CSC_IDENTITY_AUTO_DISCOVERY=false \
       --env SKIP_SIGNING=true \
+      --env VITE_ITO_VERSION="${VITE_ITO_VERSION}" \
       -v "${PROJECT_PATH}":/project \
       electronuserland/builder:wine \
       bash -c "
@@ -240,10 +241,10 @@ create_windows_installer() {
         # Run electron-builder
         bunx electron-builder --config electron-builder.config.js --win --x64 --publish=never
 
-        # Rename latest.yml to latest-windows.yml inside the container
-        if [ -f dist/latest.yml ]; then
-          echo 'Renaming dist/latest.yml to dist/latest-windows.yml for Windows auto-updater'
-          mv dist/latest.yml dist/latest-windows.yml
+        # Copy versioned installer to static name for CDN
+        if ls dist/Ito-Setup-*.exe 1> /dev/null 2>&1; then
+          echo 'Copying versioned installer to static Ito-Installer.exe for CDN'
+          cp dist/Ito-Setup-*.exe dist/Ito-Installer.exe
         fi
       "
     

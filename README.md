@@ -240,7 +240,6 @@ bun run build:mac          # Build for macOS
 bun run build:win          # Build for Windows
 ./build-app.sh mac          # Build macOS using build script
 ./build-app.sh windows      # Build Windows using build script (requires Docker)
-bun run build:unpack       # Build unpacked for testing
 
 # Code Quality
 bun run lint               # Run ESLint

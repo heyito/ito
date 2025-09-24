@@ -235,7 +235,10 @@ pub fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::
                             if chars_to_undo > 0 {
                                 let _ = shift_cursor_right_with_deselect(chars_to_undo);
                             }
-                            full_context_text
+
+                            // Return only the newly added context (first n characters where n is the difference)
+                            let new_context_char_count = full_context_char_count - selected_char_count;
+                            full_context_text.chars().take(new_context_char_count).collect()
                         }
                         Err(e) => format!("[ERROR] {}", e)
                     }

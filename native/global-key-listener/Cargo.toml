@@ -23,3 +23,11 @@ winapi = { version = "0.3", features = ["winuser"] }
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation = "0.9"
 core-graphics = "0.22"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = true
+debug = 0

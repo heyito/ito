@@ -62,7 +62,7 @@ pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
 }
 
 // Native macOS Cmd+C implementation using raw Quartz C API - matching Python exactly
-fn native_cmd_c() -> Result<(), Box<dyn std::error::Error>> {
+pub fn native_cmd_c() -> Result<(), Box<dyn std::error::Error>> {
     unsafe {
         // Key code for 'C' is 8 on macOS
         let c_key_code: CGKeyCode = 8;
@@ -103,7 +103,7 @@ fn native_cmd_c() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 // Simple function to select previous N characters and copy them
-fn select_previous_chars_and_copy(
+pub fn select_previous_chars_and_copy(
     char_count: usize,
     clipboard: &mut Clipboard,
 ) -> Result<String, Box<dyn std::error::Error>> {
@@ -167,95 +167,9 @@ fn select_previous_chars_and_copy(
     Ok(context_text)
 }
 
-pub fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::error::Error>> {
-    // Use keyboard commands to get cursor context
-    // This is more reliable across different applications than Accessibility API
-    let mut clipboard = Clipboard::new().map_err(|e| format!("Clipboard init failed: {}", e))?;
-
-    // Store original clipboard contents
-    let original_clipboard = clipboard.get_text().unwrap_or_default();
-
-    // First, get any existing selected text
-    clipboard
-        .clear()
-        .map_err(|e| format!("Clipboard clear failed: {}", e))?;
-    native_cmd_c()?;
-    thread::sleep(Duration::from_millis(25));
-    let selected_text = clipboard.get_text().unwrap_or_default();
-    let selected_char_count = selected_text.chars().count();
-
-    let context_text = if selected_char_count == 0 {
-        // Case 1: No selected text - proceed normally with cursor context
-        clipboard
-            .clear()
-            .map_err(|e| format!("Clipboard clear failed: {}", e))?;
-
-        let result = select_previous_chars_and_copy(context_length, &mut clipboard);
-        match result {
-            Ok(precursor_text) => {
-                let precursor_char_count = precursor_text.chars().count();
-                // Shift right by the amount we grabbed
-                if precursor_char_count > 0 {
-                    let _ = shift_cursor_right_with_deselect(precursor_char_count);
-                }
-                precursor_text
-            }
-            Err(e) => format!("[ERROR] {}", e),
-        }
-    } else {
-        // Case 2: Some text already selected - try extending by one character
-        clipboard
-            .clear()
-            .map_err(|e| format!("Clipboard clear failed: {}", e))?;
-
-        let result = select_previous_chars_and_copy(1, &mut clipboard);
-        match result {
-            Ok(extended_text) => {
-                let extended_char_count = extended_text.chars().count();
-
-                if extended_char_count < selected_char_count {
-                    // Selection shrunk - undo and return empty
-                    let _ = shift_cursor_right_with_deselect(1);
-                    String::new()
-                } else if extended_char_count == selected_char_count {
-                    // Selection unchanged - return empty, no need to return cursor
-                    String::new()
-                } else {
-                    // Selection extended successfully - continue extending to get full context_length
-                    clipboard
-                        .clear()
-                        .map_err(|e| format!("Clipboard clear failed: {}", e))?;
-
-                    let full_result = select_previous_chars_and_copy(context_length, &mut clipboard);
-                    match full_result {
-                        Ok(full_context_text) => {
-                            let full_context_char_count = full_context_text.chars().count();
-                            // Undo by the absolute difference between original selected text and total selection
-                            let chars_to_undo = (full_context_char_count as i32 - selected_char_count as i32).abs() as usize;
-                            if chars_to_undo > 0 {
-                                let _ = shift_cursor_right_with_deselect(chars_to_undo);
-                            }
-
-                            // Return only the newly added context (first n characters where n is the difference)
-                            let new_context_char_count = full_context_char_count - selected_char_count;
-                            full_context_text.chars().take(new_context_char_count).collect()
-                        }
-                        Err(e) => format!("[ERROR] {}", e)
-                    }
-                }
-            }
-            Err(e) => format!("[ERROR] {}", e),
-        }
-    };
-
-    // Always restore original clipboard
-    let _ = clipboard.set_text(original_clipboard);
-
-    Ok(context_text)
-}
 
 // Shift cursor right while deselecting text
-fn shift_cursor_right_with_deselect(char_count: usize) -> Result<(), Box<dyn std::error::Error>> {
+pub fn shift_cursor_right_with_deselect(char_count: usize) -> Result<(), Box<dyn std::error::Error>> {
     if char_count == 0 {
         return Ok(());
     }

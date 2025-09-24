@@ -25,4 +25,9 @@ export const MIGRATIONS: Migration[] = [
     up: 'ALTER TABLE interactions ADD COLUMN raw_audio_id TEXT;',
     down: 'ALTER TABLE interactions DROP COLUMN raw_audio_id;',
   },
+  {
+    id: '20250923091139_make_dictionary_word_unique',
+    up: 'CREATE UNIQUE INDEX idx_dictionary_items_word_unique ON dictionary_items(word) WHERE deleted_at IS NULL;',
+    down: 'DROP INDEX idx_dictionary_items_word_unique;',
+  },
 ]

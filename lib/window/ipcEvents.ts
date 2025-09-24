@@ -506,10 +506,12 @@ export function registerIPC() {
     const user_id = getCurrentUserId()
     return DictionaryTable.findAll(user_id)
   })
-  handleIPC('dictionary:add', async (_e, item) => DictionaryTable.insert(item))
-  handleIPC('dictionary:update', async (_e, { id, word, pronunciation }) =>
-    DictionaryTable.update(id, word, pronunciation),
-  )
+  handleIPC('dictionary:add', async (_e, item) => {
+    return await DictionaryTable.insert(item)
+  })
+  handleIPC('dictionary:update', async (_e, { id, word, pronunciation }) => {
+    return await DictionaryTable.update(id, word, pronunciation)
+  })
   handleIPC('dictionary:delete', async (_e, id) =>
     DictionaryTable.softDelete(id),
   )

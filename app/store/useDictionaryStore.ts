@@ -74,33 +74,31 @@ export const useDictionaryStore = create<DictionaryStore>((set, get) => ({
   addEntry: async (content: string) => {
     const { user } = useAuthStore.getState()
     if (!user) return
-    try {
-      const newItem = await window.api.dictionary.add({
-        user_id: user.id,
-        word: content.trim(),
-        pronunciation: null,
-      })
-      const newEntry = mapItemToEntry(newItem)
-      set(state => ({ entries: [newEntry, ...state.entries] }))
-    } catch (error) {
-      console.error('Failed to add dictionary entry:', error)
+    const result = await window.api.dictionary.add({
+      user_id: user.id,
+      word: content.trim(),
+      pronunciation: null,
+    })
+    if (!result.success) {
+      throw new Error(result.error)
     }
+    const newEntry = mapItemToEntry(result.data)
+    set(state => ({ entries: [newEntry, ...state.entries] }))
   },
 
   addReplacement: async (from: string, to: string) => {
     const { user } = useAuthStore.getState()
     if (!user) return
-    try {
-      const newItem = await window.api.dictionary.add({
-        user_id: user.id,
-        word: from.trim(),
-        pronunciation: to.trim(),
-      })
-      const newEntry = mapItemToEntry(newItem)
-      set(state => ({ entries: [newEntry, ...state.entries] }))
-    } catch (error) {
-      console.error('Failed to add dictionary replacement:', error)
+    const result = await window.api.dictionary.add({
+      user_id: user.id,
+      word: from.trim(),
+      pronunciation: to.trim(),
+    })
+    if (!result.success) {
+      throw new Error(result.error)
     }
+    const newEntry = mapItemToEntry(result.data)
+    set(state => ({ entries: [newEntry, ...state.entries] }))
   },
 
   updateEntry: async (id, updates) => {
@@ -121,12 +119,11 @@ export const useDictionaryStore = create<DictionaryStore>((set, get) => ({
       pronunciation = updatedEntry.to
     }
 
-    try {
-      await window.api.dictionary.update(id, word, pronunciation)
-      get().loadEntries() // Reload all entries to reflect the change
-    } catch (error) {
-      console.error('Failed to update dictionary entry:', error)
+    const result = await window.api.dictionary.update(id, word, pronunciation)
+    if (!result.success) {
+      throw new Error(result.error)
     }
+    get().loadEntries() // Reload all entries to reflect the change
   },
 
   deleteEntry: async (id: string) => {

@@ -2,6 +2,42 @@ import { run, get, all } from './utils'
 import type { Interaction, Note, DictionaryItem } from './models'
 import { v4 as uuidv4 } from 'uuid'
 
+// SQLite error codes (from better-sqlite3 and node-sqlite3)
+const SQLITE_CONSTRAINT_UNIQUE = 'SQLITE_CONSTRAINT_UNIQUE'
+
+// Helper function to check if error is a unique constraint violation
+function isUniqueConstraintError(error: any): boolean {
+  return (
+    error.code === SQLITE_CONSTRAINT_UNIQUE ||
+    error.message?.includes('UNIQUE constraint failed') ||
+    error.errno === 19 // SQLITE_CONSTRAINT
+  )
+}
+
+// Result type for database operations
+export type DbResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string; errorType?: string }
+
+// Helper function to handle unique constraint errors for dictionary items
+function handleDictionaryConstraintError(
+  error: any,
+  word: string,
+): DbResult<never> {
+  if (isUniqueConstraintError(error)) {
+    return {
+      success: false,
+      error: `"${word}" already exists in your dictionary`,
+      errorType: 'DUPLICATE',
+    }
+  }
+  return {
+    success: false,
+    error: error.message || 'Database operation failed',
+    errorType: 'UNKNOWN',
+  }
+}
+
 // Helper function to parse JSON fields and handle double encoding
 function parseJsonField(value: any): any {
   if (!value || typeof value !== 'string') {
@@ -275,7 +311,9 @@ type InsertDictionaryItem = Omit<
 >
 
 export class DictionaryTable {
-  static async insert(itemData: InsertDictionaryItem): Promise<DictionaryItem> {
+  static async insert(
+    itemData: InsertDictionaryItem,
+  ): Promise<DbResult<DictionaryItem>> {
     const newItem: DictionaryItem = {
       id: uuidv4(),
       ...itemData,
@@ -298,8 +336,12 @@ export class DictionaryTable {
       newItem.deleted_at,
     ]
 
-    await run(query, params)
-    return newItem
+    try {
+      await run(query, params)
+      return { success: true, data: newItem }
+    } catch (error: any) {
+      return handleDictionaryConstraintError(error, newItem.word)
+    }
   }
 
   static async findAll(user_id?: string): Promise<DictionaryItem[]> {
@@ -314,10 +356,15 @@ export class DictionaryTable {
     id: string,
     word: string,
     pronunciation: string | null,
-  ): Promise<void> {
+  ): Promise<DbResult<void>> {
     const query =
       'UPDATE dictionary_items SET word = ?, pronunciation = ?, updated_at = ? WHERE id = ?'
-    await run(query, [word, pronunciation, new Date().toISOString(), id])
+    try {
+      await run(query, [word, pronunciation, new Date().toISOString(), id])
+      return { success: true, data: undefined }
+    } catch (error: any) {
+      return handleDictionaryConstraintError(error, word)
+    }
   }
 
   static async softDelete(id: string): Promise<void> {
@@ -341,7 +388,7 @@ export class DictionaryTable {
     )
   }
 
-  static async upsert(item: DictionaryItem): Promise<void> {
+  static async upsert(item: DictionaryItem): Promise<DbResult<void>> {
     const query = `
       INSERT INTO dictionary_items (id, user_id, word, pronunciation, created_at, updated_at, deleted_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -360,7 +407,12 @@ export class DictionaryTable {
       item.updated_at,
       item.deleted_at,
     ]
-    await run(query, params)
+    try {
+      await run(query, params)
+      return { success: true, data: undefined }
+    } catch (error: any) {
+      return handleDictionaryConstraintError(error, item.word)
+    }
   }
 }
 

@@ -20,3 +20,10 @@ export interface RecordingStatePayload {
 export interface VolumeUpdatePayload {
   volume: number
 }
+
+// Generic IPC Response Types
+export type IpcResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string; errorType?: string }
+
+export type IpcResponse<T> = Promise<IpcResult<T>>

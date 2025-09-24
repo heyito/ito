@@ -2,6 +2,7 @@ import { spawn, ChildProcessWithoutNullStreams } from 'child_process'
 import { join } from 'path'
 import { app } from 'electron'
 import os from 'os'
+import fs from 'fs'
 import log from 'electron-log'
 import { EventEmitter } from 'events'
 import { traceLogger } from '../main/traceLogger'
@@ -272,18 +273,19 @@ class AudioRecorderService extends EventEmitter {
       : join(process.resourcesPath, 'binaries')
 
     if (isDev) {
-      let archPath
       if (platform === 'darwin') {
-        archPath = 'universal'
+        return join(baseDir, 'universal', binaryName)
       } else if (platform === 'win32') {
-        archPath = 'x86_64-pc-windows-gnu/release'
+        const msvcDir = join(baseDir, 'x86_64-pc-windows-msvc/release')
+        const gnuDir = join(baseDir, 'x86_64-pc-windows-gnu/release')
+        if (fs.existsSync(msvcDir)) return join(msvcDir, binaryName)
+        return join(gnuDir, binaryName)
       } else {
         log.error(
           `Unsupported development platform for audio-recorder: ${platform}`,
         )
         return null
       }
-      return join(baseDir, archPath, binaryName)
     } else {
       return join(process.resourcesPath, 'binaries', binaryName)
     }

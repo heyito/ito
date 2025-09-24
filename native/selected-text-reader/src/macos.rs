@@ -241,36 +241,7 @@ fn select_previous_chars_and_copy(char_count: usize, clipboard: &mut Clipboard) 
     let max_chars_to_move = context_text.chars().count();
     let chars_to_move = std::cmp::min(max_chars_to_move, char_count);
     if chars_to_move > 0 {
-
-        for i in 0..chars_to_move {
-            unsafe {
-                let right_arrow_key_code: CGKeyCode = 124; // Right Arrow key code
-                let key_down = CGEventCreateKeyboardEvent(ptr::null_mut(), right_arrow_key_code, true);
-                let key_up = CGEventCreateKeyboardEvent(ptr::null_mut(), right_arrow_key_code, false);
-
-                if !key_down.is_null() && !key_up.is_null() {
-                    // Set Shift flag to unselect the text as we move right
-                    CGEventSetFlags(key_down, CG_EVENT_FLAG_MASK_SHIFT);
-                    CGEventSetFlags(key_up, CG_EVENT_FLAG_MASK_SHIFT);
-
-                    // Mark as synthetic events
-                    CGEventSetIntegerValueField(key_down, 121, 0x49544F);
-                    CGEventSetIntegerValueField(key_up, 121, 0x49544F);
-
-                    CGEventPost(CG_SESSION_EVENT_TAP, key_down);
-                    CGEventPost(CG_SESSION_EVENT_TAP, key_up);
-
-                    CFRelease(key_down as *const c_void);
-                    CFRelease(key_up as *const c_void);
-                }
-            }
-
-            // Brief pause between movements
-            if chars_to_move > 1 {
-                thread::sleep(Duration::from_millis(1));
-            }
-        }
-    } else {
+        shift_cursor_right_with_deselect(chars_to_move)?;
     }
 
 
@@ -296,6 +267,44 @@ pub fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::
         Ok(text) => Ok(text),
         Err(e) => Ok(format!("[ERROR] {}", e)),
     }
+}
+
+// Shift cursor right while deselecting text
+fn shift_cursor_right_with_deselect(char_count: usize) -> Result<(), Box<dyn std::error::Error>> {
+    if char_count == 0 {
+        return Ok(());
+    }
+
+    for i in 0..char_count {
+        unsafe {
+            let right_arrow_key_code: CGKeyCode = 124; // Right Arrow key code
+            let key_down = CGEventCreateKeyboardEvent(ptr::null_mut(), right_arrow_key_code, true);
+            let key_up = CGEventCreateKeyboardEvent(ptr::null_mut(), right_arrow_key_code, false);
+
+            if !key_down.is_null() && !key_up.is_null() {
+                // Set Shift flag to unselect the text as we move right
+                CGEventSetFlags(key_down, CG_EVENT_FLAG_MASK_SHIFT);
+                CGEventSetFlags(key_up, CG_EVENT_FLAG_MASK_SHIFT);
+
+                // Mark as synthetic events
+                CGEventSetIntegerValueField(key_down, 121, 0x49544F);
+                CGEventSetIntegerValueField(key_up, 121, 0x49544F);
+
+                CGEventPost(CG_SESSION_EVENT_TAP, key_down);
+                CGEventPost(CG_SESSION_EVENT_TAP, key_up);
+
+                CFRelease(key_down as *const c_void);
+                CFRelease(key_up as *const c_void);
+            }
+        }
+
+        // Brief pause between movements
+        if char_count > 1 {
+            thread::sleep(Duration::from_millis(1));
+        }
+    }
+
+    Ok(())
 }
 
 fn move_cursor_right(char_count: usize) -> Result<(), Box<dyn std::error::Error>> {

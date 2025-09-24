@@ -17,5 +17,12 @@
   },
   "[typescriptreact]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
-  }
+  },
+  "rust-analyzer.linkedProjects": [
+    "./native/selected-text-reader/Cargo.toml",
+    "./native/text-writer/Cargo.toml",
+    "./native/audio-recorder/Cargo.toml",
+    "./native/active-application/Cargo.toml",
+    "./native/global-key-listener/Cargo.toml"
+  ]
 }

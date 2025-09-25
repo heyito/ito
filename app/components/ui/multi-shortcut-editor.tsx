@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import KeyboardKey from '@/app/components/ui/keyboard-key'
-import { normalizeKeyEvent, ShortcutError } from '@/app/utils/keyboard'
+import { ShortcutError } from '@/app/utils/keyboard'
+import { keyNameMap } from '@/lib/types/keyboard'
 import { ItoMode } from '@/app/generated/ito_pb'
 import { useSettingsStore } from '@/app/store/useSettingsStore'
 import { Check, Pencil } from '@mynaui/icons-react'
@@ -123,7 +124,7 @@ export default function MultiShortcutEditor({
   const handleKeyEvent = useCallback(
     (event: any) => {
       if (!editingId || event.type !== 'keydown') return
-      const key = normalizeKeyEvent(event)
+      const key = keyNameMap[event.key] || event.key.toLowerCase()
       if (key === 'fn_fast') return
       if (draftKeys.length >= MAX_KEYS_PER_SHORTCUT) return // limit to 5 keys
 

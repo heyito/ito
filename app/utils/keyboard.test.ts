@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
-import { normalizeKeyEvent, KeyState } from './keyboard'
+import { KeyState } from './keyboard'
 import type { KeyEvent } from '@/lib/preload'
 
 // Mock the window.api for KeyState tests
@@ -13,113 +13,6 @@ global.window = {
 
 beforeEach(() => {
   mockApi.blockKeys.mockClear()
-})
-
-describe('normalizeKeyEvent', () => {
-  test('should normalize modifier keys correctly', () => {
-    expect(
-      normalizeKeyEvent({ key: 'MetaLeft', type: 'keydown' } as KeyEvent),
-    ).toBe('command')
-    expect(
-      normalizeKeyEvent({ key: 'MetaRight', type: 'keydown' } as KeyEvent),
-    ).toBe('command')
-    expect(
-      normalizeKeyEvent({ key: 'ControlLeft', type: 'keydown' } as KeyEvent),
-    ).toBe('control')
-    expect(
-      normalizeKeyEvent({ key: 'ControlRight', type: 'keydown' } as KeyEvent),
-    ).toBe('control')
-    expect(normalizeKeyEvent({ key: 'Alt', type: 'keydown' } as KeyEvent)).toBe(
-      'option',
-    )
-    expect(
-      normalizeKeyEvent({ key: 'AltGr', type: 'keydown' } as KeyEvent),
-    ).toBe('option')
-    expect(
-      normalizeKeyEvent({ key: 'ShiftLeft', type: 'keydown' } as KeyEvent),
-    ).toBe('shift')
-    expect(
-      normalizeKeyEvent({ key: 'ShiftRight', type: 'keydown' } as KeyEvent),
-    ).toBe('shift')
-  })
-
-  test('should normalize letter keys correctly', () => {
-    expect(
-      normalizeKeyEvent({ key: 'KeyA', type: 'keydown' } as KeyEvent),
-    ).toBe('a')
-    expect(
-      normalizeKeyEvent({ key: 'KeyZ', type: 'keydown' } as KeyEvent),
-    ).toBe('z')
-  })
-
-  test('should normalize number keys correctly', () => {
-    expect(
-      normalizeKeyEvent({ key: 'Digit1', type: 'keydown' } as KeyEvent),
-    ).toBe('1')
-    expect(
-      normalizeKeyEvent({ key: 'Digit0', type: 'keydown' } as KeyEvent),
-    ).toBe('0')
-  })
-
-  test('should normalize special keys correctly', () => {
-    expect(
-      normalizeKeyEvent({ key: 'Space', type: 'keydown' } as KeyEvent),
-    ).toBe('space')
-    expect(
-      normalizeKeyEvent({ key: 'Enter', type: 'keydown' } as KeyEvent),
-    ).toBe('enter')
-    expect(
-      normalizeKeyEvent({ key: 'Escape', type: 'keydown' } as KeyEvent),
-    ).toBe('esc')
-    expect(
-      normalizeKeyEvent({ key: 'Backspace', type: 'keydown' } as KeyEvent),
-    ).toBe('backspace')
-    expect(normalizeKeyEvent({ key: 'Tab', type: 'keydown' } as KeyEvent)).toBe(
-      'tab',
-    )
-    expect(
-      normalizeKeyEvent({ key: 'ArrowUp', type: 'keydown' } as KeyEvent),
-    ).toBe('↑')
-    expect(
-      normalizeKeyEvent({ key: 'ArrowDown', type: 'keydown' } as KeyEvent),
-    ).toBe('↓')
-    expect(
-      normalizeKeyEvent({ key: 'ArrowLeft', type: 'keydown' } as KeyEvent),
-    ).toBe('←')
-    expect(
-      normalizeKeyEvent({ key: 'ArrowRight', type: 'keydown' } as KeyEvent),
-    ).toBe('→')
-  })
-
-  test('should handle function key special case', () => {
-    expect(
-      normalizeKeyEvent({ key: 'Function', type: 'keydown' } as KeyEvent),
-    ).toBe('fn')
-    expect(
-      normalizeKeyEvent({ key: 'Unknown(179)', type: 'keydown' } as KeyEvent),
-    ).toBe('fn_fast')
-  })
-
-  test('should normalize unknown keys by cleaning up the name', () => {
-    expect(
-      normalizeKeyEvent({ key: 'SomeUnknownKey', type: 'keydown' } as KeyEvent),
-    ).toBe('someunknownkey')
-    expect(
-      normalizeKeyEvent({ key: 'KeyCustom', type: 'keydown' } as KeyEvent),
-    ).toBe('custom')
-    expect(
-      normalizeKeyEvent({ key: 'DigitCustom', type: 'keydown' } as KeyEvent),
-    ).toBe('custom')
-    expect(
-      normalizeKeyEvent({ key: 'ArrowCustom', type: 'keydown' } as KeyEvent),
-    ).toBe('custom')
-  })
-
-  test('should handle empty key gracefully', () => {
-    expect(normalizeKeyEvent({ key: '', type: 'keydown' } as KeyEvent)).toBe(
-      'unknown',
-    )
-  })
 })
 
 describe('KeyState', () => {

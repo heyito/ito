@@ -95,45 +95,6 @@ const reverseKeyNameMap: Record<string, string[]> = Object.entries(
   {} as Record<string, string[]>,
 )
 
-/**
- * Normalizes a key event into a legacy format suitable for UI display
- * @param event The key event from the global key listener
- * @returns The legacy key name for UI display (command, control, etc.)
- */
-export function normalizeKeyEvent(event: KeyEvent): string {
-  // Map directional keys back to legacy format for UI display
-  const legacyKeyMap: Record<string, string> = {
-    MetaLeft: 'command',
-    MetaRight: 'command',
-    ControlLeft: 'control',
-    ControlRight: 'control',
-    Alt: 'option',
-    AltGr: 'option',
-    ShiftLeft: 'shift',
-    ShiftRight: 'shift',
-  }
-
-  // If we have a legacy mapping for this key, use it
-  if (legacyKeyMap[event.key]) {
-    return legacyKeyMap[event.key]
-  }
-
-  // If we have a standard mapping, use it
-  if (keyNameMap[event.key]) {
-    return keyNameMap[event.key]
-  }
-
-  // For unknown keys, try to clean up the name
-  const key = event.key
-    .toLowerCase()
-    .replace(/^key/, '') // Remove 'Key' prefix
-    .replace(/^digit/, '') // Remove 'Digit' prefix
-    .replace(/^arrow/, '') // Remove 'Arrow' prefix
-    .replace(/^(left|right)$/, '') // Remove 'Left'/'Right' suffix
-
-  return key || 'unknown'
-}
-
 export type ShortcutError =
   | 'duplicate-key-same-mode'
   | 'duplicate-key-diff-mode'

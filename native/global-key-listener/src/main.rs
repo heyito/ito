@@ -144,9 +144,6 @@ fn callback(event: Event) -> Option<Event> {
         EventType::KeyRelease(key) => {
             let key_name = format!("{:?}", key);
 
-            // Check if we should block BEFORE updating state
-            let was_blocking = should_block();
-
             // Update pressed keys
             unsafe {
                 CURRENTLY_PRESSED.retain(|k| k != &key_name);
@@ -177,12 +174,8 @@ fn callback(event: Event) -> Option<Event> {
 
             output_event("keyup", &key);
 
-            // Block the release if we were blocking when the key was pressed
-            if was_blocking {
-                None
-            } else {
-                Some(event)
-            }
+            // Always allow key release events through
+            Some(event)
         }
         _ => Some(event), // Allow all other events
     }

@@ -12,6 +12,7 @@ import {
   startKeyListener,
   KeyListenerProcess,
   stopKeyListener,
+  registerAllHotkeys,
 } from '../media/keyboard'
 import { getPillWindow, mainWindow } from '../main/app'
 import {
@@ -52,6 +53,11 @@ export function registerIPC() {
   })
   ipcMain.on('electron-store-set', (_event, key, val) => {
     store.set(key, val)
+
+    // Re-register hotkeys when keyboard shortcuts change
+    if (key === 'settings.keyboardShortcuts' && KeyListenerProcess) {
+      registerAllHotkeys()
+    }
   })
 
   ipcMain.on('audio-devices-changed', () => {
@@ -68,7 +74,9 @@ export function registerIPC() {
   })
 
   ipcMain.on('install-update', () => {
+    // @ts-ignore
     autoUpdater.updateAvailable = true
+    // @ts-ignore
     autoUpdater.updateDownloaded = true
     autoUpdater.quitAndInstall()
   })
@@ -778,6 +786,11 @@ ipcMain.on(IPC_EVENTS.SETTINGS_UPDATE, (_event, settings: any) => {
   if (settings && typeof settings.microphoneDeviceId === 'string') {
     // Ask the recorder for the effective output config for the selected mic
     voiceInputService.handleMicrophoneChanged(settings.microphoneDeviceId)
+  }
+
+  // Re-register hotkeys with the listener when keyboard shortcuts change
+  if (settings && settings.keyboardShortcuts && KeyListenerProcess) {
+    registerAllHotkeys()
   }
 })
 

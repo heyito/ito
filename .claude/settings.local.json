@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:docs.microsoft.com)"
+      "WebFetch(domain:docs.microsoft.com)",
+      "Bash(bun build:rust:win:*)"
     ],
     "deny": [],
     "ask": []

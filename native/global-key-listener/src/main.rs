@@ -8,19 +8,26 @@ use std::time::Duration;
 
 mod key_codes;
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct Hotkey {
+    keys: Vec<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "command")]
 enum Command {
-    #[serde(rename = "block")]
-    Block { keys: Vec<String> },
-    #[serde(rename = "unblock")]
-    Unblock { key: String },
-    #[serde(rename = "get_blocked")]
-    GetBlocked,
+    #[serde(rename = "register_hotkeys")]
+    RegisterHotkeys { hotkeys: Vec<Hotkey> },
+    #[serde(rename = "clear_hotkeys")]
+    ClearHotkeys,
+    #[serde(rename = "get_hotkeys")]
+    GetHotkeys,
 }
 
-// Global state for blocked keys
-static mut BLOCKED_KEYS: Vec<String> = Vec::new();
+// Global state for registered hotkeys and currently pressed keys
+static mut REGISTERED_HOTKEYS: Vec<Hotkey> = Vec::new();
+static mut CURRENTLY_PRESSED: Vec<String> = Vec::new();
+static mut ALT_PRESSED: bool = false;
 
 // Global state for tracking modifier keys to detect Cmd+C/Ctrl+C combinations
 static mut CMD_PRESSED: bool = false;
@@ -67,18 +74,20 @@ fn main() {
 
 fn handle_command(command: Command) {
     match command {
-        Command::Block { keys } => unsafe {
-            BLOCKED_KEYS = keys;
+        Command::RegisterHotkeys { hotkeys } => unsafe {
+            REGISTERED_HOTKEYS = hotkeys;
+            eprintln!("Registered {} hotkeys", REGISTERED_HOTKEYS.len());
         },
-        Command::Unblock { key } => unsafe {
-            BLOCKED_KEYS.retain(|k| k != &key);
+        Command::ClearHotkeys => unsafe {
+            REGISTERED_HOTKEYS.clear();
+            eprintln!("Cleared all hotkeys");
         },
-        Command::GetBlocked => unsafe {
+        Command::GetHotkeys => unsafe {
             println!(
                 "{}",
                 json!({
-                    "type": "blocked_keys",
-                    "keys": BLOCKED_KEYS
+                    "type": "registered_hotkeys",
+                    "hotkeys": REGISTERED_HOTKEYS
                 })
             );
         },
@@ -86,11 +95,49 @@ fn handle_command(command: Command) {
     io::stdout().flush().unwrap();
 }
 
+// Check if current pressed keys match any registered hotkey
+fn should_block() -> bool {
+    unsafe {
+        // Check each registered hotkey
+        for hotkey in &REGISTERED_HOTKEYS {
+            // A hotkey blocks when ALL its keys are currently pressed
+            let all_pressed = hotkey.keys.iter().all(|key| CURRENTLY_PRESSED.contains(key));
+
+            if all_pressed && !hotkey.keys.is_empty() {
+                return true;
+            }
+        }
+        false
+    }
+}
+
+// Check if current pressed keys are potentially part of a hotkey (for early blocking)
+fn is_potential_hotkey() -> bool {
+    unsafe {
+        // If no keys pressed, not a potential hotkey
+        if CURRENTLY_PRESSED.is_empty() {
+            return false;
+        }
+
+        // Check if the current keys could be the start of any registered hotkey
+        for hotkey in &REGISTERED_HOTKEYS {
+            // Check if all currently pressed keys are part of this hotkey
+            let could_be_hotkey = CURRENTLY_PRESSED.iter().all(|pressed_key| {
+                hotkey.keys.contains(pressed_key)
+            });
+
+            if could_be_hotkey {
+                return true;
+            }
+        }
+        false
+    }
+}
+
 fn callback(event: Event) -> Option<Event> {
     match event.event_type {
         EventType::KeyPress(key) => {
             let key_name = format!("{:?}", key);
-            let should_block = unsafe { BLOCKED_KEYS.contains(&key_name) };
 
             // Check for copy combinations before updating modifier states
             // Ignore Cmd+C (macOS) and Ctrl+C (Windows/Linux) combinations to prevent feedback loops with selected-text-reader
@@ -102,7 +149,14 @@ fn callback(event: Event) -> Option<Event> {
                 return Some(event);
             }
 
-            // Track modifier key states AFTER checking for combinations
+            // Update pressed keys BEFORE checking if we should block
+            unsafe {
+                if !CURRENTLY_PRESSED.contains(&key_name) {
+                    CURRENTLY_PRESSED.push(key_name.clone());
+                }
+            }
+
+            // Track modifier key states
             if matches!(key, Key::MetaLeft | Key::MetaRight) {
                 unsafe {
                     CMD_PRESSED = true;
@@ -113,17 +167,37 @@ fn callback(event: Event) -> Option<Event> {
                     CTRL_PRESSED = true;
                 }
             }
+            if matches!(key, Key::Alt | Key::AltGr) {
+                unsafe {
+                    ALT_PRESSED = true;
+                }
+            }
+
+            // Check if we should block based on current hotkey state
+            let block = should_block();
+
+            // For Alt key combinations, also block if this could potentially be a hotkey
+            // This prevents OS menu activation when Alt is pressed as part of a hotkey
+            let potential_block = unsafe { ALT_PRESSED } && is_potential_hotkey();
 
             output_event("keydown", &key);
 
-            match should_block {
-                true => None,
-                false => Some(event),
+            if block || potential_block {
+                None // Block the event from reaching the OS
+            } else {
+                Some(event) // Let it through
             }
         }
         EventType::KeyRelease(key) => {
             let key_name = format!("{:?}", key);
-            let should_block = unsafe { BLOCKED_KEYS.contains(&key_name) };
+
+            // Check if we should block BEFORE updating state
+            let was_blocking = should_block();
+
+            // Update pressed keys
+            unsafe {
+                CURRENTLY_PRESSED.retain(|k| k != &key_name);
+            }
 
             // Check for C key release while copy is in progress or modifiers are still held
             if matches!(key, Key::KeyC) {
@@ -136,7 +210,7 @@ fn callback(event: Event) -> Option<Event> {
                 }
             }
 
-            // Track modifier key states AFTER checking for combinations
+            // Track modifier key states
             if matches!(key, Key::MetaLeft | Key::MetaRight) {
                 unsafe {
                     CMD_PRESSED = false;
@@ -147,10 +221,20 @@ fn callback(event: Event) -> Option<Event> {
                     CTRL_PRESSED = false;
                 }
             }
+            if matches!(key, Key::Alt | Key::AltGr) {
+                unsafe {
+                    ALT_PRESSED = false;
+                }
+            }
 
             output_event("keyup", &key);
 
-            Some(event)
+            // Block the release if we were blocking when the key was pressed
+            if was_blocking {
+                None
+            } else {
+                Some(event)
+            }
         }
         _ => Some(event), // Allow all other events
     }

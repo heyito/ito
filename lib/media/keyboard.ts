@@ -22,12 +22,12 @@ interface HeartbeatEvent {
   timestamp: string
 }
 
-interface BlockedKeysEvent {
-  type: 'blocked_keys'
-  keys: string[]
+interface RegisteredHotkeysEvent {
+  type: 'registered_hotkeys'
+  hotkeys: Array<{ keys: string[] }>
 }
 
-type ProcessEvent = KeyEvent | HeartbeatEvent | BlockedKeysEvent
+type ProcessEvent = KeyEvent | HeartbeatEvent | RegisteredHotkeysEvent
 
 // Global key listener process singleton
 export let KeyListenerProcess: ReturnType<typeof spawn> | null = null
@@ -244,15 +244,6 @@ function handleKeyEventInMain(event: KeyEvent) {
       return exactMatch
     })
 
-  // Only block keys when a complete shortcut is being held
-  if (currentlyHeldShortcut) {
-    // Block all keys for the currently held shortcut
-    blockKeys(getKeysToBlock(currentlyHeldShortcut))
-  } else {
-    // Unblock all keys when no complete shortcut is pressed
-    blockKeys([])
-  }
-
   // Handle shortcut activation with debouncing
   if (currentlyHeldShortcut && !isShortcutActive) {
     // New shortcut detected - start debounce timer
@@ -368,9 +359,9 @@ export const startKeyListener = () => {
             if (event.type === 'heartbeat_ping') {
               handleHeartbeat(event)
               continue
-            } else if (event.type === 'blocked_keys') {
-              // Log blocked keys for debugging
-              console.info('🔒 Blocked keys received:', event.keys)
+            } else if (event.type === 'registered_hotkeys') {
+              // Log registered hotkeys for debugging
+              console.info('🔒 Registered hotkeys received:', event.hotkeys)
               continue
             }
 
@@ -429,6 +420,9 @@ export const startKeyListener = () => {
 
     console.log('[Key listener] started successfully.')
 
+    // Register all configured hotkeys with the listener
+    registerAllHotkeys()
+
     // Start the stuck key checker
     startStuckKeyChecker()
 
@@ -441,24 +435,38 @@ export const startKeyListener = () => {
   }
 }
 
-export const blockKeys = (keys: string[]) => {
+// Register all hotkeys from settings with the key listener
+export const registerAllHotkeys = () => {
   if (!KeyListenerProcess) {
-    console.warn('Key listener not running, cannot block keys.')
+    console.warn('Key listener not running, cannot register hotkeys.')
     return
   }
 
+  const { keyboardShortcuts } = store.get(STORE_KEYS.SETTINGS)
+
+  // Convert shortcuts to hotkey format for the listener
+  const hotkeys = keyboardShortcuts
+    .filter(ks => ks.keys.length > 0)
+    .map(shortcut => ({
+      keys: getKeysToBlock(shortcut)
+    }))
+
+  console.info('Registering hotkeys with listener:', hotkeys)
+
   KeyListenerProcess.stdin?.write(
-    JSON.stringify({ command: 'block', keys }) + '\n',
+    JSON.stringify({ command: 'register_hotkeys', hotkeys }) + '\n',
   )
 }
 
-export const unblockKey = (key: string) => {
+// Clear all registered hotkeys
+export const clearHotkeys = () => {
   if (!KeyListenerProcess) {
-    console.warn('Key listener not running, cannot unblock key.')
+    console.warn('Key listener not running, cannot clear hotkeys.')
     return
   }
+
   KeyListenerProcess.stdin?.write(
-    JSON.stringify({ command: 'unblock', key }) + '\n',
+    JSON.stringify({ command: 'clear_hotkeys' }) + '\n',
   )
 }
 

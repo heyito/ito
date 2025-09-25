@@ -783,7 +783,6 @@ ipcMain.on(IPC_EVENTS.SETTINGS_UPDATE, (_event, settings: any) => {
     // Ask the recorder for the effective output config for the selected mic
     voiceInputService.handleMicrophoneChanged(settings.microphoneDeviceId)
   }
-
 })
 
 // Persist onboarding updates per-user and forward to the pill window

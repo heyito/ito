@@ -103,14 +103,14 @@ const reverseKeyNameMap: Record<string, string[]> = Object.entries(
 export function normalizeKeyEvent(event: KeyEvent): string {
   // Map directional keys back to legacy format for UI display
   const legacyKeyMap: Record<string, string> = {
-    'MetaLeft': 'command',
-    'MetaRight': 'command',
-    'ControlLeft': 'control',
-    'ControlRight': 'control',
-    'Alt': 'option',
-    'AltGr': 'option',
-    'ShiftLeft': 'shift',
-    'ShiftRight': 'shift',
+    MetaLeft: 'command',
+    MetaRight: 'command',
+    ControlLeft: 'control',
+    ControlRight: 'control',
+    Alt: 'option',
+    AltGr: 'option',
+    ShiftLeft: 'shift',
+    ShiftRight: 'shift',
   }
 
   // If we have a legacy mapping for this key, use it
@@ -411,5 +411,4 @@ export class KeyState {
   clear() {
     this.pressedKeys.clear()
   }
-
 }

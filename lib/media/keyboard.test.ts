@@ -1146,7 +1146,9 @@ describe('Keyboard Module', () => {
         ],
       })
 
-      const { startKeyListener, registerAllHotkeys } = await import('./keyboard')
+      const { startKeyListener, registerAllHotkeys } = await import(
+        './keyboard'
+      )
       startKeyListener()
 
       mockChildProcess.stdin.write.mockClear()

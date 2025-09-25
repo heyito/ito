@@ -133,7 +133,6 @@ describe('KeyState', () => {
     test('should initialize with empty shortcut by default', () => {
       const state = new KeyState()
       expect(state.getPressedKeys()).toEqual([])
-
     })
 
     test('should initialize with provided shortcut', () => {

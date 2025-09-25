@@ -29,7 +29,6 @@ interface RegisteredHotkeysEvent {
 
 type ProcessEvent = KeyEvent | HeartbeatEvent | RegisteredHotkeysEvent
 
-
 // Global key listener process singleton
 export let KeyListenerProcess: ReturnType<typeof spawn> | null = null
 export let isShortcutActive = false
@@ -212,7 +211,6 @@ function handleKeyEventInMain(event: KeyEvent) {
 
   const normalizedKey = normalizeKey(event.key)
 
-
   // Ignore the "fast fn" event which can be noisy.
   if (normalizedKey === 'fn_fast') return
 
@@ -243,10 +241,8 @@ function handleKeyEventInMain(event: KeyEvent) {
       const exactMatch =
         normalizedShortcutKeys.length === pressedKeys.size && hasAllKeys
 
-
       return exactMatch
     })
-
 
   // Handle shortcut activation with debouncing
   if (currentlyHeldShortcut && !isShortcutActive) {
@@ -452,7 +448,7 @@ export const registerAllHotkeys = () => {
   const hotkeys = keyboardShortcuts
     .filter(ks => ks.keys.length > 0)
     .map(shortcut => ({
-      keys: getKeysToRegister(shortcut)
+      keys: getKeysToRegister(shortcut),
     }))
 
   console.info('Registering hotkeys with listener:', hotkeys)
@@ -461,7 +457,6 @@ export const registerAllHotkeys = () => {
     JSON.stringify({ command: 'register_hotkeys', hotkeys }) + '\n',
   )
 }
-
 
 /**
  * A reverse mapping of normalized key names to their raw `rdev` counterparts.

@@ -133,12 +133,12 @@ describe('KeyState', () => {
     test('should initialize with empty shortcut by default', () => {
       const state = new KeyState()
       expect(state.getPressedKeys()).toEqual([])
-      // Note: KeyState no longer calls blockKeys - hotkey registration handles blocking
+
     })
 
     test('should initialize with provided shortcut', () => {
       const keyState = new KeyState(['command', 'space'])
-      // Note: KeyState no longer calls blockKeys - hotkey registration handles blocking
+
       expect(keyState).toBeDefined()
     })
   })
@@ -146,13 +146,13 @@ describe('KeyState', () => {
   describe('updateShortcut', () => {
     test('should update the shortcut', () => {
       keyState.updateShortcut(['command', 'z'])
-      // Note: KeyState no longer calls blockKeys - hotkey registration handles blocking
+
       expect(keyState).toBeDefined()
     })
 
     test('should handle empty shortcut', () => {
       keyState.updateShortcut([])
-      // Note: KeyState no longer calls blockKeys - hotkey registration handles blocking
+
       expect(keyState).toBeDefined()
     })
   })

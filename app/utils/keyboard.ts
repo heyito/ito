@@ -361,14 +361,12 @@ export class KeyState {
   }
 
   /**
-   * Updates the shortcut (no longer blocks keys - blocking is handled by hotkey registration)
+   * Updates the shortcut
    * @param shortcut The shortcut to set, as an array of normalized key names.
    */
   updateShortcut(shortcut: KeyName[]) {
     // Normalize legacy keys to new format
     this.shortcut = shortcut.map(normalizeLegacyKey)
-    // Note: Key blocking is now handled by the hotkey registration system
-    // No need to call blockKeys API as it no longer exists
   }
 
   /**

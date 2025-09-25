@@ -8,6 +8,8 @@ import { voiceInputService } from '../main/voiceInputService'
 import { traceLogger } from '../main/traceLogger'
 import { KeyName, keyNameMap, normalizeLegacyKey } from '../types/keyboard'
 import { getProgrammaticTyping } from './typingState'
+import * as fs from 'fs'
+import * as path from 'path'
 
 interface KeyEvent {
   type: 'keydown' | 'keyup'
@@ -28,6 +30,17 @@ interface RegisteredHotkeysEvent {
 }
 
 type ProcessEvent = KeyEvent | HeartbeatEvent | RegisteredHotkeysEvent
+
+// Logging function for debugging
+const logToFile = (message: string) => {
+  try {
+    const timestamp = new Date().toISOString().slice(11, 23) // HH:MM:SS.sss
+    const logEntry = `[${timestamp}] TS: ${message}\n`
+    fs.appendFileSync('key_listener_debug.log', logEntry)
+  } catch (error) {
+    // Ignore logging errors
+  }
+}
 
 // Global key listener process singleton
 export let KeyListenerProcess: ReturnType<typeof spawn> | null = null
@@ -211,6 +224,8 @@ function handleKeyEventInMain(event: KeyEvent) {
 
   const normalizedKey = normalizeKey(event.key)
 
+  logToFile(`${event.type.toUpperCase()}: ${event.key} -> ${normalizedKey} | Pressed keys: [${Array.from(pressedKeys).join(', ')}]`)
+
   // Ignore the "fast fn" event which can be noisy.
   if (normalizedKey === 'fn_fast') return
 
@@ -220,9 +235,11 @@ function handleKeyEventInMain(event: KeyEvent) {
     if (!keyPressTimestamps.has(normalizedKey)) {
       keyPressTimestamps.set(normalizedKey, Date.now())
     }
+    logToFile(`Added ${normalizedKey} to pressed keys. Now: [${Array.from(pressedKeys).join(', ')}]`)
   } else {
     pressedKeys.delete(normalizedKey)
     keyPressTimestamps.delete(normalizedKey)
+    logToFile(`Removed ${normalizedKey} from pressed keys. Now: [${Array.from(pressedKeys).join(', ')}]`)
   }
 
   // Check if any of the configured shortcuts are currently held
@@ -241,8 +258,12 @@ function handleKeyEventInMain(event: KeyEvent) {
       const exactMatch =
         normalizedShortcutKeys.length === pressedKeys.size && hasAllKeys
 
+      logToFile(`Checking shortcut [${normalizedShortcutKeys.join('+')}]: hasAllKeys=${hasAllKeys}, exactMatch=${exactMatch}`)
+
       return exactMatch
     })
+
+  logToFile(`Currently held shortcut: ${currentlyHeldShortcut ? `[${currentlyHeldShortcut.keys.join('+')}]` : 'none'}`)
 
   // Handle shortcut activation with debouncing
   if (currentlyHeldShortcut && !isShortcutActive) {
@@ -452,6 +473,7 @@ export const registerAllHotkeys = () => {
     }))
 
   console.info('Registering hotkeys with listener:', hotkeys)
+  logToFile(`Registering ${hotkeys.length} hotkeys with listener: ${JSON.stringify(hotkeys)}`)
 
   KeyListenerProcess.stdin?.write(
     JSON.stringify({ command: 'register_hotkeys', hotkeys }) + '\n',

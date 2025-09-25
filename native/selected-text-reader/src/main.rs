@@ -103,7 +103,11 @@ impl CommandProcessor {
                     context_length,
                     cut_current_selection,
                     request_id,
-                } => self.handle_get_cursor_context(context_length, cut_current_selection, request_id),
+                } => self.handle_get_cursor_context(
+                    context_length,
+                    cut_current_selection,
+                    request_id,
+                ),
             }
         }
     }
@@ -155,7 +159,12 @@ impl CommandProcessor {
         }
     }
 
-    fn handle_get_cursor_context(&mut self, context_length: Option<usize>, _cut_current_selection: Option<bool>, request_id: String) {
+    fn handle_get_cursor_context(
+        &mut self,
+        context_length: Option<usize>,
+        _cut_current_selection: Option<bool>,
+        request_id: String,
+    ) {
         let context_len = context_length.unwrap_or(10);
 
         let response = match get_cursor_context(context_len) {
@@ -221,7 +230,9 @@ fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::erro
     let original_clipboard = clipboard.get_text().unwrap_or_default();
 
     // First, get any existing selected text
-    clipboard.clear().map_err(|e| format!("Clipboard clear failed: {}", e))?;
+    clipboard
+        .clear()
+        .map_err(|e| format!("Clipboard clear failed: {}", e))?;
     copy_selected_text()?;
     thread::sleep(Duration::from_millis(25));
     let selected_text = clipboard.get_text().unwrap_or_default();
@@ -229,7 +240,9 @@ fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::erro
 
     let context_text = if selected_char_count == 0 {
         // Case 1: No selected text - proceed normally with cursor context
-        clipboard.clear().map_err(|e| format!("Clipboard clear failed: {}", e))?;
+        clipboard
+            .clear()
+            .map_err(|e| format!("Clipboard clear failed: {}", e))?;
 
         let result = select_previous_chars_and_copy(context_length, &mut clipboard);
         match result {
@@ -241,11 +254,13 @@ fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::erro
                 }
                 precursor_text
             }
-            Err(e) => format!("[ERROR] {}", e)
+            Err(e) => format!("[ERROR] {}", e),
         }
     } else {
         // Case 2: Some text already selected - try extending by one character
-        clipboard.clear().map_err(|e| format!("Clipboard clear failed: {}", e))?;
+        clipboard
+            .clear()
+            .map_err(|e| format!("Clipboard clear failed: {}", e))?;
 
         let result = select_previous_chars_and_copy(1, &mut clipboard);
         match result {
@@ -257,31 +272,41 @@ fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::erro
                     let _ = shift_cursor_right_with_deselect(1);
                     String::new()
                 } else if extended_char_count == selected_char_count {
-                    // Selection unchanged - return empty, no need to return cursor
+                    // Selection unchanged - return empty, no need to return cursor.
+                    // Likely means we're at the edge of a textbox.
                     String::new()
                 } else {
                     // Selection extended successfully - continue extending to get full context_length
-                    clipboard.clear().map_err(|e| format!("Clipboard clear failed: {}", e))?;
+                    clipboard
+                        .clear()
+                        .map_err(|e| format!("Clipboard clear failed: {}", e))?;
 
-                    let full_result = select_previous_chars_and_copy(context_length, &mut clipboard);
+                    let full_result =
+                        select_previous_chars_and_copy(context_length - 1, &mut clipboard);
                     match full_result {
                         Ok(full_context_text) => {
                             let full_context_char_count = full_context_text.chars().count();
                             // Undo by the absolute difference between original selected text and total selection
-                            let chars_to_undo = (full_context_char_count as i32 - selected_char_count as i32).abs() as usize;
+                            let chars_to_undo = (full_context_char_count as i32
+                                - selected_char_count as i32)
+                                .abs() as usize;
                             if chars_to_undo > 0 {
                                 let _ = shift_cursor_right_with_deselect(chars_to_undo);
                             }
 
                             // Return only the newly added context (first n characters where n is the difference)
-                            let new_context_char_count = full_context_char_count - selected_char_count;
-                            full_context_text.chars().take(new_context_char_count).collect()
+                            let new_context_char_count =
+                                full_context_char_count - selected_char_count;
+                            full_context_text
+                                .chars()
+                                .take(new_context_char_count)
+                                .collect()
                         }
-                        Err(e) => format!("[ERROR] {}", e)
+                        Err(e) => format!("[ERROR] {}", e),
                     }
                 }
             }
-            Err(e) => format!("[ERROR] {}", e)
+            Err(e) => format!("[ERROR] {}", e),
         }
     };
 
@@ -303,12 +328,18 @@ fn copy_selected_text() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[cfg(target_os = "macos")]
-fn select_previous_chars_and_copy(char_count: usize, clipboard: &mut Clipboard) -> Result<String, Box<dyn std::error::Error>> {
+fn select_previous_chars_and_copy(
+    char_count: usize,
+    clipboard: &mut Clipboard,
+) -> Result<String, Box<dyn std::error::Error>> {
     macos::select_previous_chars_and_copy(char_count, clipboard)
 }
 
 #[cfg(any(target_os = "windows", target_os = "linux"))]
-fn select_previous_chars_and_copy(char_count: usize, clipboard: &mut Clipboard) -> Result<String, Box<dyn std::error::Error>> {
+fn select_previous_chars_and_copy(
+    char_count: usize,
+    clipboard: &mut Clipboard,
+) -> Result<String, Box<dyn std::error::Error>> {
     cross_platform::select_previous_chars_and_copy(char_count, clipboard)
 }
 

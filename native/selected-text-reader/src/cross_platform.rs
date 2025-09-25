@@ -70,7 +70,6 @@ fn cut_selected_text() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-
 // Simple function to select previous N characters and copy them
 pub fn select_previous_chars_and_copy(
     char_count: usize,
@@ -102,7 +101,6 @@ pub fn select_previous_chars_and_copy(
     thread::sleep(Duration::from_millis(10));
 
     copy_selected_text()?;
-    thread::sleep(Duration::from_millis(25)); // Wait for copy to complete
 
     // Adaptively wait for and get text from clipboard
     let mut context_text = String::new();
@@ -123,7 +121,9 @@ pub fn select_previous_chars_and_copy(
 }
 
 // Shift cursor right while deselecting text
-pub fn shift_cursor_right_with_deselect(char_count: usize) -> Result<(), Box<dyn std::error::Error>> {
+pub fn shift_cursor_right_with_deselect(
+    char_count: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
     if char_count == 0 {
         return Ok(());
     }

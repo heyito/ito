@@ -9,7 +9,7 @@ use std::time::Duration;
 mod key_codes;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-struct Hotkey {
+struct HotkeyCombo {
     keys: Vec<String>,
 }
 
@@ -17,7 +17,7 @@ struct Hotkey {
 #[serde(tag = "command")]
 enum Command {
     #[serde(rename = "register_hotkeys")]
-    RegisterHotkeys { hotkeys: Vec<Hotkey> },
+    RegisterHotkeys { hotkeys: Vec<HotkeyCombo> },
     #[serde(rename = "clear_hotkeys")]
     ClearHotkeys,
     #[serde(rename = "get_hotkeys")]
@@ -25,7 +25,7 @@ enum Command {
 }
 
 // Global state for registered hotkeys and currently pressed keys
-static mut REGISTERED_HOTKEYS: Vec<Hotkey> = Vec::new();
+static mut REGISTERED_HOTKEYS: Vec<HotkeyCombo> = Vec::new();
 static mut CURRENTLY_PRESSED: Vec<String> = Vec::new();
 static mut ALT_PRESSED: bool = false;
 
@@ -33,7 +33,6 @@ static mut ALT_PRESSED: bool = false;
 static mut CMD_PRESSED: bool = false;
 static mut CTRL_PRESSED: bool = false;
 static mut COPY_IN_PROGRESS: bool = false;
-
 
 fn main() {
     // Spawn a thread to read commands from stdin
@@ -102,9 +101,14 @@ fn should_block() -> bool {
         // Check each registered hotkey
         for hotkey in &REGISTERED_HOTKEYS {
             // A hotkey blocks when ALL its keys are currently pressed
-            let all_pressed = hotkey.keys.iter().all(|key| CURRENTLY_PRESSED.contains(key));
+            let all_pressed = hotkey
+                .keys
+                .iter()
+                .all(|key| CURRENTLY_PRESSED.contains(key));
 
-            if all_pressed && !hotkey.keys.is_empty() {
+            let same_length = hotkey.keys.len() == CURRENTLY_PRESSED.len();
+
+            if all_pressed && !hotkey.keys.is_empty() && same_length {
                 return true;
             }
         }
@@ -129,9 +133,9 @@ fn is_potential_hotkey() -> bool {
         // Check if the current keys could be the start of any registered hotkey
         for hotkey in &REGISTERED_HOTKEYS {
             // Check if all currently pressed keys are part of this hotkey
-            let could_be_hotkey = CURRENTLY_PRESSED.iter().all(|pressed_key| {
-                hotkey.keys.contains(pressed_key)
-            });
+            let could_be_hotkey = CURRENTLY_PRESSED
+                .iter()
+                .all(|pressed_key| hotkey.keys.contains(pressed_key));
 
             if could_be_hotkey {
                 return true;
@@ -145,7 +149,6 @@ fn callback(event: Event) -> Option<Event> {
     match event.event_type {
         EventType::KeyPress(key) => {
             let key_name = format!("{:?}", key);
-
 
             // Check for copy combinations before updating modifier states
             // Ignore Cmd+C (macOS) and Ctrl+C (Windows/Linux) combinations to prevent feedback loops with selected-text-reader
@@ -194,7 +197,6 @@ fn callback(event: Event) -> Option<Event> {
 
             let potential_block = is_potential_hotkey();
 
-
             output_event("keydown", &key);
 
             if block || potential_block || alt_combo_block || should_selectively_block_alt {
@@ -205,7 +207,6 @@ fn callback(event: Event) -> Option<Event> {
         }
         EventType::KeyRelease(key) => {
             let key_name = format!("{:?}", key);
-
 
             // Check if we should block BEFORE updating state
             let was_blocking = should_block();

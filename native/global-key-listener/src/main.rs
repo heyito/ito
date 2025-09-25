@@ -23,7 +23,6 @@ enum Command {
 // Global state for registered hotkeys and currently pressed keys
 static mut REGISTERED_HOTKEYS: Vec<HotkeyCombo> = Vec::new();
 static mut CURRENTLY_PRESSED: Vec<String> = Vec::new();
-static mut ALT_PRESSED: bool = false;
 
 // Global state for tracking modifier keys to detect Cmd+C/Ctrl+C combinations
 static mut CMD_PRESSED: bool = false;
@@ -99,35 +98,6 @@ fn should_block() -> bool {
     }
 }
 
-// Check if current pressed keys are potentially part of a hotkey (for early blocking)
-fn is_potential_hotkey() -> bool {
-    unsafe {
-        // If no keys pressed, not a potential hotkey
-        if CURRENTLY_PRESSED.is_empty() {
-            return false;
-        }
-
-        // Only consider it a potential hotkey if we have multiple keys pressed
-        // This prevents blocking single keys that happen to be part of a hotkey
-        if CURRENTLY_PRESSED.len() < 2 {
-            return false;
-        }
-
-        // Check if the current keys could be the start of any registered hotkey
-        for hotkey in &REGISTERED_HOTKEYS {
-            // Check if all currently pressed keys are part of this hotkey
-            let could_be_hotkey = CURRENTLY_PRESSED
-                .iter()
-                .all(|pressed_key| hotkey.keys.contains(pressed_key));
-
-            if could_be_hotkey {
-                return true;
-            }
-        }
-        false
-    }
-}
-
 fn callback(event: Event) -> Option<Event> {
     match event.event_type {
         EventType::KeyPress(key) => {
@@ -161,28 +131,11 @@ fn callback(event: Event) -> Option<Event> {
                     CTRL_PRESSED = true;
                 }
             }
-            if matches!(key, Key::Alt | Key::AltGr) {
-                unsafe {
-                    ALT_PRESSED = true;
-                }
-            }
-
-            // Don't do any special Alt blocking here - let the other logic handle it
-            // Alt+Tab, Alt+F4, etc. should work normally
-            let should_selectively_block_alt = false;
-
-            // Check if we should block based on current hotkey state
-            let block = should_block();
-
-            // Only block Alt combinations that would result in exact hotkey matches
-            // This allows Alt+Tab, Alt+F4, etc. to work normally
-            let alt_combo_block = false;
-
-            let potential_block = is_potential_hotkey();
 
             output_event("keydown", &key);
 
-            if block || potential_block || alt_combo_block || should_selectively_block_alt {
+            // Check if we should block based on exact hotkey match
+            if should_block() {
                 None // Block the event from reaching the OS
             } else {
                 Some(event) // Let it through
@@ -219,11 +172,6 @@ fn callback(event: Event) -> Option<Event> {
             if matches!(key, Key::ControlLeft | Key::ControlRight) {
                 unsafe {
                     CTRL_PRESSED = false;
-                }
-            }
-            if matches!(key, Key::Alt | Key::AltGr) {
-                unsafe {
-                    ALT_PRESSED = false;
                 }
             }
 

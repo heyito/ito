@@ -1,6 +1,7 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use serde::{Deserialize, Serialize};
 use std::io::{self, BufRead, Write};
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -77,6 +78,7 @@ struct CommandProcessor {
     cmd_rx: crossbeam_channel::Receiver<Command>,
     active_stream: Option<cpal::Stream>,
     stdout: Arc<Mutex<io::Stdout>>,
+    cached_host: Option<Rc<cpal::Host>>,
 }
 
 impl CommandProcessor {
@@ -85,7 +87,34 @@ impl CommandProcessor {
             cmd_rx,
             active_stream: None,
             stdout,
+            cached_host: None,
         }
+    }
+
+    fn get_or_create_host(&mut self) -> Rc<cpal::Host> {
+        if let Some(ref host) = self.cached_host {
+            return host.clone();
+        }
+
+        let host = if cfg!(windows) {
+            // On Windows, prefer WASAPI directly for best performance (10-30ms latency vs DirectSound's 50-80ms)
+            match cpal::host_from_id(cpal::platform::HostId::Wasapi) {
+                Ok(wasapi_host) => {
+                    eprintln!("[audio-recorder] Using WASAPI host (optimal for Windows)");
+                    wasapi_host
+                }
+                Err(e) => {
+                    eprintln!("[audio-recorder] WASAPI unavailable ({}), falling back to default", e);
+                    cpal::default_host()
+                }
+            }
+        } else {
+            cpal::default_host()
+        };
+
+        let host_rc = Rc::new(host);
+        self.cached_host = Some(host_rc.clone());
+        host_rc
     }
 
     fn run(&mut self) {
@@ -100,7 +129,7 @@ impl CommandProcessor {
     }
 
     fn list_devices(&mut self) {
-        let host = cpal::default_host();
+        let host = self.get_or_create_host();
         let device_names: Vec<String> = match host.input_devices() {
             Ok(devices) => devices
                 .map(|d| d.name().unwrap_or_else(|_| "Unknown Device".to_string()))
@@ -120,7 +149,8 @@ impl CommandProcessor {
     fn start_recording(&mut self, device_name: Option<String>) {
         self.stop_recording();
 
-        if let Ok(stream) = start_capture(device_name, Arc::clone(&self.stdout)) {
+        let host = self.get_or_create_host();
+        if let Ok(stream) = start_capture(device_name, Arc::clone(&self.stdout), host) {
             if stream.play().is_ok() {
                 self.active_stream = Some(stream)
             }
@@ -139,14 +169,7 @@ impl CommandProcessor {
     fn get_device_config(&mut self, device_name: Option<String>) {
         const TARGET_SAMPLE_RATE: u32 = 16000;
 
-        let host = if cfg!(windows) {
-            cpal::available_hosts()
-                .into_iter()
-                .find_map(|id| cpal::host_from_id(id).ok())
-                .unwrap_or_else(|| cpal::default_host())
-        } else {
-            cpal::default_host()
-        };
+        let host = self.get_or_create_host();
 
         let device = if let Some(name) = device_name {
             if name.to_lowercase() == "default" || name.is_empty() {
@@ -248,26 +271,11 @@ fn write_audio_chunk(data: &[f32], stdout: &Arc<Mutex<io::Stdout>>) {
 fn start_capture(
     device_name: Option<String>,
     stdout: Arc<Mutex<io::Stdout>>,
+    host: Rc<cpal::Host>,
 ) -> Result<cpal::Stream> {
     const TARGET_SAMPLE_RATE: u32 = 16000;
     const RESAMPLER_CHUNK_SIZE: usize = 1024;
 
-    // On Windows, try to get available hosts
-    let host = if cfg!(windows) {
-        // Try WASAPI first, then DirectSound, then default
-        cpal::available_hosts()
-            .into_iter()
-            .find_map(|id| {
-                eprintln!("[audio-recorder] Trying host: {:?}", id);
-                cpal::host_from_id(id).ok()
-            })
-            .unwrap_or_else(|| {
-                eprintln!("[audio-recorder] All hosts failed, using default");
-                cpal::default_host()
-            })
-    } else {
-        cpal::default_host()
-    };
     let device = if let Some(name) = device_name {
         if name.to_lowercase() == "default" || name.is_empty() {
             host.default_input_device()

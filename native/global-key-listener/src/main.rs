@@ -2,7 +2,6 @@ use chrono::Utc;
 use rdev::{grab, Event, EventType, Key};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::fs::OpenOptions;
 use std::io::{self, BufRead, Write};
 use std::thread;
 use std::time::Duration;
@@ -35,17 +34,6 @@ static mut CMD_PRESSED: bool = false;
 static mut CTRL_PRESSED: bool = false;
 static mut COPY_IN_PROGRESS: bool = false;
 
-// Logging function for debugging
-fn log_to_file(message: &str) {
-    if let Ok(mut file) = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open("key_listener_debug.log")
-    {
-        let timestamp = Utc::now().format("%H:%M:%S%.3f");
-        let _ = writeln!(file, "[{}] {}", timestamp, message);
-    }
-}
 
 fn main() {
     // Spawn a thread to read commands from stdin
@@ -89,7 +77,6 @@ fn handle_command(command: Command) {
     match command {
         Command::RegisterHotkeys { hotkeys } => unsafe {
             REGISTERED_HOTKEYS = hotkeys.clone();
-            log_to_file(&format!("Registered {} hotkeys: {:?}", REGISTERED_HOTKEYS.len(), hotkeys));
             eprintln!("Registered {} hotkeys", REGISTERED_HOTKEYS.len());
         },
         Command::ClearHotkeys => unsafe {
@@ -159,10 +146,6 @@ fn callback(event: Event) -> Option<Event> {
         EventType::KeyPress(key) => {
             let key_name = format!("{:?}", key);
 
-            unsafe {
-                log_to_file(&format!("KEYDOWN: {} | Currently pressed: {:?} | Alt: {} | Registered hotkeys: {}",
-                    key_name, CURRENTLY_PRESSED, ALT_PRESSED, REGISTERED_HOTKEYS.len()));
-            }
 
             // Check for copy combinations before updating modifier states
             // Ignore Cmd+C (macOS) and Ctrl+C (Windows/Linux) combinations to prevent feedback loops with selected-text-reader
@@ -178,7 +161,6 @@ fn callback(event: Event) -> Option<Event> {
             unsafe {
                 if !CURRENTLY_PRESSED.contains(&key_name) {
                     CURRENTLY_PRESSED.push(key_name.clone());
-                    log_to_file(&format!("Added {} to pressed keys. Now: {:?}", key_name, CURRENTLY_PRESSED));
                 }
             }
 
@@ -196,7 +178,6 @@ fn callback(event: Event) -> Option<Event> {
             if matches!(key, Key::Alt | Key::AltGr) {
                 unsafe {
                     ALT_PRESSED = true;
-                    log_to_file("ALT key pressed - setting ALT_PRESSED = true");
                 }
             }
 
@@ -213,27 +194,18 @@ fn callback(event: Event) -> Option<Event> {
 
             let potential_block = is_potential_hotkey();
 
-            log_to_file(&format!("Block decision - exact match: {} | potential: {} | alt_combo: {} | selective_alt: {} | final decision: {}",
-                block, potential_block, alt_combo_block, should_selectively_block_alt,
-                block || potential_block || alt_combo_block || should_selectively_block_alt));
 
             output_event("keydown", &key);
 
             if block || potential_block || alt_combo_block || should_selectively_block_alt {
-                log_to_file(&format!("BLOCKING key: {}", key_name));
                 None // Block the event from reaching the OS
             } else {
-                log_to_file(&format!("ALLOWING key: {}", key_name));
                 Some(event) // Let it through
             }
         }
         EventType::KeyRelease(key) => {
             let key_name = format!("{:?}", key);
 
-            unsafe {
-                log_to_file(&format!("KEYUP: {} | Currently pressed: {:?} | Alt: {}",
-                    key_name, CURRENTLY_PRESSED, ALT_PRESSED));
-            }
 
             // Check if we should block BEFORE updating state
             let was_blocking = should_block();
@@ -241,7 +213,6 @@ fn callback(event: Event) -> Option<Event> {
             // Update pressed keys
             unsafe {
                 CURRENTLY_PRESSED.retain(|k| k != &key_name);
-                log_to_file(&format!("Removed {} from pressed keys. Now: {:?}", key_name, CURRENTLY_PRESSED));
             }
 
             // Check for C key release while copy is in progress or modifiers are still held
@@ -269,7 +240,6 @@ fn callback(event: Event) -> Option<Event> {
             if matches!(key, Key::Alt | Key::AltGr) {
                 unsafe {
                     ALT_PRESSED = false;
-                    log_to_file("ALT key released - setting ALT_PRESSED = false");
                 }
             }
 

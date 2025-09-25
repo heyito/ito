@@ -438,7 +438,7 @@ checksum = "dc33ff2d4973d518d823d61aa239014831e521c75da58e3df4840d3f47749d09"
 [[package]]
 name = "rdev"
 version = "0.4.4"
-source = "git+https://github.com/heyito/rdev?branch=dev#1fe2f83dfc5a9145508ccbdf979b419840d99470"
+source = "git+https://github.com/heyito/rdev?branch=dev#353a81046dbb9ac11c511c8e61e678d4b36fab00"
 dependencies = [
  "cocoa",
  "core-foundation 0.7.0",

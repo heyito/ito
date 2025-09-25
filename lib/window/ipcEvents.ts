@@ -12,6 +12,7 @@ import {
   startKeyListener,
   KeyListenerProcess,
   stopKeyListener,
+  registerAllHotkeys,
 } from '../media/keyboard'
 import { getPillWindow, mainWindow } from '../main/app'
 import {
@@ -68,7 +69,9 @@ export function registerIPC() {
   })
 
   ipcMain.on('install-update', () => {
+    // @ts-expect-error -- autoUpater field that isnt exposed but needs to change
     autoUpdater.updateAvailable = true
+    // @ts-expect-error -- autoUpater field that isnt exposed but needs to change
     autoUpdater.updateDownloaded = true
     autoUpdater.quitAndInstall()
   })
@@ -131,6 +134,7 @@ export function registerIPC() {
     startKeyListener()
   })
   handleIPC('stop-key-listener', () => stopKeyListener())
+  handleIPC('register-hotkeys', () => registerAllHotkeys())
   handleIPC('start-native-recording-service', () =>
     voiceInputService.startSTTService(ItoMode.TRANSCRIBE),
   )

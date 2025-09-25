@@ -1,11 +1,8 @@
 import { useEffect, useCallback, useRef, useState, useMemo } from 'react'
 import { Button } from '@/app/components/ui/button'
 import KeyboardKey from '@/app/components/ui/keyboard-key'
-import {
-  KeyState,
-  normalizeKeyEvent,
-  isReservedCombination,
-} from '@/app/utils/keyboard'
+import { KeyState, isReservedCombination } from '@/app/utils/keyboard'
+import { keyNameMap } from '@/lib/types/keyboard'
 import { useAudioStore } from '@/app/store/useAudioStore'
 import { KeyboardShortcutConfig } from './multi-shortcut-editor'
 import { KeyName } from '@/lib/types/keyboard'
@@ -73,7 +70,7 @@ export default function KeyboardShortcutEditor({
       if (isEditing) {
         // In edit mode, handle adding/removing keys
         if (event.type === 'keydown') {
-          const normalizedKey = normalizeKeyEvent(event)
+          const normalizedKey = keyNameMap[event.key] || event.key.toLowerCase()
           if (normalizedKey === 'fn_fast') {
             return
           }

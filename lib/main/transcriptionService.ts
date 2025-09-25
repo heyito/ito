@@ -178,9 +178,14 @@ export class TranscriptionService {
       if (response.transcript && !response.error) {
         const contextLength = 4 // Number of chars to consider for context
         const canGetContext = await canGetContextFromCurrentApp()
-        const cursorContext = canGetContext
-          ? await getCursorContext(contextLength)
-          : ''
+        let cursorContext
+        try {
+          cursorContext = canGetContext
+            ? await getCursorContext(contextLength)
+            : ''
+        } catch (e) {
+          console.error('Cursor context failed:', e)
+        }
 
         // Apply grammar rules with cursor context
         const context = cursorContext || ''

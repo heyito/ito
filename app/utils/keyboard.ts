@@ -95,28 +95,6 @@ const reverseKeyNameMap: Record<string, string[]> = Object.entries(
   {} as Record<string, string[]>,
 )
 
-/**
- * Normalizes a key event into a format suitable for UI display
- * @param event The key event from the global key listener
- * @returns The normalized key name for UI display
- */
-export function normalizeKeyEvent(event: KeyEvent): KeyName {
-  // If we have a mapping for this key, use it
-  if (keyNameMap[event.key]) {
-    return keyNameMap[event.key]
-  }
-
-  // For unknown keys, try to clean up the name
-  const key = event.key
-    .toLowerCase()
-    .replace(/^key/, '') // Remove 'Key' prefix
-    .replace(/^digit/, '') // Remove 'Digit' prefix
-    .replace(/^arrow/, '') // Remove 'Arrow' prefix
-    .replace(/^(left|right)$/, '') // Remove 'Left'/'Right' suffix
-
-  return key as KeyName
-}
-
 export type ShortcutError =
   | 'duplicate-key-same-mode'
   | 'duplicate-key-diff-mode'
@@ -344,14 +322,12 @@ export class KeyState {
   }
 
   /**
-   * Updates the shortcut and instructs the native listener to block the relevant keys.
+   * Updates the shortcut
    * @param shortcut The shortcut to set, as an array of normalized key names.
    */
   updateShortcut(shortcut: KeyName[]) {
     // Normalize legacy keys to new format
     this.shortcut = shortcut.map(normalizeLegacyKey)
-    const keysToBlock = this.getKeysToBlock()
-    window.api.blockKeys(keysToBlock)
   }
 
   /**
@@ -395,25 +371,5 @@ export class KeyState {
    */
   clear() {
     this.pressedKeys.clear()
-  }
-
-  /**
-   * Gets the raw `rdev` key names that should be blocked for the current shortcut.
-   * @returns Array of keys to block
-   */
-  private getKeysToBlock(): string[] {
-    const keys: string[] = []
-
-    for (const normalizedKey of this.shortcut) {
-      keys.push(...(reverseKeyNameMap[normalizedKey] || []))
-    }
-
-    // Also block the special "fast fn" key if fn is part of the shortcut.
-    if (this.shortcut.includes('fn')) {
-      keys.push('Unknown(179)')
-    }
-
-    // Return a unique set of keys.
-    return [...new Set(keys)]
   }
 }

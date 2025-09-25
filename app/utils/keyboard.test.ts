@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
-import { normalizeKeyEvent, KeyState } from './keyboard'
+import { KeyState } from './keyboard'
 import type { KeyEvent } from '@/lib/preload'
 
 // Mock the window.api for KeyState tests
@@ -15,113 +15,6 @@ beforeEach(() => {
   mockApi.blockKeys.mockClear()
 })
 
-describe('normalizeKeyEvent', () => {
-  test('should normalize modifier keys correctly', () => {
-    expect(
-      normalizeKeyEvent({ key: 'MetaLeft', type: 'keydown' } as KeyEvent),
-    ).toBe('command')
-    expect(
-      normalizeKeyEvent({ key: 'MetaRight', type: 'keydown' } as KeyEvent),
-    ).toBe('command')
-    expect(
-      normalizeKeyEvent({ key: 'ControlLeft', type: 'keydown' } as KeyEvent),
-    ).toBe('control')
-    expect(
-      normalizeKeyEvent({ key: 'ControlRight', type: 'keydown' } as KeyEvent),
-    ).toBe('control')
-    expect(normalizeKeyEvent({ key: 'Alt', type: 'keydown' } as KeyEvent)).toBe(
-      'option',
-    )
-    expect(
-      normalizeKeyEvent({ key: 'AltGr', type: 'keydown' } as KeyEvent),
-    ).toBe('option')
-    expect(
-      normalizeKeyEvent({ key: 'ShiftLeft', type: 'keydown' } as KeyEvent),
-    ).toBe('shift')
-    expect(
-      normalizeKeyEvent({ key: 'ShiftRight', type: 'keydown' } as KeyEvent),
-    ).toBe('shift')
-  })
-
-  test('should normalize letter keys correctly', () => {
-    expect(
-      normalizeKeyEvent({ key: 'KeyA', type: 'keydown' } as KeyEvent),
-    ).toBe('a')
-    expect(
-      normalizeKeyEvent({ key: 'KeyZ', type: 'keydown' } as KeyEvent),
-    ).toBe('z')
-  })
-
-  test('should normalize number keys correctly', () => {
-    expect(
-      normalizeKeyEvent({ key: 'Digit1', type: 'keydown' } as KeyEvent),
-    ).toBe('1')
-    expect(
-      normalizeKeyEvent({ key: 'Digit0', type: 'keydown' } as KeyEvent),
-    ).toBe('0')
-  })
-
-  test('should normalize special keys correctly', () => {
-    expect(
-      normalizeKeyEvent({ key: 'Space', type: 'keydown' } as KeyEvent),
-    ).toBe('space')
-    expect(
-      normalizeKeyEvent({ key: 'Enter', type: 'keydown' } as KeyEvent),
-    ).toBe('enter')
-    expect(
-      normalizeKeyEvent({ key: 'Escape', type: 'keydown' } as KeyEvent),
-    ).toBe('esc')
-    expect(
-      normalizeKeyEvent({ key: 'Backspace', type: 'keydown' } as KeyEvent),
-    ).toBe('backspace')
-    expect(normalizeKeyEvent({ key: 'Tab', type: 'keydown' } as KeyEvent)).toBe(
-      'tab',
-    )
-    expect(
-      normalizeKeyEvent({ key: 'ArrowUp', type: 'keydown' } as KeyEvent),
-    ).toBe('↑')
-    expect(
-      normalizeKeyEvent({ key: 'ArrowDown', type: 'keydown' } as KeyEvent),
-    ).toBe('↓')
-    expect(
-      normalizeKeyEvent({ key: 'ArrowLeft', type: 'keydown' } as KeyEvent),
-    ).toBe('←')
-    expect(
-      normalizeKeyEvent({ key: 'ArrowRight', type: 'keydown' } as KeyEvent),
-    ).toBe('→')
-  })
-
-  test('should handle function key special case', () => {
-    expect(
-      normalizeKeyEvent({ key: 'Function', type: 'keydown' } as KeyEvent),
-    ).toBe('fn')
-    expect(
-      normalizeKeyEvent({ key: 'Unknown(179)', type: 'keydown' } as KeyEvent),
-    ).toBe('fn_fast')
-  })
-
-  test('should normalize unknown keys by cleaning up the name', () => {
-    expect(
-      normalizeKeyEvent({ key: 'SomeUnknownKey', type: 'keydown' } as KeyEvent),
-    ).toBe('someunknownkey')
-    expect(
-      normalizeKeyEvent({ key: 'KeyCustom', type: 'keydown' } as KeyEvent),
-    ).toBe('custom')
-    expect(
-      normalizeKeyEvent({ key: 'DigitCustom', type: 'keydown' } as KeyEvent),
-    ).toBe('custom')
-    expect(
-      normalizeKeyEvent({ key: 'ArrowCustom', type: 'keydown' } as KeyEvent),
-    ).toBe('custom')
-  })
-
-  test('should handle empty key gracefully', () => {
-    expect(normalizeKeyEvent({ key: '', type: 'keydown' } as KeyEvent)).toBe(
-      'unknown',
-    )
-  })
-})
-
 describe('KeyState', () => {
   let keyState: KeyState
 
@@ -133,24 +26,26 @@ describe('KeyState', () => {
     test('should initialize with empty shortcut by default', () => {
       const state = new KeyState()
       expect(state.getPressedKeys()).toEqual([])
-      expect(mockApi.blockKeys).toHaveBeenCalledWith([])
     })
 
     test('should initialize with provided shortcut', () => {
-      new KeyState(['command', 'space'])
-      expect(mockApi.blockKeys).toHaveBeenCalledWith(['command', 'space'])
+      const keyState = new KeyState(['command', 'space'])
+
+      expect(keyState).toBeDefined()
     })
   })
 
   describe('updateShortcut', () => {
-    test('should update the shortcut and call blockKeys', () => {
+    test('should update the shortcut', () => {
       keyState.updateShortcut(['command', 'z'])
-      expect(mockApi.blockKeys).toHaveBeenCalledWith([])
+
+      expect(keyState).toBeDefined()
     })
 
     test('should handle empty shortcut', () => {
       keyState.updateShortcut([])
-      expect(mockApi.blockKeys).toHaveBeenCalledWith([])
+
+      expect(keyState).toBeDefined()
     })
   })
 
@@ -218,50 +113,44 @@ describe('KeyState', () => {
       expect(keyState.isKeyPressed('b')).toBe(false)
     })
 
-    test('should call blockKeys with empty array after clearing', () => {
+    test('should clear all pressed keys', () => {
       keyState.update({ key: 'KeyA', type: 'keydown' } as KeyEvent)
       keyState.clear()
-      expect(mockApi.blockKeys).toHaveBeenCalledWith([])
+      expect(keyState.getPressedKeys()).toHaveLength(0)
     })
   })
 
   describe('key blocking behavior', () => {
-    test('should not block keys when shortcut is not being pressed', () => {
+    test('should track non-shortcut keys correctly', () => {
       keyState.updateShortcut(['command', 'z'])
 
       keyState.update({ key: 'KeyA', type: 'keydown' } as KeyEvent)
-      expect(mockApi.blockKeys).toHaveBeenCalledWith([])
+      expect(keyState.getPressedKeys()).toContain('a')
     })
 
-    test('should block keys when part of shortcut is pressed', () => {
+    test('should track keys when part of shortcut is pressed', () => {
       keyState.updateShortcut(['command', 'z'])
 
       keyState.update({ key: 'MetaLeft', type: 'keydown' } as KeyEvent)
-      expect(mockApi.blockKeys).toHaveBeenCalledWith([
-        'MetaLeft',
-        'MetaRight',
-        'KeyZ',
-      ])
+      expect(keyState.isKeyPressed('command')).toBe(true)
+      expect(keyState.getPressedKeys()).toContain('command')
     })
 
-    test('should block keys when complete shortcut is pressed', () => {
+    test('should track keys when complete shortcut is pressed', () => {
       keyState.updateShortcut(['command', 'z'])
 
       keyState.update({ key: 'MetaLeft', type: 'keydown' } as KeyEvent)
       keyState.update({ key: 'KeyZ', type: 'keydown' } as KeyEvent)
-      expect(mockApi.blockKeys).toHaveBeenLastCalledWith([
-        'MetaLeft',
-        'MetaRight',
-        'KeyZ',
-      ])
+      expect(keyState.isKeyPressed('command')).toBe(true)
+      expect(keyState.isKeyPressed('z')).toBe(true)
     })
 
-    test('should unblock keys when shortcut keys are released', () => {
+    test('should track key releases correctly', () => {
       keyState.updateShortcut(['command', 'z'])
       keyState.update({ key: 'MetaLeft', type: 'keydown' } as KeyEvent)
 
       keyState.update({ key: 'MetaLeft', type: 'keyup' } as KeyEvent)
-      expect(mockApi.blockKeys).toHaveBeenCalledWith([])
+      expect(keyState.isKeyPressed('command')).toBe(false)
     })
 
     test('should handle complex shortcuts with multiple modifier keys', () => {
@@ -270,13 +159,8 @@ describe('KeyState', () => {
       keyState.update({ key: 'MetaLeft', type: 'keydown' } as KeyEvent)
       keyState.update({ key: 'ShiftLeft', type: 'keydown' } as KeyEvent)
 
-      expect(mockApi.blockKeys).toHaveBeenLastCalledWith([
-        'MetaLeft',
-        'MetaRight',
-        'ShiftLeft',
-        'ShiftRight',
-        'KeyZ',
-      ])
+      expect(keyState.isKeyPressed('command')).toBe(true)
+      expect(keyState.isKeyPressed('shift')).toBe(true)
     })
 
     test('should handle fn key in shortcuts', () => {
@@ -284,22 +168,18 @@ describe('KeyState', () => {
 
       keyState.update({ key: 'Function', type: 'keydown' } as KeyEvent)
 
-      // Should include the special "fast fn" key
-      const lastCall =
-        mockApi.blockKeys.mock.calls[mockApi.blockKeys.mock.calls.length - 1]
-      expect(lastCall[0]).toContain('Function')
-      expect(lastCall[0]).toContain('Unknown(179)')
+      // Should track fn key presses
+      expect(keyState.isKeyPressed('fn')).toBe(true)
     })
 
-    test('should deduplicate blocked keys', () => {
+    test('should track command keys correctly', () => {
       keyState.updateShortcut(['command'])
 
       keyState.update({ key: 'MetaLeft', type: 'keydown' } as KeyEvent)
 
-      const blockedKeys =
-        mockApi.blockKeys.mock.calls[mockApi.blockKeys.mock.calls.length - 1][0]
-      const uniqueKeys = [...new Set(blockedKeys)]
-      expect(blockedKeys).toEqual(uniqueKeys)
+      // Should track the command key
+      expect(keyState.isKeyPressed('command')).toBe(true)
+      expect(keyState.getPressedKeys()).toContain('command')
     })
   })
 
@@ -322,12 +202,8 @@ describe('KeyState', () => {
       // Change shortcut while command is still pressed
       keyState.updateShortcut(['command', 'x'])
 
-      // Should update blocking based on new shortcut
-      expect(mockApi.blockKeys).toHaveBeenLastCalledWith([
-        'MetaLeft',
-        'MetaRight',
-        'KeyX',
-      ])
+      // KeyState should still track the pressed key correctly
+      expect(keyState.isKeyPressed('command')).toBe(true)
     })
   })
 })

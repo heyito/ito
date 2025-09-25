@@ -22,12 +22,12 @@ interface HeartbeatEvent {
   timestamp: string
 }
 
-interface BlockedKeysEvent {
-  type: 'blocked_keys'
-  keys: string[]
+interface RegisteredHotkeysEvent {
+  type: 'registered_hotkeys'
+  hotkeys: Array<{ keys: string[] }>
 }
 
-type ProcessEvent = KeyEvent | HeartbeatEvent | BlockedKeysEvent
+type ProcessEvent = KeyEvent | HeartbeatEvent | RegisteredHotkeysEvent
 
 // Global key listener process singleton
 export let KeyListenerProcess: ReturnType<typeof spawn> | null = null
@@ -244,15 +244,6 @@ function handleKeyEventInMain(event: KeyEvent) {
       return exactMatch
     })
 
-  // Only block keys when a complete shortcut is being held
-  if (currentlyHeldShortcut) {
-    // Block all keys for the currently held shortcut
-    blockKeys(getKeysToBlock(currentlyHeldShortcut))
-  } else {
-    // Unblock all keys when no complete shortcut is pressed
-    blockKeys([])
-  }
-
   // Handle shortcut activation with debouncing
   if (currentlyHeldShortcut && !isShortcutActive) {
     // New shortcut detected - start debounce timer
@@ -368,9 +359,9 @@ export const startKeyListener = () => {
             if (event.type === 'heartbeat_ping') {
               handleHeartbeat(event)
               continue
-            } else if (event.type === 'blocked_keys') {
-              // Log blocked keys for debugging
-              console.info('🔒 Blocked keys received:', event.keys)
+            } else if (event.type === 'registered_hotkeys') {
+              // Log registered hotkeys for debugging
+              console.info('🔒 Registered hotkeys received:', event.hotkeys)
               continue
             }
 
@@ -429,6 +420,9 @@ export const startKeyListener = () => {
 
     console.log('[Key listener] started successfully.')
 
+    // Register all configured hotkeys with the listener
+    registerAllHotkeys()
+
     // Start the stuck key checker
     startStuckKeyChecker()
 
@@ -441,24 +435,26 @@ export const startKeyListener = () => {
   }
 }
 
-export const blockKeys = (keys: string[]) => {
+// Register all hotkeys from settings with the key listener
+export const registerAllHotkeys = () => {
   if (!KeyListenerProcess) {
-    console.warn('Key listener not running, cannot block keys.')
+    console.warn('Key listener not running, cannot register hotkeys.')
     return
   }
 
-  KeyListenerProcess.stdin?.write(
-    JSON.stringify({ command: 'block', keys }) + '\n',
-  )
-}
+  const { keyboardShortcuts } = store.get(STORE_KEYS.SETTINGS)
 
-export const unblockKey = (key: string) => {
-  if (!KeyListenerProcess) {
-    console.warn('Key listener not running, cannot unblock key.')
-    return
-  }
+  // Convert shortcuts to hotkey format for the listener
+  const hotkeys = keyboardShortcuts
+    .filter(ks => ks.keys.length > 0)
+    .map(shortcut => ({
+      keys: getKeysToRegister(shortcut),
+    }))
+
+  console.info('Registering hotkeys with listener:', hotkeys)
+
   KeyListenerProcess.stdin?.write(
-    JSON.stringify({ command: 'unblock', key }) + '\n',
+    JSON.stringify({ command: 'register_hotkeys', hotkeys }) + '\n',
   )
 }
 
@@ -479,7 +475,7 @@ const reverseKeyNameMap: Record<string, string[]> = Object.entries(
   {} as Record<string, string[]>,
 )
 
-const getKeysToBlock = (shortcut?: KeyboardShortcutConfig): string[] => {
+const getKeysToRegister = (shortcut?: KeyboardShortcutConfig): string[] => {
   if (!shortcut) {
     return []
   }
@@ -489,7 +485,16 @@ const getKeysToBlock = (shortcut?: KeyboardShortcutConfig): string[] => {
   for (const key of shortcut.keys) {
     // Normalize legacy keys (maps base modifiers to left variants)
     const normalizedKey = normalizeLegacyKey(key)
-    keys.push(...(reverseKeyNameMap[normalizedKey] || []))
+    const reverseMappedKeys = reverseKeyNameMap[normalizedKey]
+
+    if (reverseMappedKeys && reverseMappedKeys.length > 0) {
+      // Use the reverse mapping if available
+      keys.push(...reverseMappedKeys)
+    } else {
+      // Fallback: use the original key name as-is
+      // This works because the key names come from rdev originally
+      keys.push(key)
+    }
   }
 
   // Also block the special "fast fn" key if fn is part of the shortcut.

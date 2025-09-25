@@ -96,6 +96,11 @@ const syncToStore = (state: Partial<SettingsState>) => {
   if (window.api?.notifySettingsUpdate) {
     window.api.notifySettingsUpdate(updatedSettings)
   }
+
+  // Re-register hotkeys when keyboard shortcuts change
+  if ('keyboardShortcuts' in state && window.api?.registerHotkeys) {
+    window.api.registerHotkeys()
+  }
 }
 
 export const useSettingsStore = create<SettingsState>(set => {

@@ -1104,58 +1104,13 @@ describe('Keyboard Module', () => {
     })
   })
 
-  describe('Key Blocking Business Logic', () => {
-    test('should block keys when process is running', async () => {
-      const { startKeyListener, blockKeys } = await import('./keyboard')
-
-      startKeyListener()
-      blockKeys(['KeyA', 'KeyB', 'KeyC'])
-
-      expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
-        JSON.stringify({ command: 'block', keys: ['KeyA', 'KeyB', 'KeyC'] }) +
-          '\n',
-      )
-    })
-
-    test('should warn when trying to block keys without process', async () => {
-      const { blockKeys } = await import('./keyboard')
-
-      blockKeys(['KeyA'])
-
-      expect(console.warn).toHaveBeenCalledWith(
-        'Key listener not running, cannot block keys.',
-      )
-      expect(mockChildProcess.stdin.write).not.toHaveBeenCalled()
-    })
-
-    test('should unblock individual keys', async () => {
-      const { startKeyListener, unblockKey } = await import('./keyboard')
-
-      startKeyListener()
-      unblockKey('KeyA')
-
-      expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
-        JSON.stringify({ command: 'unblock', key: 'KeyA' }) + '\n',
-      )
-    })
-
-    test('should warn when trying to unblock key without process', async () => {
-      const { unblockKey } = await import('./keyboard')
-
-      unblockKey('KeyA')
-
-      expect(console.warn).toHaveBeenCalledWith(
-        'Key listener not running, cannot unblock key.',
-      )
-      expect(mockChildProcess.stdin.write).not.toHaveBeenCalled()
-    })
-
-    test('should only block keys when complete shortcut is pressed', async () => {
+  describe('Hotkey Registration Business Logic', () => {
+    test('should register hotkeys on startup', async () => {
       mockMainStore.get.mockReturnValue({
         isShortcutGloballyEnabled: true,
         keyboardShortcuts: [
           {
-            id: 'block-test',
+            id: 'test-hotkey',
             keys: ['control', 'z'],
             mode: ItoMode.TRANSCRIBE,
           },
@@ -1165,58 +1120,62 @@ describe('Keyboard Module', () => {
       const { startKeyListener } = await import('./keyboard')
       startKeyListener()
 
-      // Should not block keys initially
-      expect(mockChildProcess.stdin.write).not.toHaveBeenCalled()
-
-      // Press only control (partial shortcut) - should not block
-      const controlDown = {
-        type: 'keydown',
-        key: 'ControlLeft',
-        timestamp: '2024-01-01T00:00:00.000Z',
-        raw_code: 17,
-      }
-      mockChildProcess.stdout.emit(
-        'data',
-        Buffer.from(JSON.stringify(controlDown) + '\n'),
-      )
-
-      // Should unblock keys since complete shortcut is not pressed
+      // Should register hotkeys with the Rust process
       expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
-        JSON.stringify({ command: 'block', keys: [] }) + '\n',
-      )
-
-      // Press z key to complete shortcut
-      const zDown = {
-        type: 'keydown',
-        key: 'KeyZ',
-        timestamp: '2024-01-01T00:00:00.001Z',
-        raw_code: 90,
-      }
-      mockChildProcess.stdout.emit(
-        'data',
-        Buffer.from(JSON.stringify(zDown) + '\n'),
-      )
-
-      // Now should block keys since complete shortcut is pressed
-      expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
-        expect.stringContaining('"command":"block"'),
+        expect.stringContaining('"command":"register_hotkeys"'),
       )
       expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
         expect.stringContaining('ControlLeft'),
       )
-      expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
-        expect.stringContaining('KeyZ'),
-      )
     })
 
-    test('should not block keys when shortcut is disabled', async () => {
+    test('should register all hotkeys when registerAllHotkeys is called', async () => {
       mockMainStore.get.mockReturnValue({
-        isShortcutGloballyEnabled: false,
+        isShortcutGloballyEnabled: true,
         keyboardShortcuts: [
           {
-            id: 'disabled-block-test',
-            keys: ['control', 'z'],
+            id: 'hotkey-1',
+            keys: ['command', 'space'],
             mode: ItoMode.TRANSCRIBE,
+          },
+          {
+            id: 'hotkey-2',
+            keys: ['control', 'shift', 'f'],
+            mode: ItoMode.EDIT,
+          },
+        ],
+      })
+
+      const { startKeyListener, registerAllHotkeys } = await import(
+        './keyboard'
+      )
+      startKeyListener()
+
+      mockChildProcess.stdin.write.mockClear()
+      registerAllHotkeys()
+
+      const writeCall = mockChildProcess.stdin.write.mock.calls[0][0]
+      expect(writeCall).toContain('"command":"register_hotkeys"')
+      expect(writeCall).toContain('MetaLeft')
+      expect(writeCall).toContain('Space')
+      expect(writeCall).toContain('ControlLeft')
+      expect(writeCall).toContain('ShiftLeft')
+      expect(writeCall).toContain('KeyF')
+    })
+
+    test('should only register hotkeys with keys defined', async () => {
+      mockMainStore.get.mockReturnValue({
+        isShortcutGloballyEnabled: true,
+        keyboardShortcuts: [
+          {
+            id: 'empty-hotkey',
+            keys: [],
+            mode: ItoMode.TRANSCRIBE,
+          },
+          {
+            id: 'valid-hotkey',
+            keys: ['control', 'a'],
+            mode: ItoMode.EDIT,
           },
         ],
       })
@@ -1224,7 +1183,23 @@ describe('Keyboard Module', () => {
       const { startKeyListener } = await import('./keyboard')
       startKeyListener()
 
-      // Should not block any keys if shortcut is disabled
+      const writeCall = mockChildProcess.stdin.write.mock.calls[0][0]
+      const parsed = JSON.parse(writeCall.replace('\n', ''))
+
+      // Should only have one hotkey (the valid one)
+      expect(parsed.hotkeys).toHaveLength(1)
+      expect(parsed.hotkeys[0].keys).toContain('ControlLeft')
+      expect(parsed.hotkeys[0].keys).toContain('KeyA')
+    })
+
+    test('should warn when trying to register hotkeys without process', async () => {
+      const { registerAllHotkeys } = await import('./keyboard')
+
+      registerAllHotkeys()
+
+      expect(console.warn).toHaveBeenCalledWith(
+        'Key listener not running, cannot register hotkeys.',
+      )
       expect(mockChildProcess.stdin.write).not.toHaveBeenCalled()
     })
   })

@@ -38,6 +38,7 @@ const api = {
   // Key listener methods
   startKeyListener: () => ipcRenderer.invoke('start-key-listener-service'),
   stopKeyListener: () => ipcRenderer.invoke('stop-key-listener'),
+  registerHotkeys: () => ipcRenderer.invoke('register-hotkeys'),
   startNativeRecording: () => ipcRenderer.invoke('start-native-recording'),
   stopNativeRecording: () => ipcRenderer.invoke('stop-native-recording'),
   getNativeAudioDevices: () => ipcRenderer.invoke('get-native-audio-devices'),

@@ -69,9 +69,9 @@ export function registerIPC() {
   })
 
   ipcMain.on('install-update', () => {
-    // @ts-expect-error
+    // @ts-expect-error -- autoUpater field that isnt exposed but needs to change
     autoUpdater.updateAvailable = true
-    // @ts-expect-error
+    // @ts-expect-error -- autoUpater field that isnt exposed but needs to change
     autoUpdater.updateDownloaded = true
     autoUpdater.quitAndInstall()
   })

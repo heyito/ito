@@ -64,15 +64,9 @@ export const resetForTesting = () => {
 
 const nativeModuleName = 'global-key-listener'
 
-// Store mapping from normalized key back to original raw key for reverse lookup
-const normalizedToRawKeyMap = new Map<string, string>()
-
 // Normalizes a raw key event into a consistent string
 function normalizeKey(rawKey: string): KeyName {
-  const normalized = keyNameMap[rawKey] || rawKey.toLowerCase()
-  // Store the reverse mapping for later use
-  normalizedToRawKeyMap.set(normalized, rawKey)
-  return normalized
+  return keyNameMap[rawKey] || rawKey.toLowerCase()
 }
 
 // Export the key name mapping for use in UI components
@@ -497,14 +491,9 @@ const getKeysToRegister = (shortcut?: KeyboardShortcutConfig): string[] => {
       // Use the reverse mapping if available
       keys.push(...reverseMappedKeys)
     } else {
-      // Fallback: try to get the original raw key format
-      const originalRawKey = normalizedToRawKeyMap.get(normalizedKey)
-      if (originalRawKey) {
-        keys.push(originalRawKey)
-      } else {
-        // Last resort: use the key as-is
-        keys.push(key)
-      }
+      // Fallback: use the original key name as-is
+      // This works because the key names come from rdev originally
+      keys.push(key)
     }
   }
 

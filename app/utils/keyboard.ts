@@ -96,12 +96,29 @@ const reverseKeyNameMap: Record<string, string[]> = Object.entries(
 )
 
 /**
- * Normalizes a key event into a format suitable for UI display
+ * Normalizes a key event into a legacy format suitable for UI display
  * @param event The key event from the global key listener
- * @returns The normalized key name for UI display
+ * @returns The legacy key name for UI display (command, control, etc.)
  */
-export function normalizeKeyEvent(event: KeyEvent): KeyName {
-  // If we have a mapping for this key, use it
+export function normalizeKeyEvent(event: KeyEvent): string {
+  // Map directional keys back to legacy format for UI display
+  const legacyKeyMap: Record<string, string> = {
+    'MetaLeft': 'command',
+    'MetaRight': 'command',
+    'ControlLeft': 'control',
+    'ControlRight': 'control',
+    'Alt': 'option',
+    'AltGr': 'option',
+    'ShiftLeft': 'shift',
+    'ShiftRight': 'shift',
+  }
+
+  // If we have a legacy mapping for this key, use it
+  if (legacyKeyMap[event.key]) {
+    return legacyKeyMap[event.key]
+  }
+
+  // If we have a standard mapping, use it
   if (keyNameMap[event.key]) {
     return keyNameMap[event.key]
   }
@@ -114,7 +131,7 @@ export function normalizeKeyEvent(event: KeyEvent): KeyName {
     .replace(/^arrow/, '') // Remove 'Arrow' prefix
     .replace(/^(left|right)$/, '') // Remove 'Left'/'Right' suffix
 
-  return key as KeyName
+  return key || 'unknown'
 }
 
 export type ShortcutError =
@@ -344,14 +361,14 @@ export class KeyState {
   }
 
   /**
-   * Updates the shortcut and instructs the native listener to block the relevant keys.
+   * Updates the shortcut (no longer blocks keys - blocking is handled by hotkey registration)
    * @param shortcut The shortcut to set, as an array of normalized key names.
    */
   updateShortcut(shortcut: KeyName[]) {
     // Normalize legacy keys to new format
     this.shortcut = shortcut.map(normalizeLegacyKey)
-    const keysToBlock = this.getKeysToBlock()
-    window.api.blockKeys(keysToBlock)
+    // Note: Key blocking is now handled by the hotkey registration system
+    // No need to call blockKeys API as it no longer exists
   }
 
   /**
@@ -397,23 +414,4 @@ export class KeyState {
     this.pressedKeys.clear()
   }
 
-  /**
-   * Gets the raw `rdev` key names that should be blocked for the current shortcut.
-   * @returns Array of keys to block
-   */
-  private getKeysToBlock(): string[] {
-    const keys: string[] = []
-
-    for (const normalizedKey of this.shortcut) {
-      keys.push(...(reverseKeyNameMap[normalizedKey] || []))
-    }
-
-    // Also block the special "fast fn" key if fn is part of the shortcut.
-    if (this.shortcut.includes('fn')) {
-      keys.push('Unknown(179)')
-    }
-
-    // Return a unique set of keys.
-    return [...new Set(keys)]
-  }
 }

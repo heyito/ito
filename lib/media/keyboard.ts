@@ -452,7 +452,7 @@ export const registerAllHotkeys = () => {
   const hotkeys = keyboardShortcuts
     .filter(ks => ks.keys.length > 0)
     .map(shortcut => ({
-      keys: getKeysToBlock(shortcut)
+      keys: getKeysToRegister(shortcut)
     }))
 
   console.info('Registering hotkeys with listener:', hotkeys)
@@ -462,17 +462,6 @@ export const registerAllHotkeys = () => {
   )
 }
 
-// Clear all registered hotkeys
-export const clearHotkeys = () => {
-  if (!KeyListenerProcess) {
-    console.warn('Key listener not running, cannot clear hotkeys.')
-    return
-  }
-
-  KeyListenerProcess.stdin?.write(
-    JSON.stringify({ command: 'clear_hotkeys' }) + '\n',
-  )
-}
 
 /**
  * A reverse mapping of normalized key names to their raw `rdev` counterparts.
@@ -491,7 +480,7 @@ const reverseKeyNameMap: Record<string, string[]> = Object.entries(
   {} as Record<string, string[]>,
 )
 
-const getKeysToBlock = (shortcut?: KeyboardShortcutConfig): string[] => {
+const getKeysToRegister = (shortcut?: KeyboardShortcutConfig): string[] => {
   if (!shortcut) {
     return []
   }

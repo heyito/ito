@@ -18,10 +18,6 @@ struct HotkeyCombo {
 enum Command {
     #[serde(rename = "register_hotkeys")]
     RegisterHotkeys { hotkeys: Vec<HotkeyCombo> },
-    #[serde(rename = "clear_hotkeys")]
-    ClearHotkeys,
-    #[serde(rename = "get_hotkeys")]
-    GetHotkeys,
 }
 
 // Global state for registered hotkeys and currently pressed keys
@@ -77,19 +73,6 @@ fn handle_command(command: Command) {
         Command::RegisterHotkeys { hotkeys } => unsafe {
             REGISTERED_HOTKEYS = hotkeys.clone();
             eprintln!("Registered {} hotkeys", REGISTERED_HOTKEYS.len());
-        },
-        Command::ClearHotkeys => unsafe {
-            REGISTERED_HOTKEYS.clear();
-            eprintln!("Cleared all hotkeys");
-        },
-        Command::GetHotkeys => unsafe {
-            println!(
-                "{}",
-                json!({
-                    "type": "registered_hotkeys",
-                    "hotkeys": REGISTERED_HOTKEYS
-                })
-            );
         },
     }
     io::stdout().flush().unwrap();

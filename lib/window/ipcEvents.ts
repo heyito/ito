@@ -53,11 +53,6 @@ export function registerIPC() {
   })
   ipcMain.on('electron-store-set', (_event, key, val) => {
     store.set(key, val)
-
-    // Re-register hotkeys when keyboard shortcuts change
-    if (key === 'settings.keyboardShortcuts' && KeyListenerProcess) {
-      registerAllHotkeys()
-    }
   })
 
   ipcMain.on('audio-devices-changed', () => {
@@ -139,6 +134,7 @@ export function registerIPC() {
     startKeyListener()
   })
   handleIPC('stop-key-listener', () => stopKeyListener())
+  handleIPC('register-hotkeys', () => registerAllHotkeys())
   handleIPC('start-native-recording-service', () =>
     voiceInputService.startSTTService(ItoMode.TRANSCRIBE),
   )
@@ -788,10 +784,6 @@ ipcMain.on(IPC_EVENTS.SETTINGS_UPDATE, (_event, settings: any) => {
     voiceInputService.handleMicrophoneChanged(settings.microphoneDeviceId)
   }
 
-  // Re-register hotkeys with the listener when keyboard shortcuts change
-  if (settings && settings.keyboardShortcuts && KeyListenerProcess) {
-    registerAllHotkeys()
-  }
 })
 
 // Persist onboarding updates per-user and forward to the pill window

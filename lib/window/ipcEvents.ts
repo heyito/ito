@@ -69,9 +69,9 @@ export function registerIPC() {
   })
 
   ipcMain.on('install-update', () => {
-    // @ts-ignore
+    // @ts-expect-error
     autoUpdater.updateAvailable = true
-    // @ts-ignore
+    // @ts-expect-error
     autoUpdater.updateDownloaded = true
     autoUpdater.quitAndInstall()
   })

@@ -10,7 +10,7 @@ serde = { version = "1.0", features = ["derive"] }
 
 [dependencies.rdev]
 git = "https://github.com/heyito/rdev"
-branch = "dev"
+branch = "main"
 features = ["unstable_grab"]
 
 [target.'cfg(target_os = "linux")'.dependencies]

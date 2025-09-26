@@ -76,6 +76,7 @@ pub fn type_text_macos(text: &str, _char_delay: u64) -> Result<(), String> {
                     .into_owned()
             };
 
+            thread::sleep(Duration::from_secs(1));
             let pasteboard = NSPasteboard::generalPasteboard(nil);
             pasteboard.clearContents();
             let ns_string = NSString::alloc(nil).init_str(&old_contents_str);

@@ -114,9 +114,16 @@ fn callback(event: Event) -> Option<Event> {
             }
 
             // Update pressed keys BEFORE checking if we should block
+            // Normalize Unknown(179) to Function for detection purposes
+            let normalized_key = if key_name == "Unknown(179)" {
+                "Function".to_string()
+            } else {
+                key_name.clone()
+            };
+
             unsafe {
-                if !CURRENTLY_PRESSED.contains(&key_name) {
-                    CURRENTLY_PRESSED.push(key_name.clone());
+                if !CURRENTLY_PRESSED.contains(&normalized_key) {
+                    CURRENTLY_PRESSED.push(normalized_key);
                 }
             }
 
@@ -137,6 +144,10 @@ fn callback(event: Event) -> Option<Event> {
             // Check if we should block based on exact hotkey match
             if should_block() {
                 None // Block the event from reaching the OS
+            } else if key_name == "Unknown(179)" && unsafe {
+                REGISTERED_HOTKEYS.iter().any(|hotkey| hotkey.keys.contains(&"Function".to_string()))
+            } {
+                None // Block Unknown(179) if any hotkey uses Function
             } else {
                 Some(event) // Let it through
             }
@@ -144,9 +155,16 @@ fn callback(event: Event) -> Option<Event> {
         EventType::KeyRelease(key) => {
             let key_name = format!("{:?}", key);
 
+            // Normalize Unknown(179) to Function for detection purposes
+            let normalized_key = if key_name == "Unknown(179)" {
+                "Function".to_string()
+            } else {
+                key_name.clone()
+            };
+
             // Update pressed keys
             unsafe {
-                CURRENTLY_PRESSED.retain(|k| k != &key_name);
+                CURRENTLY_PRESSED.retain(|k| k != &normalized_key);
             }
 
             // Check for C key release while copy is in progress or modifiers are still held

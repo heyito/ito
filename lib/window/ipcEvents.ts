@@ -69,11 +69,17 @@ export function registerIPC() {
   })
 
   ipcMain.on('install-update', () => {
-    // @ts-expect-error -- autoUpater field that isnt exposed but needs to change
+    // @ts-expect-error - These properties are necessary for proper updater state
     autoUpdater.updateAvailable = true
-    // @ts-expect-error -- autoUpater field that isnt exposed but needs to change
+    // @ts-expect-error - These properties are necessary for proper updater state
     autoUpdater.updateDownloaded = true
     autoUpdater.quitAndInstall()
+  })
+
+  ipcMain.handle('get-update-status', () => {
+    return (
+      global.updateStatus || { updateAvailable: false, updateDownloaded: false }
+    )
   })
 
   // Login Item Settings

@@ -259,9 +259,6 @@ class AnalyticsService {
     }
 
     if (!this.shouldTrack()) {
-      log.info(
-        '[Analytics] User identification skipped - analytics disabled or self-hosted user',
-      )
       return
     }
 

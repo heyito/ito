@@ -34,6 +34,17 @@ export const Titlebar = () => {
   }, [showUserDropdown])
 
   useEffect(() => {
+    // Check current update status on mount
+    window.api.updater.getUpdateStatus().then(status => {
+      if (status.updateAvailable) {
+        setIsUpdateAvailable(true)
+      }
+      if (status.updateDownloaded) {
+        setUpdateDownloaded(true)
+      }
+    })
+
+    // Listen for future update events
     window.api.updater.onUpdateAvailable(() => {
       setIsUpdateAvailable(true)
     })

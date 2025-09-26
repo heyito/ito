@@ -107,13 +107,13 @@ build_native_modules() {
     
     case $platform in
         "mac")
-            ./build-binaries.sh --mac --universal
+            ./build-binaries-workspace.sh --mac --universal
             ;;
         "windows")
-            ./build-binaries.sh --windows
+            ./build-binaries-workspace.sh --windows
             ;;
         "all")
-            ./build-binaries.sh --all --universal
+            ./build-binaries-workspace.sh --all --universal
             ;;
         *)
             print_error "Invalid platform: $platform. Use 'mac', 'windows', or 'all'"

@@ -96,20 +96,25 @@ impl CommandProcessor {
             return host.clone();
         }
 
-        let host = if cfg!(windows) {
-            // On Windows, prefer WASAPI directly for best performance (10-30ms latency vs DirectSound's 50-80ms)
-            match cpal::host_from_id(cpal::platform::HostId::Wasapi) {
-                Ok(wasapi_host) => {
-                    eprintln!("[audio-recorder] Using WASAPI host (optimal for Windows)");
-                    wasapi_host
-                }
-                Err(e) => {
-                    eprintln!("[audio-recorder] WASAPI unavailable ({}), falling back to default", e);
-                    cpal::default_host()
+        let host = {
+            #[cfg(target_os = "windows")]
+            {
+                // On Windows, prefer WASAPI directly for best performance (10-30ms latency vs DirectSound's 50-80ms)
+                match cpal::host_from_id(cpal::platform::HostId::Wasapi) {
+                    Ok(wasapi_host) => {
+                        eprintln!("[audio-recorder] Using WASAPI host (optimal for Windows)");
+                        wasapi_host
+                    }
+                    Err(e) => {
+                        eprintln!("[audio-recorder] WASAPI unavailable ({}), falling back to default", e);
+                        cpal::default_host()
+                    }
                 }
             }
-        } else {
-            cpal::default_host()
+            #[cfg(not(target_os = "windows"))]
+            {
+                cpal::default_host()
+            }
         };
 
         let host_rc = Rc::new(host);

@@ -5,7 +5,8 @@
       "WebFetch(domain:docs.microsoft.com)",
       "Bash(bun build:rust:win:*)",
       "Bash(bun runTest:*)",
-      "Bash(bun test:*)"
+      "Bash(bun test:*)",
+      "Bash(cargo build:*)"
     ],
     "deny": [],
     "ask": []

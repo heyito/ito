@@ -76,15 +76,11 @@ pub fn type_text_macos(text: &str, _char_delay: u64) -> Result<(), String> {
                     .into_owned()
             };
 
-            thread::spawn(move || unsafe {
-                thread::sleep(Duration::from_secs(1));
-                // Create autorelease pool for Cocoa objects in background thread
-                let _pool = NSAutoreleasePool::new(nil);
-                let pasteboard = NSPasteboard::generalPasteboard(nil);
-                pasteboard.clearContents();
-                let ns_string = NSString::alloc(nil).init_str(&old_contents_str);
-                pasteboard.setString_forType(ns_string, NSPasteboardTypeString);
-            });
+            thread::sleep(Duration::from_secs(1));
+            let pasteboard = NSPasteboard::generalPasteboard(nil);
+            pasteboard.clearContents();
+            let ns_string = NSString::alloc(nil).init_str(&old_contents_str);
+            pasteboard.setString_forType(ns_string, NSPasteboardTypeString);
         }
 
         Ok(())

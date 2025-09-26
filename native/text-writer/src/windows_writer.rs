@@ -35,29 +35,31 @@ pub fn type_text_windows(text: &str, _char_delay: u64) -> Result<(), String> {
 
     // Simulate Ctrl+V (paste)
     // Press Ctrl
-    enigo.key(Key::Control, enigo::Direction::Press)
+    enigo
+        .key(Key::Control, enigo::Direction::Press)
         .map_err(|e| format!("Failed to press Ctrl: {}", e))?;
 
     // Press V
-    enigo.key(Key::Unicode('v'), enigo::Direction::Press)
+    enigo
+        .key(Key::Unicode('v'), enigo::Direction::Press)
         .map_err(|e| format!("Failed to press V: {}", e))?;
 
     // Small delay to ensure the key press is registered
     thread::sleep(Duration::from_millis(20));
 
     // Release V
-    enigo.key(Key::Unicode('v'), enigo::Direction::Release)
+    enigo
+        .key(Key::Unicode('v'), enigo::Direction::Release)
         .map_err(|e| format!("Failed to release V: {}", e))?;
 
     // Release Ctrl
-    enigo.key(Key::Control, enigo::Direction::Release)
+    enigo
+        .key(Key::Control, enigo::Direction::Release)
         .map_err(|e| format!("Failed to release Ctrl: {}", e))?;
 
     if let Ok(old_text) = old_contents {
-        thread::spawn(move || {
-            thread::sleep(Duration::from_secs(1));
-            let _ = set_clipboard(formats::Unicode, &old_text);
-        });
+        thread::sleep(Duration::from_secs(1));
+        let _ = set_clipboard(formats::Unicode, &old_text);
     }
 
     Ok(())

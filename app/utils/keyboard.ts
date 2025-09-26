@@ -78,23 +78,6 @@ export function getKeyDisplay(
   return result
 }
 
-/**
- * A reverse mapping of normalized key names to their raw `rdev` counterparts.
- * This is a one-to-many relationship (e.g., 'command' maps to ['MetaLeft', 'MetaRight']).
- */
-const reverseKeyNameMap: Record<string, string[]> = Object.entries(
-  keyNameMap,
-).reduce(
-  (acc, [rawKey, normalizedKey]) => {
-    if (!acc[normalizedKey]) {
-      acc[normalizedKey] = []
-    }
-    acc[normalizedKey].push(rawKey)
-    return acc
-  },
-  {} as Record<string, string[]>,
-)
-
 export type ShortcutError =
   | 'duplicate-key-same-mode'
   | 'duplicate-key-diff-mode'
@@ -335,7 +318,8 @@ export class KeyState {
    * @param event The key event from the global key listener
    */
   update(event: KeyEvent) {
-    const key = normalizeKeyEvent(event)
+    // Use keyNameMap for proper directional key preservation
+    const key = keyNameMap[event.key] || event.key.toLowerCase()
 
     // Handle Function key special case
     if (key === 'fn_fast') {

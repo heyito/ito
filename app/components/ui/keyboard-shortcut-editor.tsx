@@ -191,23 +191,7 @@ export default function KeyboardShortcutEditor({
   }
 
   function isDisplayKeyPressed(displayKey: string, pressed: string[]): boolean {
-    const key = displayKey.toLowerCase()
-    if (pressed.includes(key)) return true
-
-    const baseToDirectional: Record<string, [string, string]> = {
-      control: ['control-left', 'control-right'],
-      command: ['command-left', 'command-right'],
-      shift: ['shift-left', 'shift-right'],
-      option: ['option-left', 'option-right'],
-      alt: ['option-left', 'option-right'],
-    }
-
-    if (baseToDirectional[key]) {
-      const [left, right] = baseToDirectional[key]
-      return pressed.includes(left) || pressed.includes(right)
-    }
-
-    return false
+    return pressed.includes(displayKey.toLowerCase())
   }
 
   return (

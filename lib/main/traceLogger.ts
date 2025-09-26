@@ -94,6 +94,39 @@ class TraceLogger {
   }
 
   /**
+   * Start a new user interaction trace with a predefined ID
+   */
+  startInteractionWithId(
+    interactionId: string,
+    step: string,
+    metadata?: Record<string, any>
+  ): string {
+    const timestamp = Date.now()
+    // Create a new span for this interaction
+    const span = tracer.startSpan(step, {
+      kind: SpanKind.INTERNAL,
+      attributes: {
+        'interaction.id': interactionId,
+        'interaction.start_time': timestamp,
+        ...metadata,
+      },
+    })
+
+    // Store the span for later use
+    this.activeSpans.set(interactionId, span)
+
+    // Log the start event
+    span.addEvent(`START: ${step}`, {
+      interactionId,
+      step,
+      timestamp,
+      ...(metadata ? { ...metadata } : {}),
+    })
+
+    return interactionId
+  }
+
+  /**
    * Log a step within an existing interaction
    */
   logStep(

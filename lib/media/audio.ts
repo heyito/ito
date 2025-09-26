@@ -5,6 +5,7 @@ import os from 'os'
 import log from 'electron-log'
 import { EventEmitter } from 'events'
 import { traceLogger } from '../main/traceLogger'
+import { timingService, TimingEvent } from '../main/timingService'
 
 // Message types from the native binary
 const MSG_TYPE_JSON = 1
@@ -22,6 +23,7 @@ class AudioRecorderService extends EventEmitter {
     resolve: (value: string[]) => void
     reject: (reason?: any) => void
   } | null = null
+  #firstAudioChunkReceived = false
 
   constructor() {
     super()
@@ -93,6 +95,11 @@ class AudioRecorderService extends EventEmitter {
       })
     }
 
+    // Record timing for audio start
+    timingService.recordEvent(TimingEvent.AUDIO_RECORDER_START, {
+      deviceName
+    })
+
     this.#sendCommand({ command: 'start', device_name: deviceName })
     log.info(`[AudioService] Recording started on device: ${deviceName}`)
   }
@@ -108,6 +115,9 @@ class AudioRecorderService extends EventEmitter {
         hasProcess: !!this.#audioRecorderProcess,
       })
     }
+
+    // Record timing for audio stop
+    timingService.recordEvent(TimingEvent.AUDIO_RECORDER_STOPPED)
 
     this.#sendCommand({ command: 'stop' })
     log.info('[AudioService] Recording stopped')
@@ -217,6 +227,17 @@ class AudioRecorderService extends EventEmitter {
           const inputRate = Number(jsonResponse.input_sample_rate) || 16000
           const outputRate = Number(jsonResponse.output_sample_rate) || 16000
           const channels = Number(jsonResponse.channels) || 1
+
+          // Record timing for audio started
+          timingService.recordEvent(TimingEvent.AUDIO_RECORDER_STARTED, {
+            inputSampleRate: inputRate,
+            outputSampleRate: outputRate,
+            channels
+          })
+
+          // Reset first chunk flag for new recording
+          this.#firstAudioChunkReceived = false
+
           this.emit('audio-config', {
             sampleRate: inputRate,
             outputSampleRate: outputRate,
@@ -235,6 +256,14 @@ class AudioRecorderService extends EventEmitter {
         }
       }
     } else if (message.type === 'audio') {
+      // Record timing for first audio chunk
+      if (!this.#firstAudioChunkReceived) {
+        this.#firstAudioChunkReceived = true
+        timingService.recordEvent(TimingEvent.AUDIO_FIRST_CHUNK, {
+          chunkSize: message.payload.length
+        })
+      }
+
       const volume = this.#calculateVolume(message.payload)
 
       this.emit('volume-update', volume)

@@ -1,5 +1,6 @@
 import { AudioChunkSchema } from '@/app/generated/ito_pb'
 import { create } from '@bufbuild/protobuf'
+import { timingService, TimingEvent } from '../timingService'
 
 export class AudioStreamManager {
   private isStreaming = false
@@ -19,12 +20,18 @@ export class AudioStreamManager {
     while (this.isStreaming && !this.hasStartedStreaming) {
       if (this.getBufferedDurationMs() >= this.MINIMUM_AUDIO_DURATION_MS) {
         this.hasStartedStreaming = true
+        // Record when we've connected to gRPC
+        timingService.recordEvent(TimingEvent.TRANSCRIPTION_GRPC_CONNECTED, {
+          bufferedDurationMs: this.getBufferedDurationMs()
+        })
         break
       }
       await new Promise<void>(resolve => {
         this.resolveNewChunk = resolve
       })
     }
+
+    let firstChunkSent = false
 
     // Now stream the audio chunks
     while (this.isStreaming || this.audioChunkQueue.length > 0) {
@@ -41,10 +48,20 @@ export class AudioStreamManager {
       while (this.audioChunkQueue.length > 0) {
         const chunk = this.audioChunkQueue.shift()
         if (chunk) {
+          if (!firstChunkSent) {
+            firstChunkSent = true
+            // Record when first audio is sent to server
+            timingService.recordEvent(TimingEvent.TRANSCRIPTION_FIRST_AUDIO_SENT, {
+              chunkSize: chunk.length
+            })
+          }
           yield create(AudioChunkSchema, { audioData: chunk })
         }
       }
     }
+
+    // Record finalization when streaming ends
+    timingService.recordEvent(TimingEvent.TRANSCRIPTION_FINALIZE)
   }
 
   startStreaming() {

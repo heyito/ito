@@ -1,5 +1,6 @@
 import { setFocusedText } from '../../media/text-writer'
 import { traceLogger } from '../traceLogger'
+import { timingService, TimingEvent } from '../timingService'
 
 export class TextInserter {
   async insertText(
@@ -11,7 +12,17 @@ export class TextInserter {
     }
 
     try {
+      // Record timing for output start
+      timingService.recordEvent(TimingEvent.OUTPUT_START, {
+        transcriptLength: transcript.length
+      })
+
       const success = await setFocusedText(transcript)
+
+      // Record timing for output complete
+      timingService.recordEvent(TimingEvent.OUTPUT_COMPLETE, {
+        success
+      })
 
       // Log text insertion
       if (interactionId) {

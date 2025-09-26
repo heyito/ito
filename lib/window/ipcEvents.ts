@@ -39,6 +39,7 @@ import {
   hasSelectedText,
 } from '../media/selected-text-reader'
 import { IPC_EVENTS } from '../types/ipc'
+import { timingService } from '../main/timingService'
 
 const handleIPC = (channel: string, handler: (...args: any[]) => any) => {
   ipcMain.handle(channel, handler)
@@ -528,6 +529,18 @@ export function registerIPC() {
   handleIPC('interactions:get-by-id', async (_e, id) =>
     InteractionsTable.findById(id),
   )
+
+  // Timing Data
+  handleIPC('timing:get-all-interactions', () => {
+    return timingService.getAllInteractions()
+  })
+  handleIPC('timing:export-csv', () => {
+    return timingService.exportToCSV()
+  })
+  handleIPC('timing:clear-old-data', (_e, daysToKeep?: number) => {
+    timingService.clearOldData(daysToKeep)
+    return true
+  })
 
   handleIPC('interactions:delete', async (_e, id) =>
     InteractionsTable.softDelete(id),

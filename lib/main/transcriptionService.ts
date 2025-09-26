@@ -3,6 +3,7 @@ import log from 'electron-log'
 import { ItoMode } from '@/app/generated/ito_pb'
 import { BrowserWindow } from 'electron'
 import { traceLogger } from './traceLogger'
+import { timingService, TimingEvent } from './timingService'
 import { AudioStreamManager } from './audio/AudioStreamManager'
 import { InteractionManager } from './interactions/InteractionManager'
 import { WindowMessenger } from './messaging/WindowMessenger'
@@ -57,6 +58,12 @@ export class TranscriptionService {
       startTime: this.interactionManager.getInteractionStartTime(),
     })
 
+    // Record timing for transcription start
+    timingService.recordEvent(TimingEvent.TRANSCRIPTION_START, {
+      mode,
+      interactionId: this.interactionId
+    })
+
     return true
   }
 
@@ -76,6 +83,8 @@ export class TranscriptionService {
           reason: 'insufficient_audio_duration',
           localInteractionId: interactionId,
         })
+        // Complete timing tracking
+        timingService.completeInteraction(logId)
         ;(globalThis as any).currentInteractionId = null
       }
 
@@ -102,15 +111,30 @@ export class TranscriptionService {
 
     this.hasStartedGrpc = true
 
+    // Record timing for gRPC connection start
+    timingService.recordEvent(TimingEvent.TRANSCRIPTION_GRPC_CONNECT, {
+      mode: this.currentMode,
+      bufferedDurationMs: this.audioStreamManager.getBufferedDurationMs()
+    })
+
     grpcClient
       .transcribeStream(
         this.audioStreamManager.streamAudioChunks(),
         this.currentMode,
       )
       .then(response => {
+        // Record timing for server response (this is both first and final since it's client-streaming)
+        timingService.recordEvent(TimingEvent.SERVER_FIRST_RESPONSE, {
+          hasTranscript: !!response.transcript,
+          hasError: !!response.error
+        })
         this.handleTranscriptionResponse(response)
       })
       .catch(error => {
+        // Record timing for server error
+        timingService.recordEvent(TimingEvent.SERVER_ERROR, {
+          error: error.message
+        })
         this.handleTranscriptionError(error)
       })
   }
@@ -159,6 +183,8 @@ export class TranscriptionService {
           error: response.error.message,
           localInteractionId: this.interactionManager.getCurrentInteractionId(),
         })
+        // Complete timing tracking
+        timingService.completeInteraction(this.interactionId)
         ;(globalThis as any).currentInteractionId = null
       }
 
@@ -224,6 +250,8 @@ export class TranscriptionService {
               this.interactionManager.getCurrentInteractionId(),
           },
         )
+        // Complete timing tracking
+        timingService.completeInteraction(this.interactionId)
         ;(globalThis as any).currentInteractionId = null
       }
 
@@ -255,6 +283,11 @@ export class TranscriptionService {
       )
     }
 
+    // Complete timing tracking on error
+    if (this.interactionId) {
+      timingService.completeInteraction(this.interactionId)
+    }
+
     // Clear current interaction on error
     this.interactionManager.clearCurrentInteraction()
     this.audioStreamManager.clearInteractionAudio()
@@ -265,6 +298,10 @@ export class TranscriptionService {
   public stopTranscription() {
     // Mark as finalizing to ignore accidental restarts during paste/DB save
     this.isFinalizing = true
+
+    // Record timing for transcription stop
+    timingService.recordEvent(TimingEvent.TRANSCRIPTION_STOP)
+
     this.audioStreamManager.stopStreaming()
 
     // Fallback: if no streaming is active and no handler will reset the flag,

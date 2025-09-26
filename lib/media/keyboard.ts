@@ -6,6 +6,7 @@ import { BrowserWindow } from 'electron'
 import { audioRecorderService } from './audio'
 import { voiceInputService } from '../main/voiceInputService'
 import { traceLogger } from '../main/traceLogger'
+import { timingService, TimingEvent } from '../main/timingService'
 import { KeyName, keyNameMap, normalizeLegacyKey } from '../types/keyboard'
 import { getProgrammaticTyping } from './typingState'
 
@@ -257,14 +258,32 @@ function handleKeyEventInMain(event: KeyEvent) {
       }
 
       pendingShortcut = currentlyHeldShortcut
+
+      // Generate interaction ID early for timing tracking
+      const interactionId = `interaction-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+      // Start timing tracking
+      timingService.startInteraction(interactionId, currentlyHeldShortcut.mode)
+      timingService.recordEventForInteraction(interactionId, TimingEvent.HOTKEY_DEBOUNCE_START, {
+        shortcut: currentlyHeldShortcut.keys,
+        debounceTime: DEBOUNCE_TIME
+      })
+
       shortcutDebounceTimeout = setTimeout(() => {
         // After DEBOUNCE milliseconds, if the shortcut is still active, activate it
         if (pendingShortcut && !isShortcutActive) {
           isShortcutActive = true
           console.info('lib Shortcut ACTIVATED, starting recording...')
 
+          // Record hotkey activation timing
+          timingService.recordEventForInteraction(interactionId, TimingEvent.HOTKEY_ACTIVATED, {
+            shortcut: pendingShortcut.keys,
+            mode: pendingShortcut.mode
+          })
+
           // Start trace logging for new interaction
-          const interactionId = traceLogger.startInteraction(
+          traceLogger.startInteractionWithId(
+            interactionId,
             'HOTKEY_ACTIVATED',
             {
               shortcut: pendingShortcut.keys,
@@ -301,6 +320,9 @@ function handleKeyEventInMain(event: KeyEvent) {
       // Shortcut released - deactivate immediately (no debounce on release)
       isShortcutActive = false
       console.info('lib Shortcut DEACTIVATED, stopping recording...')
+
+      // Record audio stop timing
+      timingService.recordEvent(TimingEvent.AUDIO_RECORDER_STOP)
 
       // Don't end the interaction yet - let the transcription service handle it
       // The interaction will be ended when transcription completes or fails

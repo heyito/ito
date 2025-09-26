@@ -28,12 +28,12 @@ pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
 
 #[cfg(target_os = "windows")]
 pub fn copy_selected_text() -> Result<(), Box<dyn std::error::Error>> {
-    use std::process::Command;
+    use enigo::{Enigo, Key, Keyboard, Settings, Direction};
 
-    // Use PowerShell to send Ctrl+C on Windows
-    Command::new("powershell")
-        .args(&["-Command", "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^c')"])
-        .output()?;
+    let mut enigo = Enigo::new(&Settings::default())?;
+    enigo.key(Key::Control, Direction::Press)?;
+    enigo.key(Key::Unicode('c'), Direction::Click)?;
+    enigo.key(Key::Control, Direction::Release)?;
 
     Ok(())
 }
@@ -50,12 +50,12 @@ pub fn copy_selected_text() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(target_os = "windows")]
 fn cut_selected_text() -> Result<(), Box<dyn std::error::Error>> {
-    use std::process::Command;
+    use enigo::{Enigo, Key, Keyboard, Settings, Direction};
 
-    // Use PowerShell to send Ctrl+X on Windows
-    Command::new("powershell")
-        .args(&["-Command", "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^x')"])
-        .output()?;
+    let mut enigo = Enigo::new(&Settings::default())?;
+    enigo.key(Key::Control, Direction::Press)?;
+    enigo.key(Key::Unicode('x'), Direction::Click)?;
+    enigo.key(Key::Control, Direction::Release)?;
 
     Ok(())
 }
@@ -79,10 +79,11 @@ pub fn select_previous_chars_and_copy(
     for _ in 0..char_count {
         #[cfg(target_os = "windows")]
         {
-            use std::process::Command;
-            let _output = Command::new("powershell")
-                .args(&["-Command", "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('+{LEFT}')"])
-                .output()?;
+            use enigo::{Enigo, Key, Keyboard, Settings, Direction};
+            let mut enigo = Enigo::new(&Settings::default())?;
+            enigo.key(Key::Shift, Direction::Press)?;
+            enigo.key(Key::LeftArrow, Direction::Click)?;
+            enigo.key(Key::Shift, Direction::Release)?;
         }
 
         #[cfg(target_os = "linux")]
@@ -131,10 +132,11 @@ pub fn shift_cursor_right_with_deselect(
     for _ in 0..char_count {
         #[cfg(target_os = "windows")]
         {
-            use std::process::Command;
-            let _output = Command::new("powershell")
-                .args(&["-Command", "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('+{RIGHT}')"])
-                .output()?;
+            use enigo::{Enigo, Key, Keyboard, Settings, Direction};
+            let mut enigo = Enigo::new(&Settings::default())?;
+            enigo.key(Key::Shift, Direction::Press)?;
+            enigo.key(Key::RightArrow, Direction::Click)?;
+            enigo.key(Key::Shift, Direction::Release)?;
         }
 
         #[cfg(target_os = "linux")]

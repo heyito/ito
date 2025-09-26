@@ -1,3 +1,6 @@
+const fs = require('fs')
+const path = require('path')
+
 // Define the native binaries that are shared across platforms
 const nativeBinaries = [
   'global-key-listener',
@@ -13,9 +16,32 @@ const getMacResources = () =>
     to: `binaries/${binary}`,
   }))
 
+const resolveWindowsBinaryPath = binary => {
+  const msvcPath = path.join(
+    'native',
+    binary,
+    'target',
+    'x86_64-pc-windows-msvc',
+    'release',
+    `${binary}.exe`,
+  )
+  const gnuPath = path.join(
+    'native',
+    binary,
+    'target',
+    'x86_64-pc-windows-gnu',
+    'release',
+    `${binary}.exe`,
+  )
+
+  if (fs.existsSync(msvcPath)) return msvcPath
+  if (fs.existsSync(gnuPath)) return gnuPath
+  return gnuPath
+}
+
 const getWindowsResources = () =>
   nativeBinaries.map(binary => ({
-    from: `native/${binary}/target/x86_64-pc-windows-gnu/release/${binary}.exe`,
+    from: resolveWindowsBinaryPath(binary),
     to: `binaries/${binary}.exe`,
   }))
 

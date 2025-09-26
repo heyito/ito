@@ -85,12 +85,19 @@ build_native_module() {
     # --- Windows Build ---
     if [ "$BUILD_WINDOWS" = true ]; then
         print_info "Building Windows binary for $module_name..."
-        
-        # Use GNU target (more reliable than MSVC)
+
         if [ "$compiling_on_windows" = true ]; then
-            cargo +stable-x86_64-pc-windows-gnu build --release --target x86_64-pc-windows-gnu
+            # On Windows host: prefer MSVC only if toolchain is installed AND link.exe is available
+            if rustup target list | grep -q "x86_64-pc-windows-msvc (installed)" && command -v link.exe >/dev/null 2>&1; then
+                print_info "Using MSVC toolchain"
+                cargo build --release --target x86_64-pc-windows-msvc
+            else
+                print_info "MSVC not available; using GNU toolchain"
+                cargo +stable-x86_64-pc-windows-gnu build --release --target x86_64-pc-windows-gnu
+            fi
         else
-            # Cross-compile from macOS/Linux using default toolchain
+            # On macOS/Linux hosts, always use GNU for cross-compilation
+            print_info "Non-Windows host; using GNU toolchain for cross-compile"
             cargo build --release --target x86_64-pc-windows-gnu
         fi
     fi
@@ -138,38 +145,37 @@ if [ "$BUILD_MAC" = true ]; then
     rustup target add aarch64-apple-darwin
 fi
 if [ "$BUILD_WINDOWS" = true ]; then
-    print_status "Adding Windows target..."
-    
-    # Use GNU target (more reliable than MSVC)
-    rustup target add x86_64-pc-windows-gnu
-    
-    # Check if MinGW-w64 is available
-    # Check if we're compiling on a Windows machine
+    print_status "Adding Windows targets..."
+
+    # Try to add MSVC target; ignore failure if toolchain not present
+    rustup target add x86_64-pc-windows-msvc || true
+
+    # Ensure GNU target is present for cross-compilation
+    rustup target add x86_64-pc-windows-gnu || true
+
+    # Detect host
     compiling_on_windows=false
     if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ "$OS" == "Windows_NT" ]]; then
         compiling_on_windows=true
     fi
-    
-    if [ "$compiling_on_windows" = true ]; then
-        # On Windows, use GNU toolchain
-        print_info "Using GNU toolchain (requires MinGW-w64)"
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        # On macOS, check if MinGW-w64 is installed via brew or other package managers
-        if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
-            print_info "Using MinGW-w64 cross-compiler for Windows builds on macOS"
-        elif brew list mingw-w64 &> /dev/null; then
-            print_info "MinGW-w64 found via Homebrew, using for Windows cross-compilation"
+
+    # On non-Windows hosts we always use GNU toolchain for Windows builds.
+    # Verify MinGW-w64 toolchain availability early with a clear error.
+    if [ "$compiling_on_windows" != true ]; then
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            if command -v x86_64-w64-mingw32-gcc &> /dev/null || brew list mingw-w64 &> /dev/null; then
+                print_info "MinGW-w64 found for macOS cross-compilation"
+            else
+                print_error "MinGW-w64 not found. Install with: brew install mingw-w64"
+                exit 1
+            fi
         else
-            print_error "Windows GNU target requires MinGW-w64 toolchain. Install with: brew install mingw-w64"
-            exit 1
-        fi
-    else
-        # On Linux, check if MinGW-w64 is installed
-        if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
-            print_info "Using MinGW-w64 cross-compiler for Windows builds on Linux"
-        else
-            print_error "Windows GNU target requires MinGW-w64 toolchain. Install with: sudo apt-get install mingw-w64"
-            exit 1
+            if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
+                print_info "MinGW-w64 found for Linux cross-compilation"
+            else
+                print_error "MinGW-w64 not found. Install with: sudo apt-get install mingw-w64"
+                exit 1
+            fi
         fi
     fi
 fi

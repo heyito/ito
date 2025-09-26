@@ -10,6 +10,7 @@ crossbeam-channel = "0.5"
 arboard = "3.4"
 lru = "0.12"
 parking_lot = "0.12"
+enigo = "0.6"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 accessibility-ng = "0.1.6"

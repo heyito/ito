@@ -230,12 +230,14 @@ export function isReservedCombination(
   for (const reserved of reservedCombinations) {
     const normalizedReserved = sortKeysCanonical(reserved.keys)
 
-    // Check if the shortcut contains all keys from a reserved combination (exact match)
-    const containsAllReserved = normalizedReserved.every(reservedKey => {
-      return normalizedKeys.includes(reservedKey)
-    })
+    // Check for exact match - same number of keys and all keys match
+    const isExactMatch =
+      normalizedKeys.length === normalizedReserved.length &&
+      normalizedReserved.every(reservedKey => {
+        return normalizedKeys.includes(reservedKey)
+      })
 
-    if (containsAllReserved) {
+    if (isExactMatch) {
       return { isReserved: true, reason: reserved.reason }
     }
   }

@@ -52,8 +52,10 @@ export default function MultiShortcutEditor({
   const [editingId, setEditingId] = useState<string | null>(null) // existing row id or "__new__"
   const [draftKeys, setDraftKeys] = useState<KeyName[]>([])
   const [error, setError] = useState<string>('')
+  const [temporaryError, setTemporaryError] = useState<string>('')
 
   const cleanupRef = useRef<(() => void) | null>(null)
+  const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const beginEditExisting = (row: KeyboardShortcutConfig) => {
     if (!start(editorKey)) {
@@ -63,6 +65,7 @@ export default function MultiShortcutEditor({
     setEditingId(row.id)
     setDraftKeys([])
     setError('')
+    setTemporaryError('')
 
     window.api.send(
       'electron-store-set',
@@ -98,6 +101,13 @@ export default function MultiShortcutEditor({
     setEditingId(null)
     setDraftKeys([])
     setError('')
+    setTemporaryError('')
+
+    // Clear any pending error timeout
+    if (errorTimeoutRef.current) {
+      clearTimeout(errorTimeoutRef.current)
+      errorTimeoutRef.current = null
+    }
 
     window.api.send(
       'electron-store-set',
@@ -126,16 +136,39 @@ export default function MultiShortcutEditor({
       if (!editingId || event.type !== 'keydown') return
       const key = keyNameMap[event.key] || event.key.toLowerCase()
       if (key === 'fn_fast') return
-      if (draftKeys.length >= MAX_KEYS_PER_SHORTCUT) return // limit to 5 keys
 
-      setDraftKeys(prev =>
-        prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key],
-      )
+      setDraftKeys(prev => {
+        // If key exists, remove it
+        if (prev.includes(key)) {
+          return prev.filter(k => k !== key)
+        }
 
-      // Clear error when user starts typing new keys
-      setError('')
+        // If at max keys, show temporary error and don't add
+        if (prev.length >= MAX_KEYS_PER_SHORTCUT) {
+          // Clear any existing timeout
+          if (errorTimeoutRef.current) {
+            clearTimeout(errorTimeoutRef.current)
+          }
+
+          // Show temporary error
+          setTemporaryError(`Maximum ${MAX_KEYS_PER_SHORTCUT} keys allowed`)
+
+          // Clear temporary error after 2 seconds
+          errorTimeoutRef.current = setTimeout(() => {
+            setTemporaryError('')
+            errorTimeoutRef.current = null
+          }, 2000)
+
+          return prev
+        }
+
+        // Add the new key and clear any errors
+        setError('')
+        setTemporaryError('')
+        return [...prev, key]
+      })
     },
-    [draftKeys.length, editingId],
+    [editingId],
   )
 
   useEffect(() => {
@@ -158,6 +191,10 @@ export default function MultiShortcutEditor({
           true,
         )
         stop(editorKey)
+      }
+      // Clean up any pending error timeout
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current)
       }
     }
   }, [editingId, stop, editorKey])
@@ -182,11 +219,20 @@ export default function MultiShortcutEditor({
             <div className="flex items-center justify-between">
               <div className="flex items-center justify-between gap-1">
                 {displayKeys.length ? (
-                  displayKeys.map((k, idx) => (
-                    <KeyboardKey key={idx} keyboardKey={k} variant="inline" />
-                  ))
+                  <>
+                    {displayKeys.map((k, idx) => (
+                      <KeyboardKey key={idx} keyboardKey={k} variant="inline" />
+                    ))}
+                    {isEditing && displayKeys.length < MAX_KEYS_PER_SHORTCUT && (
+                      <span className="text-xs text-neutral-400 ml-2">
+                        ({MAX_KEYS_PER_SHORTCUT - displayKeys.length} more allowed)
+                      </span>
+                    )}
+                  </>
                 ) : (
-                  <span className="text-neutral-400">No keys set</span>
+                  <span className="text-neutral-400">
+                    {isEditing ? `Press keys to add (max ${MAX_KEYS_PER_SHORTCUT})` : `No keys set`}
+                  </span>
                 )}
               </div>
 
@@ -213,8 +259,8 @@ export default function MultiShortcutEditor({
                 )}
               </div>
             </div>
-            {editingId === row.id && error && (
-              <div className="mt-1 text-xs text-red-500">{error}</div>
+            {editingId === row.id && (error || temporaryError) && (
+              <div className="mt-1 text-xs text-red-500">{temporaryError || error}</div>
             )}
           </div>
         )

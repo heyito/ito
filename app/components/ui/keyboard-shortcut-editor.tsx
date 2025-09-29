@@ -26,6 +26,8 @@ interface KeyboardShortcutEditorProps {
   confirmButtonClassName?: string
 }
 
+const MAX_KEYS_PER_SHORTCUT = 5
+
 export default function KeyboardShortcutEditor({
   shortcut,
   onShortcutChange,
@@ -56,7 +58,9 @@ export default function KeyboardShortcutEditor({
   const [isEditing, setIsEditing] = useState(false)
   const [newShortcut, setNewShortcut] = useState<KeyName[]>([])
   const [validationError, setValidationError] = useState<string>('')
+  const [temporaryError, setTemporaryError] = useState<string>('')
   const { setIsShortcutEnabled } = useAudioStore()
+  const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const handleKeyEvent = useCallback(
     (event: any) => {
@@ -77,6 +81,24 @@ export default function KeyboardShortcutEditor({
 
           let updatedShortcut: KeyName[]
           if (!newShortcut.includes(normalizedKey)) {
+            // Check if we're at the limit before adding
+            if (newShortcut.length >= MAX_KEYS_PER_SHORTCUT) {
+              // Clear any existing timeout
+              if (errorTimeoutRef.current) {
+                clearTimeout(errorTimeoutRef.current)
+              }
+
+              // Show temporary error
+              setTemporaryError(`Maximum ${MAX_KEYS_PER_SHORTCUT} keys allowed`)
+
+              // Clear temporary error after 2 seconds
+              errorTimeoutRef.current = setTimeout(() => {
+                setTemporaryError('')
+                errorTimeoutRef.current = null
+              }, 2000)
+
+              return
+            }
             updatedShortcut = [...newShortcut, normalizedKey]
           } else {
             updatedShortcut = newShortcut.filter(key => key !== normalizedKey)
@@ -142,6 +164,10 @@ export default function KeyboardShortcutEditor({
         )
         stop(editorKey)
       }
+      // Clean up any pending error timeout
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current)
+      }
     }
   }, [isEditing, stop, editorKey])
 
@@ -159,6 +185,7 @@ export default function KeyboardShortcutEditor({
     setIsEditing(true)
     setNewShortcut([])
     setValidationError('')
+    setTemporaryError('')
   }
 
   const handleCancel = () => {
@@ -170,6 +197,7 @@ export default function KeyboardShortcutEditor({
     setIsShortcutEnabled(true)
     setIsEditing(false)
     setNewShortcut([])
+    setTemporaryError('')
     stop(editorKey)
   }
 
@@ -220,13 +248,13 @@ export default function KeyboardShortcutEditor({
             ))}
             {newShortcut.length === 0 && (
               <div className="text-gray-400 text-sm">
-                Press keys to add them
+                Press keys to add them (max {MAX_KEYS_PER_SHORTCUT} keys)
               </div>
             )}
           </div>
-          {validationError && (
+          {(validationError || temporaryError) && (
             <div className="text-red-500 text-sm text-center mb-2">
-              {validationError}
+              {temporaryError || validationError}
             </div>
           )}
           <div className="flex gap-2 justify-end w-full mt-1">

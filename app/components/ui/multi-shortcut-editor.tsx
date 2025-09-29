@@ -223,15 +223,19 @@ export default function MultiShortcutEditor({
                     {displayKeys.map((k, idx) => (
                       <KeyboardKey key={idx} keyboardKey={k} variant="inline" />
                     ))}
-                    {isEditing && displayKeys.length < MAX_KEYS_PER_SHORTCUT && (
-                      <span className="text-xs text-neutral-400 ml-2">
-                        ({MAX_KEYS_PER_SHORTCUT - displayKeys.length} more allowed)
-                      </span>
-                    )}
+                    {isEditing &&
+                      displayKeys.length < MAX_KEYS_PER_SHORTCUT && (
+                        <span className="text-xs text-neutral-400 ml-2">
+                          ({MAX_KEYS_PER_SHORTCUT - displayKeys.length} more
+                          allowed)
+                        </span>
+                      )}
                   </>
                 ) : (
                   <span className="text-neutral-400">
-                    {isEditing ? `Press keys to add (max ${MAX_KEYS_PER_SHORTCUT})` : `No keys set`}
+                    {isEditing
+                      ? `Press keys to add (max ${MAX_KEYS_PER_SHORTCUT})`
+                      : `No keys set`}
                   </span>
                 )}
               </div>
@@ -260,7 +264,9 @@ export default function MultiShortcutEditor({
               </div>
             </div>
             {editingId === row.id && (error || temporaryError) && (
-              <div className="mt-1 text-xs text-red-500">{temporaryError || error}</div>
+              <div className="mt-1 text-xs text-red-500">
+                {temporaryError || error}
+              </div>
             )}
           </div>
         )

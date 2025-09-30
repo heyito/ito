@@ -39,6 +39,7 @@
     "runTest": "bun test --preload lib/__tests__/setup.ts",
     "clean": "rm -rf node_modules dist .vite",
     "clean:ito-app-data": "bun run scripts/clean-app-data.js",
+    "clean:updater": "rm -rf \"%LOCALAPPDATA%\\ito\" \"%LOCALAPPDATA%\\ito-updater\" \"%LOCALAPPDATA%\\Programs\\Ito\\\" && echo Updater cache cleared",
     "build:rust:mac": "bash ./build-binaries.sh --mac --universal",
     "build:rust:win": "bash ./build-binaries.sh --windows",
     "build:win": "bash ./build-app.sh windows",

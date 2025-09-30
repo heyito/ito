@@ -1,5 +1,12 @@
 /// <reference types="electron-vite/node" />
 
+declare global {
+  var updateStatus: {
+    updateAvailable: boolean
+    updateDownloaded: boolean
+  }
+}
+
 declare module '*.css' {
   const content: string
   export default content

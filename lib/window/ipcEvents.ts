@@ -1,4 +1,5 @@
-import { BrowserWindow, ipcMain, shell, app, autoUpdater } from 'electron'
+import { BrowserWindow, ipcMain, shell, app } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import log from 'electron-log'
 import os from 'os'
 import store, { getCurrentUserId } from '../main/store'
@@ -69,11 +70,13 @@ export function registerIPC() {
   })
 
   ipcMain.on('install-update', () => {
-    // @ts-expect-error -- autoUpater field that isnt exposed but needs to change
-    autoUpdater.updateAvailable = true
-    // @ts-expect-error -- autoUpater field that isnt exposed but needs to change
-    autoUpdater.updateDownloaded = true
-    autoUpdater.quitAndInstall()
+    autoUpdater.quitAndInstall(true, true)
+  })
+
+  ipcMain.handle('get-update-status', () => {
+    return (
+      global.updateStatus || { updateAvailable: false, updateDownloaded: false }
+    )
   })
 
   // Login Item Settings

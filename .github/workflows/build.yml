@@ -307,12 +307,13 @@ jobs:
           done
 
           # Compare and find stale files (exist in bucket but not in upload list)
-          comm -23 <(sort existing_files.txt) <(sort uploaded_root_files.txt) > stale_files.txt
+          # Exclude .blockmap files from deletion to preserve differential update capability
+          comm -23 <(sort existing_files.txt) <(sort uploaded_root_files.txt) | grep -v '\.blockmap$' > stale_files.txt
 
-          echo "Stale files identified for deletion:"
+          echo "Stale files identified for deletion (excluding .blockmap files for differential updates):"
           cat stale_files.txt
 
-          # Delete each stale file
+          # Delete each stale file (but preserve blockmaps)
           while IFS= read -r file; do
             echo "Deleting stale file: $file"
             aws s3 rm "$BUCKET/$file"

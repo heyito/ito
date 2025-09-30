@@ -8,6 +8,7 @@ import {
   checkAccessibilityPermission,
   checkMicrophonePermission,
 } from '../utils/crossPlatform'
+import { getUpdateStatus } from '../main/autoUpdaterWrapper'
 
 import {
   startKeyListener,
@@ -74,9 +75,7 @@ export function registerIPC() {
   })
 
   ipcMain.handle('get-update-status', () => {
-    return (
-      global.updateStatus || { updateAvailable: false, updateDownloaded: false }
-    )
+    return getUpdateStatus()
   })
 
   // Login Item Settings

@@ -7,9 +7,18 @@ export interface UpdateStatus {
   updateDownloaded: boolean
 }
 
+let updateStatus: UpdateStatus = {
+  updateAvailable: false,
+  updateDownloaded: false,
+}
+
+export function getUpdateStatus(): UpdateStatus {
+  return { ...updateStatus }
+}
+
 export function initializeAutoUpdater() {
   // Initialize update status tracking
-  global.updateStatus = {
+  updateStatus = {
     updateAvailable: false,
     updateDownloaded: false,
   }
@@ -62,7 +71,7 @@ export function initializeAutoUpdater() {
 
 function setupAutoUpdaterEvents() {
   autoUpdater.on('update-available', () => {
-    global.updateStatus.updateAvailable = true
+    updateStatus.updateAvailable = true
     if (
       mainWindow &&
       !mainWindow.isDestroyed() &&
@@ -74,7 +83,7 @@ function setupAutoUpdaterEvents() {
 
   autoUpdater.on('update-downloaded', () => {
     console.log('update downloaded successfully')
-    global.updateStatus.updateDownloaded = true
+    updateStatus.updateDownloaded = true
     if (
       mainWindow &&
       !mainWindow.isDestroyed() &&

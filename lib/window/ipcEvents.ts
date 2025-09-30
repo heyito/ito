@@ -624,13 +624,20 @@ export function registerIPC() {
 
   ipcMain.on('start-native-recording-test', _event => {
     log.info(`IPC: Received 'start-native-recording-test'`)
-    voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
+    const deviceId = store.get(STORE_KEYS.SETTINGS).microphoneDeviceId
+    audioRecorderService.startRecording(deviceId)
   })
 
   // When the hotkey is released, stop recording and notify the pill window.
   ipcMain.on('stop-native-recording', () => {
     log.info('IPC: Received stop-native-recording.')
     voiceInputService.stopSTTService()
+  })
+
+  // Stop recording for microphone test (doesn't stop transcription since it wasn't started)
+  ipcMain.on('stop-native-recording-test', () => {
+    log.info('IPC: Received stop-native-recording-test.')
+    audioRecorderService.stopRecording()
   })
 
   // Analytics Device ID storage - using machine ID

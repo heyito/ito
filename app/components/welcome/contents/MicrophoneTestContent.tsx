@@ -66,8 +66,8 @@ export default function MicrophoneTestContent() {
     // Cleanup function: stop recording when the component unmounts or device changes
     return () => {
       console.log('Stopping test recording.')
-      // Assumes your preload script exposes 'stop-native-recording'
-      window.api.send('stop-native-recording')
+      // Use the test-specific stop handler that only stops audio recording
+      window.api.send('stop-native-recording-test')
     }
   }, [microphoneDeviceId]) // Re-runs whenever the selected microphone changes
 

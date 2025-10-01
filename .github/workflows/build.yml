@@ -165,8 +165,8 @@ jobs:
         shell: bash
         run: |
           # Find the signed executable file in the dist directory
-          # This searches for any file matching the pattern "Ito-Setup-*.exe"
-          SIGNED_EXE=$(find dist -name "Ito-Setup-*.exe" | head -1)
+          # This searches for any file matching the pattern "Ito-*.exe"
+          SIGNED_EXE=$(find dist -name "Ito-*.exe" | head -1)
           if [ -z "$SIGNED_EXE" ]; then
             echo "Error: No signed executable found"
             exit 1

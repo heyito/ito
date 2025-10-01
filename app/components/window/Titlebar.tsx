@@ -34,6 +34,17 @@ export const Titlebar = () => {
   }, [showUserDropdown])
 
   useEffect(() => {
+    // Check current update status on mount
+    window.api.updater.getUpdateStatus().then(status => {
+      if (status.updateAvailable) {
+        setIsUpdateAvailable(true)
+      }
+      if (status.updateDownloaded) {
+        setUpdateDownloaded(true)
+      }
+    })
+
+    // Listen for future update events
     window.api.updater.onUpdateAvailable(() => {
       setIsUpdateAvailable(true)
     })
@@ -143,7 +154,7 @@ export const Titlebar = () => {
               onClick={() => {
                 if (
                   confirm(
-                    'Are you sure you want to install the update? The app will quit to install.',
+                    'Are you sure you want to install the update? The app will restart.',
                   )
                 ) {
                   window.api.updater.installUpdate()

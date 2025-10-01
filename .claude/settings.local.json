@@ -6,7 +6,9 @@
       "Bash(bun build:rust:win:*)",
       "Bash(bun runTest:*)",
       "Bash(bun test:*)",
-      "Bash(cargo build:*)"
+      "Bash(cargo build:*)",
+      "WebFetch(domain:stackoverflow.com)",
+      "WebFetch(domain:www.electron.build)"
     ],
     "deny": [],
     "ask": []

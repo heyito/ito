@@ -236,7 +236,7 @@ fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::erro
     copy_selected_text()?;
     thread::sleep(Duration::from_millis(25));
     let selected_text = clipboard.get_text().unwrap_or_default();
-    let selected_char_count = selected_text.chars().count();
+    let selected_char_count = count_editor_chars(&selected_text);
 
     let context_text = if selected_char_count == 0 {
         // Case 1: No selected text - proceed normally with cursor context
@@ -247,7 +247,7 @@ fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::erro
         let result = select_previous_chars_and_copy(context_length, &mut clipboard);
         match result {
             Ok(precursor_text) => {
-                let precursor_char_count = precursor_text.chars().count();
+                let precursor_char_count = count_editor_chars(&precursor_text);
                 // Shift right by the amount we grabbed
                 if precursor_char_count > 0 {
                     let _ = shift_cursor_right_with_deselect(precursor_char_count);
@@ -265,7 +265,7 @@ fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::erro
         let result = select_previous_chars_and_copy(1, &mut clipboard);
         match result {
             Ok(extended_text) => {
-                let extended_char_count = extended_text.chars().count();
+                let extended_char_count = count_editor_chars(&extended_text);
 
                 if extended_char_count < selected_char_count {
                     // Selection shrunk - undo and return empty
@@ -285,7 +285,7 @@ fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::erro
                         select_previous_chars_and_copy(context_length - 1, &mut clipboard);
                     match full_result {
                         Ok(full_context_text) => {
-                            let full_context_char_count = full_context_text.chars().count();
+                            let full_context_char_count = count_editor_chars(&full_context_text);
                             // Undo by the absolute difference between original selected text and total selection
                             let chars_to_undo = (full_context_char_count as i32
                                 - selected_char_count as i32)
@@ -351,4 +351,14 @@ fn shift_cursor_right_with_deselect(char_count: usize) -> Result<(), Box<dyn std
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 fn shift_cursor_right_with_deselect(char_count: usize) -> Result<(), Box<dyn std::error::Error>> {
     cross_platform::shift_cursor_right_with_deselect(char_count)
+}
+
+#[cfg(target_os = "macos")]
+fn count_editor_chars(text: &str) -> usize {
+    macos::count_editor_chars(text)
+}
+
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+fn count_editor_chars(text: &str) -> usize {
+    cross_platform::count_editor_chars(text)
 }

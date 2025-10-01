@@ -8,6 +8,11 @@ use std::time::Duration;
 
 static GET_SELECTED_TEXT_METHOD: Mutex<Option<LruCache<String, u8>>> = Mutex::new(None);
 
+// Count characters as the editor sees them (on macOS, just use normal char count)
+pub fn count_editor_chars(text: &str) -> usize {
+    text.chars().count()
+}
+
 // Raw Quartz C API bindings for CGEventCreateKeyboardEvent
 #[repr(C)]
 struct __CGEvent(c_void);

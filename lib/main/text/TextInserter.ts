@@ -6,7 +6,8 @@ export class TextInserter {
     transcript: string,
     interactionId: string | null,
   ): Promise<boolean> {
-    if (!transcript) {
+    // If the string is empty, don't insert
+    if (!transcript || !transcript.trim()) {
       return false
     }
 

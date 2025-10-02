@@ -1,6 +1,7 @@
 import { create } from 'zustand'
-import { analytics, ANALYTICS_EVENTS } from '../components/analytics'
-import { STORE_KEYS } from '../../lib/constants/store-keys'
+import { analytics } from '../components/analytics'
+import { ANALYTICS_EVENTS } from '@/lib/types/analytics'
+import { STORE_KEYS } from '@/lib/constants/store-keys'
 
 // Onboarding category constants
 export const ONBOARDING_CATEGORIES = {

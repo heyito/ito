@@ -1,14 +1,14 @@
-import {
-  init,
-  track,
-  identify,
-  setUserId,
-  Identify,
-} from '@amplitude/analytics-browser'
 import log from 'electron-log'
 import { STORE_KEYS } from '../../../lib/constants/store-keys'
 import { v4 as uuidv4 } from 'uuid'
-import type { OnboardingCategory } from '../../store/useOnboardingStore'
+import type {
+  BaseEventProperties,
+  OnboardingEventProperties,
+  AuthEventProperties,
+  SettingsEventProperties,
+  UserProperties,
+  AnalyticsEvent,
+} from '../../../lib/types/analytics'
 
 // Get or generate a machine-based device ID that's shared across all windows
 const getSharedDeviceId = async (): Promise<string> => {
@@ -29,9 +29,14 @@ const getSharedDeviceId = async (): Promise<string> => {
 
 // Check if analytics should be enabled
 const getAnalyticsEnabled = (): boolean => {
-  // First check if API key is available
-  if (!import.meta.env.VITE_AMPLITUDE_API_KEY) {
-    console.warn('[Analytics] No API key found, analytics disabled')
+  // First check if API key and host are available
+  if (
+    !import.meta.env.VITE_POSTHOG_API_KEY ||
+    !import.meta.env.VITE_POSTHOG_HOST
+  ) {
+    console.warn(
+      '[Analytics] PostHog API key or host not found, analytics disabled',
+    )
     return false
   }
 
@@ -48,18 +53,19 @@ const getAnalyticsEnabled = (): boolean => {
   }
 }
 
-// Initialize Amplitude only if analytics is enabled
+// Initialize analytics state
 let isAnalyticsInitialized = false
 let sharedDeviceId: string | null = null
 const analyticsEnabled = getAnalyticsEnabled()
 
-console.log('VITE_AMPLITUDE_API_KEY', import.meta.env.VITE_AMPLITUDE_API_KEY)
+console.log('VITE_POSTHOG_API_KEY', import.meta.env.VITE_POSTHOG_API_KEY)
+console.log('VITE_POSTHOG_HOST', import.meta.env.VITE_POSTHOG_HOST)
 console.log('[Analytics] Analytics enabled:', analyticsEnabled)
 
-// Initialize Amplitude asynchronously
+// Initialize analytics via IPC asynchronously
 const initializeAnalytics = async () => {
   if (!analyticsEnabled) {
-    log.info('[Analytics] Amplitude disabled by user settings')
+    log.info('[Analytics] PostHog disabled by user settings')
     return
   }
 
@@ -67,116 +73,32 @@ const initializeAnalytics = async () => {
     sharedDeviceId = await getSharedDeviceId()
     console.log('[Analytics] Using shared device ID:', sharedDeviceId)
 
-    init(import.meta.env.VITE_AMPLITUDE_API_KEY, {
-      deviceId: sharedDeviceId, // Use shared device ID across all windows
-      autocapture: {
-        elementInteractions: false,
-        pageViews: false,
-        sessions: true, // Keep session tracking enabled
-        formInteractions: false,
-        fileDownloads: false,
-      },
-    })
-    isAnalyticsInitialized = true
+    // Initialize analytics in main process via IPC
+    isAnalyticsInitialized =
+      (await window.api?.['analytics:initialize'](sharedDeviceId)) || false
 
     // Update the service instance after successful initialization
-    analytics.updateInitializationStatus(true, sharedDeviceId)
+    analytics.updateInitializationStatus(isAnalyticsInitialized, sharedDeviceId)
 
     log.info(
-      '[Analytics] Amplitude initialized with shared device ID:',
+      '[Analytics] PostHog initialized via IPC with shared device ID:',
       sharedDeviceId,
+      'Success:',
+      isAnalyticsInitialized,
     )
+
+    console.log('[Analytics] Renderer analytics service state:', {
+      isInitialized: analytics.isEnabled(),
+      deviceId: analytics.getDeviceId(),
+      userIdentified: analytics.isUserIdentified(),
+    })
   } catch (error) {
-    log.error('[Analytics] Failed to initialize analytics:', error)
+    log.error('[Analytics] Failed to initialize analytics via IPC:', error)
   }
 }
 
 // Initialize analytics when the module loads
 initializeAnalytics()
-
-// Event types for type safety
-export interface BaseEventProperties {
-  timestamp?: string
-  session_id?: string
-  [key: string]: any
-}
-
-export interface OnboardingEventProperties extends BaseEventProperties {
-  step: number
-  step_name: string
-  category: OnboardingCategory
-  total_steps: number
-  referral_source?: string
-  provider?: string
-}
-
-export interface HotkeyEventProperties extends BaseEventProperties {
-  action: 'press' | 'release'
-  keys: string[]
-  duration_ms?: number
-  session_duration_ms?: number
-}
-
-export interface AuthEventProperties extends BaseEventProperties {
-  provider: string
-  is_returning_user: boolean
-  user_id?: string
-}
-
-export interface SettingsEventProperties extends BaseEventProperties {
-  setting_name: string
-  old_value: any
-  new_value: any
-  setting_category: string
-}
-
-export interface UserProperties {
-  user_id: string
-  email?: string
-  name?: string
-  provider?: string
-  created_at?: string
-  last_active?: string
-  onboarding_completed?: boolean
-  referral_source?: string
-  keyboard_shortcuts?: string[]
-}
-
-// Event constants
-export const ANALYTICS_EVENTS = {
-  // Onboarding events
-  ONBOARDING_STARTED: 'onboarding_started',
-  ONBOARDING_STEP_COMPLETED: 'onboarding_step_completed',
-  ONBOARDING_STEP_VIEWED: 'onboarding_step_viewed',
-  ONBOARDING_COMPLETED: 'onboarding_completed',
-  ONBOARDING_ABANDONED: 'onboarding_abandoned',
-
-  // Authentication events
-  AUTH_SIGNUP_STARTED: 'auth_signup_started',
-  AUTH_SIGNUP_COMPLETED: 'auth_signup_completed',
-  AUTH_SIGNIN_STARTED: 'auth_signin_started',
-  AUTH_SIGNIN_COMPLETED: 'auth_signin_completed',
-  AUTH_SIGNIN_FAILED: 'auth_signin_failed',
-  AUTH_LOGOUT: 'auth_logout',
-  AUTH_LOGOUT_FAILED: 'auth_logout_failed',
-  AUTH_STATE_GENERATION_FAILED: 'auth_state_generation_failed',
-  AUTH_METHOD_FAILED: 'auth_method_failed',
-
-  // Recording events
-  RECORDING_STARTED: 'recording_started',
-  RECORDING_COMPLETED: 'recording_completed',
-  MANUAL_RECORDING_STARTED: 'manual_recording_started',
-  MANUAL_RECORDING_COMPLETED: 'manual_recording_completed',
-  MANUAL_RECORDING_ABANDONED: 'manual_recording_abandoned',
-
-  // Settings events
-  SETTING_CHANGED: 'setting_changed',
-  MICROPHONE_CHANGED: 'microphone_changed',
-  KEYBOARD_SHORTCUTS_CHANGED: 'keyboard_shortcuts_changed',
-} as const
-
-export type AnalyticsEvent =
-  (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS]
 
 /**
  * Professional Analytics Service for Ito
@@ -201,27 +123,27 @@ class AnalyticsService {
    * Enable analytics (re-initialize if needed)
    */
   async enableAnalytics() {
-    if (!this.isInitialized && import.meta.env.VITE_AMPLITUDE_API_KEY) {
+    if (
+      !this.isInitialized &&
+      import.meta.env.VITE_POSTHOG_API_KEY &&
+      import.meta.env.VITE_POSTHOG_HOST
+    ) {
       try {
         const deviceId = await getSharedDeviceId()
         this.deviceId = deviceId
-        init(import.meta.env.VITE_AMPLITUDE_API_KEY, {
-          deviceId: deviceId, // Use shared device ID for consistency
-          autocapture: {
-            elementInteractions: false,
-            pageViews: false,
-            sessions: true,
-            formInteractions: false,
-            fileDownloads: false,
-          },
-        })
-        this.isInitialized = true
+
+        // Enable analytics in main process via IPC
+        this.isInitialized =
+          (await window.api?.['analytics:enable'](deviceId)) || false
+
         log.info(
-          '[Analytics] Analytics enabled and initialized with shared device ID:',
+          '[Analytics] Analytics enabled via IPC with shared device ID:',
           deviceId,
+          'Success:',
+          this.isInitialized,
         )
       } catch (error) {
-        log.error('[Analytics] Failed to enable analytics:', error)
+        log.error('[Analytics] Failed to enable analytics via IPC:', error)
       }
     }
   }
@@ -233,6 +155,10 @@ class AnalyticsService {
     this.isInitialized = false
     this.currentUserId = null
     this.currentProvider = null
+
+    // Disable analytics in main process via IPC
+    window.api?.['analytics:disable']()
+
     log.info('[Analytics] Analytics disabled')
   }
 
@@ -269,27 +195,33 @@ class AnalyticsService {
       if (this.currentUserId !== userId) {
         this.currentUserId = userId
 
-        const identifyObj = new Identify()
+        // Build user properties for PostHog
+        const userProperties = {
+          user_id: userId,
+          last_active: new Date().toISOString(),
+          ...properties,
+        }
 
-        // Set user properties using the Identify object
-        identifyObj.set('user_id', userId)
-        identifyObj.set('last_active', new Date().toISOString())
+        // Remove undefined values
+        const cleanProperties = Object.fromEntries(
+          Object.entries(userProperties).filter(
+            ([, value]) => value !== undefined,
+          ),
+        )
 
-        // Set additional properties
-        Object.entries(properties).forEach(([key, value]) => {
-          if (value !== undefined) {
-            identifyObj.set(key, value)
-          }
-        })
+        // Identify user in main process via IPC
+        window.api?.['analytics:identify-user'](
+          userId,
+          cleanProperties,
+          provider,
+        )
 
-        identify(identifyObj, { user_id: userId })
-        setUserId(userId)
         log.info(
-          `[Analytics] User identified: ${userId} (deviceId: ${this.deviceId || 'pending'})`,
+          `[Analytics] User identified via IPC: ${userId} (deviceId: ${this.deviceId || 'pending'})`,
         )
       }
     } catch (error) {
-      log.error('[Analytics] Failed to identify user:', error)
+      log.error('[Analytics] Failed to identify user via IPC:', error)
     }
   }
 
@@ -305,18 +237,17 @@ class AnalyticsService {
     }
 
     try {
-      const identifyObj = new Identify()
+      // Remove undefined values
+      const cleanProperties = Object.fromEntries(
+        Object.entries(properties).filter(([, value]) => value !== undefined),
+      )
 
-      Object.entries(properties).forEach(([key, value]) => {
-        if (value !== undefined) {
-          identifyObj.set(key, value)
-        }
-      })
+      // Update user properties in main process via IPC
+      window.api?.['analytics:update-user-properties'](cleanProperties)
 
-      identify(identifyObj, { user_id: this.currentUserId })
-      log.info('[Analytics] User properties updated')
+      log.info('[Analytics] User properties updated via IPC')
     } catch (error) {
-      log.error('[Analytics] Failed to update user properties:', error)
+      log.error('[Analytics] Failed to update user properties via IPC:', error)
     }
   }
 
@@ -335,16 +266,17 @@ class AnalyticsService {
         ...properties,
       }
 
-      const trackOptions = this.currentUserId
-        ? { user_id: this.currentUserId }
-        : undefined
+      // Track event in main process via IPC
+      window.api?.['analytics:track'](eventName, eventProperties)
 
-      track(eventName, eventProperties, trackOptions)
       log.info(
-        `[Analytics] Event tracked: ${eventName} (deviceId: ${this.deviceId || 'pending'}, userId: ${this.currentUserId || 'anonymous'})`,
+        `[Analytics] Event tracked via IPC: ${eventName} (deviceId: ${this.deviceId || 'pending'}, userId: ${this.currentUserId || 'anonymous'})`,
       )
     } catch (error) {
-      log.error(`[Analytics] Failed to track event ${eventName}:`, error)
+      log.error(
+        `[Analytics] Failed to track event ${eventName} via IPC:`,
+        error,
+      )
     }
   }
 
@@ -427,12 +359,15 @@ class AnalyticsService {
     }
 
     try {
-      // Note: Node.js SDK doesn't have a reset function, so we just clear local state
+      // Reset user in main process via IPC
+      window.api?.['analytics:reset-user']()
+
+      // Clear local state
       this.currentUserId = null
       this.currentProvider = null
-      log.info('[Analytics] User session reset')
+      log.info('[Analytics] User session reset via IPC')
     } catch (error) {
-      log.error('[Analytics] Failed to reset user session:', error)
+      log.error('[Analytics] Failed to reset user session via IPC:', error)
     }
   }
 
@@ -472,7 +407,18 @@ class AnalyticsService {
    * Check if analytics should be tracked based on provider
    */
   private shouldTrack(): boolean {
+    const canTrack =
+      this.isInitialized && this.currentProvider !== 'self-hosted'
+    console.log('[Analytics] shouldTrack check:', {
+      isInitialized: this.isInitialized,
+      currentProvider: this.currentProvider,
+      canTrack: canTrack,
+      hasApiKey: !!import.meta.env.VITE_POSTHOG_API_KEY,
+      hasHost: !!import.meta.env.VITE_POSTHOG_HOST,
+    })
+
     if (!this.isInitialized) {
+      log.info('[Analytics] Tracking skipped - not initialized')
       return false
     }
 
@@ -490,13 +436,22 @@ class AnalyticsService {
 export const analytics = new AnalyticsService()
 
 // Function to update analytics based on settings change
-export const updateAnalyticsFromSettings = (shareAnalytics: boolean) => {
-  if (shareAnalytics && !analytics.isEnabled()) {
-    analytics.enableAnalytics()
-    log.info('[Analytics] Analytics enabled by settings change')
-  } else if (!shareAnalytics && analytics.isEnabled()) {
-    analytics.disableAnalytics()
-    log.info('[Analytics] Analytics disabled by settings change')
+export const updateAnalyticsFromSettings = async (shareAnalytics: boolean) => {
+  try {
+    const deviceId = await getSharedDeviceId()
+
+    // Update analytics settings in main process via IPC
+    window.api?.['analytics:update-settings'](shareAnalytics, deviceId)
+
+    if (shareAnalytics && !analytics.isEnabled()) {
+      analytics.enableAnalytics()
+      log.info('[Analytics] PostHog analytics enabled by settings change')
+    } else if (!shareAnalytics && analytics.isEnabled()) {
+      analytics.disableAnalytics()
+      log.info('[Analytics] PostHog analytics disabled by settings change')
+    }
+  } catch (error) {
+    log.error('[Analytics] Failed to update analytics settings via IPC:', error)
   }
 }
 

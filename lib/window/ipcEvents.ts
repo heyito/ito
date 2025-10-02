@@ -39,6 +39,7 @@ import {
   hasSelectedText,
 } from '../media/selected-text-reader'
 import { IPC_EVENTS } from '../types/ipc'
+import { mainAnalyticsService } from '../main/analyticsService'
 
 const handleIPC = (channel: string, handler: (...args: any[]) => any) => {
   ipcMain.handle(channel, handler)
@@ -667,6 +668,61 @@ export function registerIPC() {
       }
     }
   })
+
+  // Analytics Service IPC handlers
+  handleIPC('analytics:initialize', async (_, deviceId: string) => {
+    return await mainAnalyticsService.initialize(deviceId)
+  })
+
+  handleIPC('analytics:enable', async (_, deviceId: string) => {
+    return await mainAnalyticsService.enableAnalytics(deviceId)
+  })
+
+  handleIPC('analytics:disable', () => {
+    mainAnalyticsService.disableAnalytics()
+  })
+
+  handleIPC('analytics:is-enabled', () => {
+    return mainAnalyticsService.isEnabled()
+  })
+
+  handleIPC(
+    'analytics:identify-user',
+    (_, userId: string, properties: any = {}, provider?: string) => {
+      mainAnalyticsService.identifyUser(userId, properties, provider)
+    },
+  )
+
+  handleIPC('analytics:update-user-properties', (_, properties: any) => {
+    mainAnalyticsService.updateUserProperties(properties)
+  })
+
+  handleIPC('analytics:track', (_, eventName: string, properties: any = {}) => {
+    mainAnalyticsService.track(eventName, properties)
+  })
+
+  handleIPC('analytics:reset-user', () => {
+    mainAnalyticsService.resetUser()
+  })
+
+  handleIPC('analytics:get-session-duration', () => {
+    return mainAnalyticsService.getSessionDuration()
+  })
+
+  handleIPC('analytics:is-user-identified', () => {
+    return mainAnalyticsService.isUserIdentified()
+  })
+
+  handleIPC('analytics:get-device-id-cached', () => {
+    return mainAnalyticsService.getDeviceId()
+  })
+
+  handleIPC(
+    'analytics:update-settings',
+    (_, shareAnalytics: boolean, deviceId: string) => {
+      mainAnalyticsService.updateSettings(shareAnalytics, deviceId)
+    },
+  )
 }
 
 // Handlers that are specific to a given window instance

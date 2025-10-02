@@ -102,6 +102,27 @@ declare global {
       // Analytics device ID methods
       'analytics:get-device-id': () => Promise<string | undefined>
 
+      // Analytics service methods
+      'analytics:initialize': (deviceId: string) => Promise<boolean>
+      'analytics:enable': (deviceId: string) => Promise<boolean>
+      'analytics:disable': () => Promise<void>
+      'analytics:is-enabled': () => Promise<boolean>
+      'analytics:identify-user': (
+        userId: string,
+        properties?: any,
+        provider?: string,
+      ) => Promise<void>
+      'analytics:update-user-properties': (properties: any) => Promise<void>
+      'analytics:track': (eventName: string, properties?: any) => Promise<void>
+      'analytics:reset-user': () => Promise<void>
+      'analytics:get-session-duration': () => Promise<number>
+      'analytics:is-user-identified': () => Promise<boolean>
+      'analytics:get-device-id-cached': () => Promise<string | null>
+      'analytics:update-settings': (
+        shareAnalytics: boolean,
+        deviceId: string,
+      ) => Promise<void>
+
       notifyLoginSuccess: (
         profile: any,
         idToken: string | null,

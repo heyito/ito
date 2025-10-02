@@ -50,7 +50,6 @@ export function createAppWindow(): BrowserWindow {
           ...details.responseHeaders,
           'Content-Security-Policy': [
             "default-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-              "connect-src 'self' https://api2.amplitude.com https://api.amplitude.com https://*.amplitude.com; " +
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
               "style-src 'self' 'unsafe-inline'; " +
               "img-src 'self' data: res:; " +

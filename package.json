@@ -58,8 +58,6 @@
     ]
   },
   "dependencies": {
-    "@amplitude/analytics-browser": "^2.18.1",
-    "@amplitude/analytics-node": "^1.3.8",
     "@auth0/auth0-react": "^2.3.0",
     "@bufbuild/protobuf": "^2.6.0",
     "@connectrpc/connect": "^2.0.2",
@@ -92,6 +90,7 @@
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.511.0",
     "node-machine-id": "^1.1.12",
+    "posthog-node": "^5.9.2",
     "react-router-dom": "^7.6.2",
     "sqlite3": "^5.1.7",
     "tailwind-merge": "^3.3.0",

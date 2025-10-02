@@ -149,6 +149,33 @@ const api = {
   'analytics:get-device-id': () =>
     ipcRenderer.invoke('analytics:get-device-id'),
 
+  // Analytics service methods
+  'analytics:initialize': (deviceId: string) =>
+    ipcRenderer.invoke('analytics:initialize', deviceId),
+  'analytics:enable': (deviceId: string) =>
+    ipcRenderer.invoke('analytics:enable', deviceId),
+  'analytics:disable': () => ipcRenderer.invoke('analytics:disable'),
+  'analytics:is-enabled': () => ipcRenderer.invoke('analytics:is-enabled'),
+  'analytics:identify-user': (
+    userId: string,
+    properties?: any,
+    provider?: string,
+  ) =>
+    ipcRenderer.invoke('analytics:identify-user', userId, properties, provider),
+  'analytics:update-user-properties': (properties: any) =>
+    ipcRenderer.invoke('analytics:update-user-properties', properties),
+  'analytics:track': (eventName: string, properties?: any) =>
+    ipcRenderer.invoke('analytics:track', eventName, properties),
+  'analytics:reset-user': () => ipcRenderer.invoke('analytics:reset-user'),
+  'analytics:get-session-duration': () =>
+    ipcRenderer.invoke('analytics:get-session-duration'),
+  'analytics:is-user-identified': () =>
+    ipcRenderer.invoke('analytics:is-user-identified'),
+  'analytics:get-device-id-cached': () =>
+    ipcRenderer.invoke('analytics:get-device-id-cached'),
+  'analytics:update-settings': (shareAnalytics: boolean, deviceId: string) =>
+    ipcRenderer.invoke('analytics:update-settings', shareAnalytics, deviceId),
+
   // Onboarding state for current user
   getOnboardingState: () => ipcRenderer.invoke('get-onboarding-state'),
 

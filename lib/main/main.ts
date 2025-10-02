@@ -30,6 +30,9 @@ import { validateStoredTokens, ensureValidTokens } from '../auth/events'
 import { Auth0Config, validateAuth0Config } from '../auth/config'
 import { createAppTray, destroyAppTray } from './tray'
 import { transcriptionService } from './transcriptionService'
+import { mainAnalyticsService } from './analyticsService'
+import { KeyValueStore } from './sqlite/repo'
+import { machineId } from 'node-machine-id'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -93,6 +96,18 @@ app.whenReady().then(async () => {
 
   if (!app.isPackaged) {
     registerDevIPC()
+  }
+
+  // Initialize analytics service with device ID
+  try {
+    let deviceId = await KeyValueStore.get('analytics_device_id')
+    if (!deviceId) {
+      deviceId = await machineId()
+      await KeyValueStore.set('analytics_device_id', deviceId)
+    }
+    await mainAnalyticsService.initialize(deviceId)
+  } catch (error) {
+    console.error('Failed to initialize analytics service:', error)
   }
 
   // Create windows

@@ -1,9 +1,9 @@
 import { create } from 'zustand'
 import {
   analytics,
-  ANALYTICS_EVENTS,
   updateAnalyticsFromSettings,
 } from '@/app/components/analytics'
+import { ANALYTICS_EVENTS } from '@/lib/types/analytics'
 import { STORE_KEYS } from '../../lib/constants/store-keys'
 import type { KeyboardShortcutConfig } from '@/lib/main/store'
 import { ItoMode } from '../generated/ito_pb'

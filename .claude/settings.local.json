@@ -7,7 +7,9 @@
       "Bash(bun runTest:*)",
       "Bash(bun test:*)",
       "Bash(cargo build:*)",
+      "Bash(git show:*)",
       "WebFetch(domain:stackoverflow.com)",
+      "WebFetch(domain:www.electronjs.org)",
       "WebFetch(domain:www.electron.build)"
     ],
     "deny": [],

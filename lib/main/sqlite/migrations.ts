@@ -27,7 +27,20 @@ export const MIGRATIONS: Migration[] = [
   },
   {
     id: '20250923091139_make_dictionary_word_unique',
-    up: 'CREATE UNIQUE INDEX idx_dictionary_items_word_unique ON dictionary_items(word) WHERE deleted_at IS NULL;',
+    up: `
+      -- Delete duplicate entries, keeping only the most recent one (highest id)
+      DELETE FROM dictionary_items
+      WHERE id NOT IN (
+        SELECT MAX(id)
+        FROM dictionary_items
+        WHERE deleted_at IS NULL
+        GROUP BY word
+      )
+      AND deleted_at IS NULL;
+
+      -- Now create the unique index
+      CREATE UNIQUE INDEX idx_dictionary_items_word_unique ON dictionary_items(word) WHERE deleted_at IS NULL;
+    `,
     down: 'DROP INDEX idx_dictionary_items_word_unique;',
   },
 ]

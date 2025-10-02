@@ -71,6 +71,8 @@ export function registerIPC() {
   })
 
   ipcMain.on('install-update', () => {
+    log.transports.file.level = 'debug'
+    autoUpdater.logger = log
     autoUpdater.quitAndInstall(true, true)
   })
 

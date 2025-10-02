@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import log from 'electron-log'
 import { autoUpdater } from 'electron-updater'
 import { mainWindow } from './app'
 
@@ -50,6 +51,9 @@ export function initializeAutoUpdater() {
         path: 'releases/',
         region: 'us-west-2',
       })
+
+      log.transports.file.level = 'debug'
+      autoUpdater.logger = log
 
       autoUpdater.autoRunAppAfterInstall = true
 

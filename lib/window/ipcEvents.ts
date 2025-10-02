@@ -71,7 +71,10 @@ export function registerIPC() {
     getPillWindow()?.webContents.send(IPC_EVENTS.FORCE_DEVICE_LIST_RELOAD)
   })
 
+
   ipcMain.on('install-update', async () => {
+    log.transports.file.level = 'debug'
+    autoUpdater.logger = log
     teardown()
     await new Promise(r => setTimeout(r, 10000))
     autoUpdater.quitAndInstall(true, true)

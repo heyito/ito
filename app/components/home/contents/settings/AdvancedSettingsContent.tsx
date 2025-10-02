@@ -153,7 +153,7 @@ function SettingInput({ config, value, onChange }: SettingInputProps) {
     <div className="mb-5">
       <label
         htmlFor={config.name}
-        className="block text-sm font-medium text-slate-700 mb-1"
+        className="block text-sm font-medium text-slate-700 mb-1 ml-1"
       >
         {config.label}
       </label>
@@ -162,7 +162,7 @@ function SettingInput({ config, value, onChange }: SettingInputProps) {
           id={config.name}
           value={value}
           onChange={handleChange}
-          className="w-3/4 px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-3/4 ml-1 px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           disabled={config.readOnly}
         >
           {config.options?.map(option => (
@@ -178,13 +178,15 @@ function SettingInput({ config, value, onChange }: SettingInputProps) {
           onChange={handleChange}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          className="w-3/4 px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-3/4 ml-1 px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           placeholder={config.placeholder}
           maxLength={config.maxLength}
           readOnly={config.readOnly}
         />
       )}
-      <p className="text-xs text-slate-500 mt-1">{config.description}</p>
+      <p className="w-3/4 text-xs text-slate-500 mt-1 ml-1">
+        {config.description}
+      </p>
     </div>
   )
 }
@@ -221,19 +223,10 @@ export default function AdvancedSettingsContent() {
 
   return (
     <div className="max-h-[70vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-500 scrollbar-track-transparent">
-      <div>
-        <h2 className="text-lg font-semibold text-slate-900">
-          Advanced Settings
-        </h2>
-        <p className="text-slate-600 mb-3">
-          Configure advanced options and experimental features.
-        </p>
-      </div>
-
       {/* LLM Settings Section */}
       <div className="space-y-4">
         <div>
-          <h3 className="text-md font-medium text-slate-900 mb-3">
+          <h3 className="text-md font-medium text-slate-900 mb-3 ml-1">
             LLM Settings
           </h3>
           <div className="space-y-3">

@@ -7,7 +7,7 @@ export const ITO_MODE_SHORTCUT_DEFAULTS_MAC = {
 }
 
 export const ITO_MODE_SHORTCUT_DEFAULTS_WIN = {
-  [ItoMode.TRANSCRIBE]: ['option-left'],
+  [ItoMode.TRANSCRIBE]: ['control-left', 'command-left'],
   [ItoMode.EDIT]: ['option-left', 'control-left'],
 }
 

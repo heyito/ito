@@ -41,6 +41,7 @@ import {
   hasSelectedText,
 } from '../media/selected-text-reader'
 import { IPC_EVENTS } from '../types/ipc'
+import { teardown } from '../main/main'
 
 const handleIPC = (channel: string, handler: (...args: any[]) => any) => {
   ipcMain.handle(channel, handler)
@@ -70,7 +71,9 @@ export function registerIPC() {
     getPillWindow()?.webContents.send(IPC_EVENTS.FORCE_DEVICE_LIST_RELOAD)
   })
 
-  ipcMain.on('install-update', () => {
+  ipcMain.on('install-update', async () => {
+    teardown()
+    await new Promise(r => setTimeout(r, 10000))
     autoUpdater.quitAndInstall(true, true)
   })
 

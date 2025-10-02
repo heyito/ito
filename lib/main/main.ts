@@ -141,12 +141,7 @@ app.whenReady().then(async () => {
 
   app.on('before-quit', () => {
     console.log('App is quitting, cleaning up resources...')
-    stopKeyListener()
-    audioRecorderService.terminate()
-    selectedTextReaderService.terminate()
-    syncService.stop()
-    destroyAppTray()
-    allowAppNap()
+    teardown()
   })
 
   app.on('browser-window-created', (_, window) => {
@@ -172,3 +167,12 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => {
   // We want the app to stay alive
 })
+
+export const teardown = () => {
+  stopKeyListener()
+  audioRecorderService.terminate()
+  selectedTextReaderService.terminate()
+  syncService.stop()
+  destroyAppTray()
+  allowAppNap()
+}

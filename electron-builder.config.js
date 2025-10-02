@@ -115,7 +115,7 @@ module.exports = {
     createDesktopShortcut: false,
     createStartMenuShortcut: true,
     oneClick: false,
-    perMachine: true,
+    perMachine: false,
     allowToChangeInstallationDirectory: true,
     deleteAppDataOnUninstall: true,
   },

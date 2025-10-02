@@ -8,7 +8,10 @@
       "Bash(bun test:*)",
       "Bash(cargo build:*)",
       "WebFetch(domain:stackoverflow.com)",
-      "WebFetch(domain:www.electron.build)"
+      "WebFetch(domain:www.electron.build)",
+      "Read(//mnt/c/Users/julgm/work/**)",
+      "WebSearch",
+      "WebFetch(domain:www.autohotkey.com)"
     ],
     "deny": [],
     "ask": []

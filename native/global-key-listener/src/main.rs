@@ -1,5 +1,5 @@
 use chrono::Utc;
-use rdev::{grab, Event, EventType, Key};
+use rdev::{grab, simulate, Event, EventType, Key};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::io::{self, BufRead, Write};
@@ -143,6 +143,18 @@ fn callback(event: Event) -> Option<Event> {
 
             // Check if we should block based on exact hotkey match
             if should_block() {
+                // Windows-specific: Prevent Start menu from opening when Windows key is used in hotkeys
+                // Windows shows the Start menu if it sees "Win down → Win up" with no other keys in between.
+                // By injecting a harmless key (VK 0xFF), we "poison" the sequence so Windows thinks
+                // it was a combo, not a standalone Windows key press
+                #[cfg(target_os = "windows")]
+                unsafe {
+                    if CMD_PRESSED || CURRENTLY_PRESSED.iter().any(|k| k == "MetaLeft" || k == "MetaRight") {
+                        // VK 0xFF is documented as "no mapping" - a valid key code with no function
+                        let _ = simulate(&EventType::KeyPress(Key::Unknown(0xFF)));
+                        let _ = simulate(&EventType::KeyRelease(Key::Unknown(0xFF)));
+                    }
+                }
                 None // Block the event from reaching the OS
             } else if key_name == "Unknown(179)" && unsafe {
                 REGISTERED_HOTKEYS.iter().any(|hotkey| hotkey.keys.contains(&"Function".to_string()))

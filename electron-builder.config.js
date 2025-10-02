@@ -117,6 +117,6 @@ module.exports = {
     oneClick: false,
     perMachine: false,
     allowToChangeInstallationDirectory: true,
-    deleteAppDataOnUninstall: true,
+    deleteAppDataOnUninstall: false,
   },
 }

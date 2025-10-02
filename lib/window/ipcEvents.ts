@@ -655,8 +655,6 @@ export function registerIPC() {
         deviceId = await machineId()
         await KeyValueStore.set('analytics_device_id', deviceId)
         log.info('[Analytics] Generated new machine-based device ID:', deviceId)
-      } else {
-        log.info('[Analytics] Using cached machine-based device ID:', deviceId)
       }
 
       return deviceId

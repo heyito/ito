@@ -8,6 +8,13 @@ use std::time::Duration;
 
 mod key_codes;
 
+#[cfg(target_os = "macos")]
+use cocoa::base::{id, nil};
+#[cfg(target_os = "macos")]
+use cocoa::foundation::{NSProcessInfo, NSString};
+#[cfg(target_os = "macos")]
+use objc::{msg_send, sel, sel_impl};
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct HotkeyCombo {
     keys: Vec<String>,
@@ -29,7 +36,37 @@ static mut CMD_PRESSED: bool = false;
 static mut CTRL_PRESSED: bool = false;
 static mut COPY_IN_PROGRESS: bool = false;
 
+/// Prevents macOS App Nap from suspending this process.
+/// Returns an activity token that must be retained for the entire process lifetime.
+/// On non-macOS platforms, returns a dummy value.
+#[cfg(target_os = "macos")]
+fn prevent_app_nap() -> id {
+    unsafe {
+        let process_info = NSProcessInfo::processInfo(nil);
+        let reason = NSString::alloc(nil)
+            .init_str("Keyboard event monitoring requires continuous operation");
+
+        // NSActivityOptions flags:
+        // NSActivityUserInitiated = 0x00FFFFFF (includes all protective flags)
+        // This prevents App Nap and idle system sleep
+        let options: u64 = 0x00FFFFFF;
+
+        let activity: id = msg_send![process_info, beginActivityWithOptions:options reason:reason];
+
+        eprintln!("macOS App Nap prevention enabled for keyboard listener process");
+        activity
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn prevent_app_nap() -> () {
+    // No-op on non-macOS platforms
+}
+
 fn main() {
+    // Prevent macOS App Nap from suspending this process
+    // Must retain this for the entire process lifetime
+    let _activity = prevent_app_nap();
     // Spawn a thread to read commands from stdin
     thread::spawn(|| {
         let stdin = io::stdin();

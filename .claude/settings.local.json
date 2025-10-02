@@ -7,11 +7,10 @@
       "Bash(bun runTest:*)",
       "Bash(bun test:*)",
       "Bash(cargo build:*)",
+      "Bash(git show:*)",
       "WebFetch(domain:stackoverflow.com)",
       "WebFetch(domain:www.electron.build)",
-      "Read(//mnt/c/Users/julgm/work/**)",
-      "WebSearch",
-      "WebFetch(domain:www.autohotkey.com)"
+      "WebFetch(domain:www.electronjs.org)"
     ],
     "deny": [],
     "ask": []

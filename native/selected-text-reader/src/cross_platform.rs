@@ -2,6 +2,12 @@ use arboard::Clipboard;
 use std::thread;
 use std::time::Duration;
 
+// Count characters as the editor sees them (CRLF = 1 cursor position on Windows)
+pub fn count_editor_chars(text: &str) -> usize {
+    // On Windows, editors treat CRLF as a single cursor position when navigating with arrow keys
+    text.replace("\r\n", "\n").chars().count()
+}
+
 pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
     let mut clipboard = Clipboard::new().map_err(|e| format!("Clipboard init failed: {}", e))?;
 

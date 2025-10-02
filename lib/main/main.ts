@@ -1,6 +1,5 @@
 import './sentry'
 import { app, protocol } from 'electron'
-import { autoUpdater } from 'electron-updater'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import {
   createAppWindow,
@@ -30,6 +29,7 @@ import { validateStoredTokens, ensureValidTokens } from '../auth/events'
 import { Auth0Config, validateAuth0Config } from '../auth/config'
 import { createAppTray, destroyAppTray } from './tray'
 import { transcriptionService } from './transcriptionService'
+import { initializeAutoUpdater } from './autoUpdaterWrapper'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -153,57 +153,8 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  if (app.isPackaged) {
-    try {
-      console.log('App is packaged, initializing auto updater...')
-
-      const bucket = import.meta.env.VITE_UPDATER_BUCKET
-      if (!bucket) {
-        throw new Error('VITE_UPDATER_BUCKET environment variable is not set')
-      }
-
-      autoUpdater.setFeedURL({
-        provider: 's3',
-        bucket,
-        path: 'releases/',
-        region: 'us-west-2',
-      })
-
-      autoUpdater.on('update-available', () => {
-        if (
-          mainWindow &&
-          !mainWindow.isDestroyed() &&
-          !mainWindow.webContents.isDestroyed()
-        ) {
-          mainWindow.webContents.send('update-available')
-        }
-      })
-
-      autoUpdater.on('update-downloaded', () => {
-        console.log('update downloaded successfully')
-        if (
-          mainWindow &&
-          !mainWindow.isDestroyed() &&
-          !mainWindow.webContents.isDestroyed()
-        ) {
-          mainWindow.webContents.send('update-downloaded')
-        }
-      })
-
-      autoUpdater.on('error', error => {
-        console.error('Auto updater error:', error)
-      })
-
-      autoUpdater.on('download-progress', progressObj => {
-        const log_message = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent.toFixed(2)}% (${progressObj.transferred}/${progressObj.total})`
-        console.log(log_message)
-      })
-
-      autoUpdater.checkForUpdates()
-    } catch (e) {
-      console.error('Failed to check for auto updates:', e)
-    }
-  }
+  // Initialize auto-updater
+  initializeAutoUpdater()
 
   // Set up periodic token refresh check (every 10 minutes)
   setInterval(

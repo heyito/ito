@@ -1,4 +1,5 @@
-import { BrowserWindow, ipcMain, shell, app, autoUpdater } from 'electron'
+import { BrowserWindow, ipcMain, shell, app } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import log from 'electron-log'
 import os from 'os'
 import store, { getCurrentUserId } from '../main/store'
@@ -7,6 +8,7 @@ import {
   checkAccessibilityPermission,
   checkMicrophonePermission,
 } from '../utils/crossPlatform'
+import { getUpdateStatus } from '../main/autoUpdaterWrapper'
 
 import {
   startKeyListener,
@@ -69,11 +71,11 @@ export function registerIPC() {
   })
 
   ipcMain.on('install-update', () => {
-    // @ts-expect-error -- autoUpater field that isnt exposed but needs to change
-    autoUpdater.updateAvailable = true
-    // @ts-expect-error -- autoUpater field that isnt exposed but needs to change
-    autoUpdater.updateDownloaded = true
-    autoUpdater.quitAndInstall()
+    autoUpdater.quitAndInstall(true, true)
+  })
+
+  ipcMain.handle('get-update-status', () => {
+    return getUpdateStatus()
   })
 
   // Login Item Settings
@@ -624,13 +626,20 @@ export function registerIPC() {
 
   ipcMain.on('start-native-recording-test', _event => {
     log.info(`IPC: Received 'start-native-recording-test'`)
-    voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
+    const deviceId = store.get(STORE_KEYS.SETTINGS).microphoneDeviceId
+    audioRecorderService.startRecording(deviceId)
   })
 
   // When the hotkey is released, stop recording and notify the pill window.
   ipcMain.on('stop-native-recording', () => {
     log.info('IPC: Received stop-native-recording.')
     voiceInputService.stopSTTService()
+  })
+
+  // Stop recording for microphone test (doesn't stop transcription since it wasn't started)
+  ipcMain.on('stop-native-recording-test', () => {
+    log.info('IPC: Received stop-native-recording-test.')
+    audioRecorderService.stopRecording()
   })
 
   // Analytics Device ID storage - using machine ID

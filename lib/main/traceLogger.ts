@@ -31,7 +31,7 @@ class ConsoleSpanExporter {
 const sdk = new NodeSDK({
   resource: new Resource({
     'service.name': 'ito-app',
-    'service.version': '1.0.0',
+    'service.version': import.meta.env.VITE_ITO_VERSION,
   }),
   spanProcessor: new BatchSpanProcessor(new ConsoleSpanExporter()),
 })
@@ -41,24 +41,6 @@ sdk.start()
 
 // Get the tracer
 const tracer = trace.getTracer('ito-user-interactions')
-
-export interface TraceContext {
-  interactionId: string
-  step: string
-  timestamp: number
-  duration?: number
-  metadata?: Record<string, any>
-}
-
-export interface TraceEvent {
-  interactionId: string
-  step: string
-  timestamp: number
-  duration?: number
-  metadata?: Record<string, any>
-  error?: string
-}
-
 class TraceLogger {
   private activeSpans = new Map<string, any>()
 

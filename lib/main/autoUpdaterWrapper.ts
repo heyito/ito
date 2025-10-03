@@ -2,8 +2,7 @@ import { app } from 'electron'
 import log from 'electron-log'
 import { autoUpdater } from 'electron-updater'
 import { mainWindow } from './app'
-import { exec } from 'child_process'
-import { teardown } from './teardown'
+import { hardKillAll, teardown } from './teardown'
 
 export interface UpdateStatus {
   updateAvailable: boolean
@@ -111,53 +110,6 @@ function setupAutoUpdaterEvents() {
   })
 }
 
-const WIN_HELPERS = [
-  'Ito.exe', // belt + suspenders
-  'global-key-listener.exe',
-  'audio-recorder.exe',
-  'text-writer.exe',
-  'active-application.exe',
-  'selected-text-reader.exe',
-  'electron-crashpad-handler.exe',
-]
-
-const MAC_HELPERS = [
-  'global-key-listener',
-  'audio-recorder',
-  'text-writer',
-  'active-application',
-  'selected-text-reader',
-  'electron-crashpad-handler',
-  // Electron’s helpers (your app name may differ)
-  'Ito Helper',
-  'Ito Helper (Renderer)',
-  'Ito Helper (GPU)',
-  'Ito Helper (Plugin)',
-]
-
-function killByName(name: string): Promise<void> {
-  return new Promise(resolve => {
-    const cmd =
-      process.platform === 'win32'
-        ? `taskkill /IM "${name}" /T /F`
-        : `pkill -f "${name}" || true`
-    exec(cmd, () => resolve())
-  })
-}
-
-async function hardKillAll(): Promise<void> {
-  const names = process.platform === 'win32' ? WIN_HELPERS : MAC_HELPERS
-  for (const n of names) {
-    try {
-      await killByName(n)
-    } catch {
-      /* empty */
-    }
-  }
-  // tiny grace window for handle release
-  await new Promise(r => setTimeout(r, 500))
-}
-
 let installing = false
 
 export async function installUpdateNow() {
@@ -170,9 +122,11 @@ export async function installUpdateNow() {
     teardown()
     await new Promise(resolve => setTimeout(resolve, 1_500))
 
+    log.info('[Updater] Forcibly kill all straggler processes')
     // Force-kill stragglers + crashpad/helpers
     await hardKillAll()
 
+    log.info('[Updater] calling autoUpdater quit and install')
     // Fire the installer (UI visible for debugging recommended)
     autoUpdater.quitAndInstall(false /* isSilent */, true /* forceRunAfter */)
   } catch (e) {

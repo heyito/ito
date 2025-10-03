@@ -13,23 +13,23 @@ import { registerIPC } from '../window/ipcEvents'
 import { registerDevIPC } from '../window/ipcDev'
 import { initializeDatabase } from './sqlite/db'
 import { setupProtocolHandling, processStartupProtocolUrl } from '../protocol'
-import { startKeyListener, stopKeyListener } from '../media/keyboard'
+import { startKeyListener } from '../media/keyboard'
 // Import the grpcClient singleton
 import { grpcClient } from '../clients/grpcClient'
-import { allowAppNap, preventAppNap } from './appNap'
+import { preventAppNap } from './appNap'
 import { syncService } from './syncService'
 import { checkAccessibilityPermission } from '../utils/crossPlatform'
 import mainStore from './store'
 import { STORE_KEYS } from '../constants/store-keys'
-import { audioRecorderService } from '../media/audio'
 import { selectedTextReaderService } from '../media/selected-text-reader'
 import { voiceInputService } from './voiceInputService'
 import { initializeMicrophoneSelection } from '../media/microphoneSetUp'
 import { validateStoredTokens, ensureValidTokens } from '../auth/events'
 import { Auth0Config, validateAuth0Config } from '../auth/config'
-import { createAppTray, destroyAppTray } from './tray'
+import { createAppTray } from './tray'
 import { transcriptionService } from './transcriptionService'
 import { initializeAutoUpdater } from './autoUpdaterWrapper'
+import { teardown } from './tearDown'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -167,12 +167,3 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => {
   // We want the app to stay alive
 })
-
-export const teardown = () => {
-  stopKeyListener()
-  audioRecorderService.terminate()
-  selectedTextReaderService.terminate()
-  syncService.stop()
-  destroyAppTray()
-  allowAppNap()
-}

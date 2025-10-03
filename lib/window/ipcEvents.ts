@@ -40,7 +40,6 @@ import {
   hasSelectedText,
 } from '../media/selected-text-reader'
 import { IPC_EVENTS } from '../types/ipc'
-import { teardown } from '../main/main'
 
 const handleIPC = (channel: string, handler: (...args: any[]) => any) => {
   ipcMain.handle(channel, handler)
@@ -492,9 +491,6 @@ export function registerIPC() {
     log.info('[IPC] Received has-selected-text')
     return hasSelectedText()
   })
-
-  // App lifecycle
-  app.on('before-quit', () => stopKeyListener())
 
   // Notes
   handleIPC('notes:get-all', () => {

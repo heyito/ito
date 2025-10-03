@@ -3,7 +3,7 @@ import log from 'electron-log'
 import { autoUpdater } from 'electron-updater'
 import { mainWindow } from './app'
 import { exec } from 'child_process'
-import { teardown } from './main'
+import { teardown } from './tearDown'
 
 export interface UpdateStatus {
   updateAvailable: boolean
@@ -166,15 +166,14 @@ export async function installUpdateNow() {
   log.info('[Updater] Preparing to install…')
 
   try {
-    // 1) App-level cleanup (your graceful stops)
+    // Try to gracefully shut down processes
     teardown()
+    await new Promise(resolve => setTimeout(resolve, 5_000))
 
-    await new Promise(resolve => setTimeout(resolve, 1_000))
-
-    // 2) Force-kill stragglers + crashpad/helpers
+    // Force-kill stragglers + crashpad/helpers
     await hardKillAll()
 
-    // 3) Fire the installer (UI visible for debugging recommended)
+    // Fire the installer (UI visible for debugging recommended)
     autoUpdater.quitAndInstall(false /* isSilent */, true /* forceRunAfter */)
   } catch (e) {
     log.error('[Updater] installUpdateNow error', e)

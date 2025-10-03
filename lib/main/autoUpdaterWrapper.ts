@@ -2,6 +2,8 @@ import { app } from 'electron'
 import log from 'electron-log'
 import { autoUpdater } from 'electron-updater'
 import { mainWindow } from './app'
+import { exec } from 'child_process'
+import { teardown } from './main'
 
 export interface UpdateStatus {
   updateAvailable: boolean
@@ -56,6 +58,8 @@ export function initializeAutoUpdater() {
       autoUpdater.logger = log
 
       autoUpdater.autoRunAppAfterInstall = true
+      autoUpdater.autoDownload = true
+      autoUpdater.autoInstallOnAppQuit = false
 
       setupAutoUpdaterEvents()
       autoUpdater.checkForUpdates()
@@ -105,4 +109,81 @@ function setupAutoUpdaterEvents() {
     const log_message = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent.toFixed(2)}% (${progressObj.transferred}/${progressObj.total})`
     console.log(log_message)
   })
+}
+
+const WIN_HELPERS = [
+  'Ito.exe', // belt + suspenders
+  'global-key-listener.exe',
+  'audio-recorder.exe',
+  'text-writer.exe',
+  'active-application.exe',
+  'selected-text-reader.exe',
+  'electron-crashpad-handler.exe',
+]
+
+const MAC_HELPERS = [
+  'global-key-listener',
+  'audio-recorder',
+  'text-writer',
+  'active-application',
+  'selected-text-reader',
+  'electron-crashpad-handler',
+  // Electron’s helpers (your app name may differ)
+  'Ito Helper',
+  'Ito Helper (Renderer)',
+  'Ito Helper (GPU)',
+  'Ito Helper (Plugin)',
+]
+
+function killByName(name: string): Promise<void> {
+  return new Promise(resolve => {
+    const cmd =
+      process.platform === 'win32'
+        ? `taskkill /IM "${name}" /T /F`
+        : `pkill -f "${name}" || true`
+    exec(cmd, () => resolve())
+  })
+}
+
+async function hardKillAll(): Promise<void> {
+  const names = process.platform === 'win32' ? WIN_HELPERS : MAC_HELPERS
+  for (const n of names) {
+    try {
+      await killByName(n)
+    } catch {
+      /* empty */
+    }
+  }
+  // tiny grace window for handle release
+  await new Promise(r => setTimeout(r, 500))
+}
+
+let installing = false
+
+export async function installUpdateNow() {
+  if (installing) return
+  installing = true
+  log.info('[Updater] Preparing to install…')
+
+  try {
+    // 1) App-level cleanup (your graceful stops)
+    teardown()
+
+    await new Promise(resolve => setTimeout(resolve, 1_000))
+
+    // 2) Force-kill stragglers + crashpad/helpers
+    await hardKillAll()
+
+    // 3) Fire the installer (UI visible for debugging recommended)
+    autoUpdater.quitAndInstall(false /* isSilent */, true /* forceRunAfter */)
+  } catch (e) {
+    log.error('[Updater] installUpdateNow error', e)
+    // Try again, but don’t loop forever
+    try {
+      await hardKillAll()
+      autoUpdater.quitAndInstall(false, true)
+    } catch {
+      /* empty */
+    }
+  }
 }

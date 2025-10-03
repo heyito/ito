@@ -1,5 +1,4 @@
 import { BrowserWindow, ipcMain, shell, app } from 'electron'
-import { autoUpdater } from 'electron-updater'
 import log from 'electron-log'
 import os from 'os'
 import store, { getCurrentUserId } from '../main/store'
@@ -8,7 +7,7 @@ import {
   checkAccessibilityPermission,
   checkMicrophonePermission,
 } from '../utils/crossPlatform'
-import { getUpdateStatus } from '../main/autoUpdaterWrapper'
+import { getUpdateStatus, installUpdateNow } from '../main/autoUpdaterWrapper'
 
 import {
   startKeyListener,
@@ -71,13 +70,8 @@ export function registerIPC() {
     getPillWindow()?.webContents.send(IPC_EVENTS.FORCE_DEVICE_LIST_RELOAD)
   })
 
-
   ipcMain.on('install-update', async () => {
-    log.transports.file.level = 'debug'
-    autoUpdater.logger = log
-    teardown()
-    await new Promise(r => setTimeout(r, 10000))
-    autoUpdater.quitAndInstall(true, true)
+    await installUpdateNow()
   })
 
   ipcMain.handle('get-update-status', () => {

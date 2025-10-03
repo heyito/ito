@@ -44,7 +44,10 @@ export default function KeyboardTestContent() {
                   <span>{index < defaultKeys.length - 1 && ' + '}</span>
                 </React.Fragment>
               ))}
-              <span key="at-bottom"> key at the bottom left of the keyboard</span>
+              <span key="at-bottom">
+                {' '}
+                key at the bottom left of the keyboard
+              </span>
             </div>
           </div>
         </div>

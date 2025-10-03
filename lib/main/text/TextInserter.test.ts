@@ -46,6 +46,16 @@ describe('TextInserter', () => {
       expect(mockSetFocusedText).not.toHaveBeenCalled()
     })
 
+    test('should return false for transcript of whitespace', async () => {
+      let result = await textInserter.insertText(' ')
+      expect(result).toBe(false)
+      expect(mockSetFocusedText).not.toHaveBeenCalled()
+
+      result = await textInserter.insertText('\n')
+      expect(result).toBe(false)
+      expect(mockSetFocusedText).not.toHaveBeenCalled()
+    })
+
     test('should return false for null transcript', async () => {
       const result = await textInserter.insertText(null as any)
 

@@ -7,8 +7,8 @@ export const ITO_MODE_SHORTCUT_DEFAULTS_MAC = {
 }
 
 export const ITO_MODE_SHORTCUT_DEFAULTS_WIN = {
-  [ItoMode.TRANSCRIBE]: ['option-left'],
-  [ItoMode.EDIT]: ['option-left', 'control-left'],
+  [ItoMode.TRANSCRIBE]: ['option-left', 'control-left'],
+  [ItoMode.EDIT]: ['option-left', 'shift-left'],
 }
 
 // Helper to detect platform - works in both main and renderer process

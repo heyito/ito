@@ -12,6 +12,8 @@ import React from 'react'
 import { ItoMode } from '@/app/generated/ito_pb'
 import { getKeyDisplay } from '@/app/utils/keyboard'
 import { usePlatform } from '@/app/hooks/usePlatform'
+import { getItoModeShortcutDefaults } from '@/lib/constants/keyboard-defaults'
+import { KeyName } from '@/lib/types/keyboard'
 
 export default function TryItOut() {
   const { decrementOnboardingStep, setOnboardingCompleted } =
@@ -19,6 +21,7 @@ export default function TryItOut() {
   const { getItoModeShortcuts } = useSettingsStore()
   const keyboardShortcut = getItoModeShortcuts(ItoMode.TRANSCRIBE)[0].keys
   const platform = usePlatform()
+  const defaultKeys = getItoModeShortcutDefaults(platform)[ItoMode.TRANSCRIBE]
   const [selectedApp, setSelectedApp] = useState<
     'slack' | 'gmail' | 'cursor' | 'chatgpt' | 'notion'
   >('slack')
@@ -48,7 +51,7 @@ export default function TryItOut() {
           <div className="flex items-center gap-2 px-4 pb-4 rounded-b-2xl">
             <input
               type="text"
-              placeholder="Hold down on the fn key and start speaking..."
+              placeholder={`Hold down on the hotkey(s) and start speaking...`}
               className="w-full h-12 border border-neutral-500 rounded-md px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-0"
             />
           </div>
@@ -214,25 +217,33 @@ export default function TryItOut() {
               Hold down on the{' '}
               {keyboardShortcut &&
               Array.isArray(keyboardShortcut) &&
-              keyboardShortcut.length > 0 ? (
-                keyboardShortcut.map((key, idx) => (
-                  <React.Fragment key={`keyboard-shortcut-${idx}`}>
-                    <span className="inline-flex items-center px-2 py-0.5 bg-neutral-100 border rounded text-xs font-mono mx-1">
-                      {getKeyDisplay(key, platform, {
-                        showDirectionalText: false,
-                        format: 'label',
-                      })}
-                    </span>
-                    {idx < keyboardShortcut.length - 1 && (
-                      <span className="text-muted-foreground"> + </span>
-                    )}
-                  </React.Fragment>
-                ))
-              ) : (
-                <span className="inline-flex items-center px-2 py-0.5 bg-neutral-100 border rounded text-xs font-mono ml-1">
-                  fn
-                </span>
-              )}{' '}
+              keyboardShortcut.length > 0
+                ? keyboardShortcut.map((key, idx) => (
+                    <React.Fragment key={`keyboard-shortcut-${idx}`}>
+                      <span className="inline-flex items-center px-2 py-0.5 bg-neutral-100 border rounded text-xs font-mono mx-1">
+                        {getKeyDisplay(key, platform, {
+                          showDirectionalText: false,
+                          format: 'label',
+                        })}
+                      </span>
+                      {idx < keyboardShortcut.length - 1 && (
+                        <span className="text-muted-foreground"> + </span>
+                      )}
+                    </React.Fragment>
+                  ))
+                : defaultKeys.map((key, idx) => (
+                    <React.Fragment key={`default-${idx}`}>
+                      <span className="inline-flex items-center px-2 py-0.5 bg-neutral-100 border rounded text-xs font-mono mx-1">
+                        {getKeyDisplay(key as KeyName, platform, {
+                          showDirectionalText: false,
+                          format: 'label',
+                        })}
+                      </span>
+                      {idx < defaultKeys.length - 1 && (
+                        <span className="text-muted-foreground"> + </span>
+                      )}
+                    </React.Fragment>
+                  ))}{' '}
               key{keyboardShortcut.length > 1 ? 's' : ''}, speak, and let go to
               insert spoken text.
             </p>

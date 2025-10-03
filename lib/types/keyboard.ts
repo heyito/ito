@@ -157,13 +157,22 @@ export function getKeyDisplayInfo(
     const [baseKey, side] = keyName.split('-') as [string, 'left' | 'right']
 
     switch (baseKey) {
-      // Command doesn't exist on Windows
       case 'command':
-        return {
-          label: 'cmd',
-          symbol: '⌘',
-          isModifier: true,
-          side,
+        // macOS uses Command (⌘), Windows uses Win key (⊞)
+        if (platform === 'darwin') {
+          return {
+            label: 'cmd',
+            symbol: '⌘',
+            isModifier: true,
+            side,
+          }
+        } else {
+          return {
+            label: 'win',
+            symbol: '⊞',
+            isModifier: true,
+            side,
+          }
         }
       case 'control':
         return {

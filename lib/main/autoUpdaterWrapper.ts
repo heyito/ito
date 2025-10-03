@@ -3,7 +3,7 @@ import log from 'electron-log'
 import { autoUpdater } from 'electron-updater'
 import { mainWindow } from './app'
 import { exec } from 'child_process'
-import { teardown } from './tearDown'
+import { teardown } from './teardown'
 
 export interface UpdateStatus {
   updateAvailable: boolean
@@ -168,7 +168,7 @@ export async function installUpdateNow() {
   try {
     // Try to gracefully shut down processes
     teardown()
-    await new Promise(resolve => setTimeout(resolve, 5_000))
+    await new Promise(resolve => setTimeout(resolve, 1_500))
 
     // Force-kill stragglers + crashpad/helpers
     await hardKillAll()

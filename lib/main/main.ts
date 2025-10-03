@@ -29,7 +29,7 @@ import { Auth0Config, validateAuth0Config } from '../auth/config'
 import { createAppTray } from './tray'
 import { transcriptionService } from './transcriptionService'
 import { initializeAutoUpdater } from './autoUpdaterWrapper'
-import { teardown } from './tearDown'
+import { teardown } from './teardown'
 
 protocol.registerSchemesAsPrivileged([
   {

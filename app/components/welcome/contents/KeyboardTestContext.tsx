@@ -2,12 +2,19 @@ import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { useSettingsStore } from '@/app/store/useSettingsStore'
 import KeyboardShortcutEditor from '../../ui/keyboard-shortcut-editor'
 import { ItoMode } from '@/app/generated/ito_pb'
+import { getItoModeShortcutDefaults } from '@/lib/constants/keyboard-defaults'
+import { usePlatform } from '@/app/hooks/usePlatform'
+import { getKeyDisplay } from '@/app/utils/keyboard'
+import { KeyName } from '@/lib/types/keyboard'
+import React from 'react'
 
 export default function KeyboardTestContent() {
   const { incrementOnboardingStep, decrementOnboardingStep } =
     useOnboardingStore()
   const { getItoModeShortcuts, updateKeyboardShortcut } = useSettingsStore()
   const keyboardShortcut = getItoModeShortcuts(ItoMode.TRANSCRIBE)[0]
+  const platform = usePlatform()
+  const defaultKeys = getItoModeShortcutDefaults(platform)[ItoMode.TRANSCRIBE]
 
   return (
     <div className="flex flex-row h-full w-full bg-background">
@@ -25,11 +32,19 @@ export default function KeyboardTestContent() {
               Press the keyboard shortcut to test it out.
             </h1>
             <div className="text-base text-muted-foreground mb-8 max-w-md">
-              We recommend the{''}
-              <span className="inline-flex items-center px-2 py-0.5 bg-neutral-100 border rounded text-xs font-mono ml-1">
-                fn
-              </span>{' '}
-              key at the bottom left of the keyboard
+              <span key="we-recommend">We recommend the </span>
+              {defaultKeys.map((key, index) => (
+                <React.Fragment key={index}>
+                  <span className="inline-flex items-center px-2 py-0.5 bg-neutral-100 border rounded text-xs font-mono ml-1">
+                    {getKeyDisplay(key as KeyName, platform, {
+                      showDirectionalText: false,
+                      format: 'label',
+                    })}
+                  </span>
+                  <span>{index < defaultKeys.length - 1 && ' + '}</span>
+                </React.Fragment>
+              ))}
+              <span key="at-bottom"> key at the bottom left of the keyboard</span>
             </div>
           </div>
         </div>

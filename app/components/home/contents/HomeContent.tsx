@@ -25,6 +25,7 @@ import {
 } from './activityMessages'
 import { ItoMode } from '@/app/generated/ito_pb'
 import { getKeyDisplay } from '@/app/utils/keyboard'
+import { createStereo48kWavFromMonoPCM } from '@/app/utils/audioUtils'
 import { KeyName } from '@/lib/types/keyboard'
 import { usePlatform } from '@/app/hooks/usePlatform'
 
@@ -331,45 +332,6 @@ export default function HomeContent() {
     }
   }
 
-  // Utility function to create WAV file from raw PCM data
-  const createWavFile = (
-    pcmData: Uint8Array,
-    sampleRate = 16000,
-    numChannels = 1,
-    bitsPerSample = 16,
-  ) => {
-    const dataLength = pcmData.length
-    const buffer = new ArrayBuffer(44 + dataLength)
-    const view = new DataView(buffer)
-
-    // WAV header
-    const writeString = (offset: number, string: string) => {
-      for (let i = 0; i < string.length; i++) {
-        view.setUint8(offset + i, string.charCodeAt(i))
-      }
-    }
-
-    writeString(0, 'RIFF') // ChunkID
-    view.setUint32(4, 36 + dataLength, true) // ChunkSize
-    writeString(8, 'WAVE') // Format
-    writeString(12, 'fmt ') // Subchunk1ID
-    view.setUint32(16, 16, true) // Subchunk1Size (PCM)
-    view.setUint16(20, 1, true) // AudioFormat (PCM)
-    view.setUint16(22, numChannels, true) // NumChannels
-    view.setUint32(24, sampleRate, true) // SampleRate
-    view.setUint32(28, (sampleRate * numChannels * bitsPerSample) / 8, true) // ByteRate
-    view.setUint16(32, (numChannels * bitsPerSample) / 8, true) // BlockAlign
-    view.setUint16(34, bitsPerSample, true) // BitsPerSample
-    writeString(36, 'data') // Subchunk2ID
-    view.setUint32(40, dataLength, true) // Subchunk2Size
-
-    // Copy PCM data
-    const uint8Array = new Uint8Array(buffer)
-    uint8Array.set(pcmData, 44)
-
-    return buffer
-  }
-
   const handleAudioPlayStop = async (interaction: Interaction) => {
     try {
       // If this interaction is currently playing, stop it
@@ -412,10 +374,11 @@ export default function HomeContent() {
       if (!audio) {
         const pcmData = new Uint8Array(interaction.raw_audio)
         try {
-          // If direct playback fails, try converting raw PCM to WAV
-          const wavBuffer = createWavFile(
+          // Convert raw PCM (mono, typically 16 kHz) to 48 kHz stereo WAV for smoother playback
+          const wavBuffer = createStereo48kWavFromMonoPCM(
             pcmData,
             interaction.sample_rate || 16000,
+            48000,
           )
           const audioBlob = new Blob([wavBuffer], { type: 'audio/wav' })
           const audioUrl = URL.createObjectURL(audioBlob)

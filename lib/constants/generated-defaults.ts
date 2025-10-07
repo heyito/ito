@@ -47,4 +47,7 @@ When you receive a transcript, immediately return the polished version following
       - Any explanations, apologies, or additional text
       - Any formatting markers like --- or \`\`\`
   `,
+
+  // Audio silence detection
+  silenceThreshold: 0.002,
 } as const

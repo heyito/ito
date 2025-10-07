@@ -122,7 +122,8 @@ export class TranscriptionService {
 
     // Check if audio was silent (parallel to Groq transcription)
     const audioEnergy = this.audioStreamManager.calculateAudioEnergy()
-    const SILENCE_THRESHOLD = 0.002 // Very lenient - only catches truly silent audio
+    const advancedSettings = store.get(STORE_KEYS.ADVANCED_SETTINGS)
+    const SILENCE_THRESHOLD = advancedSettings?.llm?.silenceThreshold ?? 0.002
     const isSilent = audioEnergy < SILENCE_THRESHOLD
 
     // Add debugging to see what we received
@@ -136,6 +137,7 @@ export class TranscriptionService {
       errorProvider: response.error?.provider,
       interactionId: this.interactionManager.getCurrentInteractionId(),
       audioEnergy,
+      silenceThreshold: SILENCE_THRESHOLD,
       isSilent,
     })
 

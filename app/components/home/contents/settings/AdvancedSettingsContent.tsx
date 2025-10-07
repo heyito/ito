@@ -91,17 +91,11 @@ const llmSettingsConfig: LlmSettingConfig[] = [
   //   resize: true,
   // },
   {
-    name: 'noSpeechThreshold',
-    label: 'No Speech Threshold',
-    placeholder: 'e.g., 0.6',
-    description: 'Threshold for detecting no speech segments in audio.',
-    maxLength: floatLengthLimit,
-  },
-  {
-    name: 'lowQualityThreshold',
-    label: 'Low Quality Threshold',
-    placeholder: 'e.g., 0.3',
-    description: 'Threshold for identifying low-quality audio segments.',
+    name: 'silenceThreshold',
+    label: 'Silence Threshold',
+    placeholder: 'e.g., 0.002',
+    description:
+      'Audio energy threshold for silence detection. Lower values are more sensitive. (0.001-0.01)',
     maxLength: floatLengthLimit,
   },
 ]

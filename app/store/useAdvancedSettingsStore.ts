@@ -10,8 +10,7 @@ export interface LlmSettings {
   llmTemperature: number
   transcriptionPrompt: string
   editingPrompt: string
-  noSpeechThreshold: number
-  lowQualityThreshold: number
+  silenceThreshold: number
 }
 
 interface AdvancedSettingsState {
@@ -35,8 +34,7 @@ const getInitialState = () => {
       llmTemperature: storedAdvancedSettings.llm.llmTemperature,
       transcriptionPrompt: storedAdvancedSettings.llm.transcriptionPrompt,
       editingPrompt: storedAdvancedSettings.llm.editingPrompt,
-      noSpeechThreshold: storedAdvancedSettings.llm.noSpeechThreshold,
-      lowQualityThreshold: storedAdvancedSettings.llm.lowQualityThreshold,
+      silenceThreshold: storedAdvancedSettings.llm.silenceThreshold ?? 0.002,
     },
   }
 }

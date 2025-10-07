@@ -111,7 +111,10 @@ impl CommandProcessor {
                         wasapi_host
                     }
                     Err(e) => {
-                        eprintln!("[audio-recorder] WASAPI unavailable ({}), falling back to default", e);
+                        eprintln!(
+                            "[audio-recorder] WASAPI unavailable ({}), falling back to default",
+                            e
+                        );
                         cpal::default_host()
                     }
                 }
@@ -332,7 +335,10 @@ fn writer_loop(
         ) {
             Ok(r) => Some(r),
             Err(e) => {
-                eprintln!("[audio-recorder] CRITICAL: Failed to create resampler: {}", e);
+                eprintln!(
+                    "[audio-recorder] CRITICAL: Failed to create resampler: {}",
+                    e
+                );
                 None
             }
         }
@@ -346,9 +352,8 @@ fn writer_loop(
         if let Some(resampler) = resampler_opt.as_mut() {
             in_buffer.extend_from_slice(&frame);
             while in_buffer.len() >= RESAMPLER_CHUNK_SIZE {
-                let chunk_to_process: Vec<f32> = in_buffer
-                    .drain(..RESAMPLER_CHUNK_SIZE)
-                    .collect::<Vec<_>>();
+                let chunk_to_process: Vec<f32> =
+                    in_buffer.drain(..RESAMPLER_CHUNK_SIZE).collect::<Vec<_>>();
                 match resampler.process(&[chunk_to_process], None) {
                     Ok(mut resampled) => {
                         if !resampled.is_empty() {
@@ -538,5 +543,86 @@ fn start_capture(
         }
     };
 
-    Ok(CaptureHandles { stream, audio_tx, writer_handle })
+    Ok(CaptureHandles {
+        stream,
+        audio_tx,
+        writer_handle,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_downmix_to_mono_single_channel() {
+        let mono_samples: Vec<f32> = vec![0.5, -0.5, 1.0, -1.0];
+        let result = downmix_to_mono_vec(&mono_samples, 1);
+
+        assert_eq!(result.len(), 4);
+        assert_eq!(result, vec![0.5, -0.5, 1.0, -1.0]);
+    }
+
+    #[test]
+    fn test_downmix_to_mono_stereo() {
+        // Stereo: L,R,L,R pattern
+        let stereo_samples: Vec<f32> = vec![0.8, 0.2, -0.6, -0.4];
+        let result = downmix_to_mono_vec(&stereo_samples, 2);
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], 0.5); // (0.8 + 0.2) / 2
+        assert_eq!(result[1], -0.5); // (-0.6 + -0.4) / 2
+    }
+
+    #[test]
+    fn test_downmix_to_mono_quad() {
+        // 4 channels: averaging 4 samples per frame
+        let quad_samples: Vec<f32> = vec![1.0, 0.5, 0.25, 0.25]; // One frame
+        let result = downmix_to_mono_vec(&quad_samples, 4);
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], 0.5); // (1.0 + 0.5 + 0.25 + 0.25) / 4
+    }
+
+    #[test]
+    fn test_downmix_partial_frame() {
+        // 5 samples with 2 channels - last sample incomplete, should be ignored
+        let samples: Vec<f32> = vec![0.8, 0.2, -0.6, -0.4, 1.0];
+        let result = downmix_to_mono_vec(&samples, 2);
+
+        assert_eq!(result.len(), 2); // Only 2 complete frames
+        assert_eq!(result[0], 0.5);
+        assert_eq!(result[1], -0.5);
+    }
+
+    #[test]
+    fn test_write_framed_message_structure() {
+        let mut buffer = Vec::new();
+        let test_data = b"test";
+
+        write_framed_message(&mut buffer, MSG_TYPE_JSON, test_data).unwrap();
+
+        // Check structure: [msg_type(1)] + [length(4)] + [data(4)]
+        assert_eq!(buffer.len(), 9);
+        assert_eq!(buffer[0], MSG_TYPE_JSON);
+
+        // Length bytes (little-endian u32 = 4)
+        let length = u32::from_le_bytes([buffer[1], buffer[2], buffer[3], buffer[4]]);
+        assert_eq!(length, 4);
+
+        // Data
+        assert_eq!(&buffer[5..9], test_data);
+    }
+
+    #[test]
+    fn test_write_framed_message_audio_type() {
+        let mut buffer = Vec::new();
+        let audio_data = vec![0u8; 100];
+
+        write_framed_message(&mut buffer, MSG_TYPE_AUDIO, &audio_data).unwrap();
+
+        assert_eq!(buffer[0], MSG_TYPE_AUDIO);
+        let length = u32::from_le_bytes([buffer[1], buffer[2], buffer[3], buffer[4]]);
+        assert_eq!(length, 100);
+    }
 }

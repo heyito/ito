@@ -210,3 +210,16 @@ pub fn shift_cursor_right_with_deselect(char_count: usize) -> Result<(), Box<dyn
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_count_editor_chars() {
+        assert_eq!(count_editor_chars("hello"), 5);
+        assert_eq!(count_editor_chars("Hello 世界"), 8);
+        assert_eq!(count_editor_chars("Hi 👋"), 4);
+        assert_eq!(count_editor_chars(""), 0);
+    }
+}

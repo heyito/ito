@@ -1,0 +1,85 @@
+name: Native Binary Tests
+
+on:
+  pull_request:
+  push:
+    # TODO: Remove native-tests
+    branches: [main, dev, native-tests]
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  test-and-build-mac:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: 'x86_64-apple-darwin,aarch64-apple-darwin'
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            native/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Run all native module tests
+        working-directory: native
+        run: cargo test --workspace --verbose
+
+      - name: Build all modules (x86_64)
+        working-directory: native
+        run: cargo build --workspace --release --target x86_64-apple-darwin
+
+      - name: Build all modules (aarch64)
+        working-directory: native
+        run: cargo build --workspace --release --target aarch64-apple-darwin
+
+  test-and-build-windows:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install MinGW-w64
+        run: sudo apt-get update && sudo apt-get install -y mingw-w64
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: 'x86_64-pc-windows-gnu'
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            native/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Run all native module tests
+        working-directory: native
+        run: cargo test --workspace --verbose
+
+      - name: Build all modules (Windows)
+        working-directory: native
+        run: cargo build --workspace --release --target x86_64-pc-windows-gnu

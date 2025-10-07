@@ -110,14 +110,13 @@ module.exports = {
   nodeGypRebuild: false,
   buildDependenciesFromSource: false,
   nsis: {
-    debugLogging: true,
     shortcutName: '${productName}',
     uninstallDisplayName: '${productName}-uninstaller',
     createDesktopShortcut: false,
     createStartMenuShortcut: true,
     oneClick: false,
     perMachine: false,
-    allowToChangeInstallationDirectory: true,
+    allowToChangeInstallationDirectory: false,
     deleteAppDataOnUninstall: true,
   },
 }

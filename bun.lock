@@ -61,7 +61,7 @@
         "@types/sinonjs__fake-timers": "^8.1.5",
         "@vitejs/plugin-react": "^4.5.0",
         "bun-types": "^1.2.19",
-        "electron": "^38.2.1",
+        "electron": "^37.2.6",
         "electron-builder": "^26.0.20",
         "electron-vite": "^3.1.0",
         "eslint": "^9.28.0",
@@ -1196,7 +1196,7 @@
 
     "ejs": ["ejs@3.1.10", "", { "dependencies": { "jake": "^10.8.5" }, "bin": { "ejs": "bin/cli.js" } }, "sha512-UeJmFfOrAQS8OJWPZ4qtgHyWExa088/MtK5UEyoJGFH67cDEXkZSviOiKRCZ4Xij0zxI3JECgYs3oKx+AizQBA=="],
 
-    "electron": ["electron@38.2.1", "", { "dependencies": { "@electron/get": "^2.0.0", "@types/node": "^22.7.7", "extract-zip": "^2.0.1" }, "bin": { "electron": "cli.js" } }, "sha512-P4pE2RpRg3kM8IeOK+heg6iAxR5wcXnNHrbVchn7M3GBnYAhjfJRkROusdOro5PlKzdtfKjesbbqaG4MqQXccg=="],
+    "electron": ["electron@37.6.0", "", { "dependencies": { "@electron/get": "^2.0.0", "@types/node": "^22.7.7", "extract-zip": "^2.0.1" }, "bin": { "electron": "cli.js" } }, "sha512-8AANcn6irYQ7cTAJRY7r0CovWckcGCHUniQecyGhw/jJ25vWwitVhF97skF+EyDztiEI6YBoF0G6tx1s37bO3g=="],
 
     "electron-builder": ["electron-builder@26.0.20", "", { "dependencies": { "app-builder-lib": "26.0.20", "builder-util": "26.0.20", "builder-util-runtime": "9.4.0", "chalk": "^4.1.2", "ci-info": "^4.2.0", "dmg-builder": "26.0.20", "fs-extra": "^10.1.0", "lazy-val": "^1.0.5", "simple-update-notifier": "2.0.0", "yargs": "^17.6.2" }, "bin": { "electron-builder": "cli.js", "install-app-deps": "install-app-deps.js" } }, "sha512-lntLb4ZuQ4UPVlOiWZKO+NhHlNf0T6Bn+6ZLo+wxTuhazKJSXycmIP6tp/xNZvE+0ApF0SizAgY4sLHZtrTJgw=="],
 

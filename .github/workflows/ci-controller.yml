@@ -13,9 +13,12 @@ jobs:
   run-tests:
     uses: ./.github/workflows/test-runner.yml
 
+  native-build-check:
+    uses: ./.github/workflows/native-build-check.yml
+
   # This job ONLY runs for pushes to 'dev' and 'main'
   deploy-server:
-    needs: run-tests
+    needs: [run-tests, native-build-check]
     if: github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'dev')
     uses: ./.github/workflows/deploy-server.yml
     with:

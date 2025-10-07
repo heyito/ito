@@ -61,13 +61,22 @@ cargo test
 
 ### CI/CD
 
-The `.github/workflows/native-tests.yml` workflow runs tests and builds for:
-- macOS (Intel x86_64 + Apple Silicon aarch64)
-- Windows (x86_64-gnu)
+Native tests and builds are integrated into the existing CI workflows:
 
-The workflow runs automatically on:
-- Pull requests
-- Pushes to `main` or `dev` branches
+**Tests** (`.github/workflows/test-runner.yml`):
+- Unit tests run on macOS runner (OS-agnostic tests)
+- Runs automatically via `bun runAllTests` on all pushes and PRs
+- Executed as part of the main CI controller workflow
+
+**Compilation Checks** (`.github/workflows/native-build-check.yml`):
+- macOS: Verifies compilation for x86_64 and aarch64 architectures
+- Windows: Verifies cross-compilation for x86_64-pc-windows-gnu
+- Runs automatically on all pushes and PRs via the CI controller
+- Ensures binaries compile correctly for both platforms before merging
+
+**Release Builds** (`.github/workflows/build.yml`):
+- Full release compilation happens during tagged releases
+- Also includes compilation verification before packaging
 
 ## Code Style Preferences
 

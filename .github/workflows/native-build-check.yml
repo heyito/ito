@@ -1,14 +1,10 @@
-name: Native Binary Tests
+name: Native Build Check
 
 on:
-  pull_request:
-  push:
-    branches: [main, dev]
-  workflow_dispatch:
   workflow_call:
 
 jobs:
-  test-and-build-mac:
+  build-check-mac:
     runs-on: macos-latest
 
     steps:
@@ -34,19 +30,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Run all native module tests
-        working-directory: native
-        run: cargo test --workspace --verbose
-
-      - name: Build all modules (x86_64)
+      - name: Verify native binaries compile (x86_64)
         working-directory: native
         run: cargo build --workspace --release --target x86_64-apple-darwin
 
-      - name: Build all modules (aarch64)
+      - name: Verify native binaries compile (aarch64)
         working-directory: native
         run: cargo build --workspace --release --target aarch64-apple-darwin
 
-  test-and-build-windows:
+  build-check-windows:
     runs-on: ubuntu-latest
 
     steps:
@@ -56,7 +48,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y mingw-w64 libasound2-dev
+          sudo apt-get install -y mingw-w64
 
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -77,10 +69,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Run all native module tests
-        working-directory: native
-        run: cargo test --workspace --verbose
-
-      - name: Build all modules (Windows)
+      - name: Verify native binaries compile (Windows)
         working-directory: native
         run: cargo build --workspace --release --target x86_64-pc-windows-gnu

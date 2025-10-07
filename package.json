@@ -33,7 +33,7 @@
     "type-check": "tsc --noEmit --project tsconfig.node.json",
     "format:app": "prettier app lib --check",
     "format": "prettier . --check",
-    "runAllTests": "bun runLibTests && bun runServerTests",
+    "runAllTests": "bun runLibTests && bun runServerTests && bun runNativeTests",
     "runLibTests": "find lib -name \"*.test.ts\" | xargs -I {} sh -c 'bun test --preload lib/__tests__/setup.ts {} || exit 255'",
     "runServerTests": "find server/src -name \"*.test.ts\" | xargs -I {} sh -c 'bun test {} || exit 255'",
     "runNativeTests": "cd native && cargo test --workspace --quiet",

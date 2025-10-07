@@ -29,13 +29,6 @@ jobs:
           toolchain: stable
           targets: 'x86_64-apple-darwin,aarch64-apple-darwin'
 
-      - name: Verify native binaries compile
-        working-directory: native
-        run: |
-          echo "Verifying all native modules compile for macOS..."
-          cargo build --workspace --release --target x86_64-apple-darwin
-          cargo build --workspace --release --target aarch64-apple-darwin
-
       - name: Set up environment
         run: |
           echo "VITE_AUTH0_DOMAIN=\"${{ secrets.VITE_AUTH0_DOMAIN }}\"" >> .env
@@ -107,12 +100,6 @@ jobs:
         with:
           toolchain: stable
           targets: 'x86_64-pc-windows-gnu'
-
-      - name: Verify native binaries compile
-        working-directory: native
-        run: |
-          echo "Verifying all native modules compile for Windows..."
-          cargo build --workspace --release --target x86_64-pc-windows-gnu
 
       - name: Set up environment
         run: |

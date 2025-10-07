@@ -164,8 +164,6 @@ function dbToAdvancedSettingsPb(
       llmModel: dbAdvancedSettings.llm.llm_model,
       transcriptionPrompt: dbAdvancedSettings.llm.transcription_prompt,
       editingPrompt: dbAdvancedSettings.llm.editing_prompt,
-      noSpeechThreshold: dbAdvancedSettings.llm.no_speech_threshold,
-      lowQualityThreshold: dbAdvancedSettings.llm.low_quality_threshold,
     }),
   })
 }
@@ -240,8 +238,6 @@ export default (router: ConnectRouter) => {
         let transcript = await asrProvider.transcribeAudio(fullAudioWAV, {
           fileType: 'wav',
           asrModel: advancedSettingsHeaders.asrModel,
-          noSpeechThreshold: advancedSettingsHeaders.noSpeechThreshold,
-          lowQualityThreshold: advancedSettingsHeaders.lowQualityThreshold,
           vocabulary,
         })
         console.log(

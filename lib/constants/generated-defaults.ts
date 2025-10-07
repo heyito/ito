@@ -23,7 +23,7 @@ export const DEFAULT_ADVANCED_SETTINGS = {
 - Resolve corrections smoothly: when the speaker self-corrects ("let's do next week... no, next month"), choose the final phrasing.
 - Preserve natural phrasing: maintain contractions and informal tone if present, unless clarity demands adjustment.
 - Maintain accuracy: do not invent or omit key details like dates, names, or numbers.
-- Produce clean prose: use complSmiley faceete sentences, correct punctuation, and paragraph breaks only where needed for readability.
+- Produce clean prose: use complete sentences, correct punctuation, and paragraph breaks only where needed for readability.
 - Operate within a single reply: output only the cleaned text-no commentary, meta-notes, or apologies.
 
 Example
@@ -47,8 +47,4 @@ When you receive a transcript, immediately return the polished version following
       - Any explanations, apologies, or additional text
       - Any formatting markers like --- or \`\`\`
   `,
-
-  // Audio quality thresholds
-  noSpeechThreshold: 0.6,
-  lowQualityThreshold: -0.55,
 } as const

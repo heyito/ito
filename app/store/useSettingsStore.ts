@@ -24,6 +24,7 @@ interface SettingsState {
   showAppInDock: boolean
   interactionSounds: boolean
   muteAudioWhenDictating: boolean
+  removeTrailingPeriod: boolean
   microphoneDeviceId: string
   microphoneName: string
   keyboardShortcuts: KeyboardShortcutConfig[]
@@ -33,6 +34,7 @@ interface SettingsState {
   setShowAppInDock: (show: boolean) => void
   setInteractionSounds: (enabled: boolean) => void
   setMuteAudioWhenDictating: (enabled: boolean) => void
+  setRemoveTrailingPeriod: (enabled: boolean) => void
   setMicrophoneDeviceId: (deviceId: string, name: string) => void
   createKeyboardShortcut: (mode: ItoMode) => ShortcutResult
   removeKeyboardShortcut: (shortcutId: string) => void
@@ -56,6 +58,7 @@ const getInitialState = () => {
     showAppInDock: storedSettings?.showAppInDock ?? true,
     interactionSounds: storedSettings?.interactionSounds ?? false,
     muteAudioWhenDictating: storedSettings?.muteAudioWhenDictating ?? false,
+    removeTrailingPeriod: storedSettings?.removeTrailingPeriod ?? false,
     microphoneDeviceId: storedSettings?.microphoneDeviceId ?? 'default',
     microphoneName: storedSettings?.microphoneName ?? 'Default Microphone',
     keyboardShortcuts: storedSettings?.keyboardShortcuts ?? [
@@ -172,6 +175,7 @@ export const useSettingsStore = create<SettingsState>(set => {
       'muteAudioWhenDictating',
       'audio&mic',
     ),
+    setRemoveTrailingPeriod: createSetter('removeTrailingPeriod', 'general'),
     setMicrophoneDeviceId: (deviceId: string, name: string) => {
       const currentName = useSettingsStore.getState().microphoneName
       analytics.trackSettings(ANALYTICS_EVENTS.MICROPHONE_CHANGED, {

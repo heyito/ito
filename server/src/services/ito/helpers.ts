@@ -123,22 +123,6 @@ export function getAdvancedSettingsHeaders(headers: Headers) {
     'Editing prompt',
   )
 
-  const noSpeechThreshold = validateAndTransformHeaderValue(
-    headers,
-    'no-speech-threshold',
-    DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold,
-    HeaderValidator.validateNoSpeechThreshold,
-    'No speech threshold',
-  )
-
-  const lowQualityThreshold = validateAndTransformHeaderValue(
-    headers,
-    'low-quality-threshold',
-    DEFAULT_ADVANCED_SETTINGS.lowQualityThreshold,
-    HeaderValidator.validateLowQualityThreshold,
-    'Low quality threshold',
-  )
-
   return {
     asrModel,
     asrProvider,
@@ -148,8 +132,6 @@ export function getAdvancedSettingsHeaders(headers: Headers) {
     llmTemperature,
     transcriptionPrompt,
     editingPrompt,
-    noSpeechThreshold,
-    lowQualityThreshold,
   }
 }
 

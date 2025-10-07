@@ -10,6 +10,8 @@ import { TextInserter } from './text/TextInserter'
 import { getCursorContext } from '../media/selected-text-reader'
 import { canGetContextFromCurrentApp } from '../utils/applicationDetection'
 import { grammarRulesService } from './grammar/GrammarRulesService'
+import { store } from './store'
+import { STORE_KEYS } from '../constants/store-keys'
 
 export class TranscriptionService {
   private audioStreamManager = new AudioStreamManager()
@@ -94,7 +96,6 @@ export class TranscriptionService {
     if (
       this.hasStartedGrpc ||
       !this.audioStreamManager.isCurrentlyStreaming() ||
-      !this.audioStreamManager.hasMinimumDuration() ||
       this.currentMode === null
     ) {
       return
@@ -118,6 +119,12 @@ export class TranscriptionService {
   private async handleTranscriptionResponse(response: any) {
     // Prevent new streams while we finalize
     this.isFinalizing = true
+
+    // Check if audio was silent (parallel to Groq transcription)
+    const audioEnergy = this.audioStreamManager.calculateAudioEnergy()
+    const SILENCE_THRESHOLD = 0.002 // Very lenient - only catches truly silent audio
+    const isSilent = audioEnergy < SILENCE_THRESHOLD
+
     // Add debugging to see what we received
     console.log('[TranscriptionService] Processing transcription response:', {
       transcript: response.transcript,
@@ -128,9 +135,40 @@ export class TranscriptionService {
       errorType: response.error?.type,
       errorProvider: response.error?.provider,
       interactionId: this.interactionManager.getCurrentInteractionId(),
+      audioEnergy,
+      isSilent,
     })
 
     const errorMessage = response.error ? response.error.message : undefined
+
+    // If audio was silent, ignore Groq response and treat as silent
+    if (isSilent) {
+      if (this.interactionId) {
+        traceLogger.logStep(this.interactionId, 'AUDIO_SILENT', {
+          audioEnergy,
+          threshold: SILENCE_THRESHOLD,
+          localInteractionId: this.interactionManager.getCurrentInteractionId(),
+        })
+        traceLogger.endInteraction(this.interactionId, 'AUDIO_SILENT', {
+          audioEnergy,
+          localInteractionId: this.interactionManager.getCurrentInteractionId(),
+        })
+        ;(globalThis as any).currentInteractionId = null
+      }
+
+      // Save to database with silent audio error
+      await this.interactionManager.createInteraction(
+        response.transcript || '',
+        this.audioStreamManager.getInteractionAudioBuffer(),
+        this.audioStreamManager.getCurrentSampleRate(),
+        'Audio was silent - no speech detected',
+      )
+
+      this.audioStreamManager.clearInteractionAudio()
+      this.interactionManager.clearCurrentInteraction()
+      this.isFinalizing = false
+      return
+    }
 
     // Handle any transcription error
     if (response.error) {
@@ -197,6 +235,12 @@ export class TranscriptionService {
           context,
           correctedText,
         )
+
+        // Remove trailing period if setting is enabled
+        const settings = store.get(STORE_KEYS.SETTINGS)
+        if (settings?.removeTrailingPeriod && correctedText.endsWith('.')) {
+          correctedText = correctedText.slice(0, -1)
+        }
 
         await this.textInserter.insertText(correctedText, this.interactionId)
 

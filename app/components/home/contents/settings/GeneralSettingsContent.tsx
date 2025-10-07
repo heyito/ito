@@ -8,10 +8,12 @@ export default function GeneralSettingsContent() {
     launchAtLogin,
     showItoBarAlways,
     showAppInDock,
+    removeTrailingPeriod,
     setShareAnalytics,
     setLaunchAtLogin,
     setShowItoBarAlways,
     setShowAppInDock,
+    setRemoveTrailingPeriod,
   } = useSettingsStore()
 
   const windowContext = useWindowContext()
@@ -58,6 +60,20 @@ export default function GeneralSettingsContent() {
             <Switch
               checked={showItoBarAlways}
               onCheckedChange={setShowItoBarAlways}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium">Remove trailing period</div>
+              <div className="text-xs text-gray-600 mt-1">
+                Automatically remove period at end of transcripts before
+                pasting.
+              </div>
+            </div>
+            <Switch
+              checked={removeTrailingPeriod}
+              onCheckedChange={setRemoveTrailingPeriod}
             />
           </div>
 

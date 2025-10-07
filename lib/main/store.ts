@@ -28,6 +28,7 @@ export interface SettingsStore {
   showAppInDock: boolean
   interactionSounds: boolean
   muteAudioWhenDictating: boolean
+  removeTrailingPeriod: boolean
   microphoneDeviceId: string
   microphoneName: string
   isShortcutGloballyEnabled: boolean
@@ -114,6 +115,7 @@ export const defaultValues: AppStore = {
     showAppInDock: true,
     interactionSounds: false,
     muteAudioWhenDictating: false,
+    removeTrailingPeriod: false,
     microphoneDeviceId: 'default',
     microphoneName: 'Auto-detect',
     isShortcutGloballyEnabled: false,

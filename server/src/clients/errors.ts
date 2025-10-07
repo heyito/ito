@@ -150,34 +150,6 @@ export abstract class ClientAudioError extends ClientError {
 }
 
 /**
- * No speech detected in audio
- */
-export class ClientNoSpeechError extends ClientAudioError {
-  readonly code = 'CLIENT_NO_SPEECH_DETECTED'
-
-  constructor(
-    provider: ClientProvider,
-    public readonly noSpeechProbability?: number,
-  ) {
-    super('No speech detected in audio.', provider, { noSpeechProbability })
-  }
-}
-
-/**
- * Audio transcription quality too low
- */
-export class ClientTranscriptionQualityError extends ClientAudioError {
-  readonly code = 'CLIENT_TRANSCRIPTION_QUALITY_ERROR'
-
-  constructor(
-    provider: ClientProvider,
-    public readonly averageLogProbability?: number,
-  ) {
-    super('Unable to transcribe audio.', provider, { averageLogProbability })
-  }
-}
-
-/**
  * Audio file too short for transcription
  */
 export class ClientAudioTooShortError extends ClientAudioError {

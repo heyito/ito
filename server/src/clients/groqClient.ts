@@ -6,8 +6,6 @@ import {
   ClientApiKeyError,
   ClientUnavailableError,
   ClientModelError,
-  ClientNoSpeechError,
-  ClientTranscriptionQualityError,
   ClientAudioTooShortError,
   ClientApiError,
   ClientError,
@@ -16,7 +14,6 @@ import { ClientProvider } from './providers.js'
 import { LlmProvider } from './llmProvider.js'
 import { TranscriptionOptions } from './asrConfig.js'
 import { IntentTranscriptionOptions } from './intentTranscriptionConfig.js'
-import { DEFAULT_ADVANCED_SETTINGS } from '../constants/generated-defaults.js'
 
 // Load environment variables from .env file
 dotenv.config()
@@ -102,11 +99,6 @@ class GroqClient implements LlmProvider {
     const fileType = options?.fileType || 'webm'
     const asrModel = options?.asrModel
     const vocabulary = options?.vocabulary
-    const noSpeechThreshold =
-      options?.noSpeechThreshold ?? DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold
-    const lowQualityThreshold =
-      options?.lowQualityThreshold ??
-      DEFAULT_ADVANCED_SETTINGS.lowQualityThreshold
 
     const file = await toFile(audioBuffer, `audio.${fileType}`)
     if (!this.isAvailable) {
@@ -134,22 +126,6 @@ class GroqClient implements LlmProvider {
         prompt: transcriptionPrompt,
         response_format: 'verbose_json',
       })
-
-      const segments = (transcription as any).segments
-      if (segments && segments.length > 0) {
-        const segment = segments[0]
-        if (segment.no_speech_prob > noSpeechThreshold) {
-          throw new ClientNoSpeechError(
-            ClientProvider.GROQ,
-            segment.no_speech_prob,
-          )
-        } else if (segment.avg_logprob < lowQualityThreshold) {
-          throw new ClientTranscriptionQualityError(
-            ClientProvider.GROQ,
-            segment.avg_logprob,
-          )
-        }
-      }
 
       // The Node SDK returns the full object, the text is in the `text` property.
       return transcription.text.trim()

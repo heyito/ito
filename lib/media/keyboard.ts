@@ -5,9 +5,9 @@ import { getNativeBinaryPath } from './native-interface'
 import { BrowserWindow } from 'electron'
 import { audioRecorderService } from './audio'
 import { voiceInputService } from '../main/voiceInputService'
-import { traceLogger } from '../main/traceLogger'
 import { KeyName, keyNameMap, normalizeLegacyKey } from '../types/keyboard'
 import { getProgrammaticTyping } from './typingState'
+import { interactionManager } from '../main/interactions/InteractionManager'
 
 interface KeyEvent {
   type: 'keydown' | 'keyup'
@@ -262,26 +262,7 @@ function handleKeyEventInMain(event: KeyEvent) {
         if (pendingShortcut && !isShortcutActive) {
           isShortcutActive = true
           console.info('lib Shortcut ACTIVATED, starting recording...')
-
-          // Start trace logging for new interaction
-          const interactionId = traceLogger.startInteraction(
-            'HOTKEY_ACTIVATED',
-            {
-              shortcut: pendingShortcut.keys,
-              mode: pendingShortcut.mode,
-              pressedKeys: Array.from(pressedKeys),
-              event: {
-                type: event.type,
-                key: event.key,
-                normalizedKey,
-                timestamp: event.timestamp,
-              },
-            },
-          )
-
-          // Store interaction ID for later use
-          ;(globalThis as any).currentInteractionId = interactionId
-
+          interactionManager.startInteraction()
           voiceInputService.startSTTService(pendingShortcut.mode)
         }
 

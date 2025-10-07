@@ -1,40 +1,16 @@
 import { setFocusedText } from '../../media/text-writer'
-import { traceLogger } from '../traceLogger'
 
 export class TextInserter {
-  async insertText(
-    transcript: string,
-    interactionId: string | null,
-  ): Promise<boolean> {
+  async insertText(transcript: string): Promise<boolean> {
     // If the string is empty, don't insert
     if (!transcript || !transcript.trim()) {
       return false
     }
 
     try {
-      const success = await setFocusedText(transcript)
-
-      // Log text insertion
-      if (interactionId) {
-        traceLogger.logStep(interactionId, 'TEXT_INSERTION', {
-          transcript,
-          transcriptLength: transcript.length,
-          success,
-        })
-      }
-
-      return success
+      return await setFocusedText(transcript)
     } catch (error) {
       console.error('Error inserting text:', error)
-
-      if (interactionId) {
-        traceLogger.logError(
-          interactionId,
-          'TEXT_INSERTION_ERROR',
-          error instanceof Error ? error.message : String(error),
-        )
-      }
-
       return false
     }
   }

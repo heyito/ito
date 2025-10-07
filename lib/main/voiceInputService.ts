@@ -4,7 +4,6 @@ import { getPillWindow, mainWindow } from './app'
 import store from './store'
 import { STORE_KEYS } from '../constants/store-keys'
 import { transcriptionService } from './transcriptionService'
-import { traceLogger } from './traceLogger'
 import { ItoMode } from '@/app/generated/ito_pb'
 import { IPC_EVENTS, RecordingStatePayload } from '../types/ipc'
 
@@ -21,15 +20,6 @@ export class VoiceInputService {
     if (settings && settings.muteAudioWhenDictating) {
       console.info('[Audio] Muting system audio for dictation')
       muteSystemAudio()
-    }
-
-    // Get current interaction ID for trace logging
-    const interactionId = (globalThis as any).currentInteractionId
-    if (interactionId) {
-      traceLogger.logStep(interactionId, 'VOICE_INPUT_START', {
-        deviceId,
-        muteAudioWhenDictating: settings?.muteAudioWhenDictating,
-      })
     }
 
     const started = await transcriptionService.startTranscription(mode)
@@ -53,15 +43,6 @@ export class VoiceInputService {
   }
 
   public stopSTTService = () => {
-    // Get current interaction ID for trace logging
-    const interactionId = (globalThis as any).currentInteractionId
-    if (interactionId) {
-      traceLogger.logStep(interactionId, 'VOICE_INPUT_STOP', {
-        muteAudioWhenDictating: store.get(STORE_KEYS.SETTINGS)
-          .muteAudioWhenDictating,
-      })
-    }
-
     audioRecorderService.stopRecording()
 
     transcriptionService.stopTranscription()

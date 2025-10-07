@@ -111,3 +111,5 @@ export class InteractionManager {
     this.interactionStartTime = null
   }
 }
+
+export const interactionManager = new InteractionManager()

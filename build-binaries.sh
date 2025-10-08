@@ -52,6 +52,15 @@ build_native_workspace() {
 
         print_info "Building macOS binaries for entire workspace ($arch_name)..."
         cargo build --release --workspace --target "$mac_target"
+
+        # Create symlinks for electron-builder compatibility
+        if [ "$mac_target" = "aarch64-apple-darwin" ]; then
+            print_info "Creating symlink: arm64-apple-darwin -> aarch64-apple-darwin"
+            ln -sfn aarch64-apple-darwin target/arm64-apple-darwin
+        else
+            print_info "Creating symlink: x64-apple-darwin -> x86_64-apple-darwin"
+            ln -sfn x86_64-apple-darwin target/x64-apple-darwin
+        fi
     fi
 
     # --- Windows Build ---

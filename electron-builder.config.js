@@ -8,14 +8,10 @@ const nativeBinaries = [
 ]
 
 const getMacResources = () =>
-  nativeBinaries.map(binary => {
-    // Map electron-builder arch to Cargo target triple
-    const cargoArch = '${arch}' === 'arm64' ? 'aarch64' : 'x86_64'
-    return {
-      from: `native/target/${cargoArch}-apple-darwin/release/${binary}`,
-      to: `binaries/${binary}`,
-    }
-  })
+  nativeBinaries.map(binary => ({
+    from: `native/target/\${arch}-apple-darwin/release/${binary}`,
+    to: `binaries/${binary}`,
+  }))
 
 const getWindowsResources = () =>
   nativeBinaries.map(binary => ({
@@ -70,7 +66,7 @@ module.exports = {
     hardenedRuntime: true,
     gatekeeperAssess: false,
     identity: 'Demox Labs, Inc. (294ZSTM7UB)',
-    notarize: true,
+    notarize: false,
     entitlements: 'build/entitlements.mac.plist',
     entitlementsInherit: 'build/entitlements.mac.inherit.plist',
     extendInfo: {

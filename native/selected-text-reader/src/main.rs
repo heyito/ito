@@ -61,19 +61,17 @@ fn main() {
     // Spawn thread to read commands from stdin
     thread::spawn(move || {
         let stdin = io::stdin();
-        for line in stdin.lock().lines() {
-            if let Ok(l) = line {
-                if l.trim().is_empty() {
-                    continue;
-                }
-                if let Ok(command) = serde_json::from_str::<Command>(&l) {
-                    if let Err(e) = cmd_tx.send(command) {
-                        eprintln!(
-                            "[selected-text-reader] Failed to send command to processor: {}",
-                            e
-                        );
-                        break;
-                    }
+        for l in stdin.lock().lines().flatten() {
+            if l.trim().is_empty() {
+                continue;
+            }
+            if let Ok(command) = serde_json::from_str::<Command>(&l) {
+                if let Err(e) = cmd_tx.send(command) {
+                    eprintln!(
+                        "[selected-text-reader] Failed to send command to processor: {}",
+                        e
+                    );
+                    break;
                 }
             }
         }
@@ -276,7 +274,8 @@ fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::erro
                     // Likely means we're at the edge of a textbox.
                     String::new()
                 } else {
-                    // Selection extended successfully - continue extending to get full context_length
+                    // Selection extended successfully - continue extending to get full
+                    // context_length
                     clipboard
                         .clear()
                         .map_err(|e| format!("Clipboard clear failed: {}", e))?;
@@ -286,15 +285,17 @@ fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::erro
                     match full_result {
                         Ok(full_context_text) => {
                             let full_context_char_count = count_editor_chars(&full_context_text);
-                            // Undo by the absolute difference between original selected text and total selection
-                            let chars_to_undo = (full_context_char_count as i32
-                                - selected_char_count as i32)
-                                .abs() as usize;
+                            // Undo by the absolute difference between original selected text and
+                            // total selection
+                            let chars_to_undo =
+                                (full_context_char_count as i32 - selected_char_count as i32)
+                                    .unsigned_abs() as usize;
                             if chars_to_undo > 0 {
                                 let _ = shift_cursor_right_with_deselect(chars_to_undo);
                             }
 
-                            // Return only the newly added context (first n characters where n is the difference)
+                            // Return only the newly added context (first n characters where n is
+                            // the difference)
                             let new_context_char_count =
                                 full_context_char_count - selected_char_count;
                             full_context_text

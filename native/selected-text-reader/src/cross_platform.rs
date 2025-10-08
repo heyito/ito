@@ -2,9 +2,11 @@ use arboard::Clipboard;
 use std::thread;
 use std::time::Duration;
 
-// Count characters as the editor sees them (CRLF = 1 cursor position on Windows)
+// Count characters as the editor sees them (CRLF = 1 cursor position on
+// Windows)
 pub fn count_editor_chars(text: &str) -> usize {
-    // On Windows, editors treat CRLF as a single cursor position when navigating with arrow keys
+    // On Windows, editors treat CRLF as a single cursor position when navigating
+    // with arrow keys
     text.replace("\r\n", "\n").chars().count()
 }
 
@@ -26,7 +28,8 @@ pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
     // Get the copy text from clipboard (this is what was selected)
     let selected_text = clipboard.get_text().unwrap_or_default();
 
-    // Always restore original clipboard contents - ITO is copying on behalf of user for context
+    // Always restore original clipboard contents - ITO is copying on behalf of user
+    // for context
     let _ = clipboard.set_text(original_clipboard);
 
     Ok(selected_text)
@@ -34,7 +37,7 @@ pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
 
 #[cfg(target_os = "windows")]
 pub fn copy_selected_text() -> Result<(), Box<dyn std::error::Error>> {
-    use enigo::{Enigo, Key, Keyboard, Settings, Direction};
+    use enigo::{Direction, Enigo, Key, Keyboard, Settings};
 
     let mut enigo = Enigo::new(&Settings::default())?;
     enigo.key(Key::Control, Direction::Press)?;
@@ -56,7 +59,7 @@ pub fn copy_selected_text() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(target_os = "windows")]
 fn cut_selected_text() -> Result<(), Box<dyn std::error::Error>> {
-    use enigo::{Enigo, Key, Keyboard, Settings, Direction};
+    use enigo::{Direction, Enigo, Key, Keyboard, Settings};
 
     let mut enigo = Enigo::new(&Settings::default())?;
     enigo.key(Key::Control, Direction::Press)?;
@@ -85,7 +88,7 @@ pub fn select_previous_chars_and_copy(
     for _ in 0..char_count {
         #[cfg(target_os = "windows")]
         {
-            use enigo::{Enigo, Key, Keyboard, Settings, Direction};
+            use enigo::{Direction, Enigo, Key, Keyboard, Settings};
             let mut enigo = Enigo::new(&Settings::default())?;
             enigo.key(Key::Shift, Direction::Press)?;
             enigo.key(Key::LeftArrow, Direction::Click)?;
@@ -138,7 +141,7 @@ pub fn shift_cursor_right_with_deselect(
     for _ in 0..char_count {
         #[cfg(target_os = "windows")]
         {
-            use enigo::{Enigo, Key, Keyboard, Settings, Direction};
+            use enigo::{Direction, Enigo, Key, Keyboard, Settings};
             let mut enigo = Enigo::new(&Settings::default())?;
             enigo.key(Key::Shift, Direction::Press)?;
             enigo.key(Key::RightArrow, Direction::Click)?;

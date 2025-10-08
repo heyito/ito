@@ -13,7 +13,8 @@
       "WebFetch(domain:www.electron.build)",
       "Bash(cargo test)",
       "Bash(cargo test:*)",
-      "Bash(bun:*)"
+      "Bash(bun:*)",
+      "Bash(cargo clippy:*)"
     ],
     "deny": [],
     "ask": []

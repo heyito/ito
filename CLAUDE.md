@@ -20,13 +20,17 @@ Main development branch: `dev`
 - Dev: `bun dev` (starts electron-vite dev with watch)
 - Server: `docker compose up --build` (run from server directory)
 - Build: `bun build:app:mac` or `bun build:app:windows`
-- Test: `bun runAllTests` (runs both lib and server tests)
+- Test: `bun runAllTests` (runs lib, server, and native tests)
   - Lib tests: `bun runLibTests`
   - Server tests: `bun runServerTests`
-  - Native tests: See "Native Binary Tests" section below
-- Lint: `bun lint` (check) or `bun lint:fix` (fix)
+  - Native tests: `bun runNativeTests` (or see "Native Binary Tests" section)
+- Lint:
+  - TypeScript: `bun lint` (check) or `bun lint:fix` (fix)
+  - Rust: `bun lint:native` (check) or `bun lint:fix:native` (fix)
 - Type check: `bun type-check`
-- Format: `bun format` (check) or `bun format:fix` (fix)
+- Format:
+  - TypeScript: `bun format` (check) or `bun format:fix` (fix)
+  - Rust: `bun format:native` (check) or `bun format:fix:native` (fix)
 
 ## Native Binary Tests
 
@@ -58,6 +62,28 @@ cargo test
 - `text-writer` - Cross-platform text input simulation
 - `active-application` - Active window detection
 - `selected-text-reader` - Selected text extraction
+
+### Linting and Formatting
+
+Rust code follows standard formatting and linting rules defined in `native/`:
+- **rustfmt.toml** - Code formatting configuration (100 char width, Unix line endings)
+- **clippy.toml** - Linter configuration (cognitive complexity threshold)
+- **Cargo.toml** - Workspace-level lint rules (pedantic + nursery warnings)
+
+Run checks locally:
+```bash
+# Check formatting
+bun format:native
+
+# Auto-fix formatting
+bun format:fix:native
+
+# Check lints
+bun lint:native
+
+# Auto-fix lints (where possible)
+bun lint:fix:native
+```
 
 ### CI/CD
 

@@ -17,3 +17,6 @@ clipboard-win = "5.0"
 core-graphics = "0.23"
 core-foundation = "0.9"
 cocoa = "0.25"
+
+[lints]
+workspace = true

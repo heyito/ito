@@ -57,16 +57,14 @@ fn main() {
 
     thread::spawn(move || {
         let stdin = io::stdin();
-        for line in stdin.lock().lines() {
-            if let Ok(l) = line {
-                if l.trim().is_empty() {
-                    continue;
-                }
-                if let Ok(command) = serde_json::from_str::<Command>(&l) {
-                    cmd_tx
-                        .send(command)
-                        .expect("Failed to send command to processor");
-                }
+        for l in stdin.lock().lines().flatten() {
+            if l.trim().is_empty() {
+                continue;
+            }
+            if let Ok(command) = serde_json::from_str::<Command>(&l) {
+                cmd_tx
+                    .send(command)
+                    .expect("Failed to send command to processor");
             }
         }
     });
@@ -104,7 +102,8 @@ impl CommandProcessor {
         let host = {
             #[cfg(target_os = "windows")]
             {
-                // On Windows, prefer WASAPI directly for best performance (10-30ms latency vs DirectSound's 50-80ms)
+                // On Windows, prefer WASAPI directly for best performance (10-30ms latency vs
+                // DirectSound's 50-80ms)
                 match cpal::host_from_id(cpal::platform::HostId::Wasapi) {
                     Ok(wasapi_host) => {
                         eprintln!("[audio-recorder] Using WASAPI host (optimal for Windows)");
@@ -440,7 +439,7 @@ fn start_capture(
     {
         let cfg = AudioConfig {
             response_type: "audio-config".to_string(),
-            input_sample_rate: input_sample_rate,
+            input_sample_rate,
             output_sample_rate: TARGET_SAMPLE_RATE,
             channels: 1,
         };

@@ -4,6 +4,7 @@ import os from 'os'
 import Store from 'electron-store'
 import store, { getCurrentUserId } from './store'
 import { STORE_KEYS } from '../constants/store-keys'
+import { interactionManager } from './interactions/InteractionManager'
 
 export function initializeLogging() {
   // Overriding console methods with electron-log
@@ -33,7 +34,7 @@ export function initializeLogging() {
     level: 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal' | 'log'
     message: string
     fields?: Record<string, unknown>
-    interactionId?: string
+    interactionId: string | null
     traceId?: string
     spanId?: string
     appVersion?: string
@@ -108,9 +109,7 @@ export function initializeLogging() {
     fields?: Record<string, unknown>,
   ) => {
     const userId = getCurrentUserId()
-    const interactionId = (globalThis as any).currentInteractionId as
-      | string
-      | undefined
+    const interactionId = interactionManager.getCurrentInteractionId()
     const now = Date.now()
     const event: LogEvent = {
       ts: now,

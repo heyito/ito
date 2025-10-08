@@ -115,12 +115,12 @@ module.exports = {
   buildDependenciesFromSource: false,
   nsis: {
     shortcutName: '${productName}',
-    uninstallDisplayName: '${productName}',
+    uninstallDisplayName: '${productName}-uninstaller',
     createDesktopShortcut: false,
     createStartMenuShortcut: true,
     oneClick: false,
     perMachine: false,
-    allowToChangeInstallationDirectory: true,
-    deleteAppDataOnUninstall: false,
+    allowToChangeInstallationDirectory: false,
+    deleteAppDataOnUninstall: true,
   },
 }

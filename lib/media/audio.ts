@@ -1,7 +1,6 @@
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process'
 import log from 'electron-log'
 import { EventEmitter } from 'events'
-import { traceLogger } from '../main/traceLogger'
 import { getNativeBinaryPath } from './native-interface'
 
 // Message types from the native binary
@@ -82,15 +81,6 @@ class AudioRecorderService extends EventEmitter {
    * Sends a command to start recording from a specific device.
    */
   public startRecording(deviceName: string): void {
-    // Get current interaction ID for trace logging
-    const interactionId = (globalThis as any).currentInteractionId
-    if (interactionId) {
-      traceLogger.logStep(interactionId, 'AUDIO_RECORDING_START', {
-        deviceName,
-        hasProcess: !!this.#audioRecorderProcess,
-      })
-    }
-
     this.#sendCommand({ command: 'start', device_name: deviceName })
     log.info(`[AudioService] Recording started on device: ${deviceName}`)
   }
@@ -99,14 +89,6 @@ class AudioRecorderService extends EventEmitter {
    * Sends a command to stop the current recording.
    */
   public stopRecording(): void {
-    // Get current interaction ID for trace logging
-    const interactionId = (globalThis as any).currentInteractionId
-    if (interactionId) {
-      traceLogger.logStep(interactionId, 'AUDIO_RECORDING_STOP', {
-        hasProcess: !!this.#audioRecorderProcess,
-      })
-    }
-
     this.#sendCommand({ command: 'stop' })
     log.info('[AudioService] Recording stopped')
   }

@@ -98,18 +98,11 @@ const mockInteractionManager = {
   adoptInteractionId: mock(),
   clearCurrentInteraction: mock(),
   createInteraction: mock(() => Promise.resolve()),
-  getCurrentInteractionId: mock(() => 'test-interaction-123'),
+  getCurrentInteractionId: mock((): string | null => 'test-interaction-123'),
   getInteractionStartTime: mock(() => Date.now()),
 }
 mock.module('./interactions/InteractionManager', () => ({
-  InteractionManager: class MockInteractionManager {
-    startInteraction = mockInteractionManager.startInteraction
-    adoptInteractionId = mockInteractionManager.adoptInteractionId
-    clearCurrentInteraction = mockInteractionManager.clearCurrentInteraction
-    createInteraction = mockInteractionManager.createInteraction
-    getCurrentInteractionId = mockInteractionManager.getCurrentInteractionId
-    getInteractionStartTime = mockInteractionManager.getInteractionStartTime
-  },
+  interactionManager: mockInteractionManager,
 }))
 
 const mockWindowMessenger = {
@@ -134,15 +127,6 @@ mock.module('./text/TextInserter', () => ({
   },
 }))
 
-const mockTraceLogger = {
-  logStep: mock(),
-  logError: mock(),
-  endInteraction: mock(),
-}
-mock.module('./traceLogger', () => ({
-  traceLogger: mockTraceLogger,
-}))
-
 beforeEach(() => {
   console.log = mock()
   console.error = mock()
@@ -158,7 +142,6 @@ describe('TranscriptionService', () => {
     Object.values(mockWindowMessenger).forEach(mock => mock.mockClear())
     Object.values(mockTextInserter).forEach(mock => mock.mockClear())
     Object.values(mockGrammarRulesService).forEach(mock => mock.mockClear())
-    Object.values(mockTraceLogger).forEach(mock => mock.mockClear())
 
     mockGrpcClient.transcribeStream.mockClear()
     mockGrpcClient.transcribeStream.mockResolvedValue({ transcript: 'default' })
@@ -176,9 +159,7 @@ describe('TranscriptionService', () => {
       'test-interaction-123',
     )
     mockTextInserter.insertText.mockResolvedValue(true)
-
-    // Clear global interaction ID
-    ;(globalThis as any).currentInteractionId = null
+    mockInteractionManager.clearCurrentInteraction.mockClear()
   })
 
   test('should handle successful transcription flow', async () => {
@@ -186,6 +167,7 @@ describe('TranscriptionService', () => {
     mockGrpcClient.transcribeStream.mockResolvedValueOnce({
       transcript: mockTranscript,
     })
+    mockInteractionManager.getCurrentInteractionId.mockReturnValue(null)
 
     // Create fresh instance
     const { TranscriptionService } = await import('./transcriptionService')
@@ -268,11 +250,6 @@ describe('TranscriptionService', () => {
     // Should NOT call gRPC due to insufficient audio
     expect(mockGrpcClient.transcribeStream).not.toHaveBeenCalled()
     expect(mockInteractionManager.clearCurrentInteraction).toHaveBeenCalled()
-    expect(mockTraceLogger.logStep).toHaveBeenCalledWith(
-      'test-interaction-123',
-      'TRANSCRIPTION_TOO_SHORT',
-      expect.any(Object),
-    )
   })
 
   test('should prevent multiple simultaneous streams', async () => {

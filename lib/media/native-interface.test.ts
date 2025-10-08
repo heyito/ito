@@ -60,7 +60,9 @@ describe('Native Interface Module', () => {
         expect.stringContaining('native/target/aarch64-apple-darwin/release'),
         'global-key-listener',
       )
-      expect(result).toContain('aarch64-apple-darwin/release/global-key-listener')
+      expect(result).toContain(
+        'aarch64-apple-darwin/release/global-key-listener',
+      )
     })
 
     test('should resolve Windows development binary path correctly', async () => {

@@ -23,7 +23,6 @@ export const getNativeBinaryPath = (
 
 const getTargetDir = (): string | null => {
   if (isDev) {
-    // Workspace-level target directory (not per-module)
     const targetBase = join(__dirname, '../../native/target')
 
     if (platform === 'darwin') {
@@ -31,9 +30,6 @@ const getTargetDir = (): string | null => {
       const arch = os.arch() // 'arm64' or 'x64'
       const cargoArch = arch === 'arm64' ? 'aarch64' : 'x86_64'
       const targetDir = join(targetBase, `${cargoArch}-apple-darwin/release`)
-      console.log(
-        `[native-interface] arch=${arch}, cargoArch=${cargoArch}, targetDir=${targetDir}`,
-      )
       return targetDir
     } else if (platform === 'win32') {
       return join(targetBase, 'x86_64-pc-windows-gnu/release')

@@ -8,14 +8,18 @@ const nativeBinaries = [
 ]
 
 const getMacResources = () =>
-  nativeBinaries.map(binary => ({
-    from: `native/${binary}/target/\${arch}-apple-darwin/release/${binary}`,
-    to: `binaries/${binary}`,
-  }))
+  nativeBinaries.map(binary => {
+    // Map electron-builder arch to Cargo target triple
+    const cargoArch = '${arch}' === 'arm64' ? 'aarch64' : 'x86_64'
+    return {
+      from: `native/target/${cargoArch}-apple-darwin/release/${binary}`,
+      to: `binaries/${binary}`,
+    }
+  })
 
 const getWindowsResources = () =>
   nativeBinaries.map(binary => ({
-    from: `native/${binary}/target/x86_64-pc-windows-gnu/release/${binary}.exe`,
+    from: `native/target/x86_64-pc-windows-gnu/release/${binary}.exe`,
     to: `binaries/${binary}.exe`,
   }))
 

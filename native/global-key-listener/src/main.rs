@@ -75,7 +75,7 @@ fn main() {
     // Spawn a thread to read commands from stdin
     thread::spawn(|| {
         let stdin = io::stdin();
-        for line in stdin.lock().lines().flatten() {
+        for line in stdin.lock().lines().map_while(Result::ok) {
             match serde_json::from_str::<Command>(&line) {
                 Ok(command) => handle_command(command),
                 Err(e) => eprintln!("Error parsing command: {}", e),

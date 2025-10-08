@@ -57,7 +57,7 @@ fn main() {
 
     thread::spawn(move || {
         let stdin = io::stdin();
-        for l in stdin.lock().lines().flatten() {
+        for l in stdin.lock().lines().map_while(Result::ok) {
             if l.trim().is_empty() {
                 continue;
             }
@@ -220,57 +220,6 @@ impl CommandProcessor {
             let mut writer = self.stdout.lock().unwrap();
             let _ = write_framed_message(&mut *writer, MSG_TYPE_JSON, json_string.as_bytes());
         }
-    }
-}
-
-// --- MODIFIED: Function now accepts chunk_size as a parameter ---
-fn process_and_write_data<T>(
-    data: &[T],
-    resampler: &mut Option<FftFixedIn<f32>>,
-    buffer: &mut Vec<f32>,
-    stdout: &Arc<Mutex<io::Stdout>>,
-    chunk_size: usize,
-    num_channels: usize,
-) where
-    T: Sample,
-    f32: FromSample<T>,
-{
-    // Downmix to mono by averaging channels per frame to keep timebase correct
-    let mono_samples: Vec<f32> = if num_channels <= 1 {
-        data.iter().map(|s| s.to_sample::<f32>()).collect()
-    } else {
-        let mut out: Vec<f32> = Vec::with_capacity(data.len() / num_channels);
-        let mut i = 0;
-        while i + num_channels <= data.len() {
-            let mut sum = 0.0f32;
-            for c in 0..num_channels {
-                sum += data[i + c].to_sample::<f32>();
-            }
-            out.push(sum / (num_channels as f32));
-            i += num_channels;
-        }
-        out
-    };
-
-    if let Some(resampler_instance) = resampler {
-        buffer.extend_from_slice(&mono_samples);
-
-        while buffer.len() >= chunk_size {
-            let chunk_to_process = buffer.drain(..chunk_size).collect::<Vec<_>>();
-
-            match resampler_instance.process(&[chunk_to_process], None) {
-                Ok(mut resampled) => {
-                    if !resampled.is_empty() {
-                        write_audio_chunk(&resampled.remove(0), stdout);
-                    }
-                }
-                Err(e) => {
-                    eprintln!("[audio-recorder] CRITICAL: Resampling failed: {}", e);
-                }
-            }
-        }
-    } else {
-        write_audio_chunk(&mono_samples, stdout);
     }
 }
 

@@ -15,43 +15,11 @@ serde_json = "1.0"
 
 # Workspace-wide linting configuration
 [workspace.lints.clippy]
-# Pedantic lints (detailed code quality checks)
-pedantic = { level = "warn", priority = -1 }
-# Nursery lints (experimental lints that might become default)
-nursery = { level = "warn", priority = -1 }
-
-# Allow some pedantic lints that are too noisy or not applicable
-module_name_repetitions = "allow"
-missing_errors_doc = "allow"
-missing_panics_doc = "allow"
-lines_filter_map_ok = "allow"
-needless_pass_by_value = "allow"
-unreadable_literal = "allow"
-similar_names = "allow"
-uninlined_format_args = "allow"
-redundant_clone = "allow"
-float_cmp = "allow"
-ignored_unit_patterns = "allow"
-missing_const_for_fn = "allow"
-trivially_copy_pass_by_ref = "allow"
-match_same_arms = "allow"
-assigning_clones = "allow"
-comparison_chain = "allow"
-cast_possible_truncation = "allow"
-cast_possible_wrap = "allow"
-needless_pass_by_ref_mut = "allow"
-unnecessary_wraps = "allow"
-use_self = "allow"
-option_if_let_else = "allow"
-map_unwrap_or = "allow"
-cast_precision_loss = "allow"
-too_many_lines = "allow"
-unused_self = "allow"
-redundant_closure_for_method_calls = "allow"
-if_not_else = "allow"
+all = { level = "warn", priority = -1 }
+dbg_macro = "deny"                      # No debug prints should reach production
+todo = "warn"                           # Flag TODO comments for review
 
 [workspace.lints.rust]
 # Allow warnings that are unavoidable with current architecture
-unexpected_cfgs = "allow"
-dead_code = "allow"
-static_mut_refs = "allow"
+unexpected_cfgs = "allow" # Third-party objc macro issues
+static_mut_refs = "allow" # Global state for hotkey tracking

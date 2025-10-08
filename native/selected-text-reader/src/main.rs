@@ -61,7 +61,7 @@ fn main() {
     // Spawn thread to read commands from stdin
     thread::spawn(move || {
         let stdin = io::stdin();
-        for l in stdin.lock().lines().flatten() {
+        for l in stdin.lock().lines().map_while(Result::ok) {
             if l.trim().is_empty() {
                 continue;
             }

@@ -317,6 +317,7 @@ export const startKeyListener = () => {
   }
 
   const binaryPath = getNativeBinaryPath(nativeModuleName)
+  console.log({ binaryPath })
   if (!binaryPath) {
     console.error('Could not determine key listener binary path.')
     return

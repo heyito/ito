@@ -14,7 +14,9 @@
       "Bash(cargo test)",
       "Bash(cargo test:*)",
       "Bash(bun:*)",
-      "Bash(cargo clippy:*)"
+      "Bash(cargo clippy:*)",
+      "Bash(cargo clean:*)",
+      "Bash(awk:*)"
     ],
     "deny": [],
     "ask": []

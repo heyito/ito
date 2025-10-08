@@ -1,12 +1,8 @@
 use arboard::Clipboard;
 use libc::c_void;
-use lru::LruCache;
-use parking_lot::Mutex;
 use std::ptr;
 use std::thread;
 use std::time::Duration;
-
-static GET_SELECTED_TEXT_METHOD: Mutex<Option<LruCache<String, u8>>> = Mutex::new(None);
 
 // Count characters as the editor sees them (on macOS, just use normal char
 // count)
@@ -23,10 +19,8 @@ type CGKeyCode = u16;
 type CGEventFlags = u64;
 const CG_EVENT_FLAG_MASK_COMMAND: CGEventFlags = 0x100000;
 const CG_EVENT_FLAG_MASK_SHIFT: CGEventFlags = 0x020000;
-const CG_EVENT_FLAG_MASK_CONTROL: CGEventFlags = 0x040000;
 
 type CGEventTapLocation = u32;
-const CG_HID_EVENT_TAP: CGEventTapLocation = 0;
 const CG_SESSION_EVENT_TAP: CGEventTapLocation = 1;
 
 extern "C" {

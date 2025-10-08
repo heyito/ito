@@ -8,7 +8,7 @@ const isDev = !app.isPackaged
 export const getNativeBinaryPath = (
   nativeModuleName: string,
 ): string | null => {
-  const targetDir = getTargetDir(nativeModuleName)
+  const targetDir = getTargetDir()
   const binaryName =
     platform === 'win32' ? `${nativeModuleName}.exe` : `${nativeModuleName}`
 
@@ -21,15 +21,20 @@ export const getNativeBinaryPath = (
   return join(targetDir, binaryName)
 }
 
-const getTargetDir = (nativeModuleName: string): string | null => {
+const getTargetDir = (): string | null => {
   if (isDev) {
-    const targetBase = join(
-      __dirname,
-      `../../native/${nativeModuleName}/target`,
-    )
+    // Workspace-level target directory (not per-module)
+    const targetBase = join(__dirname, '../../native/target')
 
     if (platform === 'darwin') {
-      return join(targetBase, 'universal')
+      // Detect current architecture
+      const arch = os.arch() // 'arm64' or 'x64'
+      const cargoArch = arch === 'arm64' ? 'aarch64' : 'x86_64'
+      const targetDir = join(targetBase, `${cargoArch}-apple-darwin/release`)
+      console.log(
+        `[native-interface] arch=${arch}, cargoArch=${cargoArch}, targetDir=${targetDir}`,
+      )
+      return targetDir
     } else if (platform === 'win32') {
       return join(targetBase, 'x86_64-pc-windows-gnu/release')
     }

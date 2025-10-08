@@ -14,7 +14,7 @@ export const getNativeBinaryPath = (
 
   if (!targetDir) {
     console.error(
-      `Cannot determine ${nativeModuleName} binary path for platform ${os.platform()}`,
+      `Cannot determine ${nativeModuleName} binary path for platform ${platform}`,
     )
     return null
   }

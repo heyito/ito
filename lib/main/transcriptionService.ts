@@ -189,9 +189,14 @@ export class TranscriptionService {
     // clear the interaction and allow future starts after a short delay.
     setTimeout(() => {
       if (!this.audioStreamManager.isCurrentlyStreaming()) {
-        // If the interaction manager doesn't hold an interaction, clear global and unlock
-        interactionManager.clearCurrentInteraction()
-        this.isFinalizing = false
+        // Only clear if we never started gRPC; success/error handlers will clear otherwise
+        if (!this.hasStartedGrpc) {
+          interactionManager.clearCurrentInteraction()
+        }
+        // Unlock only if nothing else is finalizing
+        if (!this.isFinalizing) {
+          this.isFinalizing = false
+        }
       }
     }, 750)
   }

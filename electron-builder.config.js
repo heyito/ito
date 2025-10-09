@@ -66,7 +66,7 @@ module.exports = {
     hardenedRuntime: true,
     gatekeeperAssess: false,
     identity: 'Demox Labs, Inc. (294ZSTM7UB)',
-    notarize: false,
+    notarize: true,
     entitlements: 'build/entitlements.mac.plist',
     entitlementsInherit: 'build/entitlements.mac.inherit.plist',
     extendInfo: {

@@ -107,13 +107,18 @@ build_native_modules() {
     
     case $platform in
         "mac")
-            ./build-binaries.sh --mac --universal
+            # Build for both architectures for release
+            ./build-binaries.sh --mac
+            ./build-binaries.sh --mac --x64
             ;;
         "windows")
             ./build-binaries.sh --windows
             ;;
         "all")
-            ./build-binaries.sh --all --universal
+            # Build for all platforms and architectures for release
+            ./build-binaries.sh --mac
+            ./build-binaries.sh --mac --x64
+            ./build-binaries.sh --windows
             ;;
         *)
             print_error "Invalid platform: $platform. Use 'mac', 'windows', or 'all'"

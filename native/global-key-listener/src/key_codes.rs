@@ -94,3 +94,61 @@ pub fn key_to_code(key: &Key) -> Option<u32> {
         _ => None, // For keys that don't have a standard code
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_key_to_code_letters() {
+        // Test common letter keys
+        assert_eq!(key_to_code(&Key::KeyA), Some(65));
+        assert_eq!(key_to_code(&Key::KeyZ), Some(90));
+        assert_eq!(key_to_code(&Key::KeyC), Some(67));
+    }
+
+    #[test]
+    fn test_key_to_code_numbers() {
+        // Test number keys
+        assert_eq!(key_to_code(&Key::Num0), Some(48));
+        assert_eq!(key_to_code(&Key::Num5), Some(53));
+        assert_eq!(key_to_code(&Key::Num9), Some(57));
+    }
+
+    #[test]
+    fn test_key_to_code_modifiers() {
+        // Test modifier keys
+        assert_eq!(key_to_code(&Key::ControlLeft), Some(17));
+        assert_eq!(key_to_code(&Key::ControlRight), Some(17));
+        assert_eq!(key_to_code(&Key::ShiftLeft), Some(16));
+        assert_eq!(key_to_code(&Key::ShiftRight), Some(16));
+        assert_eq!(key_to_code(&Key::Alt), Some(18));
+    }
+
+    #[test]
+    fn test_key_to_code_function_keys() {
+        // Test function keys
+        assert_eq!(key_to_code(&Key::F1), Some(112));
+        assert_eq!(key_to_code(&Key::F12), Some(123));
+        assert_eq!(key_to_code(&Key::Function), Some(179));
+    }
+
+    #[test]
+    fn test_key_to_code_special_keys() {
+        // Test special keys
+        assert_eq!(key_to_code(&Key::Escape), Some(27));
+        assert_eq!(key_to_code(&Key::Return), Some(13));
+        assert_eq!(key_to_code(&Key::Space), Some(32));
+        assert_eq!(key_to_code(&Key::Tab), Some(9));
+        assert_eq!(key_to_code(&Key::Backspace), Some(8));
+    }
+
+    #[test]
+    fn test_key_to_code_arrow_keys() {
+        // Test arrow keys
+        assert_eq!(key_to_code(&Key::UpArrow), Some(38));
+        assert_eq!(key_to_code(&Key::DownArrow), Some(40));
+        assert_eq!(key_to_code(&Key::LeftArrow), Some(37));
+        assert_eq!(key_to_code(&Key::RightArrow), Some(39));
+    }
+}

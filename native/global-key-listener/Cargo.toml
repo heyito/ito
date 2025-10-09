@@ -25,3 +25,6 @@ core-foundation = "0.9"
 core-graphics = "0.22"
 cocoa = "0.25"
 objc = "0.2"
+
+[lints]
+workspace = true

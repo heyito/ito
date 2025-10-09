@@ -18,3 +18,6 @@ accessibility-sys-ng = "0.1"
 active-win-pos-rs = "0.8"
 core-foundation = "0.9"
 libc = "0.2"
+
+[lints]
+workspace = true

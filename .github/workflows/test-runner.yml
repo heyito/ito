@@ -25,3 +25,9 @@ jobs:
 
       - name: Check code linting
         run: bun lint:app
+
+      - name: Check Rust formatting
+        run: bun format:native
+
+      - name: Check Rust linting
+        run: bun lint:native

@@ -8,7 +8,8 @@ use std::thread;
 use std::time::Duration;
 
 /// Type text on macOS using clipboard paste approach
-/// This avoids character-by-character typing which can cause issues in some apps
+/// This avoids character-by-character typing which can cause issues in some
+/// apps
 pub fn type_text_macos(text: &str, _char_delay: u64) -> Result<(), String> {
     unsafe {
         // Create an autorelease pool for memory management
@@ -66,7 +67,8 @@ pub fn type_text_macos(text: &str, _char_delay: u64) -> Result<(), String> {
         thread::sleep(Duration::from_millis(10));
         key_v_up.post(core_graphics::event::CGEventTapLocation::HID);
 
-        // Restore old clipboard contents in background after delay in separate thread to not block
+        // Restore old clipboard contents in background after delay in separate thread
+        // to not block
         if old_contents != nil {
             // Convert Objective-C string to Rust String to make it Send-safe
             let old_contents_str = {

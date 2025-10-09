@@ -3,15 +3,18 @@ name: CI Controller
 on:
   push:
     branches:
-      - '**'
+      - 'main'
+      - 'dev'
   pull_request:
     branches:
-      - main
-      - dev
+      - '**'
 
 jobs:
   run-tests:
     uses: ./.github/workflows/test-runner.yml
+
+  native-build-check:
+    uses: ./.github/workflows/native-build-check.yml
 
   # This job ONLY runs for pushes to 'dev' and 'main'
   deploy-server:

@@ -17,15 +17,16 @@ Main development branch: `dev`
 
 ## Development Commands
 
-- Dev: `bun dev` (starts electron-vite dev with watch)
-- Server: `docker compose up --build` (run from server directory)
-- Build: `bun build:app:mac` or `bun build:app:windows`
-- Test: `bun runAllTests` (runs both lib and server tests)
-  - Lib tests: `bun runLibTests`
-  - Server tests: `bun runServerTests`
-- Lint: `bun lint` (check) or `bun lint:fix` (fix)
-- Type check: `bun type-check`
-- Format: `bun format` (check) or `bun format:fix` (fix)
+- Dev: `bun run dev` (starts electron-vite dev with watch)
+- Dev (with fresh native binaries): `bun run dev:rust`
+- Server: `bun run dev` (run inside `server/`; use `bun run local-db-up` first if Postgres is down)
+- Build: `bun run build:mac`, `bun run build:win`, or `bun run build:app`
+- Test: `bun run runAllTests` (runs both lib and server tests)
+  - Lib tests: `bun run runLibTests`
+  - Server tests: `bun run runServerTests`
+- Lint: `bun run lint` (check) or `bun run lint:fix` (fix)
+- Type check: `bun run type-check`
+- Format: `bun run format` (check) or `bun run format:fix` (fix)
 
 ## Code Style Preferences
 

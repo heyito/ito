@@ -14,7 +14,6 @@ export class TranscriptionService {
   private audioStreamManager = new AudioStreamManager()
   private windowMessenger = new WindowMessenger()
   private textInserter = new TextInserter()
-  private isFinalizing: boolean = false
   private hasStartedGrpc = false
   private currentMode: ItoMode | null = null
   private interactionId: string | null = null
@@ -23,13 +22,6 @@ export class TranscriptionService {
     // Guard against multiple concurrent transcriptions
     if (this.audioStreamManager.isCurrentlyStreaming()) {
       log.warn('[TranscriptionService] Stream already in progress.')
-      return false
-    }
-    // Guard while we are finalizing the previous interaction (creating DB rows, inserting text)
-    if (this.isFinalizing) {
-      log.warn(
-        '[TranscriptionService] Finalizing previous interaction, ignoring new start.',
-      )
       return false
     }
 
@@ -91,8 +83,6 @@ export class TranscriptionService {
   }
 
   private async handleTranscriptionResponse(response: any) {
-    // Prevent new streams while we finalize
-    this.isFinalizing = true
     // Add debugging to see what we received
     console.log('[TranscriptionService] Processing transcription response:', {
       transcript: response.transcript,
@@ -119,7 +109,6 @@ export class TranscriptionService {
 
       this.audioStreamManager.clearInteractionAudio()
       interactionManager.clearCurrentInteraction()
-      this.isFinalizing = false
     } else {
       // Handle text insertion with grammar-corrected text
       if (response.transcript && !response.error) {
@@ -161,7 +150,6 @@ export class TranscriptionService {
 
       this.audioStreamManager.clearInteractionAudio()
       interactionManager.clearCurrentInteraction()
-      this.isFinalizing = false
     }
   }
 
@@ -177,23 +165,10 @@ export class TranscriptionService {
     // Clear current interaction on error
     interactionManager.clearCurrentInteraction()
     this.audioStreamManager.clearInteractionAudio()
-    this.isFinalizing = false
   }
 
   public stopTranscription() {
-    // Mark as finalizing to ignore accidental restarts during paste/DB save
-    this.isFinalizing = true
     this.audioStreamManager.stopStreaming()
-
-    // Fallback: if no streaming is active and no handler will reset the flag,
-    // clear the interaction and allow future starts after a short delay.
-    setTimeout(() => {
-      if (!this.audioStreamManager.isCurrentlyStreaming()) {
-        // If the interaction manager doesn't hold an interaction, clear global and unlock
-        interactionManager.clearCurrentInteraction()
-        this.isFinalizing = false
-      }
-    }, 750)
   }
 
   public handleAudioChunk(chunk: Buffer) {

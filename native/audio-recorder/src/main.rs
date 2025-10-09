@@ -79,9 +79,6 @@ struct CommandProcessor {
     active_stream: Option<cpal::Stream>,
     stdout: Arc<Mutex<io::Stdout>>,
     cached_host: Option<Rc<cpal::Host>>,
-    // Offloaded writer thread state
-    audio_tx: Option<crossbeam_channel::Sender<Vec<f32>>>,
-    writer_handle: Option<std::thread::JoinHandle<()>>,
 }
 
 impl CommandProcessor {
@@ -91,8 +88,6 @@ impl CommandProcessor {
             active_stream: None,
             stdout,
             cached_host: None,
-            audio_tx: None,
-            writer_handle: None,
         }
     }
 
@@ -160,11 +155,9 @@ impl CommandProcessor {
         self.stop_recording();
 
         let host = self.get_or_create_host();
-        if let Ok(handles) = start_capture(device_name, Arc::clone(&self.stdout), host) {
-            if handles.stream.play().is_ok() {
-                self.audio_tx = Some(handles.audio_tx);
-                self.writer_handle = Some(handles.writer_handle);
-                self.active_stream = Some(handles.stream);
+        if let Ok(stream) = start_capture(device_name, Arc::clone(&self.stdout), host) {
+            if stream.play().is_ok() {
+                self.active_stream = Some(stream)
             }
         } else {
             eprintln!("[audio-recorder] CRITICAL: Failed to create audio stream");
@@ -175,13 +168,6 @@ impl CommandProcessor {
         if let Some(stream) = self.active_stream.take() {
             let _ = stream.pause();
             drop(stream);
-        }
-        // Close audio channel to signal writer thread to exit
-        if let Some(tx) = self.audio_tx.take() {
-            drop(tx);
-        }
-        if let Some(handle) = self.writer_handle.take() {
-            let _ = handle.join();
         }
     }
 
@@ -287,117 +273,13 @@ fn write_audio_chunk(data: &[f32], stdout: &Arc<Mutex<io::Stdout>>) {
     }
 }
 
-struct CaptureHandles {
-    stream: cpal::Stream,
-    audio_tx: crossbeam_channel::Sender<Vec<f32>>,
-    writer_handle: std::thread::JoinHandle<()>,
-}
-
-fn downmix_to_mono_vec<T>(data: &[T], num_channels: usize) -> Vec<f32>
-where
-    T: Sample,
-    f32: FromSample<T>,
-{
-    if num_channels <= 1 {
-        return data.iter().map(|s| s.to_sample::<f32>()).collect();
-    }
-    let mut out: Vec<f32> = Vec::with_capacity(data.len() / num_channels);
-    let mut i = 0;
-    while i + num_channels <= data.len() {
-        let mut sum = 0.0f32;
-        for c in 0..num_channels {
-            sum += data[i + c].to_sample::<f32>();
-        }
-        out.push(sum / (num_channels as f32));
-        i += num_channels;
-    }
-    out
-}
-
-fn writer_loop(
-    audio_rx: crossbeam_channel::Receiver<Vec<f32>>,
-    stdout: Arc<Mutex<io::Stdout>>,
-    input_sample_rate: u32,
-) {
-    const TARGET_SAMPLE_RATE: u32 = 16000;
-    const RESAMPLER_CHUNK_SIZE: usize = 2048; // larger chunk to reduce overhead
-
-    let mut resampler_opt = if input_sample_rate != TARGET_SAMPLE_RATE {
-        match FftFixedIn::new(
-            input_sample_rate as usize,
-            TARGET_SAMPLE_RATE as usize,
-            RESAMPLER_CHUNK_SIZE,
-            1,
-            1,
-        ) {
-            Ok(r) => Some(r),
-            Err(e) => {
-                eprintln!("[audio-recorder] CRITICAL: Failed to create resampler: {}", e);
-                None
-            }
-        }
-    } else {
-        None
-    };
-
-    let mut in_buffer: Vec<f32> = Vec::new();
-
-    while let Ok(frame) = audio_rx.recv() {
-        if let Some(resampler) = resampler_opt.as_mut() {
-            in_buffer.extend_from_slice(&frame);
-            while in_buffer.len() >= RESAMPLER_CHUNK_SIZE {
-                let chunk_to_process: Vec<f32> = in_buffer
-                    .drain(..RESAMPLER_CHUNK_SIZE)
-                    .collect::<Vec<_>>();
-                match resampler.process(&[chunk_to_process], None) {
-                    Ok(mut resampled) => {
-                        if !resampled.is_empty() {
-                            write_audio_chunk(&resampled.remove(0), &stdout);
-                        }
-                    }
-                    Err(e) => eprintln!(
-                        "[audio-recorder] CRITICAL: Resampling failed in writer: {}",
-                        e
-                    ),
-                }
-            }
-        } else {
-            // direct write at input rate
-            write_audio_chunk(&frame, &stdout);
-        }
-    }
-
-    // Channel closed; flush any remaining buffered samples through resampler
-    if let Some(mut resampler) = resampler_opt.take() {
-        while !in_buffer.is_empty() {
-            let take = if in_buffer.len() >= RESAMPLER_CHUNK_SIZE {
-                RESAMPLER_CHUNK_SIZE
-            } else {
-                in_buffer.len()
-            };
-            let mut chunk = in_buffer.drain(..take).collect::<Vec<_>>();
-            if chunk.len() < RESAMPLER_CHUNK_SIZE {
-                // zero-pad final chunk to meet resampler size
-                chunk.resize(RESAMPLER_CHUNK_SIZE, 0.0);
-            }
-            if let Ok(mut resampled) = resampler.process(&[chunk], None) {
-                if !resampled.is_empty() {
-                    write_audio_chunk(&resampled.remove(0), &stdout);
-                }
-            }
-        }
-    } else if !in_buffer.is_empty() {
-        write_audio_chunk(&in_buffer, &stdout);
-    }
-}
-
 fn start_capture(
     device_name: Option<String>,
     stdout: Arc<Mutex<io::Stdout>>,
     host: Rc<cpal::Host>,
-) -> Result<CaptureHandles> {
+) -> Result<cpal::Stream> {
     const TARGET_SAMPLE_RATE: u32 = 16000;
-    const QUEUE_CAPACITY: usize = 64;
+    const RESAMPLER_CHUNK_SIZE: usize = 1024;
 
     let device = if let Some(name) = device_name {
         if name.to_lowercase() == "default" || name.is_empty() {
@@ -411,25 +293,33 @@ fn start_capture(
     }
     .ok_or_else(|| anyhow!("[audio-recorder] Failed to find input device"))?;
 
-    // Prefer the device's default input configuration instead of max rate to
-    // better align with other apps (e.g., Zoom) and reduce host resampling.
-    let default_config = device
-        .default_input_config()
-        .map_err(|_| anyhow!("[audio-recorder] No default input config found"))?;
+    let config = device
+        .supported_input_configs()?
+        .find(|r| r.channels() > 0)
+        .ok_or_else(|| anyhow!("[audio-recorder] No supported input config found"))?
+        .with_max_sample_rate();
 
-    let input_sample_rate = default_config.sample_rate().0;
-    let input_sample_format = default_config.sample_format();
-    let channels_count: usize = default_config.channels() as usize;
+    let input_sample_rate = config.sample_rate().0;
+    let input_sample_format = config.sample_format();
+
+    let mut resampler = if input_sample_rate != TARGET_SAMPLE_RATE {
+        let resampler = FftFixedIn::new(
+            input_sample_rate as usize,
+            TARGET_SAMPLE_RATE as usize,
+            RESAMPLER_CHUNK_SIZE,
+            1,
+            1,
+        )?;
+        Some(resampler)
+    } else {
+        None
+    };
 
     let err_fn = |err| eprintln!("[audio-recorder] Stream error: {}", err);
-    let stream_config: StreamConfig = default_config.clone().into();
+    let stream_config: StreamConfig = config.clone().into();
 
-    // Writer thread and queue
-    let (audio_tx, audio_rx) = crossbeam_channel::bounded::<Vec<f32>>(QUEUE_CAPACITY);
-    let stdout_for_writer = Arc::clone(&stdout);
-    let writer_handle = std::thread::spawn(move || {
-        writer_loop(audio_rx, stdout_for_writer, input_sample_rate);
-    });
+    let mut audio_buffer: Vec<f32> = Vec::new();
+    let channels_count: usize = config.channels() as usize;
 
     // Notify JS about input and effective output audio configuration
     {
@@ -446,90 +336,112 @@ fn start_capture(
     }
 
     let stream = match input_sample_format {
-        SampleFormat::F32 => {
-            let tx = audio_tx.clone();
-            device.build_input_stream(
-                &stream_config,
-                move |data: &[f32], _| {
-                    let mono = downmix_to_mono_vec(data, channels_count);
-                    let _ = tx.try_send(mono);
-                },
-                err_fn,
-                None,
-            )?
-        }
-        SampleFormat::I16 => {
-            let tx = audio_tx.clone();
-            device.build_input_stream(
-                &stream_config,
-                move |data: &[i16], _| {
-                    let mono = downmix_to_mono_vec(data, channels_count);
-                    let _ = tx.try_send(mono);
-                },
-                err_fn,
-                None,
-            )?
-        }
-        SampleFormat::U16 => {
-            let tx = audio_tx.clone();
-            device.build_input_stream(
-                &stream_config,
-                move |data: &[u16], _| {
-                    let mono = downmix_to_mono_vec(data, channels_count);
-                    let _ = tx.try_send(mono);
-                },
-                err_fn,
-                None,
-            )?
-        }
-        SampleFormat::U8 => {
-            let tx = audio_tx.clone();
-            device.build_input_stream(
-                &stream_config,
-                move |data: &[u8], _| {
-                    let mono = downmix_to_mono_vec(data, channels_count);
-                    let _ = tx.try_send(mono);
-                },
-                err_fn,
-                None,
-            )?
-        }
-        SampleFormat::I32 => {
-            let tx = audio_tx.clone();
-            device.build_input_stream(
-                &stream_config,
-                move |data: &[i32], _| {
-                    let mono = downmix_to_mono_vec(data, channels_count);
-                    let _ = tx.try_send(mono);
-                },
-                err_fn,
-                None,
-            )?
-        }
-        SampleFormat::F64 => {
-            let tx = audio_tx.clone();
-            device.build_input_stream(
-                &stream_config,
-                move |data: &[f64], _| {
-                    let mono = downmix_to_mono_vec(data, channels_count);
-                    let _ = tx.try_send(mono);
-                },
-                err_fn,
-                None,
-            )?
-        }
-        SampleFormat::U32 => {
-            let tx = audio_tx.clone();
-            device.build_input_stream(
-                &stream_config,
-                move |data: &[u32], _| {
-                    let mono = downmix_to_mono_vec(data, channels_count);
-                    let _ = tx.try_send(mono);
-                },
-                err_fn,
-                None,
-            )?
-        }
+        // --- MODIFIED: The callbacks now pass the known chunk size ---
+        SampleFormat::F32 => device.build_input_stream(
+            &stream_config,
+            move |data: &[f32], _| {
+                process_and_write_data(
+                    data,
+                    &mut resampler,
+                    &mut audio_buffer,
+                    &stdout,
+                    RESAMPLER_CHUNK_SIZE,
+                    channels_count,
+                )
+            },
+            err_fn,
+            None,
+        )?,
+        SampleFormat::I16 => device.build_input_stream(
+            &stream_config,
+            move |data: &[i16], _| {
+                process_and_write_data(
+                    data,
+                    &mut resampler,
+                    &mut audio_buffer,
+                    &stdout,
+                    RESAMPLER_CHUNK_SIZE,
+                    channels_count,
+                )
+            },
+            err_fn,
+            None,
+        )?,
+        SampleFormat::U16 => device.build_input_stream(
+            &stream_config,
+            move |data: &[u16], _| {
+                process_and_write_data(
+                    data,
+                    &mut resampler,
+                    &mut audio_buffer,
+                    &stdout,
+                    RESAMPLER_CHUNK_SIZE,
+                    channels_count,
+                )
+            },
+            err_fn,
+            None,
+        )?,
+        SampleFormat::U8 => device.build_input_stream(
+            &stream_config,
+            move |data: &[u8], _| {
+                process_and_write_data(
+                    data,
+                    &mut resampler,
+                    &mut audio_buffer,
+                    &stdout,
+                    RESAMPLER_CHUNK_SIZE,
+                    channels_count,
+                )
+            },
+            err_fn,
+            None,
+        )?,
+        SampleFormat::I32 => device.build_input_stream(
+            &stream_config,
+            move |data: &[i32], _| {
+                process_and_write_data(
+                    data,
+                    &mut resampler,
+                    &mut audio_buffer,
+                    &stdout,
+                    RESAMPLER_CHUNK_SIZE,
+                    channels_count,
+                )
+            },
+            err_fn,
+            None,
+        )?,
+        SampleFormat::F64 => device.build_input_stream(
+            &stream_config,
+            move |data: &[f64], _| {
+                process_and_write_data(
+                    data,
+                    &mut resampler,
+                    &mut audio_buffer,
+                    &stdout,
+                    RESAMPLER_CHUNK_SIZE,
+                    channels_count,
+                )
+            },
+            err_fn,
+            None,
+        )?,
+        SampleFormat::U32 => device.build_input_stream(
+            &stream_config,
+            move |data: &[u32], _| {
+                process_and_write_data(
+                    data,
+                    &mut resampler,
+                    &mut audio_buffer,
+                    &stdout,
+                    RESAMPLER_CHUNK_SIZE,
+                    channels_count,
+                )
+            },
+            err_fn,
+            None,
+        )?,
         format => {
             return Err(anyhow!(
                 "[audio-recorder] Unsupported sample format {}",
@@ -538,5 +450,5 @@ fn start_capture(
         }
     };
 
-    Ok(CaptureHandles { stream, audio_tx, writer_handle })
+    Ok(stream)
 }

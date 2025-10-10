@@ -15,6 +15,7 @@ import {
   ItoMode,
   TranscribeStreamRequest,
   StreamConfig,
+  StreamConfigSchema,
   ContextInfo,
   TranscriptionSettings,
 } from '../../generated/ito_pb.js'
@@ -49,6 +50,7 @@ import {
   createUserPromptWithContext,
 } from './helpers.js'
 import { ITO_MODE_SYSTEM_PROMPT } from './constants.js'
+import { DEFAULT_ADVANCED_SETTINGS } from '../../constants/generated-defaults.js'
 
 /**
  * --- NEW: WAV Header Generation Function ---
@@ -199,16 +201,16 @@ export default (router: ConnectRouter) => {
   router.service(ItoServiceDesc, {
     async transcribeStreamV2(
       requests: AsyncIterable<TranscribeStreamRequest>,
-      context: HandlerContext,
+      _context: HandlerContext,
     ) {
       const startTime = Date.now()
       const audioChunks: Uint8Array[] = []
-      let mergedConfig: StreamConfig = {
+      let mergedConfig: StreamConfig = create(StreamConfigSchema, {
         context: undefined,
         transcriptionSettings: undefined,
         llmSettings: undefined,
         vocabulary: [],
-      }
+      })
 
       console.log(
         `📩 [${new Date().toISOString()}] Starting TranscribeStreamV2`,

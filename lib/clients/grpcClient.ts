@@ -21,6 +21,12 @@ import {
   GetAdvancedSettingsRequestSchema,
   UpdateAdvancedSettingsRequestSchema,
   ItoMode,
+  TranscribeStreamRequest,
+  TranscribeStreamRequestSchema,
+  StreamConfigSchema,
+  ContextInfoSchema,
+  TranscriptionSettingsSchema,
+  LlmSettingsSchema,
 } from '@/app/generated/ito_pb'
 import { createClient } from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-node'
@@ -267,6 +273,100 @@ class GrpcClient {
       const response = await this.client.transcribeStream(stream, {
         headers: await this.getHeadersWithMetadata(mode),
       })
+      return response
+    })
+  }
+
+  /**
+   * Enhanced streaming transcription using TranscribeStreamV2.
+   * Sends configuration in-stream instead of headers, allowing immediate streaming
+   * without waiting for context to be fetched.
+   */
+  async transcribeStreamV2(stream: AsyncIterable<AudioChunk>, mode: ItoMode) {
+    return this.withRetry(async () => {
+      // Create wrapper stream that sends config first, then audio chunks
+      async function* wrapStream(
+        audioStream: AsyncIterable<AudioChunk>,
+        mode: ItoMode,
+      ): AsyncGenerator<TranscribeStreamRequest> {
+        // Gather all config data
+        const user_id = getCurrentUserId()
+        const dictionaryItems = await DictionaryTable.findAll(user_id)
+        const vocabularyWords = dictionaryItems
+          .filter(item => item.deleted_at === null)
+          .map(item => item.word)
+
+        const windowContext = await getActiveWindow()
+        const advancedSettings = getAdvancedSettings()
+
+        let contextText = ''
+        try {
+          if (mode === ItoMode.EDIT) {
+            const text = await getSelectedTextString(10000)
+            if (text && text.trim().length > 0) {
+              contextText = text
+            }
+          }
+        } catch (error) {
+          console.error('[gRPC Client V2] Error getting context text:', error)
+        }
+
+        // Send config as first message
+        const configMessage = create(TranscribeStreamRequestSchema, {
+          payload: {
+            case: 'config',
+            value: create(StreamConfigSchema, {
+              context: create(ContextInfoSchema, {
+                windowTitle: windowContext?.title || '',
+                appName: windowContext?.appName || '',
+                contextText,
+                mode,
+              }),
+              transcriptionSettings: create(TranscriptionSettingsSchema, {
+                asrModel: advancedSettings.llm.asrModel,
+                asrProvider: advancedSettings.llm.asrProvider,
+                asrPrompt: advancedSettings.llm.asrPrompt,
+                noSpeechThreshold: advancedSettings.llm.noSpeechThreshold,
+                lowQualityThreshold: advancedSettings.llm.lowQualityThreshold,
+              }),
+              llmSettings: create(LlmSettingsSchema, {
+                llmProvider: advancedSettings.llm.llmProvider,
+                llmModel: advancedSettings.llm.llmModel,
+                llmTemperature: advancedSettings.llm.llmTemperature,
+                transcriptionPrompt: advancedSettings.llm.transcriptionPrompt,
+                editingPrompt: advancedSettings.llm.editingPrompt,
+                // Note: ASR fields are in transcriptionSettings, not llmSettings
+                asrModel: '',
+                asrProvider: '',
+                asrPrompt: '',
+                noSpeechThreshold: 0,
+                lowQualityThreshold: 0,
+              }),
+              vocabulary: vocabularyWords,
+            }),
+          },
+        })
+
+        console.log('[gRPC Client V2] Sending config message')
+        yield configMessage
+
+        // Then stream all audio chunks
+        for await (const audioChunk of audioStream) {
+          yield create(TranscribeStreamRequestSchema, {
+            payload: {
+              case: 'audioData',
+              value: audioChunk.audioData,
+            },
+          })
+        }
+      }
+
+      const response = await this.client.transcribeStreamV2(
+        wrapStream(stream, mode),
+        {
+          headers: this.getHeaders(), // Only auth header needed now
+        },
+      )
       return response
     })
   }

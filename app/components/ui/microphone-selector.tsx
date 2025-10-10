@@ -49,11 +49,7 @@ export function MicrophoneSelector({
     const loadMicrophones = async () => {
       try {
         const mics = await getAvailableMicrophones()
-        setAvailableMicrophones(
-          mics.concat(
-            [...Array(10)].map(() => ({ deviceId: 'foo', label: 'bar' })),
-          ),
-        )
+        setAvailableMicrophones(mics)
       } catch (error) {
         console.error('Failed to load microphones:', error)
       }

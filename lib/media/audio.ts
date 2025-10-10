@@ -21,6 +21,10 @@ class AudioRecorderService extends EventEmitter {
     resolve: (value: string[]) => void
     reject: (reason?: any) => void
   } | null = null
+  #drainPromise: {
+    resolve: () => void
+    reject: (reason?: any) => void
+  } | null = null
 
   constructor() {
     super()
@@ -204,6 +208,11 @@ class AudioRecorderService extends EventEmitter {
             outputSampleRate: outputRate,
             channels,
           })
+        } else if (jsonResponse.type === 'drain-complete') {
+          if (this.#drainPromise) {
+            this.#drainPromise.resolve()
+            this.#drainPromise = null
+          }
         }
         // You could emit a generic 'json-message' event here if needed
       } catch (err) {
@@ -215,6 +224,10 @@ class AudioRecorderService extends EventEmitter {
           )
           this.#deviceListPromise = null
         }
+        if (this.#drainPromise) {
+          this.#drainPromise.reject(err as Error)
+          this.#drainPromise = null
+        }
       }
     } else if (message.type === 'audio') {
       const volume = this.#calculateVolume(message.payload)
@@ -222,6 +235,41 @@ class AudioRecorderService extends EventEmitter {
       this.emit('volume-update', volume)
       this.emit('audio-chunk', message.payload)
     }
+  }
+
+  public awaitDrainComplete(timeoutMs: number = 500): Promise<void> {
+    if (this.#drainPromise) {
+      return new Promise((resolve, reject) => {
+        this.once('error', reject)
+        this.#drainPromise = { resolve, reject }
+      })
+    }
+    return new Promise((resolve, reject) => {
+      let settled = false
+      const onTimeout = setTimeout(() => {
+        if (!settled) {
+          settled = true
+          this.#drainPromise = null
+          resolve() // fallback: do not hang the stop flow
+        }
+      }, timeoutMs)
+      this.#drainPromise = {
+        resolve: () => {
+          if (!settled) {
+            settled = true
+            clearTimeout(onTimeout)
+            resolve()
+          }
+        },
+        reject: (err?: any) => {
+          if (!settled) {
+            settled = true
+            clearTimeout(onTimeout)
+            reject(err)
+          }
+        },
+      }
+    })
   }
 
   #sendCommand(command: object): void {

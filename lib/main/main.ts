@@ -1,3 +1,4 @@
+import './env'
 import './sentry'
 import { app, protocol } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'

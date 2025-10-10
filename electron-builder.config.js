@@ -19,9 +19,10 @@ const getWindowsResources = () =>
     to: `binaries/${binary}.exe`,
   }))
 
+const stage = process.env.ITO_ENV || 'prod'
 module.exports = {
-  appId: 'ai.ito.ito',
-  productName: 'Ito',
+  appId: stage === 'prod' ? 'ai.ito.ito' : `ai.ito.ito.${stage}`,
+  productName: stage === 'prod' ? 'Ito' : `Ito (${stage})`,
   copyright: 'Copyright © 2025 Demox Labs',
   directories: {
     buildResources: 'resources',

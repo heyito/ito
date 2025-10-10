@@ -8,6 +8,7 @@ import { voiceInputService } from '../main/voiceInputService'
 import { KeyName, keyNameMap, normalizeLegacyKey } from '../types/keyboard'
 import { getProgrammaticTyping } from './typingState'
 import { interactionManager } from '../main/interactions/InteractionManager'
+import { itoController } from '../main/itoController'
 
 interface KeyEvent {
   type: 'keydown' | 'keyup'
@@ -257,19 +258,18 @@ function handleKeyEventInMain(event: KeyEvent) {
       }
 
       pendingShortcut = currentlyHeldShortcut
-      shortcutDebounceTimeout = setTimeout(() => {
-        // After DEBOUNCE milliseconds, if the shortcut is still active, activate it
-        if (pendingShortcut && !isShortcutActive) {
-          isShortcutActive = true
-          console.info('lib Shortcut ACTIVATED, starting recording...')
-          interactionManager.startInteraction()
-          voiceInputService.startSTTService(pendingShortcut.mode)
-        }
 
-        // Clear debounce state
-        shortcutDebounceTimeout = null
-        pendingShortcut = null
-      }, DEBOUNCE_TIME) // debounce
+      if (pendingShortcut && !isShortcutActive) {
+        isShortcutActive = true
+        console.info('lib Shortcut ACTIVATED, starting recording...')
+        interactionManager.startInteraction()
+        itoController.startInteraction(pendingShortcut.mode)
+        // voiceInputService.startSTTService(pendingShortcut.mode)
+      }
+
+      // Clear debounce state
+      shortcutDebounceTimeout = null
+      pendingShortcut = null
     }
   } else if (!currentlyHeldShortcut) {
     // No shortcut detected - cancel pending activation or deactivate active shortcut

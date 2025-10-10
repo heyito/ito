@@ -281,7 +281,8 @@ export type FieldRules = Message<"buf.validate.FieldRules"> & {
    * the fields are set and valid.
    *
    * Fields that don't track presence are always validated by Protovalidate,
-   * whether they are set or not. It is not necessary to add `required`:
+   * whether they are set or not. It is not necessary to add `required`. It
+   * can be added to indicate that the field cannot be the zero value.
    *
    * ```proto
    * syntax="proto3";
@@ -292,8 +293,13 @@ export type FieldRules = Message<"buf.validate.FieldRules"> & {
    *     (buf.validate.field).string.email = true
    *   ];
    *   // `repeated.min_items` always applies, even to an empty list.
-   *   repeated string labels = 4 [
+   *   repeated string labels = 2 [
    *     (buf.validate.field).repeated.min_items = 1
+   *   ];
+   *   // `required`, for fields that don't track presence, indicates
+   *   // the value of the field can't be the zero value.
+   *   int32 zero_value_not_allowed = 3 [
+   *     (buf.validate.field).required = true
    *   ];
    * }
    * ```
@@ -4655,7 +4661,8 @@ export enum Ignore {
    *   // The field's rules will always be ignored, including any validations
    *   // on value's fields.
    *   MyOtherMessage value = 1 [
-   *     (buf.validate.field).ignore = IGNORE_ALWAYS];
+   *     (buf.validate.field).ignore = IGNORE_ALWAYS
+   *   ];
    * }
    * ```
    *

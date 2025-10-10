@@ -13,6 +13,10 @@ import {
   AdvancedSettingsSchema,
   LlmSettingsSchema,
   ItoMode,
+  TranscribeStreamRequest,
+  StreamConfig,
+  ContextInfo,
+  TranscriptionSettings,
 } from '../../generated/ito_pb.js'
 import { create } from '@bufbuild/protobuf'
 import type { HandlerContext } from '@connectrpc/connect'
@@ -170,9 +174,182 @@ function dbToAdvancedSettingsPb(
   })
 }
 
+/**
+ * Merges StreamConfig messages progressively.
+ * Later configs override earlier ones for the same field.
+ */
+function mergeStreamConfigs(base: StreamConfig, update: StreamConfig): StreamConfig {
+  return {
+    ...base,
+    context: update.context ? { ...base.context, ...update.context } : base.context,
+    transcriptionSettings: update.transcriptionSettings
+      ? { ...base.transcriptionSettings, ...update.transcriptionSettings }
+      : base.transcriptionSettings,
+    llmSettings: update.llmSettings
+      ? { ...base.llmSettings, ...update.llmSettings }
+      : base.llmSettings,
+    vocabulary: update.vocabulary.length > 0
+      ? [...base.vocabulary, ...update.vocabulary]
+      : base.vocabulary,
+  }
+}
+
 // Export the service implementation as a function that takes a ConnectRouter
 export default (router: ConnectRouter) => {
   router.service(ItoServiceDesc, {
+    async transcribeStreamV2(
+      requests: AsyncIterable<TranscribeStreamRequest>,
+      context: HandlerContext,
+    ) {
+      const startTime = Date.now()
+      const audioChunks: Uint8Array[] = []
+      let mergedConfig: StreamConfig = {
+        context: undefined,
+        transcriptionSettings: undefined,
+        llmSettings: undefined,
+        vocabulary: [],
+      }
+
+      console.log(
+        `📩 [${new Date().toISOString()}] Starting TranscribeStreamV2`,
+      )
+
+      // Process stream: collect audio chunks and merge configs
+      for await (const request of requests) {
+        if (request.payload.case === 'audioData') {
+          audioChunks.push(request.payload.value)
+        } else if (request.payload.case === 'config') {
+          mergedConfig = mergeStreamConfigs(mergedConfig, request.payload.value)
+          console.log(
+            `🔧 [${new Date().toISOString()}] Received config update`,
+          )
+        }
+      }
+
+      console.log(
+        `📊 [${new Date().toISOString()}] Processed ${audioChunks.length} audio chunks`,
+      )
+
+      // Concatenate all audio chunks
+      const totalLength = audioChunks.reduce(
+        (sum, chunk) => sum + chunk.length,
+        0,
+      )
+      const fullAudio = new Uint8Array(totalLength)
+      let offset = 0
+      for (const chunk of audioChunks) {
+        fullAudio.set(chunk, offset)
+        offset += chunk.length
+      }
+
+      console.log(
+        `🔧 [${new Date().toISOString()}] Concatenated audio: ${totalLength} bytes`,
+      )
+
+      try {
+        // Create WAV header
+        const sampleRate = 16000
+        const bitDepth = 16
+        const channels = 1
+        const wavHeader = createWavHeader(
+          fullAudio.length,
+          sampleRate,
+          channels,
+          bitDepth,
+        )
+        const fullAudioWAV = Buffer.concat([wavHeader, fullAudio])
+
+        // Extract config values with defaults
+        const asrModel = mergedConfig.transcriptionSettings?.asrModel || DEFAULT_ADVANCED_SETTINGS.asrModel
+        const asrProvider = mergedConfig.transcriptionSettings?.asrProvider || DEFAULT_ADVANCED_SETTINGS.asrProvider
+        const noSpeechThreshold = mergedConfig.transcriptionSettings?.noSpeechThreshold ?? DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold
+        const lowQualityThreshold = mergedConfig.transcriptionSettings?.lowQualityThreshold ?? DEFAULT_ADVANCED_SETTINGS.lowQualityThreshold
+        const vocabulary = mergedConfig.vocabulary
+
+        // Transcribe audio
+        const asrClient = getAsrProvider(asrProvider)
+        let transcript = await asrClient.transcribeAudio(fullAudioWAV, {
+          fileType: 'wav',
+          asrModel,
+          noSpeechThreshold,
+          lowQualityThreshold,
+          vocabulary,
+        })
+        console.log(
+          `📝 [${new Date().toISOString()}] Received transcript: "${transcript}"`,
+        )
+
+        // Build context
+        const windowContext: ItoContext = {
+          windowTitle: mergedConfig.context?.windowTitle || '',
+          appName: mergedConfig.context?.appName || '',
+          contextText: mergedConfig.context?.contextText || '',
+        }
+
+        // Determine mode
+        const mode = mergedConfig.context?.mode ?? detectItoMode(transcript)
+
+        // Get prompts
+        const advancedSettingsHeaders = {
+          asrModel,
+          asrProvider,
+          asrPrompt: mergedConfig.transcriptionSettings?.asrPrompt || DEFAULT_ADVANCED_SETTINGS.asrPrompt,
+          llmProvider: mergedConfig.llmSettings?.llmProvider || DEFAULT_ADVANCED_SETTINGS.llmProvider,
+          llmModel: mergedConfig.llmSettings?.llmModel || DEFAULT_ADVANCED_SETTINGS.llmModel,
+          llmTemperature: mergedConfig.llmSettings?.llmTemperature ?? DEFAULT_ADVANCED_SETTINGS.llmTemperature,
+          transcriptionPrompt: mergedConfig.llmSettings?.transcriptionPrompt || DEFAULT_ADVANCED_SETTINGS.transcriptionPrompt,
+          editingPrompt: mergedConfig.llmSettings?.editingPrompt || DEFAULT_ADVANCED_SETTINGS.editingPrompt,
+          noSpeechThreshold,
+          lowQualityThreshold,
+        }
+
+        const userPromptPrefix = getPromptForMode(mode, advancedSettingsHeaders)
+        const userPrompt = createUserPromptWithContext(transcript, windowContext)
+
+        console.log(
+          `[${new Date().toISOString()}] Detected mode: ${mode}, adjusting transcript`,
+        )
+
+        if (mode === ItoMode.EDIT) {
+          const llmProvider = getLlmProvider(advancedSettingsHeaders.llmProvider)
+          transcript = await llmProvider.adjustTranscript(
+            userPromptPrefix + '\n' + userPrompt,
+            {
+              temperature: advancedSettingsHeaders.llmTemperature,
+              model: advancedSettingsHeaders.llmModel,
+              prompt: ITO_MODE_SYSTEM_PROMPT[mode],
+            },
+          )
+          console.log(
+            `📝 [${new Date().toISOString()}] Adjusted transcript: "${transcript}"`,
+          )
+        }
+
+        const duration = Date.now() - startTime
+        console.log(
+          `✅ [${new Date().toISOString()}] TranscribeStreamV2 completed in ${duration}ms`,
+        )
+
+        return create(TranscriptionResponseSchema, {
+          transcript,
+        })
+      } catch (error: any) {
+        if (error instanceof ConnectError) {
+          throw error
+        }
+
+        console.error('Failed to process TranscribeStreamV2:', error)
+
+        return create(TranscriptionResponseSchema, {
+          transcript: '',
+          error: errorToProtobuf(
+            error,
+            mergedConfig.transcriptionSettings?.asrProvider as any || DEFAULT_ADVANCED_SETTINGS.asrProvider as any,
+          ),
+        })
+      }
+    },
+
     async transcribeStream(
       requests: AsyncIterable<AudioChunk>,
       context: HandlerContext,

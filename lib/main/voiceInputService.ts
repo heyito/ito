@@ -42,8 +42,15 @@ export class VoiceInputService {
     )
   }
 
-  public stopSTTService = () => {
+  public stopSTTService = async () => {
     audioRecorderService.stopRecording()
+
+    // Wait for explicit drain-complete signal from the recorder (with timeout fallback)
+    try {
+      await (audioRecorderService as any).awaitDrainComplete?.(500)
+    } catch (e) {
+      console.warn('[Audio] drain-complete wait failed, proceeding:', e)
+    }
 
     transcriptionService.stopTranscription()
 

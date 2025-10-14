@@ -1,6 +1,8 @@
 use arboard::Clipboard;
 use std::thread;
 use std::time::Duration;
+use selection::get_text;
+
 
 // Count characters as the editor sees them (CRLF = 1 cursor position on Windows)
 pub fn count_editor_chars(text: &str) -> usize {
@@ -9,26 +11,7 @@ pub fn count_editor_chars(text: &str) -> usize {
 }
 
 pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
-    let mut clipboard = Clipboard::new().map_err(|e| format!("Clipboard init failed: {}", e))?;
-
-    // Store original clipboard contents
-    let original_clipboard = clipboard.get_text().unwrap_or_default();
-
-    clipboard
-        .clear()
-        .map_err(|e| format!("Clipboard clear failed: {}", e))?;
-
-    copy_selected_text()?;
-
-    // Small delay for copy operation to complete
-    thread::sleep(Duration::from_millis(25));
-
-    // Get the copy text from clipboard (this is what was selected)
-    let selected_text = clipboard.get_text().unwrap_or_default();
-
-    // Always restore original clipboard contents - ITO is copying on behalf of user for context
-    let _ = clipboard.set_text(original_clipboard);
-
+    let selected_text = get_text();
     Ok(selected_text)
 }
 

@@ -33,6 +33,7 @@ export class InteractionManager {
     audioBuffer: Buffer,
     sampleRate: number,
     errorMessage?: string,
+    errorCode?: string,
   ) {
     if (!this.currentInteractionId) {
       log.warn(
@@ -63,6 +64,7 @@ export class InteractionManager {
         transcript,
         totalAudioBytes: audioBuffer.length,
         error: errorMessage || null,
+        errorCode: errorCode || null,
         timestamp: new Date().toISOString(),
         durationMs,
       }

@@ -50,6 +50,10 @@ class GrpcClient {
       baseUrl: import.meta.env.VITE_GRPC_BASE_URL,
       httpVersion: '1.1',
     })
+    console.log(
+      'Creating gRPC client with base URL:',
+      import.meta.env.VITE_GRPC_BASE_URL,
+    )
     this.client = createClient(ItoService, transport)
   }
 

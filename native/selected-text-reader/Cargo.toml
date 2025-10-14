@@ -12,6 +12,9 @@ lru = "0.12"
 parking_lot = "0.12"
 enigo = "0.6"
 
+[target.'cfg(target_os = "windows")'.dependencies]
+selection = "1.2.0"
+
 [target.'cfg(target_os = "macos")'.dependencies]
 accessibility-ng = "0.1.6"
 accessibility-sys-ng = "0.1"

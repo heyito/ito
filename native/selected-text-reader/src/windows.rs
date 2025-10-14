@@ -1,6 +1,7 @@
 use arboard::Clipboard;
 use std::thread;
 use std::time::Duration;
+use selection::get_text;
 
 // Count characters as the editor sees them (CRLF = 1 cursor position on Windows)
 pub fn count_editor_chars(text: &str) -> usize {
@@ -9,30 +10,11 @@ pub fn count_editor_chars(text: &str) -> usize {
 }
 
 pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
-    let mut clipboard = Clipboard::new().map_err(|e| format!("Clipboard init failed: {}", e))?;
-
-    // Store original clipboard contents
-    let original_clipboard = clipboard.get_text().unwrap_or_default();
-
-    clipboard
-        .clear()
-        .map_err(|e| format!("Clipboard clear failed: {}", e))?;
-
-    copy_selected_text()?;
-
-    // Small delay for copy operation to complete
-    thread::sleep(Duration::from_millis(25));
-
-    // Get the copy text from clipboard (this is what was selected)
-    let selected_text = clipboard.get_text().unwrap_or_default();
-
-    // Always restore original clipboard contents - ITO is copying on behalf of user for context
-    let _ = clipboard.set_text(original_clipboard);
-
+    let selected_text = get_text();
     Ok(selected_text)
 }
 
-#[cfg(target_os = "windows")]
+
 pub fn copy_selected_text() -> Result<(), Box<dyn std::error::Error>> {
     use enigo::{Enigo, Key, Keyboard, Settings, Direction};
 
@@ -44,17 +26,6 @@ pub fn copy_selected_text() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[cfg(target_os = "linux")]
-pub fn copy_selected_text() -> Result<(), Box<dyn std::error::Error>> {
-    use std::process::Command;
-
-    // Use xdotool to send Ctrl+C on Linux
-    Command::new("xdotool").args(&["key", "ctrl+c"]).output()?;
-
-    Ok(())
-}
-
-#[cfg(target_os = "windows")]
 fn cut_selected_text() -> Result<(), Box<dyn std::error::Error>> {
     use enigo::{Enigo, Key, Keyboard, Settings, Direction};
 
@@ -66,15 +37,6 @@ fn cut_selected_text() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[cfg(target_os = "linux")]
-fn cut_selected_text() -> Result<(), Box<dyn std::error::Error>> {
-    use std::process::Command;
-
-    // Use xdotool to send Ctrl+X on Linux
-    Command::new("xdotool").args(&["key", "ctrl+x"]).output()?;
-
-    Ok(())
-}
 
 // Simple function to select previous N characters and copy them
 pub fn select_previous_chars_and_copy(
@@ -90,14 +52,6 @@ pub fn select_previous_chars_and_copy(
             enigo.key(Key::Shift, Direction::Press)?;
             enigo.key(Key::LeftArrow, Direction::Click)?;
             enigo.key(Key::Shift, Direction::Release)?;
-        }
-
-        #[cfg(target_os = "linux")]
-        {
-            use std::process::Command;
-            let _ = Command::new("xdotool")
-                .args(&["key", "shift+Left"])
-                .output();
         }
 
         // Brief pause between selections
@@ -136,7 +90,6 @@ pub fn shift_cursor_right_with_deselect(
     }
 
     for _ in 0..char_count {
-        #[cfg(target_os = "windows")]
         {
             use enigo::{Enigo, Key, Keyboard, Settings, Direction};
             let mut enigo = Enigo::new(&Settings::default())?;
@@ -144,15 +97,6 @@ pub fn shift_cursor_right_with_deselect(
             enigo.key(Key::RightArrow, Direction::Click)?;
             enigo.key(Key::Shift, Direction::Release)?;
         }
-
-        #[cfg(target_os = "linux")]
-        {
-            use std::process::Command;
-            let _ = Command::new("xdotool")
-                .args(&["key", "shift+Right"])
-                .output();
-        }
-
         // Brief pause between movements
         if char_count > 1 {
             thread::sleep(Duration::from_millis(1));

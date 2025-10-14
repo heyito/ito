@@ -6,7 +6,6 @@ import { BrowserWindow } from 'electron'
 import { audioRecorderService } from './audio'
 import { voiceInputService } from '../main/voiceInputService'
 import { KeyName, keyNameMap, normalizeLegacyKey } from '../types/keyboard'
-import { getProgrammaticTyping } from './typingState'
 import { interactionManager } from '../main/interactions/InteractionManager'
 
 interface KeyEvent {
@@ -188,12 +187,6 @@ function stopStuckKeyChecker() {
 }
 
 function handleKeyEventInMain(event: KeyEvent) {
-  // Ignore keydown-driven hotkey detection while programmatic typing/pasting is in progress,
-  // but still process keyup to clear state and avoid stuck keys.
-  if (getProgrammaticTyping() === true && event.type === 'keydown') {
-    return
-  }
-
   const { isShortcutGloballyEnabled, keyboardShortcuts } = store.get(
     STORE_KEYS.SETTINGS,
   )

@@ -9,6 +9,7 @@ import { TextInserter } from './text/TextInserter'
 import { getCursorContext } from '../media/selected-text-reader'
 import { canGetContextFromCurrentApp } from '../utils/applicationDetection'
 import { grammarRulesService } from './grammar/GrammarRulesService'
+import { getAdvancedSettings } from './store'
 
 export class TranscriptionService {
   private audioStreamManager = new AudioStreamManager()
@@ -112,29 +113,36 @@ export class TranscriptionService {
     } else {
       // Handle text insertion with grammar-corrected text
       if (response.transcript && !response.error) {
-        const contextLength = 4 // Number of chars to consider for context
-        const canGetContext = await canGetContextFromCurrentApp()
-        let cursorContext
-        try {
-          cursorContext = canGetContext
-            ? await getCursorContext(contextLength)
-            : ''
-        } catch (e) {
-          console.error('Cursor context failed:', e)
+        const { grammarServiceEnabled } = getAdvancedSettings()
+        console.log(
+          '[TranscriptionService] Inserting text with grammar correction:',
+          grammarServiceEnabled ? 'enabled' : 'disabled',
+        )
+        let textToInsert = response.transcript
+
+        if (grammarServiceEnabled) {
+          const contextLength = 4 // Number of chars to consider for context
+          let context = ''
+          try {
+            const canGetContext = await canGetContextFromCurrentApp()
+            if (canGetContext) {
+              context = (await getCursorContext(contextLength)) || ''
+            }
+          } catch (e) {
+            console.error('Cursor context failed:', e)
+          }
+
+          textToInsert = grammarRulesService.setCaseFirstWord(
+            context,
+            textToInsert,
+          )
+          textToInsert = grammarRulesService.addLeadingSpaceIfNeeded(
+            context,
+            textToInsert,
+          )
         }
 
-        // Apply grammar rules with cursor context
-        const context = cursorContext || ''
-        let correctedText = grammarRulesService.setCaseFirstWord(
-          context,
-          response.transcript,
-        )
-        correctedText = grammarRulesService.addLeadingSpaceIfNeeded(
-          context,
-          correctedText,
-        )
-
-        await this.textInserter.insertText(correctedText)
+        await this.textInserter.insertText(textToInsert)
 
         // Create interaction in database
         await interactionManager.createInteraction(

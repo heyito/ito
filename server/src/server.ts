@@ -12,6 +12,7 @@ import dotenv from 'dotenv'
 import { registerLoggingRoutes } from './services/logging.js'
 import { registerAuth0Routes } from './services/auth0.js'
 import { IpLinkRepository } from './db/repo.js'
+import cors from '@fastify/cors'
 
 dotenv.config()
 
@@ -19,7 +20,10 @@ dotenv.config()
 export const startServer = async () => {
   const connectRpcServer = fastify({
     logger: true,
+    trustProxy: true,
   })
+
+  await connectRpcServer.register(cors, { origin: '*' })
 
   // Register the Auth0 plugin
   const REQUIRE_AUTH = process.env.REQUIRE_AUTH === 'true'

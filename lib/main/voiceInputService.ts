@@ -3,7 +3,7 @@ import { muteSystemAudio, unmuteSystemAudio } from '../media/systemAudio'
 import { getPillWindow, mainWindow } from './app'
 import store from './store'
 import { STORE_KEYS } from '../constants/store-keys'
-import { transcriptionService } from './transcriptionService'
+import { itoController } from './itoController'
 import { ItoMode } from '@/app/generated/ito_pb'
 import { IPC_EVENTS, RecordingStatePayload } from '../types/ipc'
 
@@ -15,6 +15,7 @@ export class VoiceInputService {
       mode === ItoMode.EDIT ? 'EDIT' : 'TRANSCRIBE',
     )
     const deviceId = store.get(STORE_KEYS.SETTINGS).microphoneDeviceId
+    console.info('[Audio] Using microphone device:', deviceId)
 
     const settings = store.get(STORE_KEYS.SETTINGS)
     if (settings && settings.muteAudioWhenDictating) {
@@ -22,14 +23,18 @@ export class VoiceInputService {
       muteSystemAudio()
     }
 
-    const started = await transcriptionService.startTranscription(mode)
+    console.info('[Audio] Starting ItoController interaction')
+    const started = await itoController.startInteraction(mode)
+    console.info('[Audio] ItoController.startInteraction returned:', started)
     if (!started) {
       console.warn(
         '[Audio] Transcription did not start, skipping recorder start',
       )
       return
     }
+    console.info('[Audio] Starting audio recorder with device:', deviceId)
     audioRecorderService.startRecording(deviceId)
+    console.info('[Audio] Audio recorder started')
 
     const recordingStatePayload: RecordingStatePayload = {
       isRecording: true,
@@ -43,16 +48,21 @@ export class VoiceInputService {
   }
 
   public stopSTTService = async () => {
+    console.info('[Audio] Stopping STT service')
     audioRecorderService.stopRecording()
+    console.info('[Audio] Audio recorder stopped, waiting for drain...')
 
     // Wait for explicit drain-complete signal from the recorder (with timeout fallback)
     try {
       await (audioRecorderService as any).awaitDrainComplete?.(500)
+      console.info('[Audio] Drain complete')
     } catch (e) {
       console.warn('[Audio] drain-complete wait failed, proceeding:', e)
     }
 
-    transcriptionService.stopTranscription()
+    console.info('[Audio] Ending ItoController interaction')
+    itoController.endInteraction()
+    console.info('[Audio] ItoController interaction ended')
 
     if (store.get(STORE_KEYS.SETTINGS).muteAudioWhenDictating) {
       console.info('[Audio] Unmuting system audio after dictation')
@@ -75,11 +85,13 @@ export class VoiceInputService {
       ({ outputSampleRate, sampleRate }: any) => {
         // Use the recorder's effective output rate (matches the PCM we store)
         const effectiveRate = outputSampleRate || sampleRate || 16000
-        transcriptionService.setAudioConfig({ sampleRate: effectiveRate })
+        console.log('[VoiceInputService] Received audio-config:', { outputSampleRate, sampleRate, effectiveRate })
+        itoController.setAudioConfig({ sampleRate: effectiveRate })
       },
     )
     audioRecorderService.on('audio-chunk', chunk => {
-      transcriptionService.handleAudioChunk(chunk)
+      console.log('[VoiceInputService] Received audio-chunk:', chunk.length, 'bytes')
+      itoController.forwardAudioChunk(chunk)
     })
 
     audioRecorderService.on('volume-update', volume => {

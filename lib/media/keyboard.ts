@@ -3,12 +3,9 @@ import store, { KeyboardShortcutConfig } from '../main/store'
 import { STORE_KEYS } from '../constants/store-keys'
 import { getNativeBinaryPath } from './native-interface'
 import { BrowserWindow } from 'electron'
-import { audioRecorderService } from './audio'
 import { voiceInputService } from '../main/voiceInputService'
 import { KeyName, keyNameMap, normalizeLegacyKey } from '../types/keyboard'
 import { getProgrammaticTyping } from './typingState'
-import { interactionManager } from '../main/interactions/InteractionManager'
-import { itoController } from '../main/itoController'
 
 interface KeyEvent {
   type: 'keydown' | 'keyup'
@@ -205,7 +202,7 @@ function handleKeyEventInMain(event: KeyEvent) {
       // Shortcut released
       isShortcutActive = false
       console.info('Shortcut DEACTIVATED, stopping recording...')
-      audioRecorderService.stopRecording()
+      voiceInputService.stopSTTService()
     }
     return
   }
@@ -262,9 +259,7 @@ function handleKeyEventInMain(event: KeyEvent) {
       if (pendingShortcut && !isShortcutActive) {
         isShortcutActive = true
         console.info('lib Shortcut ACTIVATED, starting recording...')
-        interactionManager.startInteraction()
-        itoController.startInteraction(pendingShortcut.mode)
-        // voiceInputService.startSTTService(pendingShortcut.mode)
+        voiceInputService.startSTTService(pendingShortcut.mode)
       }
 
       // Clear debounce state

@@ -663,6 +663,30 @@ export function registerIPC() {
       }
     }
   })
+
+  // Resolve and clear install link token
+  handleIPC('analytics:resolve-install-token', async () => {
+    try {
+      const url = new URL(`/link/resolve`, import.meta.env.VITE_GRPC_BASE_URL)
+      const res = await fetch(url.toString(), {
+        headers: { 'content-type': 'application/json' },
+      })
+      const data: any = await res.json().catch(() => undefined)
+      if (!res.ok) {
+        return {
+          success: false,
+          error: data?.error || `Resolve failed (${res.status})`,
+          status: res.status,
+        }
+      }
+      return {
+        success: true,
+        websiteDistinctId: data?.websiteDistinctId || null,
+      }
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Unknown error' }
+    }
+  })
 }
 
 // Handlers that are specific to a given window instance

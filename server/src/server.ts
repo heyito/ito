@@ -11,6 +11,7 @@ import { renderCallbackPage } from './utils/renderCallback.js'
 import dotenv from 'dotenv'
 import { registerLoggingRoutes } from './services/logging.js'
 import { registerAuth0Routes } from './services/auth0.js'
+import { IpLinkRepository } from './db/repo.js'
 
 dotenv.config()
 
@@ -69,6 +70,49 @@ export const startServer = async () => {
 
   // Register Auth0 management proxy routes at the root level (no auth required)
   await registerAuth0Routes(connectRpcServer)
+
+  // Register IP correlation candidate (from website click)
+  connectRpcServer.post('/link/register-ip', async (request, reply) => {
+    try {
+      const { websiteDistinctId } = (request.body ?? {}) as {
+        websiteDistinctId?: string
+      }
+      if (!websiteDistinctId || typeof websiteDistinctId !== 'string') {
+        reply.code(400).send({ error: 'Missing websiteDistinctId' })
+        return
+      }
+
+      // Hash IP with a server-side salt to avoid storing raw IP
+      const ip = (request.ip || '').trim()
+      const salt = process.env.IP_SALT || 'ito-default-salt'
+      const hash = await import('crypto').then(({ createHash }) =>
+        createHash('sha256').update(`${salt}:${ip}`).digest('hex'),
+      )
+
+      await IpLinkRepository.registerCandidate(hash, websiteDistinctId)
+      reply.send({ success: true })
+    } catch (error: any) {
+      connectRpcServer.log.error({ error }, 'Failed to register IP candidate')
+      reply.code(500).send({ error: 'Internal error' })
+    }
+  })
+
+  connectRpcServer.get('/link/resolve', async (request, reply) => {
+    try {
+      const ip = (request.ip || '').trim()
+      const salt = process.env.IP_SALT || 'ito-default-salt'
+      const hash = await import('crypto').then(({ createHash }) =>
+        createHash('sha256').update(`${salt}:${ip}`).digest('hex'),
+      )
+      const websiteDistinctId = await IpLinkRepository.consumeLatestForIp(hash)
+      reply.send({ websiteDistinctId: websiteDistinctId ?? null })
+      return
+    } catch (e) {
+      connectRpcServer.log.debug({ error: e }, 'IP correlation failed')
+      reply.send({ websiteDistinctId: null })
+      return
+    }
+  })
 
   // Register Connect RPC plugin in a context that conditionally applies Auth0 authentication
   await connectRpcServer.register(async function (fastify) {

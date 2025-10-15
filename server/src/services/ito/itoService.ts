@@ -45,6 +45,7 @@ import {
   createUserPromptWithContext,
 } from './helpers.js'
 import { ITO_MODE_SYSTEM_PROMPT } from './constants.js'
+import { enhancePcm16 } from '../../utils/audio.js'
 
 /**
  * --- NEW: WAV Header Generation Function ---
@@ -220,14 +221,15 @@ export default (router: ConnectRouter) => {
         const bitDepth = 16
         const channels = 1 // Mono
 
-        // 2. Create the header with the correct properties.
+        // 2. Enhance the PCM and create the header with the correct properties.
+        const enhancedPcm = enhancePcm16(Buffer.from(fullAudio), sampleRate)
         const wavHeader = createWavHeader(
-          fullAudio.length,
+          enhancedPcm.length,
           sampleRate,
           channels,
           bitDepth,
         )
-        const fullAudioWAV = Buffer.concat([wavHeader, fullAudio])
+        const fullAudioWAV = Buffer.concat([wavHeader, enhancedPcm])
 
         // 3. Extract and validate vocabulary from gRPC metadata
         const vocabularyHeader = context.requestHeader.get('vocabulary')

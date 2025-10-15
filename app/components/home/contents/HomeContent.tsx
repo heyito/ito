@@ -296,6 +296,16 @@ export default function HomeContent() {
   const getDisplayText = (interaction: Interaction) => {
     // Check for errors first
     if (interaction.asr_output?.error) {
+      // Prefer precise error code mapping when available
+      const code = interaction.asr_output?.errorCode
+      if (code === 'CLIENT_TRANSCRIPTION_QUALITY_ERROR') {
+        return {
+          text: 'Audio quality too low',
+          isError: true,
+          tooltip:
+            'Audio quality was too low to generate a reliable transcript',
+        }
+      }
       if (
         interaction.asr_output.error.includes('No speech detected in audio.') ||
         interaction.asr_output.error.includes('Unable to transcribe audio.')

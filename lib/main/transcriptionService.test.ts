@@ -212,6 +212,7 @@ describe('TranscriptionService', () => {
       Buffer.from('audio-data'),
       16000,
       undefined,
+      undefined,
     )
     expect(mockWindowMessenger.sendTranscriptionResult).toHaveBeenCalledWith({
       transcript: mockTranscript,

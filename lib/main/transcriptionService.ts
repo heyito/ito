@@ -97,6 +97,7 @@ export class TranscriptionService {
     })
 
     const errorMessage = response.error ? response.error.message : undefined
+    const errorCode = response.error ? response.error.code : undefined
 
     // Handle any transcription error
     if (response.error) {
@@ -106,6 +107,7 @@ export class TranscriptionService {
         this.audioStreamManager.getInteractionAudioBuffer(),
         this.audioStreamManager.getCurrentSampleRate(),
         errorMessage,
+        errorCode,
       )
 
       this.audioStreamManager.clearInteractionAudio()
@@ -150,6 +152,7 @@ export class TranscriptionService {
           this.audioStreamManager.getInteractionAudioBuffer(),
           this.audioStreamManager.getCurrentSampleRate(),
           errorMessage,
+          errorCode,
         )
       }
 

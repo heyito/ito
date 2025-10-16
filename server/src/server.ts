@@ -134,6 +134,12 @@ export const startServer = async () => {
       console.log('SHOW_CLIENT_LOGS is DISABLED.')
     }
 
+    if (process.env.SHOW_ALL_REQUEST_LOGS === 'true') {
+      console.log('SHOW_ALL_REQUEST_LOGS is ENABLED.')
+    } else {
+      console.log('SHOW_ALL_REQUEST_LOGS is DISABLED.')
+    }
+
     // Register the Connect RPC plugin with our service routes and interceptors
     await fastify.register(fastifyConnectPlugin, {
       routes: itoServiceRoutes,

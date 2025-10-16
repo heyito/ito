@@ -116,6 +116,38 @@ export class S3StorageClient {
     }
   }
 
+  async deletePrefix(prefix: string): Promise<number> {
+    let deletedCount = 0
+    let continuationToken: string | undefined
+
+    do {
+      const listParams: ListObjectsV2CommandInput = {
+        Bucket: this.bucketName,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+        MaxKeys: 1000,
+      }
+      const response = await this.s3Client.send(
+        new ListObjectsV2Command(listParams),
+      )
+
+      const keys = (response.Contents ?? [])
+        .map(obj => obj.Key!)
+        .filter(Boolean)
+
+      for (const key of keys) {
+        await this.deleteObject(key)
+        deletedCount += 1
+      }
+
+      continuationToken = response.IsTruncated
+        ? response.NextContinuationToken
+        : undefined
+    } while (continuationToken)
+
+    return deletedCount
+  }
+
   async objectExists(key: string): Promise<boolean> {
     const params: HeadObjectCommandInput = {
       Bucket: this.bucketName,

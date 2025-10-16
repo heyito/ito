@@ -19,7 +19,7 @@ dotenv.config()
 // Create the main server function
 export const startServer = async () => {
   const connectRpcServer = fastify({
-    logger: true,
+    logger: process.env.SHOW_ALL_REQUEST_LOGS === 'true',
     trustProxy: true,
   })
 
@@ -128,6 +128,12 @@ export const startServer = async () => {
       console.log('Authentication is DISABLED.')
     }
 
+    if (process.env.SHOW_CLIENT_LOGS === 'true') {
+      console.log('SHOW_CLIENT_LOGS is ENABLED.')
+    } else {
+      console.log('SHOW_CLIENT_LOGS is DISABLED.')
+    }
+
     // Register the Connect RPC plugin with our service routes and interceptors
     await fastify.register(fastifyConnectPlugin, {
       routes: itoServiceRoutes,
@@ -149,6 +155,7 @@ export const startServer = async () => {
     await registerLoggingRoutes(fastify, {
       requireAuth: REQUIRE_AUTH,
       clientLogGroupName: CLIENT_LOG_GROUP_NAME,
+      showClientLogs: process.env.SHOW_CLIENT_LOGS === 'true',
     })
   })
 

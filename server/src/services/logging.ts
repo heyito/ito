@@ -21,9 +21,13 @@ type LogEvent = {
 
 export const registerLoggingRoutes = async (
   fastify: FastifyInstance,
-  options: { requireAuth: boolean; clientLogGroupName?: string | null },
+  options: {
+    requireAuth: boolean
+    showClientLogs: boolean
+    clientLogGroupName?: string | null
+  },
 ) => {
-  const { requireAuth, clientLogGroupName } = options
+  const { requireAuth, showClientLogs, clientLogGroupName } = options
 
   const logsClient = clientLogGroupName ? new CloudWatchLogsClient({}) : null
   const logStreamName = clientLogGroupName
@@ -102,6 +106,10 @@ export const registerLoggingRoutes = async (
     })
 
     if (!logsClient || !clientLogGroupName || !logStreamName) {
+      if (!showClientLogs) {
+        reply.code(204).send()
+        return
+      }
       for (const e of entries) {
         try {
           process.stdout.write(`${e.message}\n`)

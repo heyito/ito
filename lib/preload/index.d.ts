@@ -101,6 +101,12 @@ declare global {
 
       // Analytics device ID methods
       'analytics:get-device-id': () => Promise<string | undefined>
+      'analytics:resolve-install-token': () => Promise<{
+        success: boolean
+        websiteDistinctId?: string | null
+        error?: string
+        status?: number
+      }>
 
       notifyLoginSuccess: (
         profile: any,

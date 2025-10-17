@@ -252,15 +252,34 @@ where
     if num_channels <= 1 {
         return data.iter().map(|s| s.to_sample::<f32>()).collect();
     }
-    let mut out: Vec<f32> = Vec::with_capacity(data.len() / num_channels);
-    let mut i = 0;
-    while i + num_channels <= data.len() {
-        let mut sum = 0.0f32;
+    // Select the dominant channel to avoid amplitude loss when one channel is
+    // near-silent
+    let frames = data.len() / num_channels;
+    if frames == 0 {
+        return Vec::new();
+    }
+
+    let mut energy_per_channel: Vec<f32> = vec![0.0; num_channels];
+    for frame_idx in 0..frames {
+        let base = frame_idx * num_channels;
         for c in 0..num_channels {
-            sum += data[i + c].to_sample::<f32>();
+            let v = data[base + c].to_sample::<f32>();
+            energy_per_channel[c] += v * v;
         }
-        out.push(sum / (num_channels as f32));
-        i += num_channels;
+    }
+    let mut best_channel = 0usize;
+    let mut best_energy = energy_per_channel[0];
+    for c in 1..num_channels {
+        if energy_per_channel[c] > best_energy {
+            best_energy = energy_per_channel[c];
+            best_channel = c;
+        }
+    }
+
+    let mut out: Vec<f32> = Vec::with_capacity(frames);
+    for frame_idx in 0..frames {
+        let base = frame_idx * num_channels;
+        out.push(data[base + best_channel].to_sample::<f32>());
     }
     out
 }
@@ -271,23 +290,42 @@ fn writer_loop(
     input_sample_rate: u32,
 ) {
     const TARGET_SAMPLE_RATE: u32 = 16000;
-    const RESAMPLER_CHUNK_SIZE: usize = 2048; // larger chunk to reduce overhead
+    const RESAMPLER_CHUNK_SIZE_DEFAULT: usize = 1024;
+    const RESAMPLER_CHUNK_SIZE_FALLBACK: usize = 512;
 
+    // Try FFT resampler with default size, then fallback chunk size
+    let mut chosen_chunk_size: usize = RESAMPLER_CHUNK_SIZE_DEFAULT;
     let mut resampler_opt = if input_sample_rate != TARGET_SAMPLE_RATE {
         match FftFixedIn::new(
             input_sample_rate as usize,
             TARGET_SAMPLE_RATE as usize,
-            RESAMPLER_CHUNK_SIZE,
+            chosen_chunk_size,
             1,
             1,
         ) {
             Ok(r) => Some(r),
             Err(e) => {
                 eprintln!(
-                    "[audio-recorder] CRITICAL: Failed to create resampler: {}",
+                    "[audio-recorder] CRITICAL: Failed to create resampler ({}), trying fallback chunk size",
                     e
                 );
-                None
+                chosen_chunk_size = RESAMPLER_CHUNK_SIZE_FALLBACK;
+                match FftFixedIn::new(
+                    input_sample_rate as usize,
+                    TARGET_SAMPLE_RATE as usize,
+                    chosen_chunk_size,
+                    1,
+                    1,
+                ) {
+                    Ok(r2) => Some(r2),
+                    Err(e2) => {
+                        eprintln!(
+                            "[audio-recorder] CRITICAL: Fallback resampler creation failed ({}), using linear fallback",
+                            e2
+                        );
+                        None
+                    }
+                }
             }
         }
     } else {
@@ -296,12 +334,41 @@ fn writer_loop(
 
     let mut in_buffer: Vec<f32> = Vec::new();
 
+    // Linear resampler fallback for mono when FFT resampler isn't available
+    fn linear_resample_mono(input: &[f32], in_rate: u32, out_rate: u32) -> Vec<f32> {
+        if input.is_empty() || in_rate == 0 || in_rate == out_rate {
+            return input.to_vec();
+        }
+        let in_len = input.len();
+        let ratio = out_rate as f32 / in_rate as f32;
+        let out_len = ((in_len as f32) * ratio).round().max(0.0) as usize;
+        if out_len <= 1 {
+            return Vec::new();
+        }
+        let step = in_rate as f32 / out_rate as f32;
+        let mut out = Vec::with_capacity(out_len);
+        let mut pos: f32 = 0.0;
+        for _ in 0..out_len {
+            let idx = pos.floor() as usize;
+            if idx >= in_len - 1 {
+                out.push(input[in_len - 1]);
+            } else {
+                let frac = pos - (idx as f32);
+                let a = input[idx];
+                let b = input[idx + 1];
+                out.push(a + (b - a) * frac);
+            }
+            pos += step;
+        }
+        out
+    }
+
     while let Ok(frame) = audio_rx.recv() {
         if let Some(resampler) = resampler_opt.as_mut() {
             in_buffer.extend_from_slice(&frame);
-            while in_buffer.len() >= RESAMPLER_CHUNK_SIZE {
+            while in_buffer.len() >= chosen_chunk_size {
                 let chunk_to_process: Vec<f32> =
-                    in_buffer.drain(..RESAMPLER_CHUNK_SIZE).collect::<Vec<_>>();
+                    in_buffer.drain(..chosen_chunk_size).collect::<Vec<_>>();
                 match resampler.process(&[chunk_to_process], None) {
                     Ok(mut resampled) => {
                         if !resampled.is_empty() {
@@ -315,23 +382,29 @@ fn writer_loop(
                 }
             }
         } else {
-            // direct write at input rate
-            write_audio_chunk(&frame, &stdout);
+            if input_sample_rate != TARGET_SAMPLE_RATE {
+                let resampled = linear_resample_mono(&frame, input_sample_rate, TARGET_SAMPLE_RATE);
+                if !resampled.is_empty() {
+                    write_audio_chunk(&resampled, &stdout);
+                }
+            } else {
+                write_audio_chunk(&frame, &stdout);
+            }
         }
     }
 
     // Channel closed; flush any remaining buffered samples through resampler
     if let Some(mut resampler) = resampler_opt.take() {
         while !in_buffer.is_empty() {
-            let take = if in_buffer.len() >= RESAMPLER_CHUNK_SIZE {
-                RESAMPLER_CHUNK_SIZE
+            let take = if in_buffer.len() >= chosen_chunk_size {
+                chosen_chunk_size
             } else {
                 in_buffer.len()
             };
             let mut chunk = in_buffer.drain(..take).collect::<Vec<_>>();
-            if chunk.len() < RESAMPLER_CHUNK_SIZE {
+            if chunk.len() < chosen_chunk_size {
                 // zero-pad final chunk to meet resampler size
-                chunk.resize(RESAMPLER_CHUNK_SIZE, 0.0);
+                chunk.resize(chosen_chunk_size, 0.0);
             }
             if let Ok(mut resampled) = resampler.process(&[chunk], None) {
                 if !resampled.is_empty() {
@@ -340,7 +413,23 @@ fn writer_loop(
             }
         }
     } else if !in_buffer.is_empty() {
-        write_audio_chunk(&in_buffer, &stdout);
+        if input_sample_rate != TARGET_SAMPLE_RATE {
+            let resampled = linear_resample_mono(&in_buffer, input_sample_rate, TARGET_SAMPLE_RATE);
+            if !resampled.is_empty() {
+                write_audio_chunk(&resampled, &stdout);
+            }
+        } else {
+            write_audio_chunk(&in_buffer, &stdout);
+        }
+    }
+
+    // Signal drain complete to the host via a JSON message
+    let response = serde_json::json!({
+        "type": "drain-complete"
+    });
+    if let Ok(json_string) = serde_json::to_string(&response) {
+        let mut writer = stdout.lock().unwrap();
+        let _ = write_framed_message(&mut *writer, MSG_TYPE_JSON, json_string.as_bytes());
     }
 }
 
@@ -350,7 +439,7 @@ fn start_capture(
     host: Rc<cpal::Host>,
 ) -> Result<CaptureHandles> {
     const TARGET_SAMPLE_RATE: u32 = 16000;
-    const QUEUE_CAPACITY: usize = 64;
+    const QUEUE_CAPACITY: usize = 512;
 
     let device = if let Some(name) = device_name {
         if name.to_lowercase() == "default" || name.is_empty() {

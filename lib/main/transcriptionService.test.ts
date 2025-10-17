@@ -12,6 +12,10 @@ mock.module('../clients/grpcClient', () => ({
 const mockMainStore = {
   get: mock(),
 }
+const mockGetAdvancedSettings = mock(() => ({
+  grammarServiceEnabled: false,
+  llm: {},
+}))
 mock.module('./store', () => ({
   default: mockMainStore,
   getCurrentUserId: mock(() => 'test-user-123'),
@@ -19,6 +23,7 @@ mock.module('./store', () => ({
     state: 'test-state',
     codeVerifier: 'test-verifier',
   })),
+  getAdvancedSettings: mockGetAdvancedSettings,
 }))
 
 const mockDbRun = mock(() => Promise.resolve())
@@ -160,9 +165,14 @@ describe('TranscriptionService', () => {
     )
     mockTextInserter.insertText.mockResolvedValue(true)
     mockInteractionManager.clearCurrentInteraction.mockClear()
+    mockGetAdvancedSettings.mockClear()
+    mockGetAdvancedSettings.mockReturnValue({
+      grammarServiceEnabled: false,
+      llm: {},
+    })
   })
 
-  test('should handle successful transcription flow', async () => {
+  test('should handle successful transcription flow with grammar disabled', async () => {
     const mockTranscript = 'Hello world'
     mockGrpcClient.transcribeStream.mockResolvedValueOnce({
       transcript: mockTranscript,
@@ -191,6 +201,43 @@ describe('TranscriptionService', () => {
 
     // Verify full flow
     expect(mockGrpcClient.transcribeStream).toHaveBeenCalled()
+    expect(mockGetCursorContext).not.toHaveBeenCalled()
+    expect(mockGrammarRulesService.setCaseFirstWord).not.toHaveBeenCalled()
+    expect(
+      mockGrammarRulesService.addLeadingSpaceIfNeeded,
+    ).not.toHaveBeenCalled()
+    expect(mockTextInserter.insertText).toHaveBeenCalled()
+    expect(mockInteractionManager.createInteraction).toHaveBeenCalledWith(
+      mockTranscript,
+      Buffer.from('audio-data'),
+      16000,
+      undefined,
+      undefined,
+    )
+    expect(mockWindowMessenger.sendTranscriptionResult).toHaveBeenCalledWith({
+      transcript: mockTranscript,
+    })
+  })
+
+  test('should apply grammar adjustments when enabled', async () => {
+    const mockTranscript = 'hello world'
+    mockGrpcClient.transcribeStream.mockResolvedValueOnce({
+      transcript: mockTranscript,
+    })
+    mockInteractionManager.getCurrentInteractionId.mockReturnValue(null)
+    mockGetAdvancedSettings.mockReturnValue({
+      grammarServiceEnabled: true,
+      llm: {},
+    })
+
+    const { TranscriptionService } = await import('./transcriptionService')
+    const transcriptionService = new (TranscriptionService as any)()
+
+    await transcriptionService.startTranscription(ItoMode.TRANSCRIBE)
+    mockAudioStreamManager.isCurrentlyStreaming.mockReturnValue(true)
+    transcriptionService.forwardAudioChunk(Buffer.from('audio'))
+    await new Promise(resolve => setTimeout(resolve, 20))
+
     expect(mockGetCursorContext).toHaveBeenCalled()
     expect(mockGrammarRulesService.setCaseFirstWord).toHaveBeenCalledWith(
       '',
@@ -198,15 +245,6 @@ describe('TranscriptionService', () => {
     )
     expect(mockGrammarRulesService.addLeadingSpaceIfNeeded).toHaveBeenCalled()
     expect(mockTextInserter.insertText).toHaveBeenCalled()
-    expect(mockInteractionManager.createInteraction).toHaveBeenCalledWith(
-      mockTranscript,
-      Buffer.from('audio-data'),
-      16000,
-      undefined,
-    )
-    expect(mockWindowMessenger.sendTranscriptionResult).toHaveBeenCalledWith({
-      transcript: mockTranscript,
-    })
   })
 
   test('should handle transcription errors', async () => {

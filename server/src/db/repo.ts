@@ -333,3 +333,39 @@ export class AdvancedSettingsRepository {
     }
   }
 }
+export class IpLinkRepository {
+  static async cleanupExpired(): Promise<number> {
+    const res = await pool.query(
+      'DELETE FROM ip_link_candidates WHERE expires_at < NOW()',
+    )
+    return res.rowCount ?? 0
+  }
+
+  static async registerCandidate(
+    ipHash: string,
+    websiteDistinctId: string,
+  ): Promise<void> {
+    await this.cleanupExpired()
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+    await pool.query(
+      `INSERT INTO ip_link_candidates (ip_hash, website_distinct_id, expires_at)
+       VALUES ($1, $2, $3)`,
+      [ipHash, websiteDistinctId, expiresAt],
+    )
+  }
+  static async consumeLatestForIp(ipHash: string): Promise<string | null> {
+    await this.cleanupExpired()
+    const res = await pool.query<{ website_distinct_id: string }>(
+      `DELETE FROM ip_link_candidates
+       WHERE ctid IN (
+         SELECT ctid FROM ip_link_candidates
+         WHERE ip_hash = $1 AND expires_at > NOW()
+         ORDER BY expires_at DESC
+         LIMIT 1
+       )
+       RETURNING website_distinct_id`,
+      [ipHash],
+    )
+    return res.rows[0]?.website_distinct_id ?? null
+  }
+}

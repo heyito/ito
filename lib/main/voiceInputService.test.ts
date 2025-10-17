@@ -169,8 +169,8 @@ describe('VoiceInputService Integration Tests', () => {
         muteAudioWhenDictating: true,
       })
 
-      // Stop the service
-      voiceInputService.stopSTTService()
+      // Stop the service (await async stop flow)
+      await voiceInputService.stopSTTService()
 
       // Verify audio recorder stopped
       expect(mockAudioRecorderService.stopRecording).toHaveBeenCalledTimes(1)
@@ -193,12 +193,12 @@ describe('VoiceInputService Integration Tests', () => {
       )
     })
 
-    test('should not unmute audio if muting was disabled', () => {
+    test('should not unmute audio if muting was disabled', async () => {
       mockStore.get.mockReturnValue({
         muteAudioWhenDictating: false,
       })
 
-      voiceInputService.stopSTTService()
+      await voiceInputService.stopSTTService()
 
       // System audio should not be unmuted
       expect(mockUnmuteSystemAudio).not.toHaveBeenCalled()
@@ -378,8 +378,8 @@ describe('VoiceInputService Integration Tests', () => {
       mockStore.get.mockClear()
       mockStore.get.mockReturnValue({ muteAudioWhenDictating: true })
 
-      // Stop recording session
-      voiceInputService.stopSTTService()
+      // Stop recording session (await async stop flow)
+      await voiceInputService.stopSTTService()
 
       // Verify complete flow
       expect(mockMuteSystemAudio).toHaveBeenCalledTimes(1)
@@ -434,13 +434,13 @@ describe('VoiceInputService Integration Tests', () => {
   })
 
   describe('Service State Management Business Logic', () => {
-    test('should handle stopping service without starting', () => {
+    test('should handle stopping service without starting', async () => {
       mockStore.get.mockReturnValue({
         muteAudioWhenDictating: false,
       })
 
       // Should not crash when stopping without starting
-      expect(() => voiceInputService.stopSTTService()).not.toThrow()
+      await expect(voiceInputService.stopSTTService()).resolves.toBeUndefined()
 
       // Cleanup calls should still happen
       expect(mockAudioRecorderService.stopRecording).toHaveBeenCalledTimes(1)
@@ -467,7 +467,7 @@ describe('VoiceInputService Integration Tests', () => {
       )
     })
 
-    test('should handle stop after multiple starts correctly', () => {
+    test('should handle stop after multiple starts correctly', async () => {
       mockStore.get.mockReturnValue({
         microphoneDeviceId: 'test-device',
         muteAudioWhenDictating: true,
@@ -481,7 +481,7 @@ describe('VoiceInputService Integration Tests', () => {
       mockStore.get.mockClear()
       mockStore.get.mockReturnValue({ muteAudioWhenDictating: true })
 
-      voiceInputService.stopSTTService()
+      await voiceInputService.stopSTTService()
 
       // Stop should work regardless of multiple starts
       expect(mockAudioRecorderService.stopRecording).toHaveBeenCalledTimes(1)

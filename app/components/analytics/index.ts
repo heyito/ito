@@ -40,12 +40,21 @@ const getAnalyticsEnabled = (): boolean => {
 }
 
 const initPostHog = () => {
+  const isPill =
+    typeof window !== 'undefined' &&
+    typeof window.location !== 'undefined' &&
+    typeof window.location.hash === 'string' &&
+    window.location.hash.startsWith('#/pill')
+
   posthog.init(import.meta.env.VITE_POSTHOG_API_KEY, {
     api_host: import.meta.env.VITE_POSTHOG_HOST,
     disable_session_recording: true,
     disable_surveys: true,
     advanced_disable_decide: true,
     persistence: 'cookie',
+    // Disable default web auto-capture and pageviews for the pill window only
+    autocapture: !isPill,
+    capture_pageview: !isPill,
     sanitize_properties: (props: Record<string, unknown>) => {
       const p = { ...props }
       delete (p as any).$current_url
@@ -79,6 +88,22 @@ const initializeAnalytics = async () => {
 
     if (sharedDeviceId) {
       posthog.register({ device_id: sharedDeviceId })
+    }
+    // Attempt to resolve and alias install token to website distinct id
+    try {
+      const result = await window.api?.invoke('analytics:resolve-install-token')
+      if (result && result.success && result.websiteDistinctId) {
+        try {
+          posthog.alias(result.websiteDistinctId)
+          log.info(
+            '[Analytics] Aliased to website distinct_id from install token',
+          )
+        } catch (aliasErr) {
+          log.warn('[Analytics] alias() failed:', aliasErr)
+        }
+      }
+    } catch (err) {
+      log.warn('[Analytics] resolve-install-token failed:', err)
     }
     isAnalyticsInitialized = true
 

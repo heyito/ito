@@ -54,7 +54,14 @@ jobs:
           cat out.json
 
           if jq -e '.FunctionError' out.json > /dev/null; then
-            echo "❌ Lambda function failed:"
+            echo "❌ Lambda execution failed:"
+            echo "Message: $(jq -r '.errorMessage' out.json)"
+            exit 1
+          fi
+
+          if jq -e '.errorType' out.json > /dev/null; then
+            echo "❌ Migration failed:"
+            echo "Error: $(jq -r '.errorType' out.json)"
             echo "Message: $(jq -r '.errorMessage' out.json)"
             exit 1
           fi

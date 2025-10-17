@@ -3,9 +3,8 @@ import { muteSystemAudio, unmuteSystemAudio } from '../media/systemAudio'
 import { getPillWindow, mainWindow } from './app'
 import store from './store'
 import { STORE_KEYS } from '../constants/store-keys'
-import { itoController } from './itoController'
-import { ItoMode } from '@/app/generated/ito_pb'
-import { IPC_EVENTS, RecordingStatePayload } from '../types/ipc'
+import { IPC_EVENTS } from '../types/ipc'
+import log from 'electron-log'
 
 export class VoiceInputService {
   /**
@@ -13,27 +12,22 @@ export class VoiceInputService {
    * Does NOT start the ItoController - that should be done separately.
    */
   public startAudioRecording = () => {
-    const deviceId = store.get(STORE_KEYS.SETTINGS).microphoneDeviceId
-
-    console.info('[VoiceInputService] Starting audio recording')
+    log.info('[VoiceInputService] Starting audio recording')
 
     const settings = store.get(STORE_KEYS.SETTINGS)
-    const recordingDeviceId = deviceId || settings.microphoneDeviceId
+    const deviceId = settings.microphoneDeviceId
 
     // Mute system audio if needed
-    if (settings && settings.muteAudioWhenDictating) {
-      console.info('[VoiceInputService] Muting system audio for dictation')
+    if (settings.muteAudioWhenDictating) {
+      log.info('[VoiceInputService] Muting system audio for dictation')
       muteSystemAudio()
     }
 
     // Start audio recorder
-    console.info(
-      '[VoiceInputService] Starting audio recorder with device:',
-      recordingDeviceId,
-    )
-    audioRecorderService.startRecording(recordingDeviceId)
+    log.info('[VoiceInputService] Starting audio recorder with device:', deviceId)
+    audioRecorderService.startRecording(deviceId)
 
-    console.info('[VoiceInputService] Audio recording started')
+    log.info('[VoiceInputService] Audio recording started')
   }
 
   /**
@@ -41,99 +35,25 @@ export class VoiceInputService {
    * Waits for the audio recorder to drain before returning.
    */
   public stopAudioRecording = async () => {
-    console.info('[VoiceInputService] Stopping audio recording')
+    log.info('[VoiceInputService] Stopping audio recording')
     audioRecorderService.stopRecording()
-    console.info(
-      '[VoiceInputService] Audio recorder stopped, waiting for drain...',
-    )
+    log.info('[VoiceInputService] Audio recorder stopped, waiting for drain...')
 
     // Wait for explicit drain-complete signal from the recorder (with timeout fallback)
     try {
       await (audioRecorderService as any).awaitDrainComplete?.(500)
-      console.info('[VoiceInputService] Drain complete')
+      log.info('[VoiceInputService] Drain complete')
     } catch (e) {
-      console.warn(
-        '[VoiceInputService] drain-complete wait failed, proceeding:',
-        e,
-      )
+      log.warn('[VoiceInputService] drain-complete wait failed, proceeding:', e)
     }
 
     // Unmute system audio if it was muted
     if (store.get(STORE_KEYS.SETTINGS).muteAudioWhenDictating) {
-      console.info('[VoiceInputService] Unmuting system audio after dictation')
+      log.info('[VoiceInputService] Unmuting system audio after dictation')
       unmuteSystemAudio()
     }
 
-    console.info('[VoiceInputService] Audio recording stopped')
-  }
-
-  public startSTTService = async (mode: ItoMode) => {
-    console.info(
-      '[Audio] Starting STT service with mode:',
-      mode,
-      mode === ItoMode.EDIT ? 'EDIT' : 'TRANSCRIBE',
-    )
-    const deviceId = store.get(STORE_KEYS.SETTINGS).microphoneDeviceId
-    console.info('[Audio] Using microphone device:', deviceId)
-
-    const settings = store.get(STORE_KEYS.SETTINGS)
-    if (settings && settings.muteAudioWhenDictating) {
-      console.info('[Audio] Muting system audio for dictation')
-      muteSystemAudio()
-    }
-
-    console.info('[Audio] Starting ItoController interaction')
-    const started = await itoController.startInteraction(mode)
-    console.info('[Audio] ItoController.startInteraction returned:', started)
-    if (!started) {
-      console.warn(
-        '[Audio] Transcription did not start, skipping recorder start',
-      )
-      return
-    }
-    console.info('[Audio] Starting audio recorder with device:', deviceId)
-    audioRecorderService.startRecording(deviceId)
-    console.info('[Audio] Audio recorder started')
-
-    const recordingStatePayload: RecordingStatePayload = {
-      isRecording: true,
-      mode,
-    }
-    getPillWindow()?.webContents.send(
-      IPC_EVENTS.RECORDING_STATE_UPDATE,
-      recordingStatePayload,
-    )
-  }
-
-  public stopSTTService = async () => {
-    console.info('[Audio] Stopping STT service')
-    audioRecorderService.stopRecording()
-    console.info('[Audio] Audio recorder stopped, waiting for drain...')
-
-    // Wait for explicit drain-complete signal from the recorder (with timeout fallback)
-    try {
-      await (audioRecorderService as any).awaitDrainComplete?.(500)
-      console.info('[Audio] Drain complete')
-    } catch (e) {
-      console.warn('[Audio] drain-complete wait failed, proceeding:', e)
-    }
-
-    console.info('[Audio] Ending ItoController interaction')
-    itoController.endInteraction()
-    console.info('[Audio] ItoController interaction ended')
-
-    if (store.get(STORE_KEYS.SETTINGS).muteAudioWhenDictating) {
-      console.info('[Audio] Unmuting system audio after dictation')
-      unmuteSystemAudio()
-    }
-
-    const recordingStatePayload: RecordingStatePayload = {
-      isRecording: false,
-    }
-    getPillWindow()?.webContents.send(
-      IPC_EVENTS.RECORDING_STATE_UPDATE,
-      recordingStatePayload,
-    )
+    log.info('[VoiceInputService] Audio recording stopped')
   }
 
   public setUpAudioRecorderListeners = () => {
@@ -153,7 +73,7 @@ export class VoiceInputService {
 
     audioRecorderService.on('error', err => {
       // Handle errors, maybe show a dialog to the user
-      console.error('Audio Service Error:', err.message)
+      log.error('[VoiceInputService] Audio recorder error:', err.message)
     })
 
     audioRecorderService.initialize()

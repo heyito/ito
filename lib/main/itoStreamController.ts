@@ -11,18 +11,12 @@ import { create } from '@bufbuild/protobuf'
 import { grpcClient } from '../clients/grpcClient'
 import { AudioStreamManager } from './audio/AudioStreamManager'
 import { interactionManager } from './interactions/InteractionManager'
-import { WindowMessenger } from './messaging/WindowMessenger'
-import { TextInserter } from './text/TextInserter'
-import { getCursorContext } from '../media/selected-text-reader'
-import { canGetContextFromCurrentApp } from '../utils/applicationDetection'
-import { grammarRulesService } from './grammar/GrammarRulesService'
 import { DictionaryTable } from './sqlite/repo'
 import { getCurrentUserId, getAdvancedSettings } from './store'
 import { getActiveWindow } from '../media/active-application'
 import { getSelectedTextString } from '../media/selected-text-reader'
 import { audioRecorderService } from '../media/audio'
 import log from 'electron-log'
-import { BrowserWindow } from 'electron'
 
 /**
  * ItoStreamController manages the lifecycle of a transcription stream using TranscribeStreamV2.
@@ -30,8 +24,6 @@ import { BrowserWindow } from 'electron'
  */
 export class ItoStreamController {
   private audioStreamManager = new AudioStreamManager()
-  private windowMessenger = new WindowMessenger()
-  private textInserter = new TextInserter()
 
   private hasStartedGrpc = false
   private currentMode: ItoMode | null = null
@@ -64,17 +56,21 @@ export class ItoStreamController {
 
   /**
    * Starts the gRPC stream immediately without waiting for minimum audio duration.
-   * Use this when you want to start streaming right away.
+   * Returns a promise that resolves with the transcription response and audio data.
    */
-  public startGrpcStream() {
+  public async startGrpcStream(): Promise<{
+    response: any
+    audioBuffer: Buffer
+    sampleRate: number
+  }> {
     if (this.hasStartedGrpc) {
       log.warn('[ItoStreamController] gRPC stream already started')
-      return
+      throw new Error('Stream already started')
     }
 
     if (this.currentMode === null) {
       log.error('[ItoStreamController] Cannot start gRPC stream - mode not set')
-      return
+      throw new Error('Mode not set')
     }
 
     log.info('[ItoStreamController] Starting gRPC stream immediately')
@@ -83,21 +79,24 @@ export class ItoStreamController {
     // Set up direct audio pipeline
     this.setupAudioListeners()
 
-    grpcClient
-      .transcribeStreamV2Raw(this.createStreamGenerator())
-      .then(response => {
-        if (!this.isCancelled) {
-          this.handleTranscriptionResponse(response)
-        }
-      })
-      .catch(error => {
-        if (!this.isCancelled) {
-          this.handleTranscriptionError(error)
-        }
-      })
-      .finally(() => {
-        this.cleanupAudioListeners()
-      })
+    try {
+      const response = await grpcClient.transcribeStreamV2Raw(
+        this.createStreamGenerator(),
+      )
+
+      if (this.isCancelled) {
+        throw new Error('Transcription was cancelled')
+      }
+
+      // Return response along with the audio data collected during the stream
+      return {
+        response,
+        audioBuffer: this.audioStreamManager.getInteractionAudioBuffer(),
+        sampleRate: this.audioStreamManager.getCurrentSampleRate(),
+      }
+    } finally {
+      this.cleanupAudioListeners()
+    }
   }
 
   private setupAudioListeners() {
@@ -201,12 +200,12 @@ export class ItoStreamController {
     this.audioStreamManager.clearInteractionAudio()
   }
 
-  public setMainWindow(mainWindow: BrowserWindow | null) {
-    this.windowMessenger.setMainWindow(mainWindow)
-  }
-
   public getAudioDurationMs(): number {
     return this.audioStreamManager.getAudioDurationMs()
+  }
+
+  public clearInteractionAudio(): void {
+    this.audioStreamManager.clearInteractionAudio()
   }
 
   private stopStreaming() {
@@ -307,87 +306,6 @@ export class ItoStreamController {
         }),
       },
     })
-  }
-
-  private async handleTranscriptionResponse(response: any) {
-    log.info('[ItoStreamController] Processing transcription response:', {
-      transcript: response.transcript,
-      transcriptLength: response.transcript?.length || 0,
-      hasTranscript: !!response.transcript,
-      hasError: !!response.error,
-      errorCode: response.error?.code,
-      interactionId: interactionManager.getCurrentInteractionId(),
-    })
-
-    const errorMessage = response.error ? response.error.message : undefined
-
-    // Handle any transcription error
-    if (response.error) {
-      await interactionManager.createInteraction(
-        response.transcript || '',
-        this.audioStreamManager.getInteractionAudioBuffer(),
-        this.audioStreamManager.getCurrentSampleRate(),
-        errorMessage,
-      )
-
-      this.audioStreamManager.clearInteractionAudio()
-      interactionManager.clearCurrentInteraction()
-    } else {
-      // Handle text insertion with grammar-corrected text
-      if (response.transcript && !response.error) {
-        const contextLength = 4
-        const canGetContext = await canGetContextFromCurrentApp()
-        let cursorContext: string | undefined
-        try {
-          cursorContext = canGetContext
-            ? await getCursorContext(contextLength)
-            : ''
-        } catch (e) {
-          log.error('Cursor context failed:', e)
-        }
-
-        // Apply grammar rules with cursor context
-        const context = cursorContext || ''
-        let correctedText = grammarRulesService.setCaseFirstWord(
-          context,
-          response.transcript,
-        )
-        correctedText = grammarRulesService.addLeadingSpaceIfNeeded(
-          context,
-          correctedText,
-        )
-
-        await this.textInserter.insertText(correctedText)
-
-        // Create interaction in database
-        await interactionManager.createInteraction(
-          response.transcript,
-          this.audioStreamManager.getInteractionAudioBuffer(),
-          this.audioStreamManager.getCurrentSampleRate(),
-          errorMessage,
-        )
-      }
-
-      // Send transcription result to main window
-      this.windowMessenger.sendTranscriptionResult(response)
-
-      this.audioStreamManager.clearInteractionAudio()
-      interactionManager.clearCurrentInteraction()
-    }
-  }
-
-  private async handleTranscriptionError(error: any) {
-    log.error(
-      '[ItoStreamController] An unexpected error occurred during transcription:',
-      error,
-    )
-
-    // Send transcription error to main window
-    this.windowMessenger.sendTranscriptionError(error)
-
-    // Clear current interaction on error
-    interactionManager.clearCurrentInteraction()
-    this.audioStreamManager.clearInteractionAudio()
   }
 }
 

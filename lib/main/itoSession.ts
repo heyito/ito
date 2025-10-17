@@ -2,10 +2,23 @@ import { ItoMode } from '@/app/generated/ito_pb'
 import { voiceInputService } from './voiceInputService'
 import { recordingStateNotifier } from './recordingStateNotifier'
 import { itoStreamController } from './itoStreamController'
+import { WindowMessenger } from './messaging/WindowMessenger'
+import { TextInserter } from './text/TextInserter'
+import { interactionManager } from './interactions/InteractionManager'
+import { getCursorContext } from '../media/selected-text-reader'
+import { canGetContextFromCurrentApp } from '../utils/applicationDetection'
+import { grammarRulesService } from './grammar/GrammarRulesService'
 import log from 'electron-log'
 
 export class ItoSession {
   private readonly MINIMUM_AUDIO_DURATION_MS = 100
+  private windowMessenger = new WindowMessenger()
+  private textInserter = new TextInserter()
+  private streamResponsePromise: Promise<{
+    response: any
+    audioBuffer: Buffer
+    sampleRate: number
+  }> | null = null
 
   public async startSession(mode: ItoMode) {
     log.info('[ItoSession] Starting session with mode:', mode)
@@ -17,8 +30,8 @@ export class ItoSession {
       return
     }
 
-    // Start streaming audio immediately
-    itoStreamController.startGrpcStream()
+    // Start streaming audio immediately - save the promise to wait for it in completeSession
+    this.streamResponsePromise = itoStreamController.startGrpcStream()
 
     // Send initial mode to the stream
     itoStreamController.changeMode(mode)
@@ -89,17 +102,117 @@ export class ItoSession {
       )
       itoStreamController.cancelTranscription()
       recordingStateNotifier.notifyRecordingStopped()
+      this.streamResponsePromise = null
       return
     }
 
     // End the interaction (this will complete the gRPC stream)
-    // The transcript will be automatically pasted by itoStreamController when the response comes back
     itoStreamController.endInteraction()
 
     // Update UI state
     recordingStateNotifier.notifyRecordingStopped()
 
+    // Wait for the stream response and handle it
+    if (this.streamResponsePromise) {
+      try {
+        const result = await this.streamResponsePromise
+        await this.handleTranscriptionResponse(result)
+      } catch (error) {
+        await this.handleTranscriptionError(error)
+      } finally {
+        this.streamResponsePromise = null
+      }
+    }
+
     log.info('[ItoSession] Session completed')
+  }
+
+  private async handleTranscriptionResponse(result: {
+    response: any
+    audioBuffer: Buffer
+    sampleRate: number
+  }) {
+    const { response, audioBuffer, sampleRate } = result
+
+    log.info('[ItoSession] Processing transcription response:', {
+      transcript: response.transcript,
+      transcriptLength: response.transcript?.length || 0,
+      hasTranscript: !!response.transcript,
+      hasError: !!response.error,
+      errorCode: response.error?.code,
+      interactionId: interactionManager.getCurrentInteractionId(),
+    })
+
+    const errorMessage = response.error ? response.error.message : undefined
+
+    // Handle any transcription error
+    if (response.error) {
+      await interactionManager.createInteraction(
+        response.transcript || '',
+        audioBuffer,
+        sampleRate,
+        errorMessage,
+      )
+
+      itoStreamController.clearInteractionAudio()
+      interactionManager.clearCurrentInteraction()
+    } else {
+      // Handle text insertion with grammar-corrected text
+      if (response.transcript && !response.error) {
+        const contextLength = 4
+        const canGetContext = await canGetContextFromCurrentApp()
+        let cursorContext: string | undefined
+        try {
+          cursorContext = canGetContext
+            ? await getCursorContext(contextLength)
+            : ''
+        } catch (e) {
+          log.error('[ItoSession] Cursor context failed:', e)
+        }
+
+        // Apply grammar rules with cursor context
+        const context = cursorContext || ''
+        let correctedText = grammarRulesService.setCaseFirstWord(
+          context,
+          response.transcript,
+        )
+        correctedText = grammarRulesService.addLeadingSpaceIfNeeded(
+          context,
+          correctedText,
+        )
+
+        await this.textInserter.insertText(correctedText)
+
+        // Create interaction in database
+        await interactionManager.createInteraction(
+          response.transcript,
+          audioBuffer,
+          sampleRate,
+          errorMessage,
+        )
+      }
+
+      // Send transcription result to main window
+      this.windowMessenger.sendTranscriptionResult(response)
+
+      itoStreamController.clearInteractionAudio()
+      interactionManager.clearCurrentInteraction()
+    }
+  }
+
+  private async handleTranscriptionError(error: any) {
+    log.error('[ItoSession] An unexpected error occurred during transcription:', error)
+
+    // Send transcription error to main window
+    this.windowMessenger.sendTranscriptionError(error)
+
+    // Clear current interaction on error
+    interactionManager.clearCurrentInteraction()
+    itoStreamController.clearInteractionAudio()
+  }
+
+  public setMainWindow(mainWindow: any) {
+    this.windowMessenger.setMainWindow(mainWindow)
   }
 }
 

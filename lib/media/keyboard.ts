@@ -42,6 +42,10 @@ let shortcutDebounceTimeout: NodeJS.Timeout | null = null
 let pendingShortcut: KeyboardShortcutConfig | null = null
 export const DEBOUNCE_TIME = 10
 
+// Shortcut duration tracking
+let shortcutActivationTime = 0
+const MINIMUM_SHORTCUT_DURATION_MS = 100
+
 // Test utility function - only available in development
 export const resetForTesting = () => {
   if (process.env.NODE_ENV !== 'production') {
@@ -56,6 +60,7 @@ export const resetForTesting = () => {
       shortcutDebounceTimeout = null
     }
     pendingShortcut = null
+    shortcutActivationTime = 0
     lastHeartbeatReceived = Date.now()
   }
 }
@@ -258,7 +263,10 @@ function handleKeyEventInMain(event: KeyEvent) {
 
       if (pendingShortcut && !isShortcutActive) {
         isShortcutActive = true
-        console.info('lib Shortcut ACTIVATED, starting recording...')
+        shortcutActivationTime = Date.now()
+        console.info(
+          `lib Shortcut ACTIVATED at ${shortcutActivationTime}, starting recording...`,
+        )
         itoSession.startSession(pendingShortcut.mode)
       }
 
@@ -276,10 +284,22 @@ function handleKeyEventInMain(event: KeyEvent) {
     } else if (isShortcutActive) {
       // Shortcut released - deactivate immediately (no debounce on release)
       isShortcutActive = false
-      console.info('lib Shortcut DEACTIVATED, stopping recording...')
 
-      // Complete the session - this will stop audio, end the gRPC stream, and paste the transcript
-      itoSession.completeSession()
+      // Check if shortcut was held long enough
+      const durationMs = Date.now() - shortcutActivationTime
+      console.info(`lib Shortcut DEACTIVATED after ${durationMs}ms`)
+      if (durationMs < MINIMUM_SHORTCUT_DURATION_MS) {
+        console.info(
+          `Shortcut held for only ${durationMs}ms (minimum ${MINIMUM_SHORTCUT_DURATION_MS}ms), cancelling session`,
+        )
+        itoSession.cancelSession()
+      } else {
+        // Complete the session - this will stop audio, end the gRPC stream, and paste the transcript
+        itoSession.completeSession()
+      }
+
+      // Reset activation time
+      shortcutActivationTime = 0
     }
   }
 }

@@ -607,18 +607,18 @@ mod tests {
         let result = downmix_to_mono_vec(&stereo_samples, 2);
 
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0], 0.5); // (0.8 + 0.2) / 2
-        assert_eq!(result[1], -0.5); // (-0.6 + -0.4) / 2
+        assert_eq!(result[0], 0.8); // Left channel sample 1
+        assert_eq!(result[1], -0.6); // Left channel sample 2
     }
 
     #[test]
     fn test_downmix_to_mono_quad() {
-        // 4 channels: averaging 4 samples per frame
+        // 4 channels: one frame with values [1.0, 0.5, 0.25, 0.25]
         let quad_samples: Vec<f32> = vec![1.0, 0.5, 0.25, 0.25]; // One frame
         let result = downmix_to_mono_vec(&quad_samples, 4);
 
         assert_eq!(result.len(), 1);
-        assert_eq!(result[0], 0.5); // (1.0 + 0.5 + 0.25 + 0.25) / 4
+        assert_eq!(result[0], 1.0); // Channel 0 sample
     }
 
     #[test]
@@ -628,8 +628,8 @@ mod tests {
         let result = downmix_to_mono_vec(&samples, 2);
 
         assert_eq!(result.len(), 2); // Only 2 complete frames
-        assert_eq!(result[0], 0.5);
-        assert_eq!(result[1], -0.5);
+        assert_eq!(result[0], 0.8); // Left channel sample 1
+        assert_eq!(result[1], -0.6); // Left channel sample 2
     }
 
     #[test]

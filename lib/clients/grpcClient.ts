@@ -375,9 +375,7 @@ class GrpcClient {
    * Raw TranscribeStreamV2 that accepts pre-built TranscribeStreamRequest messages.
    * Useful for advanced use cases where the caller wants full control over the stream.
    */
-  async transcribeStreamV2Raw(
-    stream: AsyncIterable<TranscribeStreamRequest>,
-  ) {
+  async transcribeStreamV2Raw(stream: AsyncIterable<TranscribeStreamRequest>) {
     return this.withRetry(async () => {
       const response = await this.client.transcribeStreamV2(stream, {
         headers: this.getHeaders(),

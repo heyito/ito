@@ -3,7 +3,7 @@ import store, { KeyboardShortcutConfig } from '../main/store'
 import { STORE_KEYS } from '../constants/store-keys'
 import { getNativeBinaryPath } from './native-interface'
 import { BrowserWindow } from 'electron'
-import { voiceInputService } from '../main/voiceInputService'
+import { itoSession } from '../main/itoSession'
 import { KeyName, keyNameMap, normalizeLegacyKey } from '../types/keyboard'
 import { getProgrammaticTyping } from './typingState'
 
@@ -202,7 +202,7 @@ function handleKeyEventInMain(event: KeyEvent) {
       // Shortcut released
       isShortcutActive = false
       console.info('Shortcut DEACTIVATED, stopping recording...')
-      voiceInputService.stopSTTService()
+      itoSession.completeSession()
     }
     return
   }
@@ -259,7 +259,7 @@ function handleKeyEventInMain(event: KeyEvent) {
       if (pendingShortcut && !isShortcutActive) {
         isShortcutActive = true
         console.info('lib Shortcut ACTIVATED, starting recording...')
-        voiceInputService.startSTTService(pendingShortcut.mode)
+        itoSession.startSession(pendingShortcut.mode)
       }
 
       // Clear debounce state
@@ -278,9 +278,8 @@ function handleKeyEventInMain(event: KeyEvent) {
       isShortcutActive = false
       console.info('lib Shortcut DEACTIVATED, stopping recording...')
 
-      // Don't end the interaction yet - let the transcription service handle it
-      // The interaction will be ended when transcription completes or fails
-      voiceInputService.stopSTTService()
+      // Complete the session - this will stop audio, end the gRPC stream, and paste the transcript
+      itoSession.completeSession()
     }
   }
 }

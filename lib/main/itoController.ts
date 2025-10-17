@@ -20,6 +20,7 @@ import { DictionaryTable } from './sqlite/repo'
 import { getCurrentUserId, getAdvancedSettings } from './store'
 import { getActiveWindow } from '../media/active-application'
 import { getSelectedTextString } from '../media/selected-text-reader'
+import { audioRecorderService } from '../media/audio'
 import log from 'electron-log'
 import { BrowserWindow } from 'electron'
 
@@ -60,6 +61,73 @@ export class ItoController {
     return true
   }
 
+  /**
+   * Starts the gRPC stream immediately without waiting for minimum audio duration.
+   * Use this when you want to start streaming right away.
+   */
+  public startGrpcStream() {
+    if (this.hasStartedGrpc) {
+      log.warn('[ItoController] gRPC stream already started')
+      return
+    }
+
+    if (this.currentMode === null) {
+      log.error('[ItoController] Cannot start gRPC stream - mode not set')
+      return
+    }
+
+    log.info('[ItoController] Starting gRPC stream immediately')
+    this.hasStartedGrpc = true
+
+    // Set up direct audio pipeline
+    this.setupAudioListeners()
+
+    grpcClient
+      .transcribeStreamV2Raw(this.createStreamGenerator())
+      .then(response => {
+        if (!this.isCancelled) {
+          this.handleTranscriptionResponse(response)
+        }
+      })
+      .catch(error => {
+        if (!this.isCancelled) {
+          this.handleTranscriptionError(error)
+        }
+      })
+      .finally(() => {
+        this.cleanupAudioListeners()
+      })
+  }
+
+  private setupAudioListeners() {
+    log.info('[ItoController] Setting up direct audio listeners')
+
+    audioRecorderService.on('audio-chunk', this.handleAudioChunk)
+    audioRecorderService.on('audio-config', this.handleAudioConfig)
+  }
+
+  private cleanupAudioListeners() {
+    log.info('[ItoController] Cleaning up audio listeners')
+
+    audioRecorderService.off('audio-chunk', this.handleAudioChunk)
+    audioRecorderService.off('audio-config', this.handleAudioConfig)
+  }
+
+  private handleAudioChunk = (chunk: Buffer) => {
+    log.info(`[ItoController] Received audio chunk: ${chunk.length} bytes`)
+    this.audioStreamManager.addAudioChunk(chunk)
+  }
+
+  private handleAudioConfig = ({ outputSampleRate, sampleRate }: any) => {
+    const effectiveRate = outputSampleRate || sampleRate || 16000
+    log.info('[ItoController] Received audio config:', {
+      outputSampleRate,
+      sampleRate,
+      effectiveRate,
+    })
+    this.audioStreamManager.setAudioConfig({ sampleRate: effectiveRate })
+  }
+
   public changeMode(mode: ItoMode) {
     if (!this.audioStreamManager.isCurrentlyStreaming()) {
       log.warn('[ItoController] Cannot change mode - no active stream')
@@ -98,58 +166,12 @@ export class ItoController {
     this.audioStreamManager.clearInteractionAudio()
   }
 
-  public forwardAudioChunk(chunk: Buffer) {
-    log.info(`[ItoController] Received audio chunk: ${chunk.length} bytes`)
-    this.audioStreamManager.addAudioChunk(chunk)
-    this.startGrpcIfReady()
-  }
-
-  public setAudioConfig(config: { sampleRate?: number; channels?: number }) {
-    log.info('[ItoController] Setting audio config:', config)
-    this.audioStreamManager.setAudioConfig(config)
-  }
-
   public setMainWindow(mainWindow: BrowserWindow | null) {
     this.windowMessenger.setMainWindow(mainWindow)
   }
 
   private stopStreaming() {
     this.audioStreamManager.stopStreaming()
-  }
-
-  private startGrpcIfReady() {
-    log.info('[ItoController] Checking if ready to start gRPC:', {
-      hasStartedGrpc: this.hasStartedGrpc,
-      isCurrentlyStreaming: this.audioStreamManager.isCurrentlyStreaming(),
-      hasMinimumDuration: this.audioStreamManager.hasMinimumDuration(),
-      bufferedDuration: this.audioStreamManager.getBufferedDurationMs(),
-      currentMode: this.currentMode,
-    })
-
-    if (
-      this.hasStartedGrpc ||
-      !this.audioStreamManager.isCurrentlyStreaming() ||
-      !this.audioStreamManager.hasMinimumDuration() ||
-      this.currentMode === null
-    ) {
-      return
-    }
-
-    log.info('[ItoController] Starting gRPC stream now')
-    this.hasStartedGrpc = true
-
-    grpcClient
-      .transcribeStreamV2Raw(this.createStreamGenerator())
-      .then(response => {
-        if (!this.isCancelled) {
-          this.handleTranscriptionResponse(response)
-        }
-      })
-      .catch(error => {
-        if (!this.isCancelled) {
-          this.handleTranscriptionError(error)
-        }
-      })
   }
 
   private async *createStreamGenerator(): AsyncGenerator<TranscribeStreamRequest> {
@@ -303,7 +325,10 @@ export class ItoController {
   }
 
   private async handleTranscriptionError(error: any) {
-    log.error('[ItoController] An unexpected error occurred during transcription:', error)
+    log.error(
+      '[ItoController] An unexpected error occurred during transcription:',
+      error,
+    )
 
     // Send transcription error to main window
     this.windowMessenger.sendTranscriptionError(error)

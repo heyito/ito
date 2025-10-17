@@ -7,7 +7,7 @@ use std::time::Duration;
 // Platform-specific modules
 #[cfg(target_os = "macos")]
 mod macos;
-#[cfg(any(target_os = "windows"))]
+#[cfg(target_os = "windows")]
 mod windows;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -214,7 +214,7 @@ fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
     macos::get_selected_text()
 }
 
-#[cfg(any(target_os = "windows"))]
+#[cfg(target_os = "windows")]
 fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
     windows::get_selected_text()
 }
@@ -323,7 +323,7 @@ fn copy_selected_text() -> Result<(), Box<dyn std::error::Error>> {
     macos::native_cmd_c()
 }
 
-#[cfg(any(target_os = "windows"))]
+#[cfg(target_os = "windows")]
 fn copy_selected_text() -> Result<(), Box<dyn std::error::Error>> {
     windows::copy_selected_text()
 }
@@ -336,7 +336,7 @@ fn select_previous_chars_and_copy(
     macos::select_previous_chars_and_copy(char_count, clipboard)
 }
 
-#[cfg(any(target_os = "windows"))]
+#[cfg(target_os = "windows")]
 fn select_previous_chars_and_copy(
     char_count: usize,
     clipboard: &mut Clipboard,
@@ -349,7 +349,7 @@ fn shift_cursor_right_with_deselect(char_count: usize) -> Result<(), Box<dyn std
     macos::shift_cursor_right_with_deselect(char_count)
 }
 
-#[cfg(any(target_os = "windows"))]
+#[cfg(target_os = "windows")]
 fn shift_cursor_right_with_deselect(char_count: usize) -> Result<(), Box<dyn std::error::Error>> {
     windows::shift_cursor_right_with_deselect(char_count)
 }
@@ -359,7 +359,7 @@ fn count_editor_chars(text: &str) -> usize {
     macos::count_editor_chars(text)
 }
 
-#[cfg(any(target_os = "windows"))]
+#[cfg(target_os = "windows")]
 fn count_editor_chars(text: &str) -> usize {
     windows::count_editor_chars(text)
 }

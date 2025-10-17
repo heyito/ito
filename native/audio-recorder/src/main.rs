@@ -269,6 +269,7 @@ where
     }
     let mut best_channel = 0usize;
     let mut best_energy = energy_per_channel[0];
+    #[allow(clippy::needless_range_loop)]
     for c in 1..num_channels {
         if energy_per_channel[c] > best_energy {
             best_energy = energy_per_channel[c];
@@ -381,15 +382,13 @@ fn writer_loop(
                     ),
                 }
             }
-        } else {
-            if input_sample_rate != TARGET_SAMPLE_RATE {
-                let resampled = linear_resample_mono(&frame, input_sample_rate, TARGET_SAMPLE_RATE);
-                if !resampled.is_empty() {
-                    write_audio_chunk(&resampled, &stdout);
-                }
-            } else {
-                write_audio_chunk(&frame, &stdout);
+        } else if input_sample_rate != TARGET_SAMPLE_RATE {
+            let resampled = linear_resample_mono(&frame, input_sample_rate, TARGET_SAMPLE_RATE);
+            if !resampled.is_empty() {
+                write_audio_chunk(&resampled, &stdout);
             }
+        } else {
+            write_audio_chunk(&frame, &stdout);
         }
     }
 

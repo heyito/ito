@@ -170,6 +170,10 @@ export class ItoController {
     this.windowMessenger.setMainWindow(mainWindow)
   }
 
+  public getAudioDurationMs(): number {
+    return this.audioStreamManager.getAudioDurationMs()
+  }
+
   private stopStreaming() {
     this.audioStreamManager.stopStreaming()
   }

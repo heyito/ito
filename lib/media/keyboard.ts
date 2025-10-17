@@ -37,15 +37,6 @@ let heartbeatCheckTimer: NodeJS.Timeout | null = null
 const HEARTBEAT_CHECK_INTERVAL_MS = 5000 // Check every 5 seconds
 const HEARTBEAT_TIMEOUT_MS = 15000 // 15 seconds without heartbeat triggers restart
 
-// Debouncing state
-let shortcutDebounceTimeout: NodeJS.Timeout | null = null
-let pendingShortcut: KeyboardShortcutConfig | null = null
-export const DEBOUNCE_TIME = 10
-
-// Shortcut duration tracking
-let shortcutActivationTime = 0
-const MINIMUM_SHORTCUT_DURATION_MS = 100
-
 // Test utility function - only available in development
 export const resetForTesting = () => {
   if (process.env.NODE_ENV !== 'production') {
@@ -55,12 +46,6 @@ export const resetForTesting = () => {
     keyPressTimestamps.clear()
     stopStuckKeyChecker()
     stopHeartbeatChecker()
-    if (shortcutDebounceTimeout) {
-      clearTimeout(shortcutDebounceTimeout)
-      shortcutDebounceTimeout = null
-    }
-    pendingShortcut = null
-    shortcutActivationTime = 0
     lastHeartbeatReceived = Date.now()
   }
 }
@@ -249,57 +234,14 @@ function handleKeyEventInMain(event: KeyEvent) {
 
   // Handle shortcut activation with debouncing
   if (currentlyHeldShortcut && !isShortcutActive) {
-    // New shortcut detected - start debounce timer
-    if (
-      !shortcutDebounceTimeout ||
-      pendingShortcut?.id !== currentlyHeldShortcut.id
-    ) {
-      // Clear any existing timeout
-      if (shortcutDebounceTimeout) {
-        clearTimeout(shortcutDebounceTimeout)
-      }
-
-      pendingShortcut = currentlyHeldShortcut
-
-      if (pendingShortcut && !isShortcutActive) {
-        isShortcutActive = true
-        shortcutActivationTime = Date.now()
-        console.info(
-          `lib Shortcut ACTIVATED at ${shortcutActivationTime}, starting recording...`,
-        )
-        itoSession.startSession(pendingShortcut.mode)
-      }
-
-      // Clear debounce state
-      shortcutDebounceTimeout = null
-      pendingShortcut = null
-    }
+    isShortcutActive = true
+    itoSession.startSession(currentlyHeldShortcut.mode)
   } else if (!currentlyHeldShortcut) {
     // No shortcut detected - cancel pending activation or deactivate active shortcut
-    if (shortcutDebounceTimeout) {
-      // Cancel pending activation
-      clearTimeout(shortcutDebounceTimeout)
-      shortcutDebounceTimeout = null
-      pendingShortcut = null
-    } else if (isShortcutActive) {
+    if (isShortcutActive) {
       // Shortcut released - deactivate immediately (no debounce on release)
       isShortcutActive = false
-
-      // Check if shortcut was held long enough
-      const durationMs = Date.now() - shortcutActivationTime
-      console.info(`lib Shortcut DEACTIVATED after ${durationMs}ms`)
-      if (durationMs < MINIMUM_SHORTCUT_DURATION_MS) {
-        console.info(
-          `Shortcut held for only ${durationMs}ms (minimum ${MINIMUM_SHORTCUT_DURATION_MS}ms), cancelling session`,
-        )
-        itoSession.cancelSession()
-      } else {
-        // Complete the session - this will stop audio, end the gRPC stream, and paste the transcript
-        itoSession.completeSession()
-      }
-
-      // Reset activation time
-      shortcutActivationTime = 0
+      itoSession.completeSession()
     }
   }
 }

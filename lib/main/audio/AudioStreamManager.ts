@@ -80,4 +80,15 @@ export class AudioStreamManager {
   clearInteractionAudio() {
     this.audioChunksForInteraction = []
   }
+
+  getAudioDurationMs(): number {
+    const totalBytes = this.audioChunksForInteraction.reduce(
+      (sum, chunk) => sum + chunk.length,
+      0,
+    )
+    // 16-bit PCM mono -> 2 bytes per sample
+    const totalSamples = totalBytes / 2
+    const durationSeconds = totalSamples / this.currentSampleRate
+    return Math.floor(durationSeconds * 1000)
+  }
 }

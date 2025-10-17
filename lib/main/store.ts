@@ -148,7 +148,6 @@ export const defaultValues: AppStore = {
       transcriptionPrompt: DEFAULT_ADVANCED_SETTINGS.transcriptionPrompt,
       editingPrompt: DEFAULT_ADVANCED_SETTINGS.editingPrompt,
       noSpeechThreshold: DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold,
-      lowQualityThreshold: DEFAULT_ADVANCED_SETTINGS.lowQualityThreshold,
     },
   },
   openMic: false,

@@ -7,7 +7,6 @@ import {
   ClientUnavailableError,
   ClientModelError,
   ClientNoSpeechError,
-  ClientTranscriptionQualityError,
   ClientAudioTooShortError,
   ClientApiError,
   ClientError,
@@ -90,23 +89,6 @@ class GroqClient implements LlmProvider {
   }
 
   /**
-   * Calculate a robust average log probability across all segments.
-   * Uses the median of available avg_logprob values to reduce outlier impact.
-   */
-  private calcAvgLogprob(segments: any[]): number | null {
-    if (!Array.isArray(segments) || segments.length === 0) return null
-    const values = segments
-      .map(s => s?.avg_logprob)
-      .filter((v: any) => typeof v === 'number' && isFinite(v)) as number[]
-    if (values.length === 0) return null
-    values.sort((a, b) => a - b)
-    const mid = Math.floor(values.length / 2)
-    return values.length % 2 === 0
-      ? (values[mid - 1] + values[mid]) / 2
-      : values[mid]
-  }
-
-  /**
    * Transcribes an audio buffer using the Groq API.
    * @param audioBuffer The audio data as a Node.js Buffer.
    * @param options Optional transcription configuration.
@@ -122,9 +104,6 @@ class GroqClient implements LlmProvider {
     const vocabulary = options?.vocabulary
     const noSpeechThreshold =
       options?.noSpeechThreshold ?? DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold
-    const lowQualityThreshold =
-      options?.lowQualityThreshold ??
-      DEFAULT_ADVANCED_SETTINGS.lowQualityThreshold
 
     const file = await toFile(audioBuffer, `audio.${fileType}`)
     if (!this.isAvailable) {
@@ -162,16 +141,6 @@ class GroqClient implements LlmProvider {
             ClientProvider.GROQ,
             first.no_speech_prob,
           )
-        }
-        const robustAvg = this.calcAvgLogprob(segments)
-        if (typeof robustAvg === 'number') {
-          if (robustAvg < lowQualityThreshold) {
-            console.log('Low quality probability (robust avg):', robustAvg)
-            throw new ClientTranscriptionQualityError(
-              ClientProvider.GROQ,
-              robustAvg,
-            )
-          }
         }
       }
 

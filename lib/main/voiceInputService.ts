@@ -9,7 +9,7 @@ import log from 'electron-log'
 export class VoiceInputService {
   /**
    * Starts audio recording and handles system audio muting.
-   * Does NOT start the ItoController - that should be done separately.
+   * Does NOT start the ItoStreamController - that should be done separately.
    */
   public startAudioRecording = () => {
     log.info('[VoiceInputService] Starting audio recording')
@@ -24,7 +24,10 @@ export class VoiceInputService {
     }
 
     // Start audio recorder
-    log.info('[VoiceInputService] Starting audio recorder with device:', deviceId)
+    log.info(
+      '[VoiceInputService] Starting audio recorder with device:',
+      deviceId,
+    )
     audioRecorderService.startRecording(deviceId)
 
     log.info('[VoiceInputService] Audio recording started')
@@ -57,7 +60,7 @@ export class VoiceInputService {
   }
 
   public setUpAudioRecorderListeners = () => {
-    // Note: audio-chunk and audio-config are now handled directly by ItoController
+    // Note: audio-chunk and audio-config are now handled directly by ItoStreamController
     // when the gRPC stream starts. VoiceInputService only handles UI-related events.
 
     audioRecorderService.on('volume-update', volume => {

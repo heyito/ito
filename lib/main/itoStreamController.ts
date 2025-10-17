@@ -25,10 +25,10 @@ import log from 'electron-log'
 import { BrowserWindow } from 'electron'
 
 /**
- * ItoController manages the lifecycle of a transcription stream using TranscribeStreamV2.
+ * ItoStreamController manages the lifecycle of a transcription stream using TranscribeStreamV2.
  * It allows sending metadata/config, streaming audio, and updating settings during the stream.
  */
-export class ItoController {
+export class ItoStreamController {
   private audioStreamManager = new AudioStreamManager()
   private windowMessenger = new WindowMessenger()
   private textInserter = new TextInserter()
@@ -36,11 +36,12 @@ export class ItoController {
   private hasStartedGrpc = false
   private currentMode: ItoMode | null = null
   private isCancelled = false
+  private configQueue: TranscribeStreamRequest[] = []
 
   public async startInteraction(mode: ItoMode): Promise<boolean> {
     // Guard against multiple concurrent transcriptions
     if (this.audioStreamManager.isCurrentlyStreaming()) {
-      log.warn('[ItoController] Stream already in progress.')
+      log.warn('[ItoStreamController] Stream already in progress.')
       return false
     }
 
@@ -48,7 +49,7 @@ export class ItoController {
     this.hasStartedGrpc = false
     this.currentMode = mode
     this.isCancelled = false
-    log.info('[ItoController] Starting new interaction stream.')
+    log.info('[ItoStreamController] Starting new interaction stream.')
 
     // Reuse existing global interaction ID if present, otherwise create a new one
     const existingId = interactionManager.getCurrentInteractionId()
@@ -67,16 +68,16 @@ export class ItoController {
    */
   public startGrpcStream() {
     if (this.hasStartedGrpc) {
-      log.warn('[ItoController] gRPC stream already started')
+      log.warn('[ItoStreamController] gRPC stream already started')
       return
     }
 
     if (this.currentMode === null) {
-      log.error('[ItoController] Cannot start gRPC stream - mode not set')
+      log.error('[ItoStreamController] Cannot start gRPC stream - mode not set')
       return
     }
 
-    log.info('[ItoController] Starting gRPC stream immediately')
+    log.info('[ItoStreamController] Starting gRPC stream immediately')
     this.hasStartedGrpc = true
 
     // Set up direct audio pipeline
@@ -100,27 +101,26 @@ export class ItoController {
   }
 
   private setupAudioListeners() {
-    log.info('[ItoController] Setting up direct audio listeners')
+    log.info('[ItoStreamController] Setting up direct audio listeners')
 
     audioRecorderService.on('audio-chunk', this.handleAudioChunk)
     audioRecorderService.on('audio-config', this.handleAudioConfig)
   }
 
   private cleanupAudioListeners() {
-    log.info('[ItoController] Cleaning up audio listeners')
+    log.info('[ItoStreamController] Cleaning up audio listeners')
 
     audioRecorderService.off('audio-chunk', this.handleAudioChunk)
     audioRecorderService.off('audio-config', this.handleAudioConfig)
   }
 
   private handleAudioChunk = (chunk: Buffer) => {
-    log.info(`[ItoController] Received audio chunk: ${chunk.length} bytes`)
     this.audioStreamManager.addAudioChunk(chunk)
   }
 
   private handleAudioConfig = ({ outputSampleRate, sampleRate }: any) => {
     const effectiveRate = outputSampleRate || sampleRate || 16000
-    log.info('[ItoController] Received audio config:', {
+    log.info('[ItoStreamController] Received audio config:', {
       outputSampleRate,
       sampleRate,
       effectiveRate,
@@ -130,31 +130,66 @@ export class ItoController {
 
   public changeMode(mode: ItoMode) {
     if (!this.audioStreamManager.isCurrentlyStreaming()) {
-      log.warn('[ItoController] Cannot change mode - no active stream')
+      log.warn('[ItoStreamController] Cannot change mode - no active stream')
       return
     }
 
     this.currentMode = mode
-    log.info(`[ItoController] Mode changed to ${mode}`)
+    log.info(`[ItoStreamController] Mode changed to ${mode}`)
+
+    // Send mode update to stream
+    this.sendModeUpdate(mode)
+  }
+
+  public async sendConfigUpdate() {
+    if (!this.audioStreamManager.isCurrentlyStreaming()) {
+      log.warn('[ItoStreamController] Cannot send config - no active stream')
+      return
+    }
+
+    log.info('[ItoStreamController] Queueing config update')
+    const config = await this.buildStreamConfig()
+    this.configQueue.push(config)
+  }
+
+  private sendModeUpdate(mode: ItoMode) {
+    log.info(`[ItoStreamController] Sending mode update: ${mode}`)
+
+    // Create a minimal config with just the mode
+    const modeUpdate = create(TranscribeStreamRequestSchema, {
+      payload: {
+        case: 'config',
+        value: create(StreamConfigSchema, {
+          context: create(ContextInfoSchema, {
+            mode,
+            windowTitle: '',
+            appName: '',
+            contextText: '',
+          }),
+        }),
+      },
+    })
+
+    this.configQueue.push(modeUpdate)
   }
 
   public endInteraction() {
     if (!this.audioStreamManager.isCurrentlyStreaming()) {
-      log.warn('[ItoController] No active stream to end')
+      log.warn('[ItoStreamController] No active stream to end')
       return
     }
 
-    log.info('[ItoController] Ending interaction stream')
+    log.info('[ItoStreamController] Ending interaction stream')
     this.stopStreaming()
   }
 
   public cancelTranscription() {
     if (!this.audioStreamManager.isCurrentlyStreaming()) {
-      log.warn('[ItoController] No active stream to cancel')
+      log.warn('[ItoStreamController] No active stream to cancel')
       return
     }
 
-    log.info('[ItoController] Cancelling transcription')
+    log.info('[ItoStreamController] Cancelling transcription')
     this.isCancelled = true
 
     // Clear interaction without creating it
@@ -179,16 +214,22 @@ export class ItoController {
   }
 
   private async *createStreamGenerator(): AsyncGenerator<TranscribeStreamRequest> {
-    // Send initial config
-    const initialConfig = await this.buildStreamConfig()
-    yield initialConfig
-    log.info('[ItoController] Sent initial config')
+    log.info(
+      '[ItoStreamController] Starting stream generator (audio-first mode)',
+    )
 
-    // Stream audio chunks
+    // Stream audio chunks and interleave config updates
     for await (const audioChunk of this.audioStreamManager.streamAudioChunks()) {
       if (this.isCancelled) {
-        log.info('[ItoController] Stream cancelled, stopping generator')
+        log.info('[ItoStreamController] Stream cancelled, stopping generator')
         break
+      }
+
+      // Send any pending config updates before this audio chunk
+      while (this.configQueue.length > 0) {
+        const configMessage = this.configQueue.shift()!
+        log.info('[ItoStreamController] Sending config update from queue')
+        yield configMessage
       }
 
       // Send audio chunk
@@ -200,7 +241,14 @@ export class ItoController {
       })
     }
 
-    log.info('[ItoController] Stream generator completed')
+    // Send any remaining config messages at the end
+    while (this.configQueue.length > 0) {
+      const configMessage = this.configQueue.shift()!
+      log.info('[ItoStreamController] Sending final config update from queue')
+      yield configMessage
+    }
+
+    log.info('[ItoStreamController] Stream generator completed')
   }
 
   private async buildStreamConfig(): Promise<TranscribeStreamRequest> {
@@ -223,7 +271,7 @@ export class ItoController {
         }
       }
     } catch (error) {
-      log.error('[ItoController] Error getting context text:', error)
+      log.error('[ItoStreamController] Error getting context text:', error)
     }
 
     return create(TranscribeStreamRequestSchema, {
@@ -262,7 +310,7 @@ export class ItoController {
   }
 
   private async handleTranscriptionResponse(response: any) {
-    log.info('[ItoController] Processing transcription response:', {
+    log.info('[ItoStreamController] Processing transcription response:', {
       transcript: response.transcript,
       transcriptLength: response.transcript?.length || 0,
       hasTranscript: !!response.transcript,
@@ -330,7 +378,7 @@ export class ItoController {
 
   private async handleTranscriptionError(error: any) {
     log.error(
-      '[ItoController] An unexpected error occurred during transcription:',
+      '[ItoStreamController] An unexpected error occurred during transcription:',
       error,
     )
 
@@ -343,4 +391,4 @@ export class ItoController {
   }
 }
 
-export const itoController = new ItoController()
+export const itoStreamController = new ItoStreamController()

@@ -28,7 +28,7 @@ import { validateStoredTokens, ensureValidTokens } from '../auth/events'
 import { Auth0Config, validateAuth0Config } from '../auth/config'
 import { createAppTray } from './tray'
 import { transcriptionService } from './transcriptionService'
-import { itoController } from './itoController'
+import { ItoStreamController } from './ItoStreamController'
 import { initializeAutoUpdater } from './autoUpdaterWrapper'
 import { teardown } from './teardown'
 
@@ -120,7 +120,7 @@ app.whenReady().then(async () => {
 
   // Set main window for transcription service so it can send messages
   transcriptionService.setMainWindow(mainWindow)
-  itoController.setMainWindow(mainWindow)
+  ItoStreamController.setMainWindow(mainWindow)
 
   console.log('Starting selected text reader service.')
   selectedTextReaderService.initialize()
@@ -137,7 +137,7 @@ app.whenReady().then(async () => {
       // Update the gRPC client with the new main window reference
       if (mainWindow) {
         grpcClient.setMainWindow(mainWindow)
-        itoController.setMainWindow(mainWindow)
+        ItoStreamController.setMainWindow(mainWindow)
       }
     }
   })

@@ -15,6 +15,7 @@ mock.module('electron', () => ({
 
 const mockOs = {
   platform: mock(() => 'darwin'),
+  arch: mock(() => 'arm64'),
 }
 mock.module('os', () => ({
   default: mockOs,
@@ -36,27 +37,32 @@ describe('Native Interface Module', () => {
     // Reset all mocks
     mockJoin.mockClear()
     mockOs.platform.mockClear()
+    mockOs.arch.mockClear()
 
     // Reset module state
     delete require.cache[require.resolve('./native-interface')]
 
-    // Set default platform
+    // Set default platform and arch
     mockOs.platform.mockReturnValue('darwin')
+    mockOs.arch.mockReturnValue('arm64')
     mockApp.isPackaged = false
   })
 
   describe('Platform-Specific Path Resolution Business Logic', () => {
     test('should resolve Darwin development binary path correctly', async () => {
       mockOs.platform.mockReturnValue('darwin')
+      mockOs.arch.mockReturnValue('arm64')
       const { getNativeBinaryPath } = await import('./native-interface')
 
       const result = getNativeBinaryPath('global-key-listener')
 
       expect(mockJoin).toHaveBeenLastCalledWith(
-        expect.stringContaining('native/global-key-listener/target/universal'),
+        expect.stringContaining('native/target/aarch64-apple-darwin/release'),
         'global-key-listener',
       )
-      expect(result).toContain('universal/global-key-listener')
+      expect(result).toContain(
+        'aarch64-apple-darwin/release/global-key-listener',
+      )
     })
 
     test('should resolve Windows development binary path correctly', async () => {
@@ -66,9 +72,7 @@ describe('Native Interface Module', () => {
       const result = getNativeBinaryPath('audio-recorder')
 
       expect(mockJoin).toHaveBeenLastCalledWith(
-        expect.stringContaining(
-          'native/audio-recorder/target/x86_64-pc-windows-gnu/release',
-        ),
+        expect.stringContaining('native/target/x86_64-pc-windows-gnu/release'),
         'audio-recorder.exe',
       )
       expect(result).toContain(
@@ -206,7 +210,7 @@ describe('Native Interface Module', () => {
         const prodImport = await import('./native-interface')
         const prodResult = prodImport.getNativeBinaryPath('test-module')
 
-        expect(devResult).toContain('target/universal')
+        expect(devResult).toContain('target/aarch64-apple-darwin/release')
         expect(prodResult).toContain('resources/binaries')
         expect(devResult).not.toBe(prodResult)
       } finally {

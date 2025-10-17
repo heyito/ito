@@ -9,13 +9,13 @@ const nativeBinaries = [
 
 const getMacResources = () =>
   nativeBinaries.map(binary => ({
-    from: `native/${binary}/target/\${arch}-apple-darwin/release/${binary}`,
+    from: `native/target/\${arch}-apple-darwin/release/${binary}`,
     to: `binaries/${binary}`,
   }))
 
 const getWindowsResources = () =>
   nativeBinaries.map(binary => ({
-    from: `native/${binary}/target/x86_64-pc-windows-gnu/release/${binary}.exe`,
+    from: `native/target/x86_64-pc-windows-gnu/release/${binary}.exe`,
     to: `binaries/${binary}.exe`,
   }))
 

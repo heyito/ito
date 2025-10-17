@@ -5,10 +5,10 @@ use std::thread;
 use std::time::Duration;
 
 // Platform-specific modules
-#[cfg(any(target_os = "windows"))]
-mod windows;
 #[cfg(target_os = "macos")]
 mod macos;
+#[cfg(target_os = "windows")]
+mod windows;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "command")]
@@ -61,19 +61,17 @@ fn main() {
     // Spawn thread to read commands from stdin
     thread::spawn(move || {
         let stdin = io::stdin();
-        for line in stdin.lock().lines() {
-            if let Ok(l) = line {
-                if l.trim().is_empty() {
-                    continue;
-                }
-                if let Ok(command) = serde_json::from_str::<Command>(&l) {
-                    if let Err(e) = cmd_tx.send(command) {
-                        eprintln!(
-                            "[selected-text-reader] Failed to send command to processor: {}",
-                            e
-                        );
-                        break;
-                    }
+        for l in stdin.lock().lines().map_while(Result::ok) {
+            if l.trim().is_empty() {
+                continue;
+            }
+            if let Ok(command) = serde_json::from_str::<Command>(&l) {
+                if let Err(e) = cmd_tx.send(command) {
+                    eprintln!(
+                        "[selected-text-reader] Failed to send command to processor: {}",
+                        e
+                    );
+                    break;
                 }
             }
         }
@@ -216,7 +214,7 @@ fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
     macos::get_selected_text()
 }
 
-#[cfg(any(target_os = "windows"))]
+#[cfg(target_os = "windows")]
 fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
     windows::get_selected_text()
 }
@@ -276,7 +274,8 @@ fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::erro
                     // Likely means we're at the edge of a textbox.
                     String::new()
                 } else {
-                    // Selection extended successfully - continue extending to get full context_length
+                    // Selection extended successfully - continue extending to get full
+                    // context_length
                     clipboard
                         .clear()
                         .map_err(|e| format!("Clipboard clear failed: {}", e))?;
@@ -286,15 +285,17 @@ fn get_cursor_context(context_length: usize) -> Result<String, Box<dyn std::erro
                     match full_result {
                         Ok(full_context_text) => {
                             let full_context_char_count = count_editor_chars(&full_context_text);
-                            // Undo by the absolute difference between original selected text and total selection
-                            let chars_to_undo = (full_context_char_count as i32
-                                - selected_char_count as i32)
-                                .abs() as usize;
+                            // Undo by the absolute difference between original selected text and
+                            // total selection
+                            let chars_to_undo =
+                                (full_context_char_count as i32 - selected_char_count as i32)
+                                    .unsigned_abs() as usize;
                             if chars_to_undo > 0 {
                                 let _ = shift_cursor_right_with_deselect(chars_to_undo);
                             }
 
-                            // Return only the newly added context (first n characters where n is the difference)
+                            // Return only the newly added context (first n characters where n is
+                            // the difference)
                             let new_context_char_count =
                                 full_context_char_count - selected_char_count;
                             full_context_text
@@ -322,7 +323,7 @@ fn copy_selected_text() -> Result<(), Box<dyn std::error::Error>> {
     macos::native_cmd_c()
 }
 
-#[cfg(any(target_os = "windows"))]
+#[cfg(target_os = "windows")]
 fn copy_selected_text() -> Result<(), Box<dyn std::error::Error>> {
     windows::copy_selected_text()
 }
@@ -335,7 +336,7 @@ fn select_previous_chars_and_copy(
     macos::select_previous_chars_and_copy(char_count, clipboard)
 }
 
-#[cfg(any(target_os = "windows"))]
+#[cfg(target_os = "windows")]
 fn select_previous_chars_and_copy(
     char_count: usize,
     clipboard: &mut Clipboard,
@@ -348,7 +349,7 @@ fn shift_cursor_right_with_deselect(char_count: usize) -> Result<(), Box<dyn std
     macos::shift_cursor_right_with_deselect(char_count)
 }
 
-#[cfg(any(target_os = "windows"))]
+#[cfg(target_os = "windows")]
 fn shift_cursor_right_with_deselect(char_count: usize) -> Result<(), Box<dyn std::error::Error>> {
     windows::shift_cursor_right_with_deselect(char_count)
 }
@@ -358,7 +359,7 @@ fn count_editor_chars(text: &str) -> usize {
     macos::count_editor_chars(text)
 }
 
-#[cfg(any(target_os = "windows"))]
+#[cfg(target_os = "windows")]
 fn count_editor_chars(text: &str) -> usize {
     windows::count_editor_chars(text)
 }

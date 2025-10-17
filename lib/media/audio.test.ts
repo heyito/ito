@@ -45,6 +45,7 @@ mock.module('electron', () => ({
 mock.module('os', () => ({
   default: {
     platform: mock(() => 'darwin'),
+    arch: mock(() => 'arm64'),
   },
 }))
 
@@ -62,6 +63,7 @@ const waitForProcessing = () => new Promise(resolve => setTimeout(resolve, 10))
 
 // Import after mocking
 import { audioRecorderService } from './audio'
+import { arch } from 'os'
 
 describe('AudioRecorderService', () => {
   beforeEach(() => {
@@ -140,105 +142,6 @@ describe('AudioRecorderService', () => {
 
       // Reset the mock back to normal behavior for other tests
       mockSpawn.mockImplementation(() => mockChildProcess)
-    })
-  })
-
-  describe('Binary Path Resolution Business Logic', () => {
-    test('should resolve Darwin development binary path correctly', () => {
-      audioRecorderService.initialize()
-
-      expect(mockSpawn).toHaveBeenCalledWith(
-        expect.stringContaining(
-          'native/audio-recorder/target/universal/audio-recorder',
-        ),
-        [],
-        { stdio: ['pipe', 'pipe', 'pipe'] },
-      )
-    })
-
-    test('should resolve Windows development binary path correctly', async () => {
-      // Mock Windows platform
-      const osModule = await import('os')
-      const originalPlatform = osModule.default.platform
-      osModule.default.platform = mock(() => 'win32' as any)
-
-      try {
-        audioRecorderService.terminate()
-        audioRecorderService.initialize()
-
-        expect(mockSpawn).toHaveBeenCalledWith(
-          expect.stringContaining(
-            'native/audio-recorder/target/x86_64-pc-windows-gnu/release/audio-recorder.exe',
-          ),
-          [],
-          { stdio: ['pipe', 'pipe', 'pipe'] },
-        )
-      } finally {
-        // Restore original platform function
-        osModule.default.platform = originalPlatform
-      }
-    })
-
-    test('should resolve production binary path correctly', async () => {
-      // Mock production mode by mocking the electron module
-      const originalElectronModule = await import('electron')
-      const mockElectronModule = {
-        ...originalElectronModule,
-        app: {
-          ...originalElectronModule.app,
-          isPackaged: true,
-        },
-      }
-
-      // Mock the module
-      mock.module('electron', () => mockElectronModule)
-
-      try {
-        audioRecorderService.terminate()
-        audioRecorderService.initialize()
-
-        expect(mockSpawn).toHaveBeenCalledWith(
-          expect.stringContaining('binaries/audio-recorder'),
-          [],
-          { stdio: ['pipe', 'pipe', 'pipe'] },
-        )
-      } finally {
-        // Restore original electron module
-        mock.module('electron', () => ({
-          app: {
-            isPackaged: false,
-          },
-        }))
-      }
-    })
-
-    test('should handle unsupported development platform gracefully', async () => {
-      // Mock unsupported platform
-      const osModule = await import('os')
-      const originalPlatform = osModule.default.platform
-      osModule.default.platform = mock(() => 'freebsd' as any)
-
-      let errorEmitted = false
-      audioRecorderService.on('error', () => {
-        errorEmitted = true
-      })
-
-      try {
-        audioRecorderService.initialize()
-
-        // Wait for error handling to complete
-        await waitForProcessing()
-
-        expect(mockElectronLog.error).toHaveBeenCalledWith(
-          expect.stringContaining(
-            'Unsupported development platform for audio-recorder: freebsd',
-          ),
-        )
-        expect(errorEmitted).toBe(true)
-      } finally {
-        // Restore original platform function
-        osModule.default.platform = originalPlatform
-      }
     })
   })
 

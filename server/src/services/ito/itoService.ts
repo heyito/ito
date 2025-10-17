@@ -179,11 +179,27 @@ function dbToAdvancedSettingsPb(
 /**
  * Merges StreamConfig messages progressively.
  * Later configs override earlier ones for the same field.
+ * Empty strings are NOT considered updates - only non-empty values override.
  */
 function mergeStreamConfigs(base: StreamConfig, update: StreamConfig): StreamConfig {
+  // Helper to merge context while preserving non-empty base values when update has empty strings
+  const mergeContext = (baseCtx: ContextInfo | undefined, updateCtx: ContextInfo | undefined): ContextInfo | undefined => {
+    if (!updateCtx) return baseCtx
+    if (!baseCtx) return updateCtx
+
+    // Only override base values with non-empty update values
+    return {
+      ...baseCtx,
+      mode: updateCtx.mode !== undefined && updateCtx.mode !== 0 ? updateCtx.mode : baseCtx.mode,
+      windowTitle: updateCtx.windowTitle !== '' ? updateCtx.windowTitle : baseCtx.windowTitle,
+      appName: updateCtx.appName !== '' ? updateCtx.appName : baseCtx.appName,
+      contextText: updateCtx.contextText !== '' ? updateCtx.contextText : baseCtx.contextText,
+    }
+  }
+
   return {
     ...base,
-    context: update.context ? { ...base.context, ...update.context } : base.context,
+    context: mergeContext(base.context, update.context),
     transcriptionSettings: update.transcriptionSettings
       ? { ...base.transcriptionSettings, ...update.transcriptionSettings }
       : base.transcriptionSettings,

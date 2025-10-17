@@ -152,16 +152,16 @@ export class ItoStreamController {
     log.info(`[ItoStreamController] Sending mode update: ${mode}`)
 
     // Create a minimal config with just the mode
+    // IMPORTANT: Only set the mode field, leave others undefined so server merge works correctly
+    const contextInfo = create(ContextInfoSchema, {})
+    contextInfo.mode = mode
+    // Don't set windowTitle, appName, or contextText - let server keep existing values
+
     const modeUpdate = create(TranscribeStreamRequestSchema, {
       payload: {
         case: 'config',
         value: create(StreamConfigSchema, {
-          context: create(ContextInfoSchema, {
-            mode,
-            windowTitle: '',
-            appName: '',
-            contextText: '',
-          }),
+          context: contextInfo,
         }),
       },
     })

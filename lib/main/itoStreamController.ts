@@ -11,10 +11,7 @@ import { create } from '@bufbuild/protobuf'
 import { grpcClient } from '../clients/grpcClient'
 import { AudioStreamManager } from './audio/AudioStreamManager'
 import { interactionManager } from './interactions/InteractionManager'
-import { DictionaryTable } from './sqlite/repo'
-import { getCurrentUserId, getAdvancedSettings } from './store'
-import { getActiveWindow } from '../media/active-application'
-import { getSelectedTextString } from '../media/selected-text-reader'
+import { contextGrabber } from './context/ContextGrabber'
 import { audioRecorderService } from '../media/audio'
 import log from 'electron-log'
 
@@ -127,7 +124,7 @@ export class ItoStreamController {
     this.audioStreamManager.setAudioConfig({ sampleRate: effectiveRate })
   }
 
-  public changeMode(mode: ItoMode) {
+  public setMode(mode: ItoMode) {
     if (!this.audioStreamManager.isCurrentlyStreaming()) {
       log.warn('[ItoStreamController] Cannot change mode - no active stream')
       return
@@ -251,58 +248,41 @@ export class ItoStreamController {
   }
 
   private async buildStreamConfig(): Promise<TranscribeStreamRequest> {
-    // Gather all config data
-    const userId = getCurrentUserId()
-    const dictionaryItems = await DictionaryTable.findAll(userId)
-    const vocabularyWords = dictionaryItems
-      .filter(item => item.deleted_at === null)
-      .map(item => item.word)
-
-    const windowContext = await getActiveWindow()
-    const advancedSettings = getAdvancedSettings()
-
-    let contextText = ''
-    try {
-      if (this.currentMode === ItoMode.EDIT) {
-        const text = await getSelectedTextString(10000)
-        if (text && text.trim().length > 0) {
-          contextText = text
-        }
-      }
-    } catch (error) {
-      log.error('[ItoStreamController] Error getting context text:', error)
-    }
+    // Gather all config data using ContextGrabber
+    const context = await contextGrabber.gatherContext(this.currentMode!)
 
     return create(TranscribeStreamRequestSchema, {
       payload: {
         case: 'config',
         value: create(StreamConfigSchema, {
           context: create(ContextInfoSchema, {
-            windowTitle: windowContext?.title || '',
-            appName: windowContext?.appName || '',
-            contextText,
+            windowTitle: context.windowTitle,
+            appName: context.appName,
+            contextText: context.contextText,
             mode: this.currentMode!,
           }),
           transcriptionSettings: create(TranscriptionSettingsSchema, {
-            asrModel: advancedSettings.llm.asrModel,
-            asrProvider: advancedSettings.llm.asrProvider,
-            asrPrompt: advancedSettings.llm.asrPrompt,
-            noSpeechThreshold: advancedSettings.llm.noSpeechThreshold,
-            lowQualityThreshold: advancedSettings.llm.lowQualityThreshold,
+            asrModel: context.advancedSettings.llm.asrModel,
+            asrProvider: context.advancedSettings.llm.asrProvider,
+            asrPrompt: context.advancedSettings.llm.asrPrompt,
+            noSpeechThreshold: context.advancedSettings.llm.noSpeechThreshold,
+            lowQualityThreshold:
+              context.advancedSettings.llm.lowQualityThreshold,
           }),
           llmSettings: create(LlmSettingsSchema, {
-            llmProvider: advancedSettings.llm.llmProvider,
-            llmModel: advancedSettings.llm.llmModel,
-            llmTemperature: advancedSettings.llm.llmTemperature,
-            transcriptionPrompt: advancedSettings.llm.transcriptionPrompt,
-            editingPrompt: advancedSettings.llm.editingPrompt,
+            llmProvider: context.advancedSettings.llm.llmProvider,
+            llmModel: context.advancedSettings.llm.llmModel,
+            llmTemperature: context.advancedSettings.llm.llmTemperature,
+            transcriptionPrompt:
+              context.advancedSettings.llm.transcriptionPrompt,
+            editingPrompt: context.advancedSettings.llm.editingPrompt,
             asrModel: '',
             asrProvider: '',
             asrPrompt: '',
             noSpeechThreshold: 0,
             lowQualityThreshold: 0,
           }),
-          vocabulary: vocabularyWords,
+          vocabulary: context.vocabularyWords,
         }),
       },
     })

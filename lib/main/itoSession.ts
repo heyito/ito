@@ -5,8 +5,7 @@ import { itoStreamController } from './itoStreamController'
 import { WindowMessenger } from './messaging/WindowMessenger'
 import { TextInserter } from './text/TextInserter'
 import { interactionManager } from './interactions/InteractionManager'
-import { getCursorContext } from '../media/selected-text-reader'
-import { canGetContextFromCurrentApp } from '../utils/applicationDetection'
+import { contextGrabber } from './context/ContextGrabber'
 import { grammarRulesService } from './grammar/GrammarRulesService'
 import log from 'electron-log'
 
@@ -34,7 +33,7 @@ export class ItoSession {
     this.streamResponsePromise = itoStreamController.startGrpcStream()
 
     // Send initial mode to the stream
-    itoStreamController.changeMode(mode)
+    itoStreamController.setMode(mode)
 
     // Begin recording audio (audio bytes will now flow into the gRPC stream)
     voiceInputService.startAudioRecording()
@@ -61,11 +60,11 @@ export class ItoSession {
     log.info('[ItoSession] Context sent to stream')
   }
 
-  public changeMode(mode: ItoMode) {
+  public setMode(mode: ItoMode) {
     log.info('[ItoSession] Changing mode to:', mode)
 
     // Send mode change to grpc stream (will also update windows via recordingStateNotifier)
-    itoStreamController.changeMode(mode)
+    itoStreamController.setMode(mode)
 
     // Update UI to show the new mode
     recordingStateNotifier.notifyRecordingStarted(mode)
@@ -159,25 +158,16 @@ export class ItoSession {
     } else {
       // Handle text insertion with grammar-corrected text
       if (response.transcript && !response.error) {
-        const contextLength = 4
-        const canGetContext = await canGetContextFromCurrentApp()
-        let cursorContext: string | undefined
-        try {
-          cursorContext = canGetContext
-            ? await getCursorContext(contextLength)
-            : ''
-        } catch (e) {
-          log.error('[ItoSession] Cursor context failed:', e)
-        }
+        // Get cursor context for grammar rules (capitalization, spacing, etc.)
+        const cursorContext = await contextGrabber.getCursorContextForGrammar(4)
 
         // Apply grammar rules with cursor context
-        const context = cursorContext || ''
         let correctedText = grammarRulesService.setCaseFirstWord(
-          context,
+          cursorContext,
           response.transcript,
         )
         correctedText = grammarRulesService.addLeadingSpaceIfNeeded(
-          context,
+          cursorContext,
           correctedText,
         )
 
@@ -201,7 +191,10 @@ export class ItoSession {
   }
 
   private async handleTranscriptionError(error: any) {
-    log.error('[ItoSession] An unexpected error occurred during transcription:', error)
+    log.error(
+      '[ItoSession] An unexpected error occurred during transcription:',
+      error,
+    )
 
     // Send transcription error to main window
     this.windowMessenger.sendTranscriptionError(error)

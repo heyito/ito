@@ -5,10 +5,10 @@ use std::thread;
 use std::time::Duration;
 
 // Platform-specific modules
-#[cfg(any(target_os = "windows"))]
-mod windows;
 #[cfg(target_os = "macos")]
 mod macos;
+#[cfg(any(target_os = "windows"))]
+mod windows;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "command")]

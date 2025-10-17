@@ -11,7 +11,6 @@ export interface LlmSettings {
   transcriptionPrompt: string
   editingPrompt: string
   noSpeechThreshold: number
-  lowQualityThreshold: number
 }
 
 interface AdvancedSettingsState {
@@ -38,7 +37,6 @@ const getInitialState = () => {
       transcriptionPrompt: storedAdvancedSettings.llm.transcriptionPrompt,
       editingPrompt: storedAdvancedSettings.llm.editingPrompt,
       noSpeechThreshold: storedAdvancedSettings.llm.noSpeechThreshold,
-      lowQualityThreshold: storedAdvancedSettings.llm.lowQualityThreshold,
     },
     grammarServiceEnabled:
       storedAdvancedSettings.grammarServiceEnabled ?? false,

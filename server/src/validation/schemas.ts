@@ -49,11 +49,6 @@ export const NoSpeechThresholdSchema = z
   .min(0, 'No speech probability must be at least 0')
   .max(1, 'No speech probability cannot exceed 1')
 
-export const LowQualityThreshold = z
-  .number()
-  .min(-1, 'Low quality threshold cammot be less than -1')
-  .max(0, 'Low quality threshold cannot exceed 0')
-
 // Individual vocabulary word schema
 export const VocabularyWordSchema = z
   .string()

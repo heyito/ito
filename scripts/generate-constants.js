@@ -35,7 +35,6 @@ export const DEFAULT_ADVANCED_SETTINGS = {
   
   // Audio quality thresholds
   noSpeechThreshold: ${DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold},
-  lowQualityThreshold: ${DEFAULT_ADVANCED_SETTINGS.lowQualityThreshold},
 } as const;
 `
 

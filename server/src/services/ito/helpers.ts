@@ -131,14 +131,6 @@ export function getAdvancedSettingsHeaders(headers: Headers) {
     'No speech threshold',
   )
 
-  const lowQualityThreshold = validateAndTransformHeaderValue(
-    headers,
-    'low-quality-threshold',
-    DEFAULT_ADVANCED_SETTINGS.lowQualityThreshold,
-    HeaderValidator.validateLowQualityThreshold,
-    'Low quality threshold',
-  )
-
   return {
     asrModel,
     asrProvider,
@@ -149,7 +141,6 @@ export function getAdvancedSettingsHeaders(headers: Headers) {
     transcriptionPrompt,
     editingPrompt,
     noSpeechThreshold,
-    lowQualityThreshold,
   }
 }
 

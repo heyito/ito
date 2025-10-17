@@ -165,10 +165,6 @@ class GrpcClient {
         'no-speech-threshold',
         advancedSettings.llm.noSpeechThreshold.toString(),
       )
-      headers.set(
-        'low-quality-threshold',
-        advancedSettings.llm.lowQualityThreshold.toString(),
-      )
 
       headers.set('mode', mode.toString())
 
@@ -499,7 +495,6 @@ class GrpcClient {
           transcriptionPrompt: settings.llm.transcriptionPrompt,
           editingPrompt: settings.llm.editingPrompt,
           noSpeechThreshold: settings.llm.noSpeechThreshold,
-          lowQualityThreshold: settings.llm.lowQualityThreshold,
         },
       })
       return await this.client.updateAdvancedSettings(request, {

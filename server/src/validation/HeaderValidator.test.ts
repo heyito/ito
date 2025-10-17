@@ -393,39 +393,4 @@ describe('HeaderValidator', () => {
       ).toThrow(ConnectError)
     })
   })
-
-  describe('validateLowQualityThreshold', () => {
-    it('should return valid low quality threshold values', () => {
-      expect(HeaderValidator.validateLowQualityThreshold(0)).toBe(0)
-      expect(HeaderValidator.validateLowQualityThreshold(-1)).toBe(-1)
-      expect(HeaderValidator.validateLowQualityThreshold(-0.5)).toBe(-0.5)
-    })
-
-    it('should throw ConnectError for threshold below -1', () => {
-      expect(() => HeaderValidator.validateLowQualityThreshold(-1.1)).toThrow(
-        ConnectError,
-      )
-      expect(() => HeaderValidator.validateLowQualityThreshold(-2)).toThrow(
-        ConnectError,
-      )
-    })
-
-    it('should throw ConnectError for threshold above 0', () => {
-      expect(() => HeaderValidator.validateLowQualityThreshold(0.1)).toThrow(
-        ConnectError,
-      )
-      expect(() => HeaderValidator.validateLowQualityThreshold(1)).toThrow(
-        ConnectError,
-      )
-    })
-
-    it('should throw ConnectError for null and undefined inputs', () => {
-      expect(() =>
-        HeaderValidator.validateLowQualityThreshold(null as any),
-      ).toThrow(ConnectError)
-      expect(() =>
-        HeaderValidator.validateLowQualityThreshold(undefined as any),
-      ).toThrow(ConnectError)
-    })
-  })
 })

@@ -83,6 +83,7 @@ describe('registerLoggingRoutes', () => {
     const app = fastify()
     await registerLoggingRoutes(app, {
       requireAuth: false,
+      showClientLogs: true,
       clientLogGroupName: null,
     })
 
@@ -107,6 +108,7 @@ describe('registerLoggingRoutes', () => {
     // Add a hook to simulate authenticated user when requireAuth is true; here false so ignored
     await registerLoggingRoutes(app, {
       requireAuth: false,
+      showClientLogs: true,
       clientLogGroupName: null,
     })
 
@@ -143,6 +145,7 @@ describe('registerLoggingRoutes', () => {
     const app = fastify()
     await registerLoggingRoutes(app, {
       requireAuth: true,
+      showClientLogs: true,
       clientLogGroupName: 'my-log-group',
     })
 
@@ -192,6 +195,7 @@ describe('registerLoggingRoutes', () => {
     const app = fastify()
     await registerLoggingRoutes(app, {
       requireAuth: false,
+      showClientLogs: true,
       clientLogGroupName: 'retry-group',
     })
 
@@ -236,6 +240,7 @@ describe('registerLoggingRoutes', () => {
     const app = fastify()
     await registerLoggingRoutes(app, {
       requireAuth: false,
+      showClientLogs: true,
       clientLogGroupName: null,
     })
 

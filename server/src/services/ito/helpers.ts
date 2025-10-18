@@ -53,7 +53,7 @@ function validateAndTransformHeaderValue<T>(
   }
   const validatedValue = validator(valueToValidate)
   console.log(
-    `[Transcription] Using validated ${logName}: ${validatedValue} (source: ${headerValue ? 'header' : 'default'})`,
+    `[Transcription] Using validated ${logName}: ${typeof validatedValue === 'string' ? validatedValue.slice(0, 50) + '...' : validatedValue} (source: ${headerValue ? 'header' : 'default'})`,
   )
   return validatedValue
 }

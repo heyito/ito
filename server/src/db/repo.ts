@@ -86,6 +86,13 @@ export class NotesRepository {
     )
     return (res.rowCount ?? 0) > 0
   }
+
+  static async hardDeleteAllUserData(userId: string): Promise<number> {
+    const res = await pool.query('DELETE FROM notes WHERE user_id = $1', [
+      userId,
+    ])
+    return res.rowCount ?? 0
+  }
 }
 
 export class InteractionsRepository {
@@ -170,6 +177,14 @@ export class InteractionsRepository {
     )
     return (res.rowCount ?? 0) > 0
   }
+
+  static async hardDeleteAllUserData(userId: string): Promise<number> {
+    const res = await pool.query(
+      'DELETE FROM interactions WHERE user_id = $1',
+      [userId],
+    )
+    return res.rowCount ?? 0
+  }
 }
 
 export class DictionaryRepository {
@@ -234,6 +249,14 @@ export class DictionaryRepository {
       [userId],
     )
     return (res.rowCount ?? 0) > 0
+  }
+
+  static async hardDeleteAllUserData(userId: string): Promise<number> {
+    const res = await pool.query(
+      'DELETE FROM dictionary_items WHERE user_id = $1',
+      [userId],
+    )
+    return res.rowCount ?? 0
   }
 }
 
@@ -331,6 +354,14 @@ export class AdvancedSettingsRepository {
       created_at: llmSettings.created_at,
       updated_at: llmSettings.updated_at,
     }
+  }
+
+  static async hardDeleteByUserId(userId: string): Promise<number> {
+    const res = await pool.query(
+      'DELETE FROM llm_settings WHERE user_id = $1',
+      [userId],
+    )
+    return res.rowCount ?? 0
   }
 }
 export class IpLinkRepository {

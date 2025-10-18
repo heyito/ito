@@ -573,11 +573,18 @@ export default (router: ConnectRouter) => {
       }
 
       console.log(`Deleting all data for authenticated user: ${userId}`)
+
+      const storageClient = getStorageClient()
+      const audioPrefix = `raw-audio/${userId}/`
+
       await Promise.all([
-        NotesRepository.deleteAllUserData(userId),
-        InteractionsRepository.deleteAllUserData(userId),
-        DictionaryRepository.deleteAllUserData(userId),
+        storageClient.deletePrefix(audioPrefix),
+        NotesRepository.hardDeleteAllUserData(userId),
+        InteractionsRepository.hardDeleteAllUserData(userId),
+        DictionaryRepository.hardDeleteAllUserData(userId),
+        AdvancedSettingsRepository.hardDeleteByUserId(userId),
       ])
+
       console.log(`Successfully deleted all data for user: ${userId}`)
       return {}
     },

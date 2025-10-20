@@ -320,9 +320,6 @@ export class SyncService {
             noSpeechThreshold:
               remoteSettings.llm?.noSpeechThreshold ||
               DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold,
-            lowQualityThreshold:
-              remoteSettings.llm?.lowQualityThreshold ||
-              DEFAULT_ADVANCED_SETTINGS.lowQualityThreshold,
           },
           // Preserve local-only settings that aren't synced to the server
           grammarServiceEnabled:

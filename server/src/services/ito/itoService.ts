@@ -243,7 +243,6 @@ export default (router: ConnectRouter) => {
           fileType: 'wav',
           asrModel: advancedSettingsHeaders.asrModel,
           noSpeechThreshold: advancedSettingsHeaders.noSpeechThreshold,
-          lowQualityThreshold: advancedSettingsHeaders.lowQualityThreshold,
           vocabulary,
         })
         console.log(

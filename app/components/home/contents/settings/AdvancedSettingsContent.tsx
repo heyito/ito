@@ -97,13 +97,6 @@ const llmSettingsConfig: LlmSettingConfig[] = [
     description: 'Threshold for detecting no speech segments in audio.',
     maxLength: floatLengthLimit,
   },
-  {
-    name: 'lowQualityThreshold',
-    label: 'Low Quality Threshold',
-    placeholder: 'e.g., 0.3',
-    description: 'Threshold for identifying low-quality audio segments.',
-    maxLength: floatLengthLimit,
-  },
 ]
 
 function formatDisplayValue(value: string): string {

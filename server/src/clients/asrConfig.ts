@@ -3,5 +3,4 @@ export interface TranscriptionOptions {
   asrModel?: string
   vocabulary?: string[]
   noSpeechThreshold?: number
-  lowQualityThreshold?: number
 }

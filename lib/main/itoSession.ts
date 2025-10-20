@@ -23,28 +23,24 @@ export class ItoSession {
   public async startSession(mode: ItoMode) {
     log.info('[ItoSession] Starting session with mode:', mode)
 
-    // Start grpc stream (must happen before audio starts flowing)
+    // Initialize all necessary components
     const started = await itoStreamController.startInteraction(mode)
     if (!started) {
       log.error('[ItoSession] Failed to start itoStreamController')
       return
     }
 
-    // Start streaming audio immediately - save the promise to wait for it in completeSession
+    // Begin gRPC stream immediately (note, no audio is flowing yet)
     this.streamResponsePromise = itoStreamController.startGrpcStream()
-
-    // Send initial mode to the stream
-    itoStreamController.setMode(mode)
 
     // Begin recording audio (audio bytes will now flow into the gRPC stream)
     voiceInputService.startAudioRecording()
 
+    // Send initial mode to the stream
+    itoStreamController.setMode(mode)
+
     // Update UI state
     recordingStateNotifier.notifyRecordingStarted(mode)
-
-    log.info(
-      '[ItoSession] Session started - audio flowing, fetching context in background',
-    )
 
     // Fetch and send context in the background (non-blocking)
     this.fetchAndSendContext().catch(error => {

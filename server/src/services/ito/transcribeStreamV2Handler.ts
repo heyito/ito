@@ -52,6 +52,11 @@ export class TranscribeStreamV2Handler {
           request.payload.value,
         )
 
+        console.log(
+          `🔧 [${new Date().toISOString()}] Received config update:`,
+          JSON.stringify(mergedConfig, null, 2),
+        )
+
         const newMode = mergedConfig.context?.mode
         if (newMode !== undefined && newMode !== previousMode) {
           modeHistory.push({
@@ -62,8 +67,6 @@ export class TranscribeStreamV2Handler {
             `🔧 [${new Date().toISOString()}] Mode changed to: ${newMode}`,
           )
         }
-
-        console.log(`🔧 [${new Date().toISOString()}] Received config update`)
       }
     }
 
@@ -135,9 +138,6 @@ export class TranscribeStreamV2Handler {
       const noSpeechThreshold =
         mergedConfig.transcriptionSettings?.noSpeechThreshold ??
         DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold
-      const lowQualityThreshold =
-        mergedConfig.transcriptionSettings?.lowQualityThreshold ??
-        DEFAULT_ADVANCED_SETTINGS.lowQualityThreshold
       const vocabulary = mergedConfig.vocabulary
 
       const asrClient = getAsrProvider(asrProvider)
@@ -145,7 +145,6 @@ export class TranscribeStreamV2Handler {
         fileType: 'wav',
         asrModel,
         noSpeechThreshold,
-        lowQualityThreshold,
         vocabulary,
       })
       console.log(
@@ -182,7 +181,6 @@ export class TranscribeStreamV2Handler {
           mergedConfig.llmSettings?.editingPrompt ||
           DEFAULT_ADVANCED_SETTINGS.editingPrompt,
         noSpeechThreshold,
-        lowQualityThreshold,
       }
 
       const userPromptPrefix = getPromptForMode(mode, advancedSettingsHeaders)

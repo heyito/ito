@@ -33,6 +33,7 @@ import {
 } from '../main/sqlite/repo'
 import { audioRecorderService } from '../media/audio'
 import { voiceInputService } from '../main/voiceInputService'
+import { itoSession } from '../main/itoSession'
 import { ItoMode } from '@/app/generated/ito_pb'
 import {
   getSelectedText,
@@ -137,11 +138,9 @@ export function registerIPC() {
   handleIPC('stop-key-listener', () => stopKeyListener())
   handleIPC('register-hotkeys', () => registerAllHotkeys())
   handleIPC('start-native-recording-service', () =>
-    voiceInputService.startSTTService(ItoMode.TRANSCRIBE),
+    itoSession.startSession(ItoMode.TRANSCRIBE),
   )
-  handleIPC('stop-native-recording-service', () =>
-    voiceInputService.stopSTTService(),
-  )
+  handleIPC('stop-native-recording-service', () => itoSession.completeSession())
   handleIPC('block-keys', (_e, keys: string[]) => {
     if (KeyListenerProcess)
       KeyListenerProcess.stdin?.write(
@@ -617,7 +616,7 @@ export function registerIPC() {
   // When the hotkey is pressed, start recording and notify the pill window.
   ipcMain.on('start-native-recording', _event => {
     log.info(`IPC: Received 'start-native-recording'`)
-    voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
+    itoSession.startSession(ItoMode.TRANSCRIBE)
   })
 
   ipcMain.on('start-native-recording-test', _event => {
@@ -629,7 +628,7 @@ export function registerIPC() {
   // When the hotkey is released, stop recording and notify the pill window.
   ipcMain.on('stop-native-recording', () => {
     log.info('IPC: Received stop-native-recording.')
-    voiceInputService.stopSTTService()
+    itoSession.completeSession()
   })
 
   // Stop recording for microphone test (doesn't stop transcription since it wasn't started)
@@ -805,7 +804,7 @@ ipcMain.on(IPC_EVENTS.VOLUME_UPDATE, (_event, volume: number) => {
 ipcMain.on(IPC_EVENTS.SETTINGS_UPDATE, (_event, settings: any) => {
   getPillWindow()?.webContents.send(IPC_EVENTS.SETTINGS_UPDATE, settings)
 
-  // If microphone selection changed, ensure TranscriptionService config is set
+  // If microphone selection changed, ensure audio config is set
   if (settings && typeof settings.microphoneDeviceId === 'string') {
     // Ask the recorder for the effective output config for the selected mic
     voiceInputService.handleMicrophoneChanged(settings.microphoneDeviceId)

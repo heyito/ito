@@ -1,14 +1,38 @@
 import nlp from 'compromise'
 
 export class GrammarRulesService {
+  private cursorContext: string = ''
+
   /**
-   * Set first word case (uppercase or lowercase) based on cursor context
+   * Set the cursor context for grammar rules.
+   * This should be called before applying grammar rules to a transcript.
    */
-  public setCaseFirstWord(cursorContext: string, transcript: string): string {
+  public setCursorContext(context: string): void {
+    this.cursorContext = context
+  }
+
+  /**
+   * Get the current cursor context
+   */
+  public getCursorContext(): string {
+    return this.cursorContext
+  }
+
+  /**
+   * Clear the cursor context (typically after completing a session)
+   */
+  public clearCursorContext(): void {
+    this.cursorContext = ''
+  }
+
+  /**
+   * Set first word case (uppercase or lowercase) based on stored cursor context
+   */
+  public setCaseFirstWord(transcript: string): string {
     if (!transcript) return transcript
 
     // If no cursor context available, just capitalize first letter
-    if (!cursorContext) {
+    if (!this.cursorContext) {
       const firstLetterIndex = transcript.search(/[a-zA-Z]/)
       if (firstLetterIndex >= 0) {
         return (
@@ -25,7 +49,7 @@ export class GrammarRulesService {
     // Check if we should capitalize the first letter
     const firstWord = correctedText.trim().split(/\s+/)[0] || ''
     const shouldCapitalize = this.shouldCapitalizeBasedOnContext(
-      cursorContext,
+      this.cursorContext,
       firstWord,
     )
 
@@ -49,16 +73,13 @@ export class GrammarRulesService {
   }
 
   /**
-   * Add leading space if needed based on cursor context
+   * Add leading space if needed based on stored cursor context
    */
-  public addLeadingSpaceIfNeeded(
-    cursorContext: string,
-    transcript: string,
-  ): string {
+  public addLeadingSpaceIfNeeded(transcript: string): string {
     if (!transcript) return transcript
 
     // Check if we need to add a space before the text
-    const needsLeadingSpace = this.needsLeadingSpace(cursorContext)
+    const needsLeadingSpace = this.needsLeadingSpace(this.cursorContext)
     if (needsLeadingSpace) {
       return ' ' + transcript
     }

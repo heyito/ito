@@ -111,8 +111,9 @@ const Pill = () => {
           setIsManualRecording(false)
           isManualRecordingRef.current = false
           setRecordingMode(undefined)
+          // Only clear volume history when recording stops
+          setVolumeHistory([])
         }
-        setVolumeHistory([])
       },
     )
 

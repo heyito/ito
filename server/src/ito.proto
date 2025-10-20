@@ -9,6 +9,11 @@ service ItoService {
   // This is the ideal method for dictation to reduce latency and memory usage.
   rpc TranscribeStream(stream AudioChunk) returns (TranscriptionResponse);
 
+  // Enhanced streaming transcription that accepts configuration data in-stream.
+  // Config can be sent before, during, or omitted entirely. Multiple config messages
+  // are merged by the server. This allows immediate streaming without waiting for context.
+  rpc TranscribeStreamV2(stream TranscribeStreamRequest) returns (TranscriptionResponse);
+
   // Note Service
   rpc CreateNote(CreateNoteRequest) returns (Note);
   rpc GetNote(GetNoteRequest) returns (Note);
@@ -77,6 +82,42 @@ message ClientError {
 // A chunk of audio data for streaming.
 message AudioChunk {
   bytes audio_data = 1 [(buf.validate.field).bytes.max_len = 1048576]; // 1 MB limit per chunk
+}
+
+// Context information for transcription.
+message ContextInfo {
+  optional string window_title = 1;
+  optional string app_name = 2;
+  optional string context_text = 3;
+  optional ItoMode mode = 4;
+}
+
+// ASR-specific transcription settings.
+message TranscriptionSettings {
+  optional string asr_model = 1;
+  optional string asr_provider = 2;
+  optional string asr_prompt = 3;
+  optional float no_speech_threshold = 4;
+  optional float low_quality_threshold = 5;
+}
+
+// Configuration that can be sent in-stream for TranscribeStreamV2.
+// All fields are optional and will be merged by the server.
+// Multiple config messages received during the stream are progressively merged.
+message StreamConfig {
+  optional ContextInfo context = 1;
+  optional TranscriptionSettings transcription_settings = 2;
+  optional LlmSettings llm_settings = 3;
+  repeated string vocabulary = 4;
+}
+
+// Request message for TranscribeStreamV2.
+// Can contain either configuration or audio data.
+message TranscribeStreamRequest {
+  oneof payload {
+    StreamConfig config = 1;      // Configuration/context data
+    bytes audio_data = 2 [(buf.validate.field).bytes.max_len = 1048576]; // Audio chunk (1 MB limit)
+  }
 }
 
 // The response message containing the final transcript.

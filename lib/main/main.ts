@@ -27,7 +27,7 @@ import { initializeMicrophoneSelection } from '../media/microphoneSetUp'
 import { validateStoredTokens, ensureValidTokens } from '../auth/events'
 import { Auth0Config, validateAuth0Config } from '../auth/config'
 import { createAppTray } from './tray'
-import { transcriptionService } from './transcriptionService'
+import { itoSession } from './itoSession'
 import { initializeAutoUpdater } from './autoUpdaterWrapper'
 import { teardown } from './teardown'
 
@@ -117,8 +117,8 @@ app.whenReady().then(async () => {
   console.log('Microphone access granted, starting audio recorder.')
   voiceInputService.setUpAudioRecorderListeners()
 
-  // Set main window for transcription service so it can send messages
-  transcriptionService.setMainWindow(mainWindow)
+  // Set main window for ito session so it can send messages
+  itoSession.setMainWindow(mainWindow)
 
   console.log('Starting selected text reader service.')
   selectedTextReaderService.initialize()
@@ -135,6 +135,7 @@ app.whenReady().then(async () => {
       // Update the gRPC client with the new main window reference
       if (mainWindow) {
         grpcClient.setMainWindow(mainWindow)
+        itoSession.setMainWindow(mainWindow)
       }
     }
   })

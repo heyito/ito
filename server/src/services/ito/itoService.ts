@@ -13,6 +13,7 @@ import {
   AdvancedSettingsSchema,
   LlmSettingsSchema,
   ItoMode,
+  TranscribeStreamRequest,
 } from '../../generated/ito_pb.js'
 import { create } from '@bufbuild/protobuf'
 import type { HandlerContext } from '@connectrpc/connect'
@@ -46,49 +47,8 @@ import {
 } from './helpers.js'
 import { ITO_MODE_SYSTEM_PROMPT } from './constants.js'
 import { enhancePcm16 } from '../../utils/audio.js'
-
-/**
- * --- NEW: WAV Header Generation Function ---
- * Creates a 44-byte WAV header for raw PCM audio data.
- * @param dataLength The length of the raw audio data in bytes.
- * @param sampleRate The sample rate (e.g., 44100).
- * @param channelCount The number of channels (1 for mono, 2 for stereo).
- * @param bitDepth The bit depth (e.g., 16).
- * @returns A Buffer containing the WAV header.
- */
-function createWavHeader(
-  dataLength: number,
-  sampleRate: number,
-  channelCount: number,
-  bitDepth: number,
-): Buffer {
-  const header = Buffer.alloc(44)
-
-  // RIFF chunk descriptor
-  header.write('RIFF', 0)
-  header.writeUInt32LE(36 + dataLength, 4) // ChunkSize
-  header.write('WAVE', 8)
-
-  // "fmt " sub-chunk
-  header.write('fmt ', 12)
-  header.writeUInt32LE(16, 16) // Subchunk1Size (16 for PCM)
-  header.writeUInt16LE(1, 20) // AudioFormat (1 for PCM)
-  header.writeUInt16LE(channelCount, 22)
-  header.writeUInt32LE(sampleRate, 24)
-
-  const blockAlign = channelCount * (bitDepth / 8)
-  const byteRate = sampleRate * blockAlign
-
-  header.writeUInt32LE(byteRate, 28)
-  header.writeUInt16LE(blockAlign, 32)
-  header.writeUInt16LE(bitDepth, 34)
-
-  // "data" sub-chunk
-  header.write('data', 36)
-  header.writeUInt32LE(dataLength, 40)
-
-  return header
-}
+import { createWavHeader } from './audioUtils.js'
+import { transcribeStreamV2Handler } from './transcribeStreamV2Handler.js'
 
 function dbToNotePb(dbNote: DbNote): Note {
   return create(NoteSchema, {
@@ -174,6 +134,13 @@ function dbToAdvancedSettingsPb(
 // Export the service implementation as a function that takes a ConnectRouter
 export default (router: ConnectRouter) => {
   router.service(ItoServiceDesc, {
+    async transcribeStreamV2(
+      requests: AsyncIterable<TranscribeStreamRequest>,
+      _context: HandlerContext,
+    ) {
+      return transcribeStreamV2Handler.process(requests)
+    },
+
     async transcribeStream(
       requests: AsyncIterable<AudioChunk>,
       context: HandlerContext,

@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 
-// Mock database utilities (same pattern as transcriptionService.test.ts)
+// Mock database utilities
 const mockDbRun = mock(() => Promise.resolve())
 const mockDbGet = mock(() => Promise.resolve(undefined))
 const mockDbAll = mock(() => Promise.resolve([]))
@@ -110,8 +110,8 @@ describe('InteractionManager', () => {
       expect(mockDbRun).toHaveBeenCalled()
       // Check the SQL call parameters
       const call = mockDbRun.mock.calls[0]
-      const sql = call[0] as string
-      const params = call[1] as any[]
+      const sql = call[0] as unknown as string
+      const params = call[1] as unknown as any[]
 
       expect(sql).toContain('INSERT INTO interactions')
       expect(params).toContain(interactionManager.getCurrentInteractionId())
@@ -156,7 +156,7 @@ describe('InteractionManager', () => {
       )
 
       expect(mockDbRun).toHaveBeenCalled()
-      const params = mockDbRun.mock.calls[0][1] as any[]
+      const params = mockDbRun.mock.calls[0][1] as unknown as any[]
       const titleParam = params[2] // title is at index 2
       expect(titleParam).toBe(transcript)
     })
@@ -173,7 +173,7 @@ describe('InteractionManager', () => {
       )
 
       expect(mockDbRun).toHaveBeenCalled()
-      const params = mockDbRun.mock.calls[0][1] as any[]
+      const params = mockDbRun.mock.calls[0][1] as unknown as any[]
       const titleParam = params[2]
       expect(titleParam).toBe(
         'This is a very long transcript that should be trun...',
@@ -190,7 +190,7 @@ describe('InteractionManager', () => {
       )
 
       expect(mockDbRun).toHaveBeenCalled()
-      const params = mockDbRun.mock.calls[0][1] as any[]
+      const params = mockDbRun.mock.calls[0][1] as unknown as any[]
       const titleParam = params[2]
       expect(titleParam).toBe('Voice interaction')
     })
@@ -210,7 +210,7 @@ describe('InteractionManager', () => {
       )
 
       expect(mockDbRun).toHaveBeenCalled()
-      const params = mockDbRun.mock.calls[0][1] as any[]
+      const params = mockDbRun.mock.calls[0][1] as unknown as any[]
       const durationParam = params[6] // duration_ms is at index 6 in upsert
       expect(durationParam).toBeGreaterThan(0)
       expect(durationParam).toBeLessThan(1000) // Should be reasonable
@@ -225,7 +225,7 @@ describe('InteractionManager', () => {
       await manager.createInteraction('test', Buffer.from('audio'), 16000)
 
       expect(mockDbRun).toHaveBeenCalled()
-      const params = mockDbRun.mock.calls[0][1] as any[]
+      const params = mockDbRun.mock.calls[0][1] as unknown as any[]
       const durationParam = params[6] // duration_ms is at index 6 in upsert
       expect(durationParam).toBe(0)
     })
@@ -239,7 +239,7 @@ describe('InteractionManager', () => {
       await interactionManager.createInteraction('test', audioBuffer, 16000)
 
       expect(mockDbRun).toHaveBeenCalled()
-      const params = mockDbRun.mock.calls[0][1] as any[]
+      const params = mockDbRun.mock.calls[0][1] as unknown as any[]
       const rawAudioParam = params[5] // raw_audio is at index 5
       expect(rawAudioParam).toEqual(audioBuffer)
     })
@@ -251,7 +251,7 @@ describe('InteractionManager', () => {
       await interactionManager.createInteraction('test', emptyBuffer, 16000)
 
       expect(mockDbRun).toHaveBeenCalled()
-      const params = mockDbRun.mock.calls[0][1] as any[]
+      const params = mockDbRun.mock.calls[0][1] as unknown as any[]
       const rawAudioParam = params[5]
       expect(rawAudioParam).toBeNull()
     })

@@ -3,10 +3,8 @@ import store, { KeyboardShortcutConfig } from '../main/store'
 import { STORE_KEYS } from '../constants/store-keys'
 import { getNativeBinaryPath } from './native-interface'
 import { BrowserWindow } from 'electron'
-import { audioRecorderService } from './audio'
-import { voiceInputService } from '../main/voiceInputService'
+import { itoSession } from '../main/itoSession'
 import { KeyName, keyNameMap, normalizeLegacyKey } from '../types/keyboard'
-import { interactionManager } from '../main/interactions/InteractionManager'
 
 interface KeyEvent {
   type: 'keydown' | 'keyup'
@@ -31,6 +29,7 @@ type ProcessEvent = KeyEvent | HeartbeatEvent | RegisteredHotkeysEvent
 // Global key listener process singleton
 export let KeyListenerProcess: ReturnType<typeof spawn> | null = null
 export let isShortcutActive = false
+let activeShortcutId: string | null = null
 
 // Heartbeat monitoring state
 let lastHeartbeatReceived = Date.now()
@@ -38,25 +37,16 @@ let heartbeatCheckTimer: NodeJS.Timeout | null = null
 const HEARTBEAT_CHECK_INTERVAL_MS = 5000 // Check every 5 seconds
 const HEARTBEAT_TIMEOUT_MS = 15000 // 15 seconds without heartbeat triggers restart
 
-// Debouncing state
-let shortcutDebounceTimeout: NodeJS.Timeout | null = null
-let pendingShortcut: KeyboardShortcutConfig | null = null
-export const DEBOUNCE_TIME = 10
-
 // Test utility function - only available in development
 export const resetForTesting = () => {
   if (process.env.NODE_ENV !== 'production') {
     KeyListenerProcess = null
     isShortcutActive = false
+    activeShortcutId = null
     pressedKeys.clear()
     keyPressTimestamps.clear()
     stopStuckKeyChecker()
     stopHeartbeatChecker()
-    if (shortcutDebounceTimeout) {
-      clearTimeout(shortcutDebounceTimeout)
-      shortcutDebounceTimeout = null
-    }
-    pendingShortcut = null
     lastHeartbeatReceived = Date.now()
   }
 }
@@ -196,8 +186,9 @@ function handleKeyEventInMain(event: KeyEvent) {
     if (isShortcutActive) {
       // Shortcut released
       isShortcutActive = false
+      activeShortcutId = null
       console.info('Shortcut DEACTIVATED, stopping recording...')
-      audioRecorderService.stopRecording()
+      itoSession.completeSession()
     }
     return
   }
@@ -237,48 +228,30 @@ function handleKeyEventInMain(event: KeyEvent) {
       return exactMatch
     })
 
-  // Handle shortcut activation with debouncing
-  if (currentlyHeldShortcut && !isShortcutActive) {
-    // New shortcut detected - start debounce timer
-    if (
-      !shortcutDebounceTimeout ||
-      pendingShortcut?.id !== currentlyHeldShortcut.id
-    ) {
-      // Clear any existing timeout
-      if (shortcutDebounceTimeout) {
-        clearTimeout(shortcutDebounceTimeout)
-      }
-
-      pendingShortcut = currentlyHeldShortcut
-      shortcutDebounceTimeout = setTimeout(() => {
-        // After DEBOUNCE milliseconds, if the shortcut is still active, activate it
-        if (pendingShortcut && !isShortcutActive) {
-          isShortcutActive = true
-          console.info('lib Shortcut ACTIVATED, starting recording...')
-          interactionManager.startInteraction()
-          voiceInputService.startSTTService(pendingShortcut.mode)
-        }
-
-        // Clear debounce state
-        shortcutDebounceTimeout = null
-        pendingShortcut = null
-      }, DEBOUNCE_TIME) // debounce
+  // Handle shortcut activation and mode changes
+  if (currentlyHeldShortcut) {
+    if (!isShortcutActive) {
+      // Starting a new session
+      isShortcutActive = true
+      activeShortcutId = currentlyHeldShortcut.id
+      console.info('lib Shortcut ACTIVATED, starting recording...')
+      itoSession.startSession(currentlyHeldShortcut.mode)
+    } else if (activeShortcutId !== currentlyHeldShortcut.id) {
+      // Different shortcut detected while already recording - change mode
+      activeShortcutId = currentlyHeldShortcut.id
+      console.info(
+        `lib Shortcut mode CHANGED to ${currentlyHeldShortcut.mode}, updating session...`,
+      )
+      itoSession.setMode(currentlyHeldShortcut.mode)
     }
   } else if (!currentlyHeldShortcut) {
     // No shortcut detected - cancel pending activation or deactivate active shortcut
-    if (shortcutDebounceTimeout) {
-      // Cancel pending activation
-      clearTimeout(shortcutDebounceTimeout)
-      shortcutDebounceTimeout = null
-      pendingShortcut = null
-    } else if (isShortcutActive) {
+    if (isShortcutActive) {
       // Shortcut released - deactivate immediately (no debounce on release)
       isShortcutActive = false
+      activeShortcutId = null
       console.info('lib Shortcut DEACTIVATED, stopping recording...')
-
-      // Don't end the interaction yet - let the transcription service handle it
-      // The interaction will be ended when transcription completes or fails
-      voiceInputService.stopSTTService()
+      itoSession.completeSession()
     }
   }
 }

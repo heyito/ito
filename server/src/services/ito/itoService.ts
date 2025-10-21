@@ -578,7 +578,7 @@ export default (router: ConnectRouter) => {
       const audioPrefix = `raw-audio/${userId}/`
 
       await Promise.all([
-        storageClient.deletePrefix(audioPrefix),
+        storageClient.hardDeletePrefix(audioPrefix),
         NotesRepository.hardDeleteAllUserData(userId),
         InteractionsRepository.hardDeleteAllUserData(userId),
         DictionaryRepository.hardDeleteAllUserData(userId),

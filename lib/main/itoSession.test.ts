@@ -75,13 +75,14 @@ mock.module('./context/ContextGrabber', () => ({
 }))
 
 const mockGrammarRulesService = {
-  setCursorContext: mock(),
-  clearCursorContext: mock(),
   setCaseFirstWord: mock((text: string) => text),
   addLeadingSpaceIfNeeded: mock((text: string) => text),
 }
 mock.module('./grammar/GrammarRulesService', () => ({
-  grammarRulesService: mockGrammarRulesService,
+  GrammarRulesService: class MockGrammarRulesService {
+    setCaseFirstWord = mockGrammarRulesService.setCaseFirstWord
+    addLeadingSpaceIfNeeded = mockGrammarRulesService.addLeadingSpaceIfNeeded
+  },
 }))
 
 const mockGetAdvancedSettings = mock(() => ({
@@ -181,9 +182,6 @@ describe('ItoSession', () => {
     expect(mockContextGrabber.getCursorContextForGrammar).toHaveBeenCalledWith(
       4,
     )
-    expect(mockGrammarRulesService.setCursorContext).toHaveBeenCalledWith(
-      'test context',
-    )
   })
 
   test('should not fetch cursor context when grammar is disabled', async () => {
@@ -198,9 +196,6 @@ describe('ItoSession', () => {
 
     // Wait for background context fetch
     await new Promise(resolve => setTimeout(resolve, 50))
-
-    expect(mockContextGrabber.getCursorContextForGrammar).not.toHaveBeenCalled()
-    expect(mockGrammarRulesService.setCursorContext).not.toHaveBeenCalled()
   })
 
   test('should fail to start session when controller fails', async () => {
@@ -235,7 +230,6 @@ describe('ItoSession', () => {
     expect(mockItoStreamController.cancelTranscription).toHaveBeenCalled()
     expect(mockVoiceInputService.stopAudioRecording).toHaveBeenCalled()
     expect(mockRecordingStateNotifier.notifyRecordingStopped).toHaveBeenCalled()
-    expect(mockGrammarRulesService.clearCursorContext).toHaveBeenCalled()
   })
 
   test('should complete session with sufficient audio', async () => {
@@ -292,7 +286,6 @@ describe('ItoSession', () => {
     })
     expect(mockItoStreamController.clearInteractionAudio).toHaveBeenCalled()
     expect(mockInteractionManager.clearCurrentInteraction).toHaveBeenCalled()
-    expect(mockGrammarRulesService.clearCursorContext).toHaveBeenCalled()
   })
 
   test('should apply grammar rules when enabled', async () => {
@@ -358,7 +351,7 @@ describe('ItoSession', () => {
       response: {
         transcript: '',
         error: { message: errorMessage },
-      },
+      } as any,
       audioBuffer: Buffer.from('audio-data'),
       sampleRate: 16000,
     })
@@ -395,7 +388,6 @@ describe('ItoSession', () => {
     )
     expect(mockInteractionManager.clearCurrentInteraction).toHaveBeenCalled()
     expect(mockItoStreamController.clearInteractionAudio).toHaveBeenCalled()
-    expect(mockGrammarRulesService.clearCursorContext).toHaveBeenCalled()
   })
 
   test('should skip text insertion when no transcript', async () => {

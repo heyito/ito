@@ -3,26 +3,8 @@ import nlp from 'compromise'
 export class GrammarRulesService {
   private cursorContext: string = ''
 
-  /**
-   * Set the cursor context for grammar rules.
-   * This should be called before applying grammar rules to a transcript.
-   */
-  public setCursorContext(context: string): void {
+  public constructor(context: string) {
     this.cursorContext = context
-  }
-
-  /**
-   * Get the current cursor context
-   */
-  public getCursorContext(): string {
-    return this.cursorContext
-  }
-
-  /**
-   * Clear the cursor context (typically after completing a session)
-   */
-  public clearCursorContext(): void {
-    this.cursorContext = ''
   }
 
   /**
@@ -170,6 +152,3 @@ export class GrammarRulesService {
     return true
   }
 }
-
-// Export singleton instance
-export const grammarRulesService = new GrammarRulesService()

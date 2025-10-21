@@ -6,7 +6,7 @@ import { WindowMessenger } from './messaging/WindowMessenger'
 import { TextInserter } from './text/TextInserter'
 import { interactionManager } from './interactions/InteractionManager'
 import { contextGrabber } from './context/ContextGrabber'
-import { grammarRulesService } from './grammar/GrammarRulesService'
+import { GrammarRulesService } from './grammar/GrammarRulesService'
 import { getAdvancedSettings } from './store'
 import log from 'electron-log'
 
@@ -19,6 +19,7 @@ export class ItoSession {
     audioBuffer: Buffer
     sampleRate: number
   }> | null = null
+  private grammarRulesService = new GrammarRulesService('')
 
   public async startSession(mode: ItoMode) {
     log.info('[ItoSession] Starting session with mode:', mode)
@@ -60,7 +61,7 @@ export class ItoSession {
     const { grammarServiceEnabled } = getAdvancedSettings()
     if (grammarServiceEnabled) {
       const cursorContext = await contextGrabber.getCursorContextForGrammar()
-      grammarRulesService.setCursorContext(cursorContext)
+      this.grammarRulesService = new GrammarRulesService(cursorContext)
       log.info('[ItoSession] Cursor context set for grammar rules')
     }
   }
@@ -97,9 +98,6 @@ export class ItoSession {
       }
       this.streamResponsePromise = null
     }
-
-    // Clear cursor context on cancel
-    grammarRulesService.clearCursorContext()
 
     log.info('[ItoSession] Session cancelled')
   }
@@ -178,9 +176,9 @@ export class ItoSession {
         // Apply grammar rules only if grammar service is enabled
         const { grammarServiceEnabled } = getAdvancedSettings()
         if (grammarServiceEnabled) {
-          textToInsert = grammarRulesService.setCaseFirstWord(textToInsert)
+          textToInsert = this.grammarRulesService.setCaseFirstWord(textToInsert)
           textToInsert =
-            grammarRulesService.addLeadingSpaceIfNeeded(textToInsert)
+            this.grammarRulesService.addLeadingSpaceIfNeeded(textToInsert)
         }
 
         await this.textInserter.insertText(textToInsert)
@@ -206,9 +204,6 @@ export class ItoSession {
       itoStreamController.clearInteractionAudio()
       interactionManager.clearCurrentInteraction()
     }
-
-    // Clear cursor context after handling response
-    grammarRulesService.clearCursorContext()
   }
 
   private async handleTranscriptionError(error: any) {
@@ -223,9 +218,6 @@ export class ItoSession {
     // Clear current interaction on error
     interactionManager.clearCurrentInteraction()
     itoStreamController.clearInteractionAudio()
-
-    // Clear cursor context after error
-    grammarRulesService.clearCursorContext()
   }
 
   public setMainWindow(mainWindow: any) {

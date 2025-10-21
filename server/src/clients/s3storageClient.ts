@@ -12,6 +12,7 @@ import {
   DeleteObjectCommandInput,
   ListObjectsV2CommandInput,
   HeadObjectCommandInput,
+  DeleteObjectsCommand,
 } from '@aws-sdk/client-s3'
 import { Readable } from 'stream'
 
@@ -114,6 +115,42 @@ export class S3StorageClient {
       keys: response.Contents?.map(item => item.Key!).filter(Boolean) || [],
       isTruncated: response.IsTruncated || false,
     }
+  }
+
+  async hardDeletePrefix(prefix: string): Promise<number> {
+    let deletedCount = 0
+    let continuationToken: string | undefined
+
+    do {
+      const listParams: ListObjectsV2CommandInput = {
+        Bucket: this.bucketName,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+        MaxKeys: 1000,
+      }
+      const response = await this.s3Client.send(
+        new ListObjectsV2Command(listParams),
+      )
+
+      const keys = (response.Contents ?? [])
+        .map(obj => obj.Key!)
+        .filter(Boolean)
+
+      await this.s3Client.send(
+        new DeleteObjectsCommand({
+          Bucket: this.bucketName,
+          Delete: { Objects: keys.map(k => ({ Key: k })) },
+        }),
+      )
+
+      deletedCount += keys.length
+
+      continuationToken = response.IsTruncated
+        ? response.NextContinuationToken
+        : undefined
+    } while (continuationToken)
+
+    return deletedCount
   }
 
   async objectExists(key: string): Promise<boolean> {

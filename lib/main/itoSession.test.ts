@@ -179,7 +179,9 @@ describe('ItoSession', () => {
     // Wait for background context fetch
     await new Promise(resolve => setTimeout(resolve, 50))
 
-    expect(mockContextGrabber.getCursorContextForGrammar).toHaveBeenCalledTimes(1)
+    expect(mockContextGrabber.getCursorContextForGrammar).toHaveBeenCalledTimes(
+      1,
+    )
     expect(mockContextGrabber.getCursorContextForGrammar).toHaveBeenCalled()
   })
 

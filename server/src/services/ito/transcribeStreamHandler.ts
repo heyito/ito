@@ -37,10 +37,7 @@ import { HeaderValidator } from '../../validation/HeaderValidator.js'
  * @deprecated Maintained for backwards compatibility only.
  */
 export class TranscribeStreamHandler {
-  async process(
-    requests: AsyncIterable<AudioChunk>,
-    context: HandlerContext,
-  ) {
+  async process(requests: AsyncIterable<AudioChunk>, context: HandlerContext) {
     const startTime = Date.now()
     const audioChunks: Uint8Array[] = []
 
@@ -58,7 +55,10 @@ export class TranscribeStreamHandler {
     )
 
     // Concatenate all audio chunks
-    const totalLength = audioChunks.reduce((sum, chunk) => sum + chunk.length, 0)
+    const totalLength = audioChunks.reduce(
+      (sum, chunk) => sum + chunk.length,
+      0,
+    )
     const fullAudio = new Uint8Array(totalLength)
     let offset = 0
     for (const chunk of audioChunks) {
@@ -133,9 +133,7 @@ export class TranscribeStreamHandler {
       )
 
       if (detectedMode === ItoMode.EDIT) {
-        const llmProvider = getLlmProvider(
-          advancedSettingsHeaders.llmProvider,
-        )
+        const llmProvider = getLlmProvider(advancedSettingsHeaders.llmProvider)
         transcript = await llmProvider.adjustTranscript(
           userPromptPrefix + '\n' + userPrompt,
           {

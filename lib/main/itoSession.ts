@@ -87,6 +87,17 @@ export class ItoSession {
     // Update UI state
     recordingStateNotifier.notifyRecordingStopped()
 
+    // Wait for the stream promise to reject with cancellation error
+    if (this.streamResponsePromise) {
+      try {
+        await this.streamResponsePromise
+      } catch (error) {
+        // Expected cancellation error, log and ignore
+        log.info('[ItoSession] Stream cancelled as expected:', error)
+      }
+      this.streamResponsePromise = null
+    }
+
     // Clear cursor context on cancel
     grammarRulesService.clearCursorContext()
 
@@ -106,7 +117,17 @@ export class ItoSession {
       )
       itoStreamController.cancelTranscription()
       recordingStateNotifier.notifyRecordingStopped()
-      this.streamResponsePromise = null
+
+      // Wait for the stream promise to reject with cancellation error
+      if (this.streamResponsePromise) {
+        try {
+          await this.streamResponsePromise
+        } catch (error) {
+          // Expected cancellation error, log and ignore
+          log.info('[ItoSession] Stream cancelled as expected:', error)
+        }
+        this.streamResponsePromise = null
+      }
       return
     }
 

@@ -59,7 +59,7 @@ export class ItoSession {
     // Fetch cursor context for grammar rules only if grammar service is enabled
     const { grammarServiceEnabled } = getAdvancedSettings()
     if (grammarServiceEnabled) {
-      const cursorContext = await contextGrabber.getCursorContextForGrammar(4)
+      const cursorContext = await contextGrabber.getCursorContextForGrammar()
       grammarRulesService.setCursorContext(cursorContext)
       log.info('[ItoSession] Cursor context set for grammar rules')
     }

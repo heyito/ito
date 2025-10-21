@@ -37,19 +37,6 @@ mock.module('./itoStreamController', () => ({
   itoStreamController: mockItoStreamController,
 }))
 
-const mockWindowMessenger = {
-  setMainWindow: mock(),
-  sendTranscriptionResult: mock(),
-  sendTranscriptionError: mock(),
-}
-mock.module('./messaging/WindowMessenger', () => ({
-  WindowMessenger: class MockWindowMessenger {
-    setMainWindow = mockWindowMessenger.setMainWindow
-    sendTranscriptionResult = mockWindowMessenger.sendTranscriptionResult
-    sendTranscriptionError = mockWindowMessenger.sendTranscriptionError
-  },
-}))
-
 const mockTextInserter = {
   insertText: mock(() => Promise.resolve(true)),
 }
@@ -105,7 +92,7 @@ beforeEach(() => {
   console.error = mock()
 })
 
-describe('ItoSession', () => {
+describe('itoSessionManager', () => {
   beforeEach(() => {
     // Reset all mocks
     Object.values(mockVoiceInputService).forEach(mockFn => mockFn.mockClear())
@@ -113,7 +100,6 @@ describe('ItoSession', () => {
       mockFn.mockClear(),
     )
     Object.values(mockItoStreamController).forEach(mockFn => mockFn.mockClear())
-    Object.values(mockWindowMessenger).forEach(mockFn => mockFn.mockClear())
     Object.values(mockTextInserter).forEach(mockFn => mockFn.mockClear())
     Object.values(mockInteractionManager).forEach(mockFn => mockFn.mockClear())
     Object.values(mockContextGrabber).forEach(mockFn => mockFn.mockClear())
@@ -136,8 +122,8 @@ describe('ItoSession', () => {
   })
 
   test('should start session successfully', async () => {
-    const { ItoSession } = await import('./itoSession')
-    const session = new ItoSession()
+    const { ItoSessionManager } = await import('./itoSessionManager')
+    const session = new ItoSessionManager()
 
     await session.startSession(ItoMode.TRANSCRIBE)
 
@@ -155,8 +141,8 @@ describe('ItoSession', () => {
   })
 
   test('should fetch and send context in background', async () => {
-    const { ItoSession } = await import('./itoSession')
-    const session = new ItoSession()
+    const { ItoSessionManager } = await import('./itoSessionManager')
+    const session = new ItoSessionManager()
 
     await session.startSession(ItoMode.TRANSCRIBE)
 
@@ -171,8 +157,8 @@ describe('ItoSession', () => {
       grammarServiceEnabled: true,
     })
 
-    const { ItoSession } = await import('./itoSession')
-    const session = new ItoSession()
+    const { ItoSessionManager } = await import('./itoSessionManager')
+    const session = new ItoSessionManager()
 
     await session.startSession(ItoMode.TRANSCRIBE)
 
@@ -190,8 +176,8 @@ describe('ItoSession', () => {
       grammarServiceEnabled: false,
     })
 
-    const { ItoSession } = await import('./itoSession')
-    const session = new ItoSession()
+    const { ItoSessionManager } = await import('./itoSessionManager')
+    const session = new ItoSessionManager()
 
     await session.startSession(ItoMode.TRANSCRIBE)
 
@@ -202,8 +188,8 @@ describe('ItoSession', () => {
   test('should fail to start session when controller fails', async () => {
     mockItoStreamController.startInteraction.mockResolvedValueOnce(false)
 
-    const { ItoSession } = await import('./itoSession')
-    const session = new ItoSession()
+    const { ItoSessionManager } = await import('./itoSessionManager')
+    const session = new ItoSessionManager()
 
     await session.startSession(ItoMode.TRANSCRIBE)
 
@@ -211,8 +197,8 @@ describe('ItoSession', () => {
   })
 
   test('should change mode during session', async () => {
-    const { ItoSession } = await import('./itoSession')
-    const session = new ItoSession()
+    const { ItoSessionManager } = await import('./itoSessionManager')
+    const session = new ItoSessionManager()
 
     session.setMode(ItoMode.EDIT)
 
@@ -223,8 +209,8 @@ describe('ItoSession', () => {
   })
 
   test('should cancel session successfully', async () => {
-    const { ItoSession } = await import('./itoSession')
-    const session = new ItoSession()
+    const { ItoSessionManager } = await import('./itoSessionManager')
+    const session = new ItoSessionManager()
 
     await session.cancelSession()
 
@@ -234,8 +220,8 @@ describe('ItoSession', () => {
   })
 
   test('should complete session with sufficient audio', async () => {
-    const { ItoSession } = await import('./itoSession')
-    const session = new ItoSession()
+    const { ItoSessionManager } = await import('./itoSessionManager')
+    const session = new ItoSessionManager()
 
     mockItoStreamController.getAudioDurationMs.mockReturnValue(500)
 
@@ -248,8 +234,8 @@ describe('ItoSession', () => {
   })
 
   test('should cancel session when audio too short', async () => {
-    const { ItoSession } = await import('./itoSession')
-    const session = new ItoSession()
+    const { ItoSessionManager } = await import('./itoSessionManager')
+    const session = new ItoSessionManager()
 
     mockItoStreamController.getAudioDurationMs.mockReturnValue(50)
 
@@ -269,8 +255,8 @@ describe('ItoSession', () => {
       sampleRate: 16000,
     })
 
-    const { ItoSession } = await import('./itoSession')
-    const session = new ItoSession()
+    const { ItoSessionManager } = await import('./itoSessionManager')
+    const session = new ItoSessionManager()
 
     await session.startSession(ItoMode.TRANSCRIBE)
     await session.completeSession()
@@ -282,9 +268,6 @@ describe('ItoSession', () => {
       16000,
       undefined,
     )
-    expect(mockWindowMessenger.sendTranscriptionResult).toHaveBeenCalledWith({
-      transcript: mockTranscript,
-    })
     expect(mockItoStreamController.clearInteractionAudio).toHaveBeenCalled()
     expect(mockInteractionManager.clearCurrentInteraction).toHaveBeenCalled()
   })
@@ -306,8 +289,8 @@ describe('ItoSession', () => {
       ' Hello world',
     )
 
-    const { ItoSession } = await import('./itoSession')
-    const session = new ItoSession()
+    const { ItoSessionManager } = await import('./itoSessionManager')
+    const session = new ItoSessionManager()
 
     await session.startSession(ItoMode.TRANSCRIBE)
     await session.completeSession()
@@ -333,8 +316,8 @@ describe('ItoSession', () => {
       sampleRate: 16000,
     })
 
-    const { ItoSession } = await import('./itoSession')
-    const session = new ItoSession()
+    const { ItoSessionManager } = await import('./itoSessionManager')
+    const session = new ItoSessionManager()
 
     await session.startSession(ItoMode.TRANSCRIBE)
     await session.completeSession()
@@ -357,8 +340,8 @@ describe('ItoSession', () => {
       sampleRate: 16000,
     })
 
-    const { ItoSession } = await import('./itoSession')
-    const session = new ItoSession()
+    const { ItoSessionManager } = await import('./itoSessionManager')
+    const session = new ItoSessionManager()
 
     await session.startSession(ItoMode.TRANSCRIBE)
     await session.completeSession()
@@ -378,15 +361,12 @@ describe('ItoSession', () => {
     const error = new Error('Network timeout')
     mockItoStreamController.startGrpcStream.mockRejectedValueOnce(error)
 
-    const { ItoSession } = await import('./itoSession')
-    const session = new ItoSession()
+    const { ItoSessionManager } = await import('./itoSessionManager')
+    const session = new ItoSessionManager()
 
     await session.startSession(ItoMode.TRANSCRIBE)
     await session.completeSession()
 
-    expect(mockWindowMessenger.sendTranscriptionError).toHaveBeenCalledWith(
-      error,
-    )
     expect(mockInteractionManager.clearCurrentInteraction).toHaveBeenCalled()
     expect(mockItoStreamController.clearInteractionAudio).toHaveBeenCalled()
   })
@@ -398,26 +378,13 @@ describe('ItoSession', () => {
       sampleRate: 16000,
     })
 
-    const { ItoSession } = await import('./itoSession')
-    const session = new ItoSession()
+    const { ItoSessionManager } = await import('./itoSessionManager')
+    const session = new ItoSessionManager()
 
     await session.startSession(ItoMode.TRANSCRIBE)
     await session.completeSession()
 
     expect(mockTextInserter.insertText).not.toHaveBeenCalled()
-    expect(mockWindowMessenger.sendTranscriptionResult).toHaveBeenCalledWith({
-      transcript: '',
-    })
-  })
-
-  test('should set main window', async () => {
-    const { ItoSession } = await import('./itoSession')
-    const session = new ItoSession()
-
-    const mockWindow = { isDestroyed: () => false } as any
-    session.setMainWindow(mockWindow)
-
-    expect(mockWindowMessenger.setMainWindow).toHaveBeenCalledWith(mockWindow)
   })
 
   test('should handle context fetch error gracefully', async () => {
@@ -425,8 +392,8 @@ describe('ItoSession', () => {
       new Error('Context fetch failed'),
     )
 
-    const { ItoSession } = await import('./itoSession')
-    const session = new ItoSession()
+    const { ItoSessionManager } = await import('./itoSessionManager')
+    const session = new ItoSessionManager()
 
     // Should not throw
     await session.startSession(ItoMode.TRANSCRIBE)
@@ -439,8 +406,8 @@ describe('ItoSession', () => {
   })
 
   test('should handle complete session flow', async () => {
-    const { ItoSession } = await import('./itoSession')
-    const session = new ItoSession()
+    const { ItoSessionManager } = await import('./itoSessionManager')
+    const session = new ItoSessionManager()
 
     const mockTranscript = 'Test complete flow'
     mockItoStreamController.startGrpcStream.mockResolvedValueOnce({

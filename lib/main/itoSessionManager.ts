@@ -2,7 +2,6 @@ import { ItoMode } from '@/app/generated/ito_pb'
 import { voiceInputService } from './voiceInputService'
 import { recordingStateNotifier } from './recordingStateNotifier'
 import { itoStreamController } from './itoStreamController'
-import { WindowMessenger } from './messaging/WindowMessenger'
 import { TextInserter } from './text/TextInserter'
 import { interactionManager } from './interactions/InteractionManager'
 import { contextGrabber } from './context/ContextGrabber'
@@ -10,9 +9,8 @@ import { GrammarRulesService } from './grammar/GrammarRulesService'
 import { getAdvancedSettings } from './store'
 import log from 'electron-log'
 
-export class ItoSession {
+export class ItoSessionManager {
   private readonly MINIMUM_AUDIO_DURATION_MS = 100
-  private windowMessenger = new WindowMessenger()
   private textInserter = new TextInserter()
   private streamResponsePromise: Promise<{
     response: any
@@ -22,12 +20,12 @@ export class ItoSession {
   private grammarRulesService = new GrammarRulesService('')
 
   public async startSession(mode: ItoMode) {
-    log.info('[ItoSession] Starting session with mode:', mode)
+    log.info('[itoSessionManager] Starting session with mode:', mode)
 
     // Initialize all necessary components
     const started = await itoStreamController.startInteraction(mode)
     if (!started) {
-      log.error('[ItoSession] Failed to start itoStreamController')
+      log.error('[itoSessionManager] Failed to start itoStreamController')
       return
     }
 
@@ -45,29 +43,29 @@ export class ItoSession {
 
     // Fetch and send context in the background (non-blocking)
     this.fetchAndSendContext().catch(error => {
-      log.error('[ItoSession] Failed to fetch/send context:', error)
+      log.error('[itoSessionManager] Failed to fetch/send context:', error)
     })
   }
 
   private async fetchAndSendContext() {
-    log.info('[ItoSession] Fetching context in background...')
+    log.info('[itoSessionManager] Fetching context in background...')
 
     // This builds the full config (window context, selected text, vocabulary, settings)
     await itoStreamController.sendConfigUpdate()
 
-    log.info('[ItoSession] Context sent to stream')
+    log.info('[itoSessionManager] Context sent to stream')
 
     // Fetch cursor context for grammar rules only if grammar service is enabled
     const { grammarServiceEnabled } = getAdvancedSettings()
     if (grammarServiceEnabled) {
       const cursorContext = await contextGrabber.getCursorContextForGrammar()
       this.grammarRulesService = new GrammarRulesService(cursorContext)
-      log.info('[ItoSession] Cursor context set for grammar rules')
+      log.info('[itoSessionManager] Cursor context set for grammar rules')
     }
   }
 
   public setMode(mode: ItoMode) {
-    log.info('[ItoSession] Changing mode to:', mode)
+    log.info('[itoSessionManager] Changing mode to:', mode)
 
     // Send mode change to grpc stream (will also update windows via recordingStateNotifier)
     itoStreamController.setMode(mode)
@@ -77,7 +75,7 @@ export class ItoSession {
   }
 
   public async cancelSession() {
-    log.info('[ItoSession] Cancelling session')
+    log.info('[itoSessionManager] Cancelling session')
 
     // Cancel the transcription (will not create interaction)
     itoStreamController.cancelTranscription()
@@ -94,12 +92,12 @@ export class ItoSession {
         await this.streamResponsePromise
       } catch (error) {
         // Expected cancellation error, log and ignore
-        log.info('[ItoSession] Stream cancelled as expected:', error)
+        log.info('[itoSessionManager] Stream cancelled as expected:', error)
       }
       this.streamResponsePromise = null
     }
 
-    log.info('[ItoSession] Session cancelled')
+    log.info('[itoSessionManager] Session cancelled')
   }
 
   public async completeSession() {
@@ -111,7 +109,7 @@ export class ItoSession {
 
     if (audioDurationMs < this.MINIMUM_AUDIO_DURATION_MS) {
       log.info(
-        `[ItoSession] Audio too short (${audioDurationMs}ms < ${this.MINIMUM_AUDIO_DURATION_MS}ms), cancelling`,
+        `[itoSessionManager] Audio too short (${audioDurationMs}ms < ${this.MINIMUM_AUDIO_DURATION_MS}ms), cancelling`,
       )
       itoStreamController.cancelTranscription()
       recordingStateNotifier.notifyRecordingStopped()
@@ -122,7 +120,7 @@ export class ItoSession {
           await this.streamResponsePromise
         } catch (error) {
           // Expected cancellation error, log and ignore
-          log.info('[ItoSession] Stream cancelled as expected:', error)
+          log.info('[itoSessionManager] Stream cancelled as expected:', error)
         }
         this.streamResponsePromise = null
       }
@@ -191,15 +189,12 @@ export class ItoSession {
           errorMessage,
         )
       } else {
-        log.warn('[ItoSession] Skipping text insertion:', {
+        log.warn('[itoSessionManager] Skipping text insertion:', {
           hasTranscript: !!response.transcript,
           transcriptLength: response.transcript?.length || 0,
           hasError: !!response.error,
         })
       }
-
-      // Send transcription result to main window
-      this.windowMessenger.sendTranscriptionResult(response)
 
       itoStreamController.clearInteractionAudio()
       interactionManager.clearCurrentInteraction()
@@ -208,21 +203,14 @@ export class ItoSession {
 
   private async handleTranscriptionError(error: any) {
     log.error(
-      '[ItoSession] An unexpected error occurred during transcription:',
+      '[itoSessionManager] An unexpected error occurred during transcription:',
       error,
     )
-
-    // Send transcription error to main window
-    this.windowMessenger.sendTranscriptionError(error)
 
     // Clear current interaction on error
     interactionManager.clearCurrentInteraction()
     itoStreamController.clearInteractionAudio()
   }
-
-  public setMainWindow(mainWindow: any) {
-    this.windowMessenger.setMainWindow(mainWindow)
-  }
 }
 
-export const itoSession = new ItoSession()
+export const itoSessionManager = new ItoSessionManager()

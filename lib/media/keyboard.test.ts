@@ -85,14 +85,14 @@ mock.module('./audio', () => ({
   audioRecorderService: mockAudioRecorderService,
 }))
 
-const mockItoSession = {
+const mockitoSessionManager = {
   startSession: mock(),
   completeSession: mock(),
   setMode: mock(),
   cancelSession: mock(),
 }
-mock.module('../main/itoSession', () => ({
-  itoSession: mockItoSession,
+mock.module('../main/itoSessionManager', () => ({
+  itoSessionManager: mockitoSessionManager,
 }))
 // Mock console to avoid spam
 beforeEach(async () => {
@@ -116,10 +116,10 @@ describe('Keyboard Module', () => {
     mockWindow.webContents.send.mockClear()
     mockWindow.webContents.isDestroyed.mockClear()
     mockAudioRecorderService.stopRecording.mockClear()
-    mockItoSession.startSession.mockClear()
-    mockItoSession.completeSession.mockClear()
-    mockItoSession.setMode.mockClear()
-    mockItoSession.cancelSession.mockClear()
+    mockitoSessionManager.startSession.mockClear()
+    mockitoSessionManager.completeSession.mockClear()
+    mockitoSessionManager.setMode.mockClear()
+    mockitoSessionManager.cancelSession.mockClear()
 
     // Reset child process to clean state
     mockChildProcess.stdout.removeAllListeners()
@@ -398,7 +398,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(spaceDown) + '\n'),
       )
 
-      expect(mockItoSession.startSession).toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).toHaveBeenCalled()
       expect(console.info).toHaveBeenCalledWith(
         'lib Shortcut ACTIVATED, starting recording...',
       )
@@ -453,7 +453,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(spaceUp) + '\n'),
       )
 
-      expect(mockItoSession.completeSession).toHaveBeenCalled()
+      expect(mockitoSessionManager.completeSession).toHaveBeenCalled()
       expect(console.info).toHaveBeenCalledWith(
         'lib Shortcut DEACTIVATED, stopping recording...',
       )
@@ -495,7 +495,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(spaceDown) + '\n'),
       )
 
-      expect(mockItoSession.startSession).not.toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).not.toHaveBeenCalled()
     })
 
     test('should stop active recording when shortcut is disabled', async () => {
@@ -551,7 +551,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(otherKey) + '\n'),
       )
 
-      expect(mockItoSession.completeSession).toHaveBeenCalled()
+      expect(mockitoSessionManager.completeSession).toHaveBeenCalled()
       expect(console.info).toHaveBeenCalledWith(
         'Shortcut DEACTIVATED, stopping recording...',
       )
@@ -648,7 +648,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(fDown) + '\n'),
       )
 
-      expect(mockItoSession.startSession).toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).toHaveBeenCalled()
     })
 
     test('should handle partial shortcut matches correctly', async () => {
@@ -690,7 +690,7 @@ describe('Keyboard Module', () => {
       )
 
       // Should not activate shortcut with partial match
-      expect(mockItoSession.startSession).not.toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).not.toHaveBeenCalled()
     })
 
     test('should not activate shortcut when superset of keys is pressed', async () => {
@@ -732,7 +732,7 @@ describe('Keyboard Module', () => {
       )
 
       // Should not activate shortcut when superset is pressed
-      expect(mockItoSession.startSession).not.toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).not.toHaveBeenCalled()
     })
 
     test('should require exact key match for shortcut activation', async () => {
@@ -764,7 +764,7 @@ describe('Keyboard Module', () => {
       )
 
       // Should activate shortcut with exact match
-      expect(mockItoSession.startSession).toHaveBeenCalledWith(
+      expect(mockitoSessionManager.startSession).toHaveBeenCalledWith(
         ItoMode.TRANSCRIBE,
       )
     })
@@ -818,7 +818,7 @@ describe('Keyboard Module', () => {
       )
 
       // Should not activate shortcut when extra keys are pressed
-      expect(mockItoSession.startSession).not.toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).not.toHaveBeenCalled()
     })
 
     test('should allow repeated shortcut activations with exact matching', async () => {
@@ -872,7 +872,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(spaceDown1) + '\n'),
       )
 
-      expect(mockItoSession.startSession).toHaveBeenCalledTimes(1)
+      expect(mockitoSessionManager.startSession).toHaveBeenCalledTimes(1)
 
       // Release command + space
       mockChildProcess.stdout.emit(
@@ -884,11 +884,11 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(spaceUp1) + '\n'),
       )
 
-      expect(mockItoSession.completeSession).toHaveBeenCalledTimes(1)
+      expect(mockitoSessionManager.completeSession).toHaveBeenCalledTimes(1)
 
       // Clear mocks for second cycle
-      mockItoSession.startSession.mockClear()
-      mockItoSession.completeSession.mockClear()
+      mockitoSessionManager.startSession.mockClear()
+      mockitoSessionManager.completeSession.mockClear()
 
       // Second activation cycle - should work again
       const commandDown2 = {
@@ -915,7 +915,7 @@ describe('Keyboard Module', () => {
       )
 
       // Should activate shortcut again
-      expect(mockItoSession.startSession).toHaveBeenCalledTimes(1)
+      expect(mockitoSessionManager.startSession).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -947,8 +947,8 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(metaLeftDown) + '\n'),
       )
 
-      expect(mockItoSession.startSession).toHaveBeenCalled()
-      mockItoSession.startSession.mockClear()
+      expect(mockitoSessionManager.startSession).toHaveBeenCalled()
+      mockitoSessionManager.startSession.mockClear()
 
       const metaLeftUp = {
         type: 'keyup',
@@ -974,7 +974,7 @@ describe('Keyboard Module', () => {
       )
 
       // Should NOT have been called again
-      expect(mockItoSession.startSession).not.toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).not.toHaveBeenCalled()
     })
 
     test('should normalize letter keys correctly', async () => {
@@ -1003,7 +1003,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(keyADown) + '\n'),
       )
 
-      expect(mockItoSession.startSession).toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).toHaveBeenCalled()
     })
 
     test('should normalize number keys correctly', async () => {
@@ -1032,7 +1032,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(digit1Down) + '\n'),
       )
 
-      expect(mockItoSession.startSession).toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).toHaveBeenCalled()
     })
 
     test('should handle unknown keys by lowercasing them', async () => {
@@ -1061,7 +1061,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(unknownKeyDown) + '\n'),
       )
 
-      expect(mockItoSession.startSession).toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).toHaveBeenCalled()
     })
   })
 
@@ -1216,7 +1216,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(keyADown) + '\n'),
       )
 
-      expect(mockItoSession.startSession).not.toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).not.toHaveBeenCalled()
     })
   })
 

@@ -33,7 +33,7 @@ import {
 } from '../main/sqlite/repo'
 import { audioRecorderService } from '../media/audio'
 import { voiceInputService } from '../main/voiceInputService'
-import { itoSession } from '../main/itoSession'
+import { itoSessionManager } from '../main/itoSessionManager'
 import { ItoMode } from '@/app/generated/ito_pb'
 import {
   getSelectedText,
@@ -138,9 +138,11 @@ export function registerIPC() {
   handleIPC('stop-key-listener', () => stopKeyListener())
   handleIPC('register-hotkeys', () => registerAllHotkeys())
   handleIPC('start-native-recording-service', () =>
-    itoSession.startSession(ItoMode.TRANSCRIBE),
+    itoSessionManager.startSession(ItoMode.TRANSCRIBE),
   )
-  handleIPC('stop-native-recording-service', () => itoSession.completeSession())
+  handleIPC('stop-native-recording-service', () =>
+    itoSessionManager.completeSession(),
+  )
   handleIPC('block-keys', (_e, keys: string[]) => {
     if (KeyListenerProcess)
       KeyListenerProcess.stdin?.write(
@@ -616,7 +618,7 @@ export function registerIPC() {
   // When the hotkey is pressed, start recording and notify the pill window.
   ipcMain.on('start-native-recording', _event => {
     log.info(`IPC: Received 'start-native-recording'`)
-    itoSession.startSession(ItoMode.TRANSCRIBE)
+    itoSessionManager.startSession(ItoMode.TRANSCRIBE)
   })
 
   ipcMain.on('start-native-recording-test', _event => {
@@ -628,7 +630,7 @@ export function registerIPC() {
   // When the hotkey is released, stop recording and notify the pill window.
   ipcMain.on('stop-native-recording', () => {
     log.info('IPC: Received stop-native-recording.')
-    itoSession.completeSession()
+    itoSessionManager.completeSession()
   })
 
   // Stop recording for microphone test (doesn't stop transcription since it wasn't started)

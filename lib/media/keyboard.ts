@@ -3,7 +3,7 @@ import store, { KeyboardShortcutConfig } from '../main/store'
 import { STORE_KEYS } from '../constants/store-keys'
 import { getNativeBinaryPath } from './native-interface'
 import { BrowserWindow } from 'electron'
-import { itoSession } from '../main/itoSession'
+import { itoSessionManager } from '../main/itoSessionManager'
 import { KeyName, keyNameMap, normalizeLegacyKey } from '../types/keyboard'
 
 interface KeyEvent {
@@ -188,7 +188,7 @@ function handleKeyEventInMain(event: KeyEvent) {
       isShortcutActive = false
       activeShortcutId = null
       console.info('Shortcut DEACTIVATED, stopping recording...')
-      itoSession.completeSession()
+      itoSessionManager.completeSession()
     }
     return
   }
@@ -235,14 +235,14 @@ function handleKeyEventInMain(event: KeyEvent) {
       isShortcutActive = true
       activeShortcutId = currentlyHeldShortcut.id
       console.info('lib Shortcut ACTIVATED, starting recording...')
-      itoSession.startSession(currentlyHeldShortcut.mode)
+      itoSessionManager.startSession(currentlyHeldShortcut.mode)
     } else if (activeShortcutId !== currentlyHeldShortcut.id) {
       // Different shortcut detected while already recording - change mode
       activeShortcutId = currentlyHeldShortcut.id
       console.info(
         `lib Shortcut mode CHANGED to ${currentlyHeldShortcut.mode}, updating session...`,
       )
-      itoSession.setMode(currentlyHeldShortcut.mode)
+      itoSessionManager.setMode(currentlyHeldShortcut.mode)
     }
   } else if (!currentlyHeldShortcut) {
     // No shortcut detected - cancel pending activation or deactivate active shortcut
@@ -251,7 +251,7 @@ function handleKeyEventInMain(event: KeyEvent) {
       isShortcutActive = false
       activeShortcutId = null
       console.info('lib Shortcut DEACTIVATED, stopping recording...')
-      itoSession.completeSession()
+      itoSessionManager.completeSession()
     }
   }
 }

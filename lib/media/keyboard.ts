@@ -28,7 +28,6 @@ type ProcessEvent = KeyEvent | HeartbeatEvent | RegisteredHotkeysEvent
 
 // Global key listener process singleton
 export let KeyListenerProcess: ReturnType<typeof spawn> | null = null
-export let isShortcutActive = false
 let activeShortcutId: string | null = null
 
 // Heartbeat monitoring state
@@ -41,7 +40,6 @@ const HEARTBEAT_TIMEOUT_MS = 15000 // 15 seconds without heartbeat triggers rest
 export const resetForTesting = () => {
   if (process.env.NODE_ENV !== 'production') {
     KeyListenerProcess = null
-    isShortcutActive = false
     activeShortcutId = null
     pressedKeys.clear()
     keyPressTimestamps.clear()
@@ -125,7 +123,7 @@ function checkForStuckKeys() {
     // If there's an active shortcut, check if this stuck key is part of it
     let shouldRemove = true
 
-    if (isShortcutActive) {
+    if (activeShortcutId !== null) {
       const { keyboardShortcuts } = store.get(STORE_KEYS.SETTINGS)
       const activeShortcut = keyboardShortcuts
         .filter(ks => ks.keys.length > 0)
@@ -183,9 +181,8 @@ function handleKeyEventInMain(event: KeyEvent) {
 
   if (!isShortcutGloballyEnabled) {
     // check to see if we should stop an in-progress recording
-    if (isShortcutActive) {
+    if (activeShortcutId !== null) {
       // Shortcut released
-      isShortcutActive = false
       activeShortcutId = null
       console.info('Shortcut DEACTIVATED, stopping recording...')
       itoSessionManager.completeSession()
@@ -230,9 +227,8 @@ function handleKeyEventInMain(event: KeyEvent) {
 
   // Handle shortcut activation and mode changes
   if (currentlyHeldShortcut) {
-    if (!isShortcutActive) {
+    if (activeShortcutId === null) {
       // Starting a new session
-      isShortcutActive = true
       activeShortcutId = currentlyHeldShortcut.id
       console.info('lib Shortcut ACTIVATED, starting recording...')
       itoSessionManager.startSession(currentlyHeldShortcut.mode)
@@ -246,9 +242,8 @@ function handleKeyEventInMain(event: KeyEvent) {
     }
   } else if (!currentlyHeldShortcut) {
     // No shortcut detected - cancel pending activation or deactivate active shortcut
-    if (isShortcutActive) {
+    if (activeShortcutId !== null) {
       // Shortcut released - deactivate immediately (no debounce on release)
-      isShortcutActive = false
       activeShortcutId = null
       console.info('lib Shortcut DEACTIVATED, stopping recording...')
       itoSessionManager.completeSession()

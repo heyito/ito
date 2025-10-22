@@ -1,5 +1,6 @@
 import { create } from '@bufbuild/protobuf'
-import { ConnectError } from '@connectrpc/connect'
+import { ConnectError, Code } from '@connectrpc/connect'
+import type { HandlerContext } from '@connectrpc/connect'
 import {
   ContextInfo,
   ItoMode,
@@ -29,7 +30,10 @@ interface ModeChangeRecord {
 export class TranscribeStreamV2Handler {
   private readonly MODE_CHANGE_GRACE_PERIOD_MS = 100
 
-  async process(requests: AsyncIterable<TranscribeStreamRequest>) {
+  async process(
+    requests: AsyncIterable<TranscribeStreamRequest>,
+    context?: HandlerContext,
+  ) {
     const startTime = Date.now()
     const audioChunks: Uint8Array[] = []
     let mergedConfig: StreamConfig = create(StreamConfigSchema, {
@@ -42,35 +46,68 @@ export class TranscribeStreamV2Handler {
 
     console.log(`📩 [${new Date().toISOString()}] Starting TranscribeStreamV2`)
 
-    for await (const request of requests) {
-      if (request.payload.case === 'audioData') {
-        audioChunks.push(request.payload.value)
-      } else if (request.payload.case === 'config') {
-        const previousMode = mergedConfig.context?.mode
-        mergedConfig = this.mergeStreamConfigs(
-          mergedConfig,
-          request.payload.value,
-        )
-
-        console.log(
-          `🔧 [${new Date().toISOString()}] Received config update:`,
-          JSON.stringify(mergedConfig, null, 2),
-        )
-
-        const newMode = mergedConfig.context?.mode
-        if (newMode !== undefined && newMode !== previousMode) {
-          modeHistory.push({
-            mode: newMode,
-            timestamp: Date.now(),
-          })
-          console.log(
-            `🔧 [${new Date().toISOString()}] Mode changed to: ${newMode}`,
+    try {
+      for await (const request of requests) {
+        if (request.payload.case === 'audioData') {
+          audioChunks.push(request.payload.value)
+        } else if (request.payload.case === 'config') {
+          const previousMode = mergedConfig.context?.mode
+          mergedConfig = this.mergeStreamConfigs(
+            mergedConfig,
+            request.payload.value,
           )
+
+          console.log(
+            `🔧 [${new Date().toISOString()}] Received config update:`,
+            JSON.stringify(mergedConfig, null, 2),
+          )
+
+          const newMode = mergedConfig.context?.mode
+          if (newMode !== undefined && newMode !== previousMode) {
+            modeHistory.push({
+              mode: newMode,
+              timestamp: Date.now(),
+            })
+            console.log(
+              `🔧 [${new Date().toISOString()}] Mode changed to: ${newMode}`,
+            )
+          }
         }
       }
+    } catch (err) {
+      // Check if this is a client abort/cancellation error
+      const isAbortError =
+        err instanceof Error &&
+        (err.message === 'aborted' ||
+          (err as any).code === 'ECONNRESET' ||
+          (err as any).code === 'ABORT_ERR')
+
+      if (isAbortError) {
+        console.log(
+          `🚫 [${new Date().toISOString()}] Stream reading interrupted (client cancelled)`,
+        )
+        throw new ConnectError(
+          'Stream cancelled by client',
+          Code.Canceled,
+          undefined,
+          undefined,
+          err,
+        )
+      }
+
+      // Re-throw other errors
+      throw err
     }
 
     const streamEndTime = Date.now()
+
+    // Check if client cancelled the stream
+    if (context?.signal.aborted) {
+      console.log(
+        `🚫 [${new Date().toISOString()}] Stream cancelled by client, aborting processing`,
+      )
+      throw new ConnectError('Stream cancelled by client', Code.Canceled)
+    }
 
     let finalMode = mergedConfig.context?.mode
     if (modeHistory.length > 1) {
@@ -139,6 +176,14 @@ export class TranscribeStreamV2Handler {
         mergedConfig.transcriptionSettings?.noSpeechThreshold ??
         DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold
       const vocabulary = mergedConfig.vocabulary
+
+      // Check for cancellation before calling ASR provider
+      if (context?.signal.aborted) {
+        console.log(
+          `🚫 [${new Date().toISOString()}] Stream cancelled before ASR call, skipping transcription`,
+        )
+        throw new ConnectError('Stream cancelled by client', Code.Canceled)
+      }
 
       const asrClient = getAsrProvider(asrProvider)
       let transcript = await asrClient.transcribeAudio(fullAudioWAV, {
@@ -267,9 +312,7 @@ export class TranscribeStreamV2Handler {
         ? { ...base.llmSettings, ...update.llmSettings }
         : base.llmSettings,
       vocabulary:
-        update.vocabulary.length > 0
-          ? [...base.vocabulary, ...update.vocabulary]
-          : base.vocabulary,
+        update.vocabulary.length > 0 ? update.vocabulary : base.vocabulary,
     }
   }
 }

@@ -24,6 +24,7 @@ export class ItoStreamController {
   private currentMode: ItoMode = ItoMode.TRANSCRIBE
   private isCancelled = false
   private configQueue: TranscribeStreamRequest[] = []
+  private abortController: AbortController | null = null
 
   public async initialize(mode: ItoMode): Promise<boolean> {
     // Guard against multiple concurrent transcriptions
@@ -36,6 +37,7 @@ export class ItoStreamController {
     this.hasStartedGrpc = false
     this.currentMode = mode
     this.isCancelled = false
+    this.abortController = null
     console.log('[ItoStreamController] Starting new interaction stream.')
 
     return true
@@ -57,9 +59,11 @@ export class ItoStreamController {
 
     console.log('[ItoStreamController] Starting gRPC stream immediately')
     this.hasStartedGrpc = true
+    this.abortController = new AbortController()
 
     const response = await grpcClient.transcribeStreamV2(
       this.createStreamGenerator(),
+      this.abortController.signal,
     )
 
     // Return response along with the audio data collected during the stream
@@ -133,6 +137,7 @@ export class ItoStreamController {
 
     console.log('[ItoStreamController] Cancelling transcription')
     this.isCancelled = true
+    this.abortController?.abort()
 
     this.stopStreaming()
   }

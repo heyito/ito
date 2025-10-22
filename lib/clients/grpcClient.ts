@@ -272,10 +272,14 @@ class GrpcClient {
     })
   }
 
-  async transcribeStreamV2(stream: AsyncIterable<TranscribeStreamRequest>) {
+  async transcribeStreamV2(
+    stream: AsyncIterable<TranscribeStreamRequest>,
+    signal?: AbortSignal,
+  ) {
     return this.withRetry(async () => {
       const response = await this.client.transcribeStreamV2(stream, {
         headers: this.getHeaders(),
+        signal,
       })
       return response
     })

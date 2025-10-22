@@ -121,9 +121,9 @@ export default (router: ConnectRouter) => {
   router.service(ItoServiceDesc, {
     async transcribeStreamV2(
       requests: AsyncIterable<TranscribeStreamRequest>,
-      _context: HandlerContext,
+      context: HandlerContext,
     ) {
-      return transcribeStreamV2Handler.process(requests)
+      return transcribeStreamV2Handler.process(requests, context)
     },
 
     /**

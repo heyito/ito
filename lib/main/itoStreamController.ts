@@ -11,7 +11,6 @@ import { create } from '@bufbuild/protobuf'
 import { grpcClient } from '../clients/grpcClient'
 import { AudioStreamManager } from './audio/AudioStreamManager'
 import { contextGrabber } from './context/ContextGrabber'
-import { audioRecorderService } from '../media/audio'
 import log from 'electron-log'
 
 /**
@@ -22,15 +21,9 @@ export class ItoStreamController {
   private audioStreamManager = new AudioStreamManager()
 
   private hasStartedGrpc = false
-  private currentMode: ItoMode | null = null
+  private currentMode: ItoMode = ItoMode.TRANSCRIBE
   private isCancelled = false
   private configQueue: TranscribeStreamRequest[] = []
-
-  constructor() {
-    // Set up audio listeners once - they remain active for the lifetime of the controller
-    // The AudioStreamManager's isStreaming flag gates whether chunks are processed
-    this.setupAudioListeners()
-  }
 
   public async initialize(mode: ItoMode): Promise<boolean> {
     // Guard against multiple concurrent transcriptions
@@ -62,11 +55,6 @@ export class ItoStreamController {
       throw new Error('Stream already started')
     }
 
-    if (this.currentMode === null) {
-      log.error('[ItoStreamController] Cannot start gRPC stream - mode not set')
-      throw new Error('Mode not set')
-    }
-
     console.log('[ItoStreamController] Starting gRPC stream immediately')
     this.hasStartedGrpc = true
 
@@ -80,27 +68,6 @@ export class ItoStreamController {
       audioBuffer: this.audioStreamManager.getInteractionAudioBuffer(),
       sampleRate: this.audioStreamManager.getCurrentSampleRate(),
     }
-  }
-
-  private setupAudioListeners() {
-    console.log('[ItoStreamController] Setting up direct audio listeners')
-
-    audioRecorderService.on('audio-chunk', this.handleAudioChunk)
-    audioRecorderService.on('audio-config', this.handleAudioConfig)
-  }
-
-  private handleAudioChunk = (chunk: Buffer) => {
-    this.audioStreamManager.addAudioChunk(chunk)
-  }
-
-  private handleAudioConfig = ({ outputSampleRate, sampleRate }: any) => {
-    const effectiveRate = outputSampleRate || sampleRate || 16000
-    console.log('[ItoStreamController] Received audio config:', {
-      outputSampleRate,
-      sampleRate,
-      effectiveRate,
-    })
-    this.audioStreamManager.setAudioConfig({ sampleRate: effectiveRate })
   }
 
   public setMode(mode: ItoMode) {
@@ -221,7 +188,7 @@ export class ItoStreamController {
 
   private async buildStreamConfig(): Promise<TranscribeStreamRequest> {
     // Gather all config data using ContextGrabber
-    const context = await contextGrabber.gatherContext(this.currentMode!)
+    const context = await contextGrabber.gatherContext(this.currentMode)
 
     return create(TranscribeStreamRequestSchema, {
       payload: {
@@ -231,7 +198,7 @@ export class ItoStreamController {
             windowTitle: context.windowTitle,
             appName: context.appName,
             contextText: context.contextText,
-            mode: this.currentMode!,
+            mode: this.currentMode,
           }),
           transcriptionSettings: create(TranscriptionSettingsSchema, {
             asrModel: context.advancedSettings.llm.asrModel,

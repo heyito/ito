@@ -119,6 +119,7 @@ Native tests and builds are integrated into the existing CI workflows:
 - Group related code into useful, well-named functions
 - Prefer clean, readable code over complex solutions
 - Follow existing patterns and conventions in the codebase
+- Always prefer console commands over log commands. E.g. use `console.log` instead of `log.info`.
 
 ## Tech Stack
 

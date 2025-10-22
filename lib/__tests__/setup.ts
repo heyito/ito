@@ -14,6 +14,7 @@ mock.module('electron', () => {
       getVersion: () => '1.0.0',
       whenReady: () => Promise.resolve(),
       isReady: () => true,
+      isPackaged: false,
       dock: {
         hide: () => {},
         show: () => {},

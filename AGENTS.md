@@ -20,6 +20,7 @@
 - TypeScript + React across app/lib; server targets modern ECMAScript on Bun.
 - Prettier (2-space indent) and ESLint enforce formatting. Run `bun run format` and `bun run lint` (or `*:app` variants) before submitting.
 - Components/classes use `PascalCase`, hooks/utilities `camelCase`, constants `SCREAMING_SNAKE_CASE`. Co-locate Tailwind styles with components and reuse tokens via `lib/constants`.
+- Always prefer console commands over log commands. E.g. use `console.log` instead of `log.info`.
 
 ## Testing Guidelines
 

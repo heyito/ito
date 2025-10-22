@@ -1,10 +1,14 @@
 import { describe, test, expect, beforeEach } from 'bun:test'
 import { AudioStreamManager } from './AudioStreamManager'
+import { audioRecorderService } from '../../media/audio'
 
 describe('AudioStreamManager', () => {
   let audioManager: AudioStreamManager
 
   beforeEach(() => {
+    // Clean up any existing listeners from previous tests
+    audioRecorderService.removeAllListeners('audio-chunk')
+    audioRecorderService.removeAllListeners('audio-config')
     audioManager = new AudioStreamManager()
   })
 
@@ -300,4 +304,5 @@ describe('AudioStreamManager', () => {
       expect(audioManager.getInteractionAudioBuffer().length).toBe(0)
     })
   })
+
 })

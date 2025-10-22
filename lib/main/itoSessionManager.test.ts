@@ -31,7 +31,6 @@ const mockItoStreamController = {
   getAudioDurationMs: mock(() => 1000),
   endInteraction: mock(),
   cancelTranscription: mock(),
-  clearInteractionAudio: mock(),
 }
 mock.module('./itoStreamController', () => ({
   itoStreamController: mockItoStreamController,
@@ -47,6 +46,9 @@ mock.module('./text/TextInserter', () => ({
 }))
 
 const mockInteractionManager = {
+  getCurrentInteractionId: mock((): string | null => null),
+  adoptInteractionId: mock(),
+  initialize: mock(() => 'test-interaction-123'),
   createInteraction: mock(() => Promise.resolve()),
   clearCurrentInteraction: mock(),
 }
@@ -116,6 +118,8 @@ describe('itoSessionManager', () => {
     })
     mockItoStreamController.getAudioDurationMs.mockReturnValue(1000)
     mockTextInserter.insertText.mockResolvedValue(true)
+    mockInteractionManager.getCurrentInteractionId.mockReturnValue(null)
+    mockInteractionManager.initialize.mockReturnValue('test-interaction-123')
     mockGetAdvancedSettings.mockReturnValue({
       grammarServiceEnabled: false,
     })
@@ -268,7 +272,7 @@ describe('itoSessionManager', () => {
       16000,
       undefined,
     )
-    expect(mockItoStreamController.clearInteractionAudio).toHaveBeenCalled()
+    expect(mockItoStreamController.endInteraction).toHaveBeenCalled()
     expect(mockInteractionManager.clearCurrentInteraction).toHaveBeenCalled()
   })
 
@@ -353,7 +357,7 @@ describe('itoSessionManager', () => {
       16000,
       errorMessage,
     )
-    expect(mockItoStreamController.clearInteractionAudio).toHaveBeenCalled()
+    expect(mockItoStreamController.endInteraction).toHaveBeenCalled()
     expect(mockInteractionManager.clearCurrentInteraction).toHaveBeenCalled()
   })
 
@@ -367,8 +371,8 @@ describe('itoSessionManager', () => {
     await session.startSession(ItoMode.TRANSCRIBE)
     await session.completeSession()
 
+    expect(mockItoStreamController.endInteraction).toHaveBeenCalled()
     expect(mockInteractionManager.clearCurrentInteraction).toHaveBeenCalled()
-    expect(mockItoStreamController.clearInteractionAudio).toHaveBeenCalled()
   })
 
   test('should skip text insertion when no transcript', async () => {

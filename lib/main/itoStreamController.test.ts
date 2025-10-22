@@ -43,16 +43,6 @@ mock.module('./audio/AudioStreamManager', () => ({
   },
 }))
 
-const mockInteractionManager = {
-  getCurrentInteractionId: mock((): string | null => null),
-  adoptInteractionId: mock(),
-  initialize: mock(() => 'test-interaction-123'),
-  clearCurrentInteraction: mock(),
-}
-mock.module('./interactions/InteractionManager', () => ({
-  interactionManager: mockInteractionManager,
-}))
-
 const mockContextGrabber = {
   gatherContext: mock(() =>
     Promise.resolve({
@@ -80,13 +70,6 @@ mock.module('./context/ContextGrabber', () => ({
   contextGrabber: mockContextGrabber,
 }))
 
-const mockAudioRecorderService = {
-  on: mock(),
-  off: mock(),
-}
-mock.module('../media/audio', () => ({
-  audioRecorderService: mockAudioRecorderService,
-}))
 
 mock.module('electron-log', () => ({
   default: {
@@ -105,16 +88,12 @@ describe('ItoStreamController', () => {
   beforeEach(() => {
     // Reset all mocks
     Object.values(mockAudioStreamManager).forEach(mockFn => mockFn.mockClear())
-    Object.values(mockInteractionManager).forEach(mockFn => mockFn.mockClear())
     Object.values(mockContextGrabber).forEach(mockFn => mockFn.mockClear())
 
     mockGrpcClient.transcribeStreamV2.mockClear()
     mockGrpcClient.transcribeStreamV2.mockResolvedValue({
       transcript: 'default',
     })
-
-    mockAudioRecorderService.on.mockClear()
-    mockAudioRecorderService.off.mockClear()
 
     // Reset default behaviors
     mockAudioStreamManager.isCurrentlyStreaming.mockReturnValue(false)
@@ -123,21 +102,6 @@ describe('ItoStreamController', () => {
       Buffer.from('audio-data'),
     )
     mockAudioStreamManager.getCurrentSampleRate.mockReturnValue(16000)
-    mockInteractionManager.getCurrentInteractionId.mockReturnValue(null)
-  })
-
-  test('should setup audio listeners on construction', async () => {
-    const { ItoStreamController } = await import('./itoStreamController')
-    new ItoStreamController()
-
-    expect(mockAudioRecorderService.on).toHaveBeenCalledWith(
-      'audio-chunk',
-      expect.any(Function),
-    )
-    expect(mockAudioRecorderService.on).toHaveBeenCalledWith(
-      'audio-config',
-      expect.any(Function),
-    )
   })
 
   test('should start interaction successfully', async () => {
@@ -148,7 +112,6 @@ describe('ItoStreamController', () => {
 
     expect(started).toBe(true)
     expect(mockAudioStreamManager.initialize).toHaveBeenCalled()
-    expect(mockInteractionManager.initialize).toHaveBeenCalled()
   })
 
   test('should prevent multiple concurrent interactions', async () => {
@@ -160,23 +123,6 @@ describe('ItoStreamController', () => {
     const started = await controller.initialize(ItoMode.TRANSCRIBE)
 
     expect(started).toBe(false)
-    expect(mockInteractionManager.initialize).not.toHaveBeenCalled()
-  })
-
-  test('should adopt existing interaction ID if present', async () => {
-    const { ItoStreamController } = await import('./itoStreamController')
-    const controller = new ItoStreamController()
-
-    mockInteractionManager.getCurrentInteractionId.mockReturnValue(
-      'existing-id-123',
-    )
-
-    await controller.initialize(ItoMode.TRANSCRIBE)
-
-    expect(mockInteractionManager.adoptInteractionId).toHaveBeenCalledWith(
-      'existing-id-123',
-    )
-    expect(mockInteractionManager.initialize).not.toHaveBeenCalled()
   })
 
   test('should start gRPC stream successfully', async () => {
@@ -213,12 +159,6 @@ describe('ItoStreamController', () => {
     )
   })
 
-  test('should throw error when starting gRPC stream without mode set', async () => {
-    const { ItoStreamController } = await import('./itoStreamController')
-    const controller = new ItoStreamController()
-
-    await expect(controller.startGrpcStream()).rejects.toThrow('Mode not set')
-  })
 
   test('should change mode during streaming', async () => {
     const { ItoStreamController } = await import('./itoStreamController')
@@ -304,41 +244,6 @@ describe('ItoStreamController', () => {
     expect(mockAudioStreamManager.clearInteractionAudio).toHaveBeenCalled()
   })
 
-  test('should clear interaction when cancelling before gRPC starts', async () => {
-    const { ItoStreamController } = await import('./itoStreamController')
-    const controller = new ItoStreamController()
-
-    mockAudioStreamManager.isCurrentlyStreaming.mockReturnValue(true)
-    await controller.initialize(ItoMode.TRANSCRIBE)
-
-    // Cancel before starting gRPC
-    controller.cancelTranscription()
-
-    expect(mockInteractionManager.clearCurrentInteraction).toHaveBeenCalled()
-  })
-
-  test('should not clear interaction when cancelling after gRPC starts', async () => {
-    const { ItoStreamController } = await import('./itoStreamController')
-    const controller = new ItoStreamController()
-
-    await controller.initialize(ItoMode.TRANSCRIBE)
-    mockAudioStreamManager.isCurrentlyStreaming.mockReturnValue(true)
-
-    // Start gRPC stream (which sets hasStartedGrpc = true)
-    const streamPromise = controller.startGrpcStream()
-
-    // Cancel after gRPC starts
-    controller.cancelTranscription()
-
-    // Clear should not be called during cancellation because hasStartedGrpc is true
-    expect(
-      mockInteractionManager.clearCurrentInteraction,
-    ).not.toHaveBeenCalled()
-
-    // Wait for stream to complete
-    await expect(streamPromise).rejects.toThrow('Transcription was cancelled')
-  })
-
   test('should return audio duration', async () => {
     const { ItoStreamController } = await import('./itoStreamController')
     const controller = new ItoStreamController()
@@ -349,68 +254,5 @@ describe('ItoStreamController', () => {
 
     expect(duration).toBe(5000)
     expect(mockAudioStreamManager.getAudioDurationMs).toHaveBeenCalled()
-  })
-
-  test('should clear interaction audio', async () => {
-    const { ItoStreamController } = await import('./itoStreamController')
-    const controller = new ItoStreamController()
-
-    controller.clearInteractionAudio()
-
-    expect(mockAudioStreamManager.clearInteractionAudio).toHaveBeenCalled()
-  })
-
-  test('should handle audio chunk events', async () => {
-    const { ItoStreamController } = await import('./itoStreamController')
-    new ItoStreamController()
-
-    // Get the audio-chunk handler that was registered
-    const audioChunkHandler = mockAudioRecorderService.on.mock.calls.find(
-      call => call[0] === 'audio-chunk',
-    )?.[1]
-
-    expect(audioChunkHandler).toBeDefined()
-
-    // Simulate audio chunk event
-    const testChunk = Buffer.from('test-audio-data')
-    audioChunkHandler?.(testChunk)
-
-    expect(mockAudioStreamManager.addAudioChunk).toHaveBeenCalledWith(testChunk)
-  })
-
-  test('should handle audio config events', async () => {
-    const { ItoStreamController } = await import('./itoStreamController')
-    new ItoStreamController()
-
-    // Get the audio-config handler that was registered
-    const audioConfigHandler = mockAudioRecorderService.on.mock.calls.find(
-      call => call[0] === 'audio-config',
-    )?.[1]
-
-    expect(audioConfigHandler).toBeDefined()
-
-    // Simulate audio config event
-    audioConfigHandler?.({ outputSampleRate: 48000, sampleRate: 44100 })
-
-    expect(mockAudioStreamManager.setAudioConfig).toHaveBeenCalledWith({
-      sampleRate: 48000,
-    })
-  })
-
-  test('should use fallback sample rate when no config provided', async () => {
-    const { ItoStreamController } = await import('./itoStreamController')
-    new ItoStreamController()
-
-    // Get the audio-config handler
-    const audioConfigHandler = mockAudioRecorderService.on.mock.calls.find(
-      call => call[0] === 'audio-config',
-    )?.[1]
-
-    // Simulate audio config event with no sample rate
-    audioConfigHandler?.({})
-
-    expect(mockAudioStreamManager.setAudioConfig).toHaveBeenCalledWith({
-      sampleRate: 16000,
-    })
   })
 })

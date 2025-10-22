@@ -1,5 +1,6 @@
 import { AudioChunkSchema } from '@/app/generated/ito_pb'
 import { create } from '@bufbuild/protobuf'
+import { audioRecorderService } from '../../media/audio'
 
 export class AudioStreamManager {
   private isStreaming = false
@@ -35,6 +36,7 @@ export class AudioStreamManager {
     this.isStreaming = true
     this.audioChunkQueue = []
     this.audioChunksForInteraction = []
+    this.setupListeners()
   }
 
   stopStreaming() {
@@ -43,6 +45,33 @@ export class AudioStreamManager {
       this.resolveNewChunk()
       this.resolveNewChunk = null
     }
+    this.removeListeners()
+  }
+
+  private setupListeners() {
+    console.log('[AudioStreamManager] Setting up audio listeners')
+    audioRecorderService.on('audio-chunk', this.handleAudioChunk)
+    audioRecorderService.on('audio-config', this.handleAudioConfig)
+  }
+
+  private removeListeners() {
+    console.log('[AudioStreamManager] Removing audio listeners')
+    audioRecorderService.off('audio-chunk', this.handleAudioChunk)
+    audioRecorderService.off('audio-config', this.handleAudioConfig)
+  }
+
+  private handleAudioChunk = (chunk: Buffer) => {
+    this.addAudioChunk(chunk)
+  }
+
+  private handleAudioConfig = ({ outputSampleRate, sampleRate }: any) => {
+    const effectiveRate = outputSampleRate || sampleRate || 16000
+    console.log('[AudioStreamManager] Received audio config:', {
+      outputSampleRate,
+      sampleRate,
+      effectiveRate,
+    })
+    this.setAudioConfig({ sampleRate: effectiveRate })
   }
 
   addAudioChunk(chunk: Buffer) {

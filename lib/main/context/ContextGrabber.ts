@@ -26,7 +26,7 @@ export class ContextGrabber {
    * Gather all context data needed for a transcription stream
    */
   public async gatherContext(mode: ItoMode): Promise<ContextData> {
-    log.info('[ContextGrabber] Gathering context for mode:', mode)
+    console.log('[ContextGrabber] Gathering context for mode:', mode)
 
     // Get vocabulary words from dictionary
     const vocabularyWords = await this.getVocabulary()
@@ -40,7 +40,7 @@ export class ContextGrabber {
     // Get advanced settings
     const advancedSettings = getAdvancedSettings()
 
-    log.info('[ContextGrabber] Context gathered successfully')
+    console.log('[ContextGrabber] Context gathered successfully')
 
     return {
       vocabularyWords,
@@ -111,7 +111,9 @@ export class ContextGrabber {
       const canGetContext = await canGetContextFromCurrentApp()
 
       if (!canGetContext) {
-        log.info('[ContextGrabber] Cannot get cursor context from current app')
+        console.log(
+          '[ContextGrabber] Cannot get cursor context from current app',
+        )
         return ''
       }
 

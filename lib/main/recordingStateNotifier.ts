@@ -8,7 +8,9 @@ import log from 'electron-log'
  */
 export class RecordingStateNotifier {
   public notifyRecordingStarted(mode: ItoMode) {
-    log.info('[RecordingStateNotifier] Notifying recording started:', { mode })
+    console.log('[RecordingStateNotifier] Notifying recording started:', {
+      mode,
+    })
 
     const payload: RecordingStatePayload = {
       isRecording: true,
@@ -19,7 +21,7 @@ export class RecordingStateNotifier {
   }
 
   public notifyRecordingStopped() {
-    log.info('[RecordingStateNotifier] Notifying recording stopped')
+    console.log('[RecordingStateNotifier] Notifying recording stopped')
 
     const payload: RecordingStatePayload = {
       isRecording: false,

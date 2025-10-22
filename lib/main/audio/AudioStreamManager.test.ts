@@ -12,7 +12,7 @@ describe('AudioStreamManager', () => {
     test('should start and stop streaming correctly', () => {
       expect(audioManager.isCurrentlyStreaming()).toBe(false)
 
-      audioManager.startStreaming()
+      audioManager.initialize()
       expect(audioManager.isCurrentlyStreaming()).toBe(true)
 
       audioManager.stopStreaming()
@@ -21,12 +21,12 @@ describe('AudioStreamManager', () => {
 
     test('should clear audio on start', () => {
       // Add some chunks
-      audioManager.startStreaming()
+      audioManager.initialize()
       audioManager.addAudioChunk(Buffer.from('test'))
       audioManager.stopStreaming()
 
       // Start again - should be clean
-      audioManager.startStreaming()
+      audioManager.initialize()
       const buffer = audioManager.getInteractionAudioBuffer()
       expect(buffer.length).toBe(0)
     })
@@ -34,7 +34,7 @@ describe('AudioStreamManager', () => {
 
   describe('Audio Chunk Management', () => {
     test('should accumulate audio chunks', () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
 
       const chunk1 = Buffer.from('chunk1')
       const chunk2 = Buffer.from('chunk2')
@@ -55,7 +55,7 @@ describe('AudioStreamManager', () => {
     })
 
     test('should clear interaction audio', () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
       audioManager.addAudioChunk(Buffer.from('test'))
 
       audioManager.clearInteractionAudio()
@@ -83,7 +83,7 @@ describe('AudioStreamManager', () => {
 
   describe('Audio Duration Calculation', () => {
     test('should calculate duration correctly for 16kHz audio', () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
 
       // 16kHz, 16-bit mono = 2 bytes per sample
       // 1600 samples = 0.1 seconds = 100ms
@@ -96,7 +96,7 @@ describe('AudioStreamManager', () => {
 
     test('should calculate duration correctly for different sample rates', () => {
       audioManager.setAudioConfig({ sampleRate: 8000 })
-      audioManager.startStreaming()
+      audioManager.initialize()
 
       // 8kHz, 16-bit mono = 2 bytes per sample
       // 800 samples = 0.1 seconds = 100ms
@@ -108,14 +108,14 @@ describe('AudioStreamManager', () => {
     })
 
     test('should return zero duration for no audio', () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
       expect(audioManager.getAudioDurationMs()).toBe(0)
     })
   })
 
   describe('Audio Streaming', () => {
     test('should stream chunks immediately as they arrive', async () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
 
       const streamPromise = audioManager.streamAudioChunks()
       const iterator = streamPromise[Symbol.asyncIterator]()
@@ -132,7 +132,7 @@ describe('AudioStreamManager', () => {
     })
 
     test('should continue streaming additional chunks', async () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
 
       const streamPromise = audioManager.streamAudioChunks()
       const iterator = streamPromise[Symbol.asyncIterator]()
@@ -157,7 +157,7 @@ describe('AudioStreamManager', () => {
     })
 
     test('should finish streaming when stopped', async () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
 
       const chunk = Buffer.alloc(100)
       audioManager.addAudioChunk(chunk)
@@ -177,7 +177,7 @@ describe('AudioStreamManager', () => {
     })
 
     test('should wait for chunks when queue is empty', async () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
 
       const streamPromise = audioManager.streamAudioChunks()
       const iterator = streamPromise[Symbol.asyncIterator]()
@@ -193,7 +193,7 @@ describe('AudioStreamManager', () => {
     })
 
     test('should resume streaming after waiting for chunks', async () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
 
       const streamPromise = audioManager.streamAudioChunks()
       const iterator = streamPromise[Symbol.asyncIterator]()
@@ -216,7 +216,7 @@ describe('AudioStreamManager', () => {
 
   describe('Edge Cases', () => {
     test('should handle empty chunks', () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
 
       const emptyChunk = Buffer.alloc(0)
       audioManager.addAudioChunk(emptyChunk)
@@ -225,7 +225,7 @@ describe('AudioStreamManager', () => {
     })
 
     test('should handle very small chunks', () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
 
       const tinyChunk = Buffer.alloc(1) // 1 byte
       audioManager.addAudioChunk(tinyChunk)
@@ -235,18 +235,18 @@ describe('AudioStreamManager', () => {
     })
 
     test('should reset audio duration on restart', () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
       audioManager.addAudioChunk(Buffer.alloc(3200)) // 100ms
       expect(audioManager.getAudioDurationMs()).toBe(100)
 
       audioManager.stopStreaming()
-      audioManager.startStreaming()
+      audioManager.initialize()
 
       expect(audioManager.getAudioDurationMs()).toBe(0)
     })
 
     test('should accumulate duration across multiple chunks', () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
 
       // Add 50ms worth (800 samples * 2 bytes)
       audioManager.addAudioChunk(Buffer.alloc(1600))
@@ -260,7 +260,7 @@ describe('AudioStreamManager', () => {
 
   describe('Interaction Audio Buffer', () => {
     test('should maintain complete audio buffer for interaction', () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
 
       const chunk1 = Buffer.from('audio1')
       const chunk2 = Buffer.from('audio2')
@@ -275,7 +275,7 @@ describe('AudioStreamManager', () => {
     })
 
     test('should preserve interaction buffer even after streaming stops', () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
 
       const chunk = Buffer.from('preserved')
       audioManager.addAudioChunk(chunk)
@@ -287,7 +287,7 @@ describe('AudioStreamManager', () => {
     })
 
     test('should clear buffer only on explicit clear or restart', () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
       audioManager.addAudioChunk(Buffer.from('test'))
 
       audioManager.stopStreaming()

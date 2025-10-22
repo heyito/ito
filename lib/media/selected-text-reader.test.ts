@@ -73,7 +73,7 @@ describe('SelectedTextReaderService', () => {
     mockChildProcess.on.mockClear()
     mockChildProcess.kill.mockClear()
     mockGetNativeBinaryPath.mockClear()
-    mockLog.info.mockClear()
+    mockconsole.log.mockClear()
     mockLog.warn.mockClear()
     mockLog.error.mockClear()
     mockLog.debug.mockClear()

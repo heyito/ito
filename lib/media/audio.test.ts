@@ -73,7 +73,7 @@ describe('AudioRecorderService', () => {
     mockChildProcess.stdin.write.mockClear()
     mockChildProcess.on.mockClear()
     mockChildProcess.kill.mockClear()
-    mockElectronLog.info.mockClear()
+    mockElectronconsole.log.mockClear()
     mockElectronLog.warn.mockClear()
     mockElectronLog.error.mockClear()
 
@@ -198,7 +198,7 @@ describe('AudioRecorderService', () => {
       expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
         JSON.stringify({ command: 'start', device_name: deviceName }) + '\n',
       )
-      expect(mockElectronLog.info).toHaveBeenCalledWith(
+      expect(mockElectronconsole.log).toHaveBeenCalledWith(
         `[AudioService] Recording started on device: ${deviceName}`,
       )
     })
@@ -209,7 +209,7 @@ describe('AudioRecorderService', () => {
       expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
         JSON.stringify({ command: 'stop' }) + '\n',
       )
-      expect(mockElectronLog.info).toHaveBeenCalledWith(
+      expect(mockElectronconsole.log).toHaveBeenCalledWith(
         '[AudioService] Recording stopped',
       )
     })

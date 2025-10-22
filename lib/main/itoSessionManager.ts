@@ -20,13 +20,21 @@ export class ItoSessionManager {
   private grammarRulesService = new GrammarRulesService('')
 
   public async startSession(mode: ItoMode) {
-    log.info('[itoSessionManager] Starting session with mode:', mode)
+    console.log('[itoSessionManager] Starting session with mode:', mode)
 
     // Initialize all necessary components
-    const started = await itoStreamController.startInteraction(mode)
+    const started = await itoStreamController.initialize(mode)
     if (!started) {
-      log.error('[itoSessionManager] Failed to start itoStreamController')
+      log.error('[itoSessionManager] Failed to initialize itoStreamController')
       return
+    }
+
+    // Reuse existing global interaction ID if present, otherwise create a new one
+    const existingId = interactionManager.getCurrentInteractionId()
+    if (existingId) {
+      interactionManager.adoptInteractionId(existingId)
+    } else {
+      interactionManager.initialize()
     }
 
     // Begin gRPC stream immediately (note, no audio is flowing yet)
@@ -48,24 +56,24 @@ export class ItoSessionManager {
   }
 
   private async fetchAndSendContext() {
-    log.info('[itoSessionManager] Fetching context in background...')
+    console.log('[itoSessionManager] Fetching context in background...')
 
     // This builds the full config (window context, selected text, vocabulary, settings)
     await itoStreamController.sendConfigUpdate()
 
-    log.info('[itoSessionManager] Context sent to stream')
+    console.log('[itoSessionManager] Context sent to stream')
 
     // Fetch cursor context for grammar rules only if grammar service is enabled
     const { grammarServiceEnabled } = getAdvancedSettings()
     if (grammarServiceEnabled) {
       const cursorContext = await contextGrabber.getCursorContextForGrammar()
       this.grammarRulesService = new GrammarRulesService(cursorContext)
-      log.info('[itoSessionManager] Cursor context set for grammar rules')
+      console.log('[itoSessionManager] Cursor context set for grammar rules')
     }
   }
 
   public setMode(mode: ItoMode) {
-    log.info('[itoSessionManager] Changing mode to:', mode)
+    console.log('[itoSessionManager] Changing mode to:', mode)
 
     // Send mode change to grpc stream (will also update windows via recordingStateNotifier)
     itoStreamController.setMode(mode)
@@ -75,10 +83,11 @@ export class ItoSessionManager {
   }
 
   public async cancelSession() {
-    log.info('[itoSessionManager] Cancelling session')
+    console.log('[itoSessionManager] Cancelling session')
 
     // Cancel the transcription (will not create interaction)
     itoStreamController.cancelTranscription()
+    interactionManager.clearCurrentInteraction()
 
     // Stop audio recording
     await voiceInputService.stopAudioRecording()
@@ -92,12 +101,12 @@ export class ItoSessionManager {
         await this.streamResponsePromise
       } catch (error) {
         // Expected cancellation error, log and ignore
-        log.info('[itoSessionManager] Stream cancelled as expected:', error)
+        console.log('[itoSessionManager] Stream cancelled as expected:', error)
       }
       this.streamResponsePromise = null
     }
 
-    log.info('[itoSessionManager] Session cancelled')
+    console.log('[itoSessionManager] Session cancelled')
   }
 
   public async completeSession() {
@@ -108,7 +117,7 @@ export class ItoSessionManager {
     const audioDurationMs = itoStreamController.getAudioDurationMs()
 
     if (audioDurationMs < this.MINIMUM_AUDIO_DURATION_MS) {
-      log.info(
+      console.log(
         `[itoSessionManager] Audio too short (${audioDurationMs}ms < ${this.MINIMUM_AUDIO_DURATION_MS}ms), cancelling`,
       )
       itoStreamController.cancelTranscription()
@@ -120,7 +129,10 @@ export class ItoSessionManager {
           await this.streamResponsePromise
         } catch (error) {
           // Expected cancellation error, log and ignore
-          log.info('[itoSessionManager] Stream cancelled as expected:', error)
+          console.log(
+            '[itoSessionManager] Stream cancelled as expected:',
+            error,
+          )
         }
         this.streamResponsePromise = null
       }
@@ -164,7 +176,6 @@ export class ItoSessionManager {
         errorMessage,
       )
 
-      itoStreamController.clearInteractionAudio()
       interactionManager.clearCurrentInteraction()
     } else {
       // Handle text insertion with grammar-corrected text
@@ -196,7 +207,6 @@ export class ItoSessionManager {
         })
       }
 
-      itoStreamController.clearInteractionAudio()
       interactionManager.clearCurrentInteraction()
     }
   }
@@ -209,7 +219,6 @@ export class ItoSessionManager {
 
     // Clear current interaction on error
     interactionManager.clearCurrentInteraction()
-    itoStreamController.clearInteractionAudio()
   }
 }
 

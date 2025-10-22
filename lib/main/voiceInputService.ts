@@ -12,25 +12,25 @@ export class VoiceInputService {
    * Does NOT start the ItoStreamController - that should be done separately.
    */
   public startAudioRecording = () => {
-    log.info('[VoiceInputService] Starting audio recording')
+    console.log('[VoiceInputService] Starting audio recording')
 
     const settings = store.get(STORE_KEYS.SETTINGS)
     const deviceId = settings.microphoneDeviceId
 
     // Mute system audio if needed
     if (settings.muteAudioWhenDictating) {
-      log.info('[VoiceInputService] Muting system audio for dictation')
+      console.log('[VoiceInputService] Muting system audio for dictation')
       muteSystemAudio()
     }
 
     // Start audio recorder
-    log.info(
+    console.log(
       '[VoiceInputService] Starting audio recorder with device:',
       deviceId,
     )
     audioRecorderService.startRecording(deviceId)
 
-    log.info('[VoiceInputService] Audio recording started')
+    console.log('[VoiceInputService] Audio recording started')
   }
 
   /**
@@ -38,25 +38,27 @@ export class VoiceInputService {
    * Waits for the audio recorder to drain before returning.
    */
   public stopAudioRecording = async () => {
-    log.info('[VoiceInputService] Stopping audio recording')
+    console.log('[VoiceInputService] Stopping audio recording')
     audioRecorderService.stopRecording()
-    log.info('[VoiceInputService] Audio recorder stopped, waiting for drain...')
+    console.log(
+      '[VoiceInputService] Audio recorder stopped, waiting for drain...',
+    )
 
     // Wait for explicit drain-complete signal from the recorder (with timeout fallback)
     try {
       await (audioRecorderService as any).awaitDrainComplete?.(500)
-      log.info('[VoiceInputService] Drain complete')
+      console.log('[VoiceInputService] Drain complete')
     } catch (e) {
       log.warn('[VoiceInputService] drain-complete wait failed, proceeding:', e)
     }
 
     // Unmute system audio if it was muted
     if (store.get(STORE_KEYS.SETTINGS).muteAudioWhenDictating) {
-      log.info('[VoiceInputService] Unmuting system audio after dictation')
+      console.log('[VoiceInputService] Unmuting system audio after dictation')
       unmuteSystemAudio()
     }
 
-    log.info('[VoiceInputService] Audio recording stopped')
+    console.log('[VoiceInputService] Audio recording stopped')
   }
 
   public setUpAudioRecorderListeners = () => {

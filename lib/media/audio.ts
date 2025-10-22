@@ -47,7 +47,7 @@ class AudioRecorderService extends EventEmitter {
       return
     }
 
-    log.info(`[AudioService] Spawning audio recorder at: ${binaryPath}`)
+    console.log(`[AudioService] Spawning audio recorder at: ${binaryPath}`)
     try {
       this.#audioRecorderProcess = spawn(binaryPath, [], {
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -74,7 +74,7 @@ class AudioRecorderService extends EventEmitter {
    */
   public terminate(): void {
     if (this.#audioRecorderProcess) {
-      log.info('[AudioService] Stopping audio recorder process.')
+      console.log('[AudioService] Stopping audio recorder process.')
       this.#audioRecorderProcess.kill()
       this.#audioRecorderProcess = null
       this.emit('stopped')
@@ -86,7 +86,7 @@ class AudioRecorderService extends EventEmitter {
    */
   public startRecording(deviceName: string): void {
     this.#sendCommand({ command: 'start', device_name: deviceName })
-    log.info(`[AudioService] Recording started on device: ${deviceName}`)
+    console.log(`[AudioService] Recording started on device: ${deviceName}`)
   }
 
   /**
@@ -94,7 +94,7 @@ class AudioRecorderService extends EventEmitter {
    */
   public stopRecording(): void {
     this.#sendCommand({ command: 'stop' })
-    log.info('[AudioService] Recording stopped')
+    console.log('[AudioService] Recording stopped')
   }
 
   /**

@@ -12,7 +12,7 @@ mock.module('../clients/grpcClient', () => ({
 
 const mockAudioStreamManager = {
   isCurrentlyStreaming: mock(() => false),
-  startStreaming: mock(),
+  initialize: mock(),
   stopStreaming: mock(),
   addAudioChunk: mock(),
   setAudioConfig: mock(),
@@ -31,7 +31,7 @@ const mockAudioStreamManager = {
 mock.module('./audio/AudioStreamManager', () => ({
   AudioStreamManager: class MockAudioStreamManager {
     isCurrentlyStreaming = mockAudioStreamManager.isCurrentlyStreaming
-    startStreaming = mockAudioStreamManager.startStreaming
+    initialize = mockAudioStreamManager.initialize
     stopStreaming = mockAudioStreamManager.stopStreaming
     addAudioChunk = mockAudioStreamManager.addAudioChunk
     setAudioConfig = mockAudioStreamManager.setAudioConfig
@@ -46,7 +46,7 @@ mock.module('./audio/AudioStreamManager', () => ({
 const mockInteractionManager = {
   getCurrentInteractionId: mock((): string | null => null),
   adoptInteractionId: mock(),
-  startInteraction: mock(() => 'test-interaction-123'),
+  initialize: mock(() => 'test-interaction-123'),
   clearCurrentInteraction: mock(),
 }
 mock.module('./interactions/InteractionManager', () => ({
@@ -144,11 +144,11 @@ describe('ItoStreamController', () => {
     const { ItoStreamController } = await import('./itoStreamController')
     const controller = new ItoStreamController()
 
-    const started = await controller.startInteraction(ItoMode.TRANSCRIBE)
+    const started = await controller.initialize(ItoMode.TRANSCRIBE)
 
     expect(started).toBe(true)
-    expect(mockAudioStreamManager.startStreaming).toHaveBeenCalled()
-    expect(mockInteractionManager.startInteraction).toHaveBeenCalled()
+    expect(mockAudioStreamManager.initialize).toHaveBeenCalled()
+    expect(mockInteractionManager.initialize).toHaveBeenCalled()
   })
 
   test('should prevent multiple concurrent interactions', async () => {
@@ -157,10 +157,10 @@ describe('ItoStreamController', () => {
 
     mockAudioStreamManager.isCurrentlyStreaming.mockReturnValue(true)
 
-    const started = await controller.startInteraction(ItoMode.TRANSCRIBE)
+    const started = await controller.initialize(ItoMode.TRANSCRIBE)
 
     expect(started).toBe(false)
-    expect(mockInteractionManager.startInteraction).not.toHaveBeenCalled()
+    expect(mockInteractionManager.initialize).not.toHaveBeenCalled()
   })
 
   test('should adopt existing interaction ID if present', async () => {
@@ -171,12 +171,12 @@ describe('ItoStreamController', () => {
       'existing-id-123',
     )
 
-    await controller.startInteraction(ItoMode.TRANSCRIBE)
+    await controller.initialize(ItoMode.TRANSCRIBE)
 
     expect(mockInteractionManager.adoptInteractionId).toHaveBeenCalledWith(
       'existing-id-123',
     )
-    expect(mockInteractionManager.startInteraction).not.toHaveBeenCalled()
+    expect(mockInteractionManager.initialize).not.toHaveBeenCalled()
   })
 
   test('should start gRPC stream successfully', async () => {
@@ -189,7 +189,7 @@ describe('ItoStreamController', () => {
     }
     mockGrpcClient.transcribeStreamV2.mockResolvedValueOnce(mockResponse)
 
-    await controller.startInteraction(ItoMode.TRANSCRIBE)
+    await controller.initialize(ItoMode.TRANSCRIBE)
 
     const result = await controller.startGrpcStream()
 
@@ -205,7 +205,7 @@ describe('ItoStreamController', () => {
     const { ItoStreamController } = await import('./itoStreamController')
     const controller = new ItoStreamController()
 
-    await controller.startInteraction(ItoMode.TRANSCRIBE)
+    await controller.initialize(ItoMode.TRANSCRIBE)
     await controller.startGrpcStream()
 
     await expect(controller.startGrpcStream()).rejects.toThrow(
@@ -248,7 +248,7 @@ describe('ItoStreamController', () => {
     const { ItoStreamController } = await import('./itoStreamController')
     const controller = new ItoStreamController()
 
-    await controller.startInteraction(ItoMode.TRANSCRIBE)
+    await controller.initialize(ItoMode.TRANSCRIBE)
     mockAudioStreamManager.isCurrentlyStreaming.mockReturnValue(true)
 
     await controller.sendConfigUpdate()
@@ -296,7 +296,7 @@ describe('ItoStreamController', () => {
     const controller = new ItoStreamController()
 
     mockAudioStreamManager.isCurrentlyStreaming.mockReturnValue(true)
-    await controller.startInteraction(ItoMode.TRANSCRIBE)
+    await controller.initialize(ItoMode.TRANSCRIBE)
 
     controller.cancelTranscription()
 
@@ -309,7 +309,7 @@ describe('ItoStreamController', () => {
     const controller = new ItoStreamController()
 
     mockAudioStreamManager.isCurrentlyStreaming.mockReturnValue(true)
-    await controller.startInteraction(ItoMode.TRANSCRIBE)
+    await controller.initialize(ItoMode.TRANSCRIBE)
 
     // Cancel before starting gRPC
     controller.cancelTranscription()
@@ -321,7 +321,7 @@ describe('ItoStreamController', () => {
     const { ItoStreamController } = await import('./itoStreamController')
     const controller = new ItoStreamController()
 
-    await controller.startInteraction(ItoMode.TRANSCRIBE)
+    await controller.initialize(ItoMode.TRANSCRIBE)
     mockAudioStreamManager.isCurrentlyStreaming.mockReturnValue(true)
 
     // Start gRPC stream (which sets hasStartedGrpc = true)

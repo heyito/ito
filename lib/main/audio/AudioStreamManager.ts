@@ -31,7 +31,7 @@ export class AudioStreamManager {
     }
   }
 
-  startStreaming() {
+  initialize() {
     this.isStreaming = true
     this.audioChunkQueue = []
     this.audioChunksForInteraction = []

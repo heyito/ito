@@ -18,7 +18,7 @@ mock.module('./recordingStateNotifier', () => ({
 }))
 
 const mockItoStreamController = {
-  startInteraction: mock(() => Promise.resolve(true)),
+  initialize: mock(() => Promise.resolve(true)),
   startGrpcStream: mock(() =>
     Promise.resolve({
       response: { transcript: 'test transcript' },
@@ -108,7 +108,7 @@ describe('itoSessionManager', () => {
     mockGetAdvancedSettings.mockClear()
 
     // Reset default behaviors
-    mockItoStreamController.startInteraction.mockResolvedValue(true)
+    mockItoStreamController.initialize.mockResolvedValue(true)
     mockItoStreamController.startGrpcStream.mockResolvedValue({
       response: { transcript: 'test transcript' },
       audioBuffer: Buffer.from('audio-data'),
@@ -127,7 +127,7 @@ describe('itoSessionManager', () => {
 
     await session.startSession(ItoMode.TRANSCRIBE)
 
-    expect(mockItoStreamController.startInteraction).toHaveBeenCalledWith(
+    expect(mockItoStreamController.initialize).toHaveBeenCalledWith(
       ItoMode.TRANSCRIBE,
     )
     expect(mockItoStreamController.startGrpcStream).toHaveBeenCalled()
@@ -186,7 +186,7 @@ describe('itoSessionManager', () => {
   })
 
   test('should fail to start session when controller fails', async () => {
-    mockItoStreamController.startInteraction.mockResolvedValueOnce(false)
+    mockItoStreamController.initialize.mockResolvedValueOnce(false)
 
     const { ItoSessionManager } = await import('./itoSessionManager')
     const session = new ItoSessionManager()
@@ -419,7 +419,7 @@ describe('itoSessionManager', () => {
     // Start session
     await session.startSession(ItoMode.TRANSCRIBE)
 
-    expect(mockItoStreamController.startInteraction).toHaveBeenCalled()
+    expect(mockItoStreamController.initialize).toHaveBeenCalled()
     expect(mockVoiceInputService.startAudioRecording).toHaveBeenCalled()
 
     // Complete session

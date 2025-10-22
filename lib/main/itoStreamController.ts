@@ -10,7 +10,6 @@ import {
 import { create } from '@bufbuild/protobuf'
 import { grpcClient } from '../clients/grpcClient'
 import { AudioStreamManager } from './audio/AudioStreamManager'
-import { interactionManager } from './interactions/InteractionManager'
 import { contextGrabber } from './context/ContextGrabber'
 import { audioRecorderService } from '../media/audio'
 import log from 'electron-log'
@@ -33,26 +32,18 @@ export class ItoStreamController {
     this.setupAudioListeners()
   }
 
-  public async startInteraction(mode: ItoMode): Promise<boolean> {
+  public async initialize(mode: ItoMode): Promise<boolean> {
     // Guard against multiple concurrent transcriptions
     if (this.audioStreamManager.isCurrentlyStreaming()) {
       log.warn('[ItoStreamController] Stream already in progress.')
       return false
     }
 
-    this.audioStreamManager.startStreaming()
+    this.audioStreamManager.initialize()
     this.hasStartedGrpc = false
     this.currentMode = mode
     this.isCancelled = false
-    log.info('[ItoStreamController] Starting new interaction stream.')
-
-    // Reuse existing global interaction ID if present, otherwise create a new one
-    const existingId = interactionManager.getCurrentInteractionId()
-    if (existingId) {
-      interactionManager.adoptInteractionId(existingId)
-    } else {
-      interactionManager.startInteraction()
-    }
+    console.log('[ItoStreamController] Starting new interaction stream.')
 
     return true
   }
@@ -76,16 +67,12 @@ export class ItoStreamController {
       throw new Error('Mode not set')
     }
 
-    log.info('[ItoStreamController] Starting gRPC stream immediately')
+    console.log('[ItoStreamController] Starting gRPC stream immediately')
     this.hasStartedGrpc = true
 
     const response = await grpcClient.transcribeStreamV2(
       this.createStreamGenerator(),
     )
-
-    if (this.isCancelled) {
-      throw new Error('Transcription was cancelled')
-    }
 
     // Return response along with the audio data collected during the stream
     return {
@@ -96,17 +83,10 @@ export class ItoStreamController {
   }
 
   private setupAudioListeners() {
-    log.info('[ItoStreamController] Setting up direct audio listeners')
+    console.log('[ItoStreamController] Setting up direct audio listeners')
 
     audioRecorderService.on('audio-chunk', this.handleAudioChunk)
     audioRecorderService.on('audio-config', this.handleAudioConfig)
-  }
-
-  private cleanupAudioListeners() {
-    log.info('[ItoStreamController] Cleaning up audio listeners')
-
-    audioRecorderService.off('audio-chunk', this.handleAudioChunk)
-    audioRecorderService.off('audio-config', this.handleAudioConfig)
   }
 
   private handleAudioChunk = (chunk: Buffer) => {
@@ -115,7 +95,7 @@ export class ItoStreamController {
 
   private handleAudioConfig = ({ outputSampleRate, sampleRate }: any) => {
     const effectiveRate = outputSampleRate || sampleRate || 16000
-    log.info('[ItoStreamController] Received audio config:', {
+    console.log('[ItoStreamController] Received audio config:', {
       outputSampleRate,
       sampleRate,
       effectiveRate,
@@ -130,7 +110,7 @@ export class ItoStreamController {
     }
 
     this.currentMode = mode
-    log.info(`[ItoStreamController] Mode changed to ${mode}`)
+    console.log(`[ItoStreamController] Mode changed to ${mode}`)
 
     // Send mode update to stream
     this.sendModeUpdate(mode)
@@ -142,13 +122,13 @@ export class ItoStreamController {
       return
     }
 
-    log.info('[ItoStreamController] Queueing config update')
+    console.log('[ItoStreamController] Queueing config update')
     const config = await this.buildStreamConfig()
     this.configQueue.push(config)
   }
 
   private sendModeUpdate(mode: ItoMode) {
-    log.info(`[ItoStreamController] Sending mode update: ${mode}`)
+    console.log(`[ItoStreamController] Sending mode update: ${mode}`)
 
     // Create a minimal config with just the mode
     // IMPORTANT: Only set the mode field, leave others undefined so server merge works correctly
@@ -174,7 +154,7 @@ export class ItoStreamController {
       return
     }
 
-    log.info('[ItoStreamController] Ending interaction stream')
+    console.log('[ItoStreamController] Ending interaction stream')
     this.stopStreaming()
   }
 
@@ -184,46 +164,39 @@ export class ItoStreamController {
       return
     }
 
-    log.info('[ItoStreamController] Cancelling transcription')
+    console.log('[ItoStreamController] Cancelling transcription')
     this.isCancelled = true
 
-    // Clear interaction without creating it
-    if (!this.hasStartedGrpc) {
-      interactionManager.clearCurrentInteraction()
-    }
-
     this.stopStreaming()
-    this.audioStreamManager.clearInteractionAudio()
   }
 
   public getAudioDurationMs(): number {
     return this.audioStreamManager.getAudioDurationMs()
   }
 
-  public clearInteractionAudio(): void {
+  private stopStreaming() {
+    this.audioStreamManager.stopStreaming()
     this.audioStreamManager.clearInteractionAudio()
   }
 
-  private stopStreaming() {
-    this.audioStreamManager.stopStreaming()
-  }
-
   private async *createStreamGenerator(): AsyncGenerator<TranscribeStreamRequest> {
-    log.info(
+    console.log(
       '[ItoStreamController] Starting stream generator (audio-first mode)',
     )
 
     // Stream audio chunks and interleave config updates
     for await (const audioChunk of this.audioStreamManager.streamAudioChunks()) {
       if (this.isCancelled) {
-        log.info('[ItoStreamController] Stream cancelled, stopping generator')
+        console.log(
+          '[ItoStreamController] Stream cancelled, stopping generator',
+        )
         break
       }
 
       // Send any pending config updates before this audio chunk
       while (this.configQueue.length > 0) {
         const configMessage = this.configQueue.shift()!
-        log.info('[ItoStreamController] Sending config update from queue')
+        console.log('[ItoStreamController] Sending config update from queue')
         yield configMessage
       }
 
@@ -239,7 +212,9 @@ export class ItoStreamController {
     // Send any remaining config messages at the end
     while (this.configQueue.length > 0) {
       const configMessage = this.configQueue.shift()!
-      log.info('[ItoStreamController] Sending final config update from queue')
+      console.log(
+        '[ItoStreamController] Sending final config update from queue',
+      )
       yield configMessage
     }
   }

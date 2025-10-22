@@ -58,7 +58,7 @@ describe('InteractionManager', () => {
 
   describe('Interaction Lifecycle', () => {
     test('should start interaction and generate ID', () => {
-      const id = interactionManager.startInteraction()
+      const id = interactionManager.initialize()
 
       expect(id).toBeDefined()
       expect(typeof id).toBe('string')
@@ -68,7 +68,7 @@ describe('InteractionManager', () => {
 
     test('should track start time', () => {
       const beforeStart = Date.now()
-      interactionManager.startInteraction()
+      interactionManager.initialize()
       const afterStart = Date.now()
 
       const startTime = interactionManager.getInteractionStartTime()
@@ -77,7 +77,7 @@ describe('InteractionManager', () => {
     })
 
     test('should clear current interaction', () => {
-      interactionManager.startInteraction()
+      interactionManager.initialize()
       expect(interactionManager.getCurrentInteractionId()).not.toBeNull()
 
       interactionManager.clearCurrentInteraction()
@@ -86,9 +86,9 @@ describe('InteractionManager', () => {
     })
 
     test('should generate unique IDs for different interactions', () => {
-      const id1 = interactionManager.startInteraction()
+      const id1 = interactionManager.initialize()
       interactionManager.clearCurrentInteraction()
-      const id2 = interactionManager.startInteraction()
+      const id2 = interactionManager.initialize()
 
       expect(id1).not.toBe(id2)
     })
@@ -100,7 +100,7 @@ describe('InteractionManager', () => {
       const audioBuffer = Buffer.from('audio-data')
       const sampleRate = 16000
 
-      interactionManager.startInteraction()
+      interactionManager.initialize()
       await interactionManager.createInteraction(
         transcript,
         audioBuffer,
@@ -133,7 +133,7 @@ describe('InteractionManager', () => {
     test('should skip creation when no user ID', async () => {
       mockMainStore.get.mockReturnValue(null)
 
-      interactionManager.startInteraction()
+      interactionManager.initialize()
       await interactionManager.createInteraction(
         'test',
         Buffer.from('audio'),
@@ -148,7 +148,7 @@ describe('InteractionManager', () => {
   describe('Title Generation', () => {
     test('should use transcript as title for short transcripts', async () => {
       const transcript = 'Short message'
-      interactionManager.startInteraction()
+      interactionManager.initialize()
       await interactionManager.createInteraction(
         transcript,
         Buffer.from('audio'),
@@ -165,7 +165,7 @@ describe('InteractionManager', () => {
       const longTranscript =
         'This is a very long transcript that should be truncated because it exceeds fifty characters'
 
-      interactionManager.startInteraction()
+      interactionManager.initialize()
       await interactionManager.createInteraction(
         longTranscript,
         Buffer.from('audio'),
@@ -182,7 +182,7 @@ describe('InteractionManager', () => {
     })
 
     test('should use fallback title for empty transcript', async () => {
-      interactionManager.startInteraction()
+      interactionManager.initialize()
       await interactionManager.createInteraction(
         '',
         Buffer.from('audio'),
@@ -198,7 +198,7 @@ describe('InteractionManager', () => {
 
   describe('Duration Calculation', () => {
     test('should calculate duration from start time', async () => {
-      interactionManager.startInteraction()
+      interactionManager.initialize()
 
       // Wait a bit to ensure measurable duration
       await new Promise(resolve => setTimeout(resolve, 10))
@@ -217,7 +217,7 @@ describe('InteractionManager', () => {
     })
 
     test('should handle missing start time', async () => {
-      // Manually set interaction ID without using startInteraction
+      // Manually set interaction ID without using initialize
       const manager = new InteractionManager()
       ;(manager as any).currentInteractionId = 'test-id'
       ;(manager as any).interactionStartTime = null
@@ -235,7 +235,7 @@ describe('InteractionManager', () => {
     test('should include audio buffer when not empty', async () => {
       const audioBuffer = Buffer.from('audio-data')
 
-      interactionManager.startInteraction()
+      interactionManager.initialize()
       await interactionManager.createInteraction('test', audioBuffer, 16000)
 
       expect(mockDbRun).toHaveBeenCalled()
@@ -247,7 +247,7 @@ describe('InteractionManager', () => {
     test('should set null for empty audio buffer', async () => {
       const emptyBuffer = Buffer.alloc(0)
 
-      interactionManager.startInteraction()
+      interactionManager.initialize()
       await interactionManager.createInteraction('test', emptyBuffer, 16000)
 
       expect(mockDbRun).toHaveBeenCalled()
@@ -261,7 +261,7 @@ describe('InteractionManager', () => {
     test('should handle database insertion errors gracefully', async () => {
       mockDbRun.mockRejectedValueOnce(new Error('Database error'))
 
-      interactionManager.startInteraction()
+      interactionManager.initialize()
 
       // Should not throw - errors should be caught and logged
       await expect(

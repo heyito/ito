@@ -4,7 +4,6 @@ import {
   TranscribeStreamRequestSchema,
   StreamConfigSchema,
   ContextInfoSchema,
-  TranscriptionSettingsSchema,
   LlmSettingsSchema,
 } from '@/app/generated/ito_pb'
 import { create } from '@bufbuild/protobuf'
@@ -205,23 +204,17 @@ export class ItoStreamController {
             contextText: context.contextText,
             mode: this.currentMode,
           }),
-          transcriptionSettings: create(TranscriptionSettingsSchema, {
+          llmSettings: create(LlmSettingsSchema, {
             asrModel: context.advancedSettings.llm.asrModel,
             asrProvider: context.advancedSettings.llm.asrProvider,
             asrPrompt: context.advancedSettings.llm.asrPrompt,
             noSpeechThreshold: context.advancedSettings.llm.noSpeechThreshold,
-          }),
-          llmSettings: create(LlmSettingsSchema, {
             llmProvider: context.advancedSettings.llm.llmProvider,
             llmModel: context.advancedSettings.llm.llmModel,
             llmTemperature: context.advancedSettings.llm.llmTemperature,
             transcriptionPrompt:
               context.advancedSettings.llm.transcriptionPrompt,
             editingPrompt: context.advancedSettings.llm.editingPrompt,
-            asrModel: '',
-            asrProvider: '',
-            asrPrompt: '',
-            noSpeechThreshold: 0,
           }),
           vocabulary: context.vocabularyWords,
         }),

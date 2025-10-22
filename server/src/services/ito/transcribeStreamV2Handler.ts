@@ -125,7 +125,7 @@ export class TranscribeStreamV2Handler {
         transcript: '',
         error: errorToProtobuf(
           error,
-          (mergedConfig.transcriptionSettings?.asrProvider as any) ||
+          (mergedConfig.llmSettings?.asrProvider as any) ||
             (DEFAULT_ADVANCED_SETTINGS.asrProvider as any),
         ),
       })
@@ -143,7 +143,6 @@ export class TranscribeStreamV2Handler {
     const audioChunks: Uint8Array[] = []
     let mergedConfig: StreamConfig = create(StreamConfigSchema, {
       context: undefined,
-      transcriptionSettings: undefined,
       llmSettings: undefined,
       vocabulary: [],
     })
@@ -225,13 +224,13 @@ export class TranscribeStreamV2Handler {
   private extractAsrConfig(mergedConfig: StreamConfig) {
     return {
       asrModel:
-        mergedConfig.transcriptionSettings?.asrModel ||
+        mergedConfig.llmSettings?.asrModel ||
         DEFAULT_ADVANCED_SETTINGS.asrModel,
       asrProvider:
-        mergedConfig.transcriptionSettings?.asrProvider ||
+        mergedConfig.llmSettings?.asrProvider ||
         DEFAULT_ADVANCED_SETTINGS.asrProvider,
       noSpeechThreshold:
-        mergedConfig.transcriptionSettings?.noSpeechThreshold ??
+        mergedConfig.llmSettings?.noSpeechThreshold ??
         DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold,
       vocabulary: mergedConfig.vocabulary,
     }
@@ -247,7 +246,7 @@ export class TranscribeStreamV2Handler {
       asrModel,
       asrProvider,
       asrPrompt:
-        mergedConfig.transcriptionSettings?.asrPrompt ||
+        mergedConfig.llmSettings?.asrPrompt ||
         DEFAULT_ADVANCED_SETTINGS.asrPrompt,
       llmProvider:
         mergedConfig.llmSettings?.llmProvider ||
@@ -358,9 +357,6 @@ export class TranscribeStreamV2Handler {
     return {
       ...base,
       context: mergeContext(base.context, update.context),
-      transcriptionSettings: update.transcriptionSettings
-        ? { ...base.transcriptionSettings, ...update.transcriptionSettings }
-        : base.transcriptionSettings,
       llmSettings: update.llmSettings
         ? { ...base.llmSettings, ...update.llmSettings }
         : base.llmSettings,

@@ -92,23 +92,13 @@ message ContextInfo {
   optional ItoMode mode = 4;
 }
 
-// ASR-specific transcription settings.
-message TranscriptionSettings {
-  optional string asr_model = 1;
-  optional string asr_provider = 2;
-  optional string asr_prompt = 3;
-  optional float no_speech_threshold = 4;
-  optional float low_quality_threshold = 5;
-}
-
 // Configuration that can be sent in-stream for TranscribeStreamV2.
 // All fields are optional and will be merged by the server.
 // Multiple config messages received during the stream are progressively merged.
 message StreamConfig {
   optional ContextInfo context = 1;
-  optional TranscriptionSettings transcription_settings = 2;
-  optional LlmSettings llm_settings = 3;
-  repeated string vocabulary = 4;
+  optional LlmSettings llm_settings = 2;
+  repeated string vocabulary = 3;
 }
 
 // Request message for TranscribeStreamV2.

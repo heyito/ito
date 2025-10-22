@@ -36,6 +36,7 @@ export class ItoStreamController {
     this.hasStartedGrpc = false
     this.currentMode = mode
     this.isCancelled = false
+    this.configQueue = []
     this.abortController = null
     console.log('[ItoStreamController] Starting new interaction stream.')
 

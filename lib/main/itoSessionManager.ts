@@ -32,6 +32,10 @@ export class ItoSessionManager {
     // Reuse existing global interaction ID if present, otherwise create a new one
     const existingId = interactionManager.getCurrentInteractionId()
     if (existingId) {
+      console.log(
+        '[itoSessionManager] Reusing existing interaction ID:',
+        existingId,
+      )
       interactionManager.adoptInteractionId(existingId)
     } else {
       interactionManager.initialize()
@@ -56,25 +60,18 @@ export class ItoSessionManager {
   }
 
   private async fetchAndSendContext() {
-    console.log('[itoSessionManager] Fetching context in background...')
-
     // This builds the full config (window context, selected text, vocabulary, settings)
     await itoStreamController.sendConfigUpdate()
-
-    console.log('[itoSessionManager] Context sent to stream')
 
     // Fetch cursor context for grammar rules only if grammar service is enabled
     const { grammarServiceEnabled } = getAdvancedSettings()
     if (grammarServiceEnabled) {
       const cursorContext = await contextGrabber.getCursorContextForGrammar()
       this.grammarRulesService = new GrammarRulesService(cursorContext)
-      console.log('[itoSessionManager] Cursor context set for grammar rules')
     }
   }
 
   public setMode(mode: ItoMode) {
-    console.log('[itoSessionManager] Changing mode to:', mode)
-
     // Send mode change to grpc stream (will also update windows via recordingStateNotifier)
     itoStreamController.setMode(mode)
 
@@ -83,7 +80,9 @@ export class ItoSessionManager {
   }
 
   public async cancelSession() {
-    console.log('[itoSessionManager] Cancelling session')
+    // Capture the promise in a local variable immediately so new sessions can start
+    const responsePromise = this.streamResponsePromise
+    this.streamResponsePromise = null
 
     // Cancel the transcription (will not create interaction)
     itoStreamController.cancelTranscription()
@@ -96,20 +95,21 @@ export class ItoSessionManager {
     recordingStateNotifier.notifyRecordingStopped()
 
     // Wait for the stream promise to reject with cancellation error
-    if (this.streamResponsePromise) {
+    if (responsePromise) {
       try {
-        await this.streamResponsePromise
+        await responsePromise
       } catch (error) {
         // Expected cancellation error, log and ignore
         console.log('[itoSessionManager] Stream cancelled as expected:', error)
       }
-      this.streamResponsePromise = null
     }
-
-    console.log('[itoSessionManager] Session cancelled')
   }
 
   public async completeSession() {
+    // Capture the promise in a local variable immediately so new sessions can start
+    const responsePromise = this.streamResponsePromise
+    this.streamResponsePromise = null
+
     // Stop audio recording and wait for drain
     await voiceInputService.stopAudioRecording()
 
@@ -124,9 +124,9 @@ export class ItoSessionManager {
       recordingStateNotifier.notifyRecordingStopped()
 
       // Wait for the stream promise to reject with cancellation error
-      if (this.streamResponsePromise) {
+      if (responsePromise) {
         try {
-          await this.streamResponsePromise
+          await responsePromise
         } catch (error) {
           // Expected cancellation error, log and ignore
           console.log(
@@ -134,7 +134,6 @@ export class ItoSessionManager {
             error,
           )
         }
-        this.streamResponsePromise = null
       }
       return
     }
@@ -146,15 +145,28 @@ export class ItoSessionManager {
     recordingStateNotifier.notifyRecordingStopped()
 
     // Wait for the stream response and handle it
-    if (this.streamResponsePromise) {
+    if (responsePromise) {
+      console.log(
+        '[itoSessionManager] Waiting for stream response from server...',
+      )
       try {
-        const result = await this.streamResponsePromise
+        const result = await responsePromise
+        console.log('[itoSessionManager] Received stream response:', {
+          hasTranscript: !!result.response?.transcript,
+          transcriptLength: result.response?.transcript?.length || 0,
+          hasError: !!result.response?.error,
+          audioBufferSize: result.audioBuffer.length,
+        })
         await this.handleTranscriptionResponse(result)
       } catch (error) {
+        console.error(
+          '[itoSessionManager] Error waiting for stream response:',
+          error,
+        )
         await this.handleTranscriptionError(error)
-      } finally {
-        this.streamResponsePromise = null
       }
+    } else {
+      console.warn('[itoSessionManager] No stream response promise to wait for')
     }
   }
 

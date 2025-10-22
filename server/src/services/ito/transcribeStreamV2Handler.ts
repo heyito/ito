@@ -21,6 +21,7 @@ import {
 import { ITO_MODE_SYSTEM_PROMPT } from './constants.js'
 import type { ItoContext } from './types.js'
 import { createWavHeader } from './audioUtils.js'
+import { isAbortError, createAbortError } from '../../utils/abortUtils.js'
 
 export class TranscribeStreamV2Handler {
   private readonly MODE_CHANGE_GRACE_PERIOD_MS = 100
@@ -174,23 +175,11 @@ export class TranscribeStreamV2Handler {
         }
       }
     } catch (err) {
-      const isAbortError =
-        err instanceof Error &&
-        (err.message === 'aborted' ||
-          (err as any).code === 'ECONNRESET' ||
-          (err as any).code === 'ABORT_ERR')
-
-      if (isAbortError) {
+      if (isAbortError(err)) {
         console.log(
           `🚫 [${new Date().toISOString()}] Stream reading interrupted (client cancelled)`,
         )
-        throw new ConnectError(
-          'Stream cancelled by client',
-          Code.Canceled,
-          undefined,
-          undefined,
-          err,
-        )
+        throw createAbortError(err, 'Stream cancelled by client')
       }
 
       throw err

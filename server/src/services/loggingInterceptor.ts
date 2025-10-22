@@ -5,11 +5,9 @@ export const loggingInterceptor: Interceptor = next => async req => {
   try {
     return await next(req)
   } catch (err) {
-    // Don't log cancellations as failures - they're expected
+    // Don't throw cancellations as errors - they're expected
     if (err instanceof ConnectError && err.code === Code.Canceled) {
-      console.log(
-        `🚫 [${new Date().toISOString()}] RPC cancelled: ${req.url}`,
-      )
+      console.log(`🚫 [${new Date().toISOString()}] RPC cancelled: ${req.url}`)
     } else {
       console.error(
         `❌ [${new Date().toISOString()}] RPC failed: ${req.url}`,

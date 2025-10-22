@@ -1,5 +1,6 @@
 import type { Interceptor } from '@connectrpc/connect'
 import { ConnectError, Code } from '@connectrpc/connect'
+import { isAbortError, createAbortError } from '../utils/abortUtils.js'
 
 export const errorInterceptor: Interceptor = next => async req => {
   try {
@@ -14,21 +15,9 @@ export const errorInterceptor: Interceptor = next => async req => {
     console.error('Unhandled error in RPC handler:', err)
 
     // Check if this is a connection abort/reset error (client cancelled)
-    const isAbortError =
-      err instanceof Error &&
-      (err.message === 'aborted' ||
-        (err as any).code === 'ECONNRESET' ||
-        (err as any).code === 'ABORT_ERR')
-
-    if (isAbortError) {
+    if (isAbortError(err)) {
       console.log('Request cancelled by client (connection closed)')
-      throw new ConnectError(
-        'Request cancelled by client',
-        Code.Canceled,
-        undefined,
-        undefined,
-        err,
-      )
+      throw createAbortError(err)
     }
 
     // Otherwise, wrap in a ConnectError

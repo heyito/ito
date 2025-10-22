@@ -22,11 +22,6 @@ import { ITO_MODE_SYSTEM_PROMPT } from './constants.js'
 import type { ItoContext } from './types.js'
 import { createWavHeader } from './audioUtils.js'
 
-interface ModeChangeRecord {
-  mode: ItoMode
-  timestamp: number
-}
-
 export class TranscribeStreamV2Handler {
   private readonly MODE_CHANGE_GRACE_PERIOD_MS = 100
 
@@ -35,69 +30,16 @@ export class TranscribeStreamV2Handler {
     context?: HandlerContext,
   ) {
     const startTime = Date.now()
-    const audioChunks: Uint8Array[] = []
-    let mergedConfig: StreamConfig = create(StreamConfigSchema, {
-      context: undefined,
-      transcriptionSettings: undefined,
-      llmSettings: undefined,
-      vocabulary: [],
-    })
-    const modeHistory: ModeChangeRecord[] = []
 
     console.log(`📩 [${new Date().toISOString()}] Starting TranscribeStreamV2`)
 
-    try {
-      for await (const request of requests) {
-        if (request.payload.case === 'audioData') {
-          audioChunks.push(request.payload.value)
-        } else if (request.payload.case === 'config') {
-          const previousMode = mergedConfig.context?.mode
-          mergedConfig = this.mergeStreamConfigs(
-            mergedConfig,
-            request.payload.value,
-          )
-
-          console.log(
-            `🔧 [${new Date().toISOString()}] Received config update:`,
-            JSON.stringify(mergedConfig, null, 2),
-          )
-
-          const newMode = mergedConfig.context?.mode
-          if (newMode !== undefined && newMode !== previousMode) {
-            modeHistory.push({
-              mode: newMode,
-              timestamp: Date.now(),
-            })
-            console.log(
-              `🔧 [${new Date().toISOString()}] Mode changed to: ${newMode}`,
-            )
-          }
-        }
-      }
-    } catch (err) {
-      // Check if this is a client abort/cancellation error
-      const isAbortError =
-        err instanceof Error &&
-        (err.message === 'aborted' ||
-          (err as any).code === 'ECONNRESET' ||
-          (err as any).code === 'ABORT_ERR')
-
-      if (isAbortError) {
-        console.log(
-          `🚫 [${new Date().toISOString()}] Stream reading interrupted (client cancelled)`,
-        )
-        throw new ConnectError(
-          'Stream cancelled by client',
-          Code.Canceled,
-          undefined,
-          undefined,
-          err,
-        )
-      }
-
-      // Re-throw other errors
-      throw err
-    }
+    // Collect stream data
+    const {
+      audioChunks,
+      mergedConfig: initialConfig,
+      lastModeChangeTimestamp,
+      previousMode,
+    } = await this.collectStreamData(requests)
 
     const streamEndTime = Date.now()
 
@@ -109,93 +51,35 @@ export class TranscribeStreamV2Handler {
       throw new ConnectError('Stream cancelled by client', Code.Canceled)
     }
 
-    let finalMode = mergedConfig.context?.mode
-    if (modeHistory.length > 1) {
-      const lastModeChange = modeHistory[modeHistory.length - 1]
-      const timeSinceLastChange = streamEndTime - lastModeChange.timestamp
-
-      if (timeSinceLastChange <= this.MODE_CHANGE_GRACE_PERIOD_MS) {
-        const previousModeRecord = modeHistory[modeHistory.length - 2]
-        finalMode = previousModeRecord.mode
-        console.log(
-          `⏱️ [${new Date().toISOString()}] Last mode change (${timeSinceLastChange}ms ago) within grace period (${this.MODE_CHANGE_GRACE_PERIOD_MS}ms) - reverting from ${lastModeChange.mode} to ${finalMode}`,
-        )
-      }
-    }
-
-    if (finalMode !== undefined && mergedConfig.context) {
-      mergedConfig = {
-        ...mergedConfig,
-        context: {
-          ...mergedConfig.context,
-          mode: finalMode,
-        },
-      }
-    }
+    // Apply mode grace period
+    const mergedConfig = this.applyModeGracePeriod(
+      initialConfig,
+      lastModeChangeTimestamp,
+      previousMode,
+      streamEndTime,
+    )
 
     console.log(
       `📊 [${new Date().toISOString()}] Processed ${audioChunks.length} audio chunks`,
     )
 
-    const totalLength = audioChunks.reduce(
-      (sum, chunk) => sum + chunk.length,
-      0,
-    )
-    const fullAudio = new Uint8Array(totalLength)
-    let offset = 0
-    for (const chunk of audioChunks) {
-      fullAudio.set(chunk, offset)
-      offset += chunk.length
-    }
-
-    console.log(
-      `🔧 [${new Date().toISOString()}] Concatenated audio: ${totalLength} bytes`,
-    )
+    // Concatenate and prepare audio
+    const fullAudio = this.concatenateAudioChunks(audioChunks)
 
     try {
-      const sampleRate = 16000
-      const bitDepth = 16
-      const channels = 1
+      const fullAudioWAV = this.prepareAudioForTranscription(fullAudio)
 
-      const enhancedPcm = enhancePcm16(Buffer.from(fullAudio), sampleRate)
-      const wavHeader = createWavHeader(
-        enhancedPcm.length,
-        sampleRate,
-        channels,
-        bitDepth,
-      )
-      const fullAudioWAV = Buffer.concat([wavHeader, enhancedPcm])
+      // Extract configuration
+      const asrConfig = this.extractAsrConfig(mergedConfig)
 
-      const asrModel =
-        mergedConfig.transcriptionSettings?.asrModel ||
-        DEFAULT_ADVANCED_SETTINGS.asrModel
-      const asrProvider =
-        mergedConfig.transcriptionSettings?.asrProvider ||
-        DEFAULT_ADVANCED_SETTINGS.asrProvider
-      const noSpeechThreshold =
-        mergedConfig.transcriptionSettings?.noSpeechThreshold ??
-        DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold
-      const vocabulary = mergedConfig.vocabulary
-
-      // Check for cancellation before calling ASR provider
-      if (context?.signal.aborted) {
-        console.log(
-          `🚫 [${new Date().toISOString()}] Stream cancelled before ASR call, skipping transcription`,
-        )
-        throw new ConnectError('Stream cancelled by client', Code.Canceled)
-      }
-
-      const asrClient = getAsrProvider(asrProvider)
-      let transcript = await asrClient.transcribeAudio(fullAudioWAV, {
-        fileType: 'wav',
-        asrModel,
-        noSpeechThreshold,
-        vocabulary,
-      })
-      console.log(
-        `📝 [${new Date().toISOString()}] Received transcript: "${transcript}"`,
+      // Transcribe audio
+      let transcript = await this.transcribeAudioData(
+        fullAudioWAV,
+        asrConfig,
+        context,
       )
 
+      // Prepare context and settings
       const windowContext: ItoContext = {
         windowTitle: mergedConfig.context?.windowTitle || '',
         appName: mergedConfig.context?.appName || '',
@@ -204,51 +88,20 @@ export class TranscribeStreamV2Handler {
 
       const mode = mergedConfig.context?.mode ?? detectItoMode(transcript)
 
-      const advancedSettingsHeaders = {
-        asrModel,
-        asrProvider,
-        asrPrompt:
-          mergedConfig.transcriptionSettings?.asrPrompt ||
-          DEFAULT_ADVANCED_SETTINGS.asrPrompt,
-        llmProvider:
-          mergedConfig.llmSettings?.llmProvider ||
-          DEFAULT_ADVANCED_SETTINGS.llmProvider,
-        llmModel:
-          mergedConfig.llmSettings?.llmModel ||
-          DEFAULT_ADVANCED_SETTINGS.llmModel,
-        llmTemperature:
-          mergedConfig.llmSettings?.llmTemperature ??
-          DEFAULT_ADVANCED_SETTINGS.llmTemperature,
-        transcriptionPrompt:
-          mergedConfig.llmSettings?.transcriptionPrompt ||
-          DEFAULT_ADVANCED_SETTINGS.transcriptionPrompt,
-        editingPrompt:
-          mergedConfig.llmSettings?.editingPrompt ||
-          DEFAULT_ADVANCED_SETTINGS.editingPrompt,
-        noSpeechThreshold,
-      }
-
-      const userPromptPrefix = getPromptForMode(mode, advancedSettingsHeaders)
-      const userPrompt = createUserPromptWithContext(transcript, windowContext)
-
-      console.log(
-        `[${new Date().toISOString()}] Detected mode: ${mode}, adjusting transcript`,
+      const advancedSettings = this.prepareAdvancedSettings(
+        mergedConfig,
+        asrConfig.asrModel,
+        asrConfig.asrProvider,
+        asrConfig.noSpeechThreshold,
       )
 
-      if (mode === ItoMode.EDIT) {
-        const llmProvider = getLlmProvider(advancedSettingsHeaders.llmProvider)
-        transcript = await llmProvider.adjustTranscript(
-          userPromptPrefix + '\n' + userPrompt,
-          {
-            temperature: advancedSettingsHeaders.llmTemperature,
-            model: advancedSettingsHeaders.llmModel,
-            prompt: ITO_MODE_SYSTEM_PROMPT[mode],
-          },
-        )
-        console.log(
-          `📝 [${new Date().toISOString()}] Adjusted transcript: "${transcript}"`,
-        )
-      }
+      // Adjust transcript based on mode
+      transcript = await this.adjustTranscriptForMode(
+        transcript,
+        mode,
+        windowContext,
+        advancedSettings,
+      )
 
       const duration = Date.now() - startTime
       console.log(
@@ -274,6 +127,250 @@ export class TranscribeStreamV2Handler {
         ),
       })
     }
+  }
+
+  private async collectStreamData(
+    requests: AsyncIterable<TranscribeStreamRequest>,
+  ): Promise<{
+    audioChunks: Uint8Array[]
+    mergedConfig: StreamConfig
+    lastModeChangeTimestamp: number | null
+    previousMode: ItoMode | undefined
+  }> {
+    const audioChunks: Uint8Array[] = []
+    let mergedConfig: StreamConfig = create(StreamConfigSchema, {
+      context: undefined,
+      transcriptionSettings: undefined,
+      llmSettings: undefined,
+      vocabulary: [],
+    })
+    let lastModeChangeTimestamp: number | null = null
+    let previousMode: ItoMode | undefined = undefined
+
+    try {
+      for await (const request of requests) {
+        if (request.payload.case === 'audioData') {
+          audioChunks.push(request.payload.value)
+        } else if (request.payload.case === 'config') {
+          const currentMode = mergedConfig.context?.mode
+          mergedConfig = this.mergeStreamConfigs(
+            mergedConfig,
+            request.payload.value,
+          )
+
+          console.log(
+            `🔧 [${new Date().toISOString()}] Received config update:`,
+            JSON.stringify(mergedConfig, null, 2),
+          )
+
+          const newMode = mergedConfig.context?.mode
+          if (newMode !== undefined && newMode !== currentMode) {
+            previousMode = currentMode
+            lastModeChangeTimestamp = Date.now()
+            console.log(
+              `🔧 [${new Date().toISOString()}] Mode changed from ${currentMode} to: ${newMode}`,
+            )
+          }
+        }
+      }
+    } catch (err) {
+      const isAbortError =
+        err instanceof Error &&
+        (err.message === 'aborted' ||
+          (err as any).code === 'ECONNRESET' ||
+          (err as any).code === 'ABORT_ERR')
+
+      if (isAbortError) {
+        console.log(
+          `🚫 [${new Date().toISOString()}] Stream reading interrupted (client cancelled)`,
+        )
+        throw new ConnectError(
+          'Stream cancelled by client',
+          Code.Canceled,
+          undefined,
+          undefined,
+          err,
+        )
+      }
+
+      throw err
+    }
+
+    return { audioChunks, mergedConfig, lastModeChangeTimestamp, previousMode }
+  }
+
+  private applyModeGracePeriod(
+    mergedConfig: StreamConfig,
+    lastModeChangeTimestamp: number | null,
+    previousMode: ItoMode | undefined,
+    streamEndTime: number,
+  ): StreamConfig {
+    // If there was a mode change and it happened within the grace period,
+    // revert to the previous mode (or undefined if no previous mode)
+    if (lastModeChangeTimestamp !== null) {
+      const timeSinceLastChange = streamEndTime - lastModeChangeTimestamp
+
+      if (timeSinceLastChange <= this.MODE_CHANGE_GRACE_PERIOD_MS) {
+        const currentMode = mergedConfig.context?.mode
+        console.log(
+          `⏱️ [${new Date().toISOString()}] Last mode change (${timeSinceLastChange}ms ago) within grace period (${this.MODE_CHANGE_GRACE_PERIOD_MS}ms) - reverting from ${currentMode} to ${previousMode}`,
+        )
+
+        if (mergedConfig.context) {
+          return {
+            ...mergedConfig,
+            context: {
+              ...mergedConfig.context,
+              mode: previousMode,
+            },
+          }
+        }
+      }
+    }
+
+    return mergedConfig
+  }
+
+  private concatenateAudioChunks(audioChunks: Uint8Array[]): Uint8Array {
+    const totalLength = audioChunks.reduce(
+      (sum, chunk) => sum + chunk.length,
+      0,
+    )
+    const fullAudio = new Uint8Array(totalLength)
+    let offset = 0
+    for (const chunk of audioChunks) {
+      fullAudio.set(chunk, offset)
+      offset += chunk.length
+    }
+
+    console.log(
+      `🔧 [${new Date().toISOString()}] Concatenated audio: ${totalLength} bytes`,
+    )
+
+    return fullAudio
+  }
+
+  private prepareAudioForTranscription(audioData: Uint8Array): Buffer {
+    const sampleRate = 16000
+    const bitDepth = 16
+    const channels = 1
+
+    const enhancedPcm = enhancePcm16(Buffer.from(audioData), sampleRate)
+    const wavHeader = createWavHeader(
+      enhancedPcm.length,
+      sampleRate,
+      channels,
+      bitDepth,
+    )
+
+    return Buffer.concat([wavHeader, enhancedPcm])
+  }
+
+  private extractAsrConfig(mergedConfig: StreamConfig) {
+    return {
+      asrModel:
+        mergedConfig.transcriptionSettings?.asrModel ||
+        DEFAULT_ADVANCED_SETTINGS.asrModel,
+      asrProvider:
+        mergedConfig.transcriptionSettings?.asrProvider ||
+        DEFAULT_ADVANCED_SETTINGS.asrProvider,
+      noSpeechThreshold:
+        mergedConfig.transcriptionSettings?.noSpeechThreshold ??
+        DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold,
+      vocabulary: mergedConfig.vocabulary,
+    }
+  }
+
+  private prepareAdvancedSettings(
+    mergedConfig: StreamConfig,
+    asrModel: string,
+    asrProvider: string,
+    noSpeechThreshold: number,
+  ) {
+    return {
+      asrModel,
+      asrProvider,
+      asrPrompt:
+        mergedConfig.transcriptionSettings?.asrPrompt ||
+        DEFAULT_ADVANCED_SETTINGS.asrPrompt,
+      llmProvider:
+        mergedConfig.llmSettings?.llmProvider ||
+        DEFAULT_ADVANCED_SETTINGS.llmProvider,
+      llmModel:
+        mergedConfig.llmSettings?.llmModel ||
+        DEFAULT_ADVANCED_SETTINGS.llmModel,
+      llmTemperature:
+        mergedConfig.llmSettings?.llmTemperature ??
+        DEFAULT_ADVANCED_SETTINGS.llmTemperature,
+      transcriptionPrompt:
+        mergedConfig.llmSettings?.transcriptionPrompt ||
+        DEFAULT_ADVANCED_SETTINGS.transcriptionPrompt,
+      editingPrompt:
+        mergedConfig.llmSettings?.editingPrompt ||
+        DEFAULT_ADVANCED_SETTINGS.editingPrompt,
+      noSpeechThreshold,
+    }
+  }
+
+  private async transcribeAudioData(
+    audioWav: Buffer,
+    asrConfig: ReturnType<typeof this.extractAsrConfig>,
+    context?: HandlerContext,
+  ): Promise<string> {
+    if (context?.signal.aborted) {
+      console.log(
+        `🚫 [${new Date().toISOString()}] Stream cancelled before ASR call, skipping transcription`,
+      )
+      throw new ConnectError('Stream cancelled by client', Code.Canceled)
+    }
+
+    const asrClient = getAsrProvider(asrConfig.asrProvider)
+    const transcript = await asrClient.transcribeAudio(audioWav, {
+      fileType: 'wav',
+      asrModel: asrConfig.asrModel,
+      noSpeechThreshold: asrConfig.noSpeechThreshold,
+      vocabulary: asrConfig.vocabulary,
+    })
+
+    console.log(
+      `📝 [${new Date().toISOString()}] Received transcript: "${transcript}"`,
+    )
+
+    return transcript
+  }
+
+  private async adjustTranscriptForMode(
+    transcript: string,
+    mode: ItoMode,
+    windowContext: ItoContext,
+    advancedSettings: ReturnType<typeof this.prepareAdvancedSettings>,
+  ): Promise<string> {
+    console.log(
+      `[${new Date().toISOString()}] Detected mode: ${mode}, adjusting transcript`,
+    )
+
+    if (mode !== ItoMode.EDIT) {
+      return transcript
+    }
+
+    const userPromptPrefix = getPromptForMode(mode, advancedSettings)
+    const userPrompt = createUserPromptWithContext(transcript, windowContext)
+    const llmProvider = getLlmProvider(advancedSettings.llmProvider)
+
+    const adjustedTranscript = await llmProvider.adjustTranscript(
+      userPromptPrefix + '\n' + userPrompt,
+      {
+        temperature: advancedSettings.llmTemperature,
+        model: advancedSettings.llmModel,
+        prompt: ITO_MODE_SYSTEM_PROMPT[mode],
+      },
+    )
+
+    console.log(
+      `📝 [${new Date().toISOString()}] Adjusted transcript: "${adjustedTranscript}"`,
+    )
+
+    return adjustedTranscript
   }
 
   private mergeStreamConfigs(

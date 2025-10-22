@@ -4,6 +4,7 @@ import { STORE_KEYS } from '../../constants/store-keys'
 import log from 'electron-log'
 import { v4 as uuidv4 } from 'uuid'
 import { BrowserWindow } from 'electron'
+import { timingCollector } from '../timing/TimingCollector'
 
 export class InteractionManager {
   private currentInteractionId: string | null = null
@@ -103,8 +104,15 @@ export class InteractionManager {
           durationMs,
         })
       })
+
+      // Finalize timing collection for this interaction
+      timingCollector.finalizeInteraction(this.currentInteractionId)
     } catch (error) {
       log.error('[InteractionManager] Failed to create interaction:', error)
+      // Clear timing on error
+      if (this.currentInteractionId) {
+        timingCollector.clearInteraction(this.currentInteractionId)
+      }
     }
   }
 

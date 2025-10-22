@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AdvancedSettings, AudioChunk, CreateDictionaryItemRequest, CreateInteractionRequest, CreateNoteRequest, DeleteDictionaryItemRequest, DeleteInteractionRequest, DeleteNoteRequest, DeleteUserDataRequest, DictionaryItem, Empty, GetAdvancedSettingsRequest, GetInteractionRequest, GetNoteRequest, Interaction, ListDictionaryItemsRequest, ListDictionaryItemsResponse, ListInteractionsRequest, ListInteractionsResponse, ListNotesRequest, ListNotesResponse, Note, TranscriptionResponse, UpdateAdvancedSettingsRequest, UpdateDictionaryItemRequest, UpdateInteractionRequest, UpdateNoteRequest } from "./ito_pb.js";
+import { AdvancedSettings, AudioChunk, CreateDictionaryItemRequest, CreateInteractionRequest, CreateNoteRequest, DeleteDictionaryItemRequest, DeleteInteractionRequest, DeleteNoteRequest, DeleteUserDataRequest, DictionaryItem, Empty, GetAdvancedSettingsRequest, GetInteractionRequest, GetNoteRequest, Interaction, ListDictionaryItemsRequest, ListDictionaryItemsResponse, ListInteractionsRequest, ListInteractionsResponse, ListNotesRequest, ListNotesResponse, Note, SubmitTimingDataRequest, SubmitTimingDataResponse, TranscriptionResponse, UpdateAdvancedSettingsRequest, UpdateDictionaryItemRequest, UpdateInteractionRequest, UpdateNoteRequest } from "./ito_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -185,6 +185,17 @@ export const ItoService = {
       name: "UpdateAdvancedSettings",
       I: UpdateAdvancedSettingsRequest,
       O: AdvancedSettings,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Timing Analytics Service
+     *
+     * @generated from rpc ito.ItoService.SubmitTimingData
+     */
+    submitTimingData: {
+      name: "SubmitTimingData",
+      I: SubmitTimingDataRequest,
+      O: SubmitTimingDataResponse,
       kind: MethodKind.Unary,
     },
   }

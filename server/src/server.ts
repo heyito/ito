@@ -10,6 +10,7 @@ import { createValidationInterceptor } from './services/validationInterceptor.js
 import { renderCallbackPage } from './utils/renderCallback.js'
 import dotenv from 'dotenv'
 import { registerLoggingRoutes } from './services/logging.js'
+import { registerTimingRoutes } from './services/timing.js'
 import { registerAuth0Routes } from './services/auth0.js'
 import { IpLinkRepository } from './db/repo.js'
 import cors from '@fastify/cors'
@@ -28,6 +29,8 @@ export const startServer = async () => {
   // Register the Auth0 plugin
   const REQUIRE_AUTH = process.env.REQUIRE_AUTH === 'true'
   const CLIENT_LOG_GROUP_NAME = process.env.CLIENT_LOG_GROUP_NAME
+  const TIMING_LOG_GROUP_NAME =
+    process.env.TIMING_LOG_GROUP_NAME || CLIENT_LOG_GROUP_NAME
 
   if (REQUIRE_AUTH) {
     const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN
@@ -149,6 +152,11 @@ export const startServer = async () => {
     await registerLoggingRoutes(fastify, {
       requireAuth: REQUIRE_AUTH,
       clientLogGroupName: CLIENT_LOG_GROUP_NAME,
+    })
+
+    await registerTimingRoutes(fastify, {
+      requireAuth: REQUIRE_AUTH,
+      timingLogGroupName: TIMING_LOG_GROUP_NAME,
     })
   })
 

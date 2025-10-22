@@ -10,6 +10,7 @@ import { getCursorContext } from '../media/selected-text-reader'
 import { canGetContextFromCurrentApp } from '../utils/applicationDetection'
 import { grammarRulesService } from './grammar/GrammarRulesService'
 import { getAdvancedSettings } from './store'
+import { timingCollector, TimingEventName } from './timing/TimingCollector'
 
 export class TranscriptionService {
   private audioStreamManager = new AudioStreamManager()
@@ -70,15 +71,37 @@ export class TranscriptionService {
 
     this.hasStartedGrpc = true
 
+    // Track server send timing
+    if (this.interactionId) {
+      timingCollector.startTiming(
+        this.interactionId,
+        TimingEventName.SERVER_TRANSCRIBE,
+      )
+    }
+
     grpcClient
       .transcribeStream(
         this.audioStreamManager.streamAudioChunks(),
         this.currentMode,
       )
       .then(response => {
+        // Track server response timing
+        if (this.interactionId) {
+          timingCollector.endTiming(
+            this.interactionId,
+            TimingEventName.SERVER_TRANSCRIBE,
+          )
+        }
         this.handleTranscriptionResponse(response)
       })
       .catch(error => {
+        // Track server response timing even on error
+        if (this.interactionId) {
+          timingCollector.endTiming(
+            this.interactionId,
+            TimingEventName.SERVER_TRANSCRIBE,
+          )
+        }
         this.handleTranscriptionError(error)
       })
   }
@@ -126,12 +149,44 @@ export class TranscriptionService {
           const contextLength = 4 // Number of chars to consider for context
           let context = ''
           try {
+            // Track context gathering timing
+            const interactionId = interactionManager.getCurrentInteractionId()
+            if (interactionId) {
+              timingCollector.startTiming(
+                interactionId,
+                TimingEventName.CONTEXT_GATHER,
+              )
+            }
+
             const canGetContext = await canGetContextFromCurrentApp()
             if (canGetContext) {
               context = (await getCursorContext(contextLength)) || ''
             }
+
+            if (interactionId) {
+              timingCollector.endTiming(
+                interactionId,
+                TimingEventName.CONTEXT_GATHER,
+              )
+            }
           } catch (e) {
             console.error('Cursor context failed:', e)
+            const interactionId = interactionManager.getCurrentInteractionId()
+            if (interactionId) {
+              timingCollector.endTiming(
+                interactionId,
+                TimingEventName.CONTEXT_GATHER,
+              )
+            }
+          }
+
+          // Track grammar service timing
+          const interactionId = interactionManager.getCurrentInteractionId()
+          if (interactionId) {
+            timingCollector.startTiming(
+              interactionId,
+              TimingEventName.GRAMMAR_SERVICE,
+            )
           }
 
           textToInsert = grammarRulesService.setCaseFirstWord(
@@ -142,6 +197,13 @@ export class TranscriptionService {
             context,
             textToInsert,
           )
+
+          if (interactionId) {
+            timingCollector.endTiming(
+              interactionId,
+              TimingEventName.GRAMMAR_SERVICE,
+            )
+          }
         }
 
         await this.textInserter.insertText(textToInsert)

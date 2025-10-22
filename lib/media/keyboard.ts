@@ -7,6 +7,10 @@ import { audioRecorderService } from './audio'
 import { voiceInputService } from '../main/voiceInputService'
 import { KeyName, keyNameMap, normalizeLegacyKey } from '../types/keyboard'
 import { interactionManager } from '../main/interactions/InteractionManager'
+import {
+  timingCollector,
+  TimingEventName,
+} from '../main/timing/TimingCollector'
 
 interface KeyEvent {
   type: 'keydown' | 'keyup'
@@ -255,7 +259,15 @@ function handleKeyEventInMain(event: KeyEvent) {
         if (pendingShortcut && !isShortcutActive) {
           isShortcutActive = true
           console.info('lib Shortcut ACTIVATED, starting recording...')
-          interactionManager.startInteraction()
+          const interactionId = interactionManager.startInteraction()
+
+          // Start timing collection
+          timingCollector.startInteraction(interactionId)
+          timingCollector.startTiming(
+            interactionId,
+            TimingEventName.HOTKEY_PRESS,
+          )
+
           voiceInputService.startSTTService(pendingShortcut.mode)
         }
 
@@ -275,6 +287,12 @@ function handleKeyEventInMain(event: KeyEvent) {
       // Shortcut released - deactivate immediately (no debounce on release)
       isShortcutActive = false
       console.info('lib Shortcut DEACTIVATED, stopping recording...')
+
+      // Record hotkey release timing
+      const interactionId = interactionManager.getCurrentInteractionId()
+      if (interactionId) {
+        timingCollector.endTiming(interactionId, TimingEventName.HOTKEY_PRESS)
+      }
 
       // Don't end the interaction yet - let the transcription service handle it
       // The interaction will be ended when transcription completes or fails

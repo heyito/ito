@@ -47,7 +47,8 @@
     "dev": "tsx watch src/index.ts",
     "dev:win": "bun --watch src/index.ts",
     "test-client": "tsx ./test-client.ts",
-    "migrate-audio-to-s3": "tsx scripts/migrate-audio-to-s3.ts"
+    "migrate-audio-to-s3": "tsx scripts/migrate-audio-to-s3.ts",
+    "deploy:dev": "bash ./scripts/deploy-dev.sh"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",

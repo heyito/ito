@@ -70,7 +70,6 @@ mock.module('./context/ContextGrabber', () => ({
   contextGrabber: mockContextGrabber,
 }))
 
-
 mock.module('electron-log', () => ({
   default: {
     info: mock(),
@@ -158,7 +157,6 @@ describe('ItoStreamController', () => {
       'Stream already started',
     )
   })
-
 
   test('should change mode during streaming', async () => {
     const { ItoStreamController } = await import('./itoStreamController')

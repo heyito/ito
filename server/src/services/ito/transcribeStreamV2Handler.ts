@@ -10,7 +10,6 @@ import {
   TranscriptionResponseSchema,
 } from '../../generated/ito_pb.js'
 import { getAsrProvider, getLlmProvider } from '../../clients/providerUtils.js'
-import { enhancePcm16 } from '../../utils/audio.js'
 import { DEFAULT_ADVANCED_SETTINGS } from '../../constants/generated-defaults.js'
 import { errorToProtobuf } from '../../clients/errors.js'
 import {
@@ -20,8 +19,11 @@ import {
 } from './helpers.js'
 import { ITO_MODE_SYSTEM_PROMPT } from './constants.js'
 import type { ItoContext } from './types.js'
-import { createWavHeader } from './audioUtils.js'
 import { isAbortError, createAbortError } from '../../utils/abortUtils.js'
+import {
+  concatenateAudioChunks,
+  prepareAudioForTranscription,
+} from '../../utils/audioProcessing.js'
 
 export class TranscribeStreamV2Handler {
   private readonly MODE_CHANGE_GRACE_PERIOD_MS = 100
@@ -65,10 +67,10 @@ export class TranscribeStreamV2Handler {
     )
 
     // Concatenate and prepare audio
-    const fullAudio = this.concatenateAudioChunks(audioChunks)
+    const fullAudio = concatenateAudioChunks(audioChunks)
 
     try {
-      const fullAudioWAV = this.prepareAudioForTranscription(fullAudio)
+      const fullAudioWAV = prepareAudioForTranscription(fullAudio)
 
       // Extract configuration
       const asrConfig = this.extractAsrConfig(mergedConfig)
@@ -218,41 +220,6 @@ export class TranscribeStreamV2Handler {
     }
 
     return mergedConfig
-  }
-
-  private concatenateAudioChunks(audioChunks: Uint8Array[]): Uint8Array {
-    const totalLength = audioChunks.reduce(
-      (sum, chunk) => sum + chunk.length,
-      0,
-    )
-    const fullAudio = new Uint8Array(totalLength)
-    let offset = 0
-    for (const chunk of audioChunks) {
-      fullAudio.set(chunk, offset)
-      offset += chunk.length
-    }
-
-    console.log(
-      `🔧 [${new Date().toISOString()}] Concatenated audio: ${totalLength} bytes`,
-    )
-
-    return fullAudio
-  }
-
-  private prepareAudioForTranscription(audioData: Uint8Array): Buffer {
-    const sampleRate = 16000
-    const bitDepth = 16
-    const channels = 1
-
-    const enhancedPcm = enhancePcm16(Buffer.from(audioData), sampleRate)
-    const wavHeader = createWavHeader(
-      enhancedPcm.length,
-      sampleRate,
-      channels,
-      bitDepth,
-    )
-
-    return Buffer.concat([wavHeader, enhancedPcm])
   }
 
   private extractAsrConfig(mergedConfig: StreamConfig) {

@@ -304,5 +304,4 @@ describe('AudioStreamManager', () => {
       expect(audioManager.getInteractionAudioBuffer().length).toBe(0)
     })
   })
-
 })

@@ -18,7 +18,7 @@ mock.module('./recordingStateNotifier', () => ({
 }))
 
 const mockItoStreamController = {
-  initialize: mock(() => Promise.resolve(true)),
+  initialize: mock((_mode, _interactionId) => Promise.resolve(true)),
   startGrpcStream: mock(() =>
     Promise.resolve({
       response: { transcript: 'test transcript' },
@@ -89,6 +89,25 @@ mock.module('electron-log', () => ({
   },
 }))
 
+const mockTimingCollector = {
+  startInteraction: mock(),
+  startTiming: mock(),
+  endTiming: mock(),
+  finalizeInteraction: mock(),
+  clearInteraction: mock(),
+  timeAsync: mock(async (_interactionId, _eventName, fn) => await fn()),
+}
+mock.module('./timing/TimingCollector', () => ({
+  timingCollector: mockTimingCollector,
+  TimingEventName: {
+    HOTKEY_PRESS: 'hotkey_press',
+    SERVER_TRANSCRIBE: 'server_transcribe',
+    CONTEXT_GATHER: 'context_gather',
+    GRAMMAR_SERVICE: 'grammar_service',
+    TEXT_WRITER: 'text_writer',
+  },
+}))
+
 beforeEach(() => {
   console.log = mock()
   console.error = mock()
@@ -106,10 +125,14 @@ describe('itoSessionManager', () => {
     Object.values(mockInteractionManager).forEach(mockFn => mockFn.mockClear())
     Object.values(mockContextGrabber).forEach(mockFn => mockFn.mockClear())
     Object.values(mockGrammarRulesService).forEach(mockFn => mockFn.mockClear())
+    Object.values(mockTimingCollector).forEach(mockFn => mockFn.mockClear())
 
     mockGetAdvancedSettings.mockClear()
 
     // Reset default behaviors
+    mockTimingCollector.timeAsync.mockImplementation(
+      async (_interactionId, _eventName, fn) => await fn(),
+    )
     mockItoStreamController.initialize.mockResolvedValue(true)
     mockItoStreamController.startGrpcStream.mockResolvedValue({
       response: { transcript: 'test transcript' },
@@ -133,6 +156,7 @@ describe('itoSessionManager', () => {
 
     expect(mockItoStreamController.initialize).toHaveBeenCalledWith(
       ItoMode.TRANSCRIBE,
+      'test-interaction-123',
     )
     expect(mockItoStreamController.startGrpcStream).toHaveBeenCalled()
     expect(mockItoStreamController.setMode).toHaveBeenCalledWith(

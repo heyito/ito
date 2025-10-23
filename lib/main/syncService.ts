@@ -64,8 +64,6 @@ export class SyncService {
   }
 
   private async runSync() {
-    // TODO: remove me
-    return
     if (this.isSyncing) {
       return
     }

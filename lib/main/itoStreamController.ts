@@ -68,19 +68,14 @@ export class ItoStreamController {
     this.hasStartedGrpc = true
     this.abortController = new AbortController()
 
-    timingCollector.startTiming(
+    const response = await timingCollector.timeAsync(
       this.interactionId,
       TimingEventName.SERVER_TRANSCRIBE,
-    )
-
-    const response = await grpcClient.transcribeStreamV2(
-      this.createStreamGenerator(),
-      this.abortController.signal,
-    )
-
-    timingCollector.endTiming(
-      this.interactionId,
-      TimingEventName.SERVER_TRANSCRIBE,
+      async () =>
+        await grpcClient.transcribeStreamV2(
+          this.createStreamGenerator(),
+          this.abortController!.signal,
+        ),
     )
 
     // Return response along with the audio data collected during the stream
@@ -210,14 +205,10 @@ export class ItoStreamController {
 
   private async buildStreamConfig(): Promise<TranscribeStreamRequest> {
     // Gather all config data using ContextGrabber
-    timingCollector.startTiming(
+    const context = await timingCollector.timeAsync(
       this.interactionId,
       TimingEventName.CONTEXT_GATHER,
-    )
-    const context = await contextGrabber.gatherContext(this.currentMode)
-    timingCollector.endTiming(
-      this.interactionId,
-      TimingEventName.CONTEXT_GATHER,
+      async () => await contextGrabber.gatherContext(this.currentMode),
     )
 
     return create(TranscribeStreamRequestSchema, {

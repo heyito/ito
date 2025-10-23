@@ -10,22 +10,15 @@ export class TextInserter {
     }
 
     try {
-      // Track text writer timing
       const interactionId = interactionManager.getCurrentInteractionId()
 
-      timingCollector.startTiming(interactionId, TimingEventName.TEXT_WRITER)
-
-      const result = await setFocusedText(transcript)
-
-      timingCollector.endTiming(interactionId, TimingEventName.TEXT_WRITER)
-
-      return result
+      return await timingCollector.timeAsync(
+        interactionId,
+        TimingEventName.TEXT_WRITER,
+        async () => await setFocusedText(transcript),
+      )
     } catch (error) {
       console.error('Error inserting text:', error)
-      const interactionId = interactionManager.getCurrentInteractionId()
-      if (interactionId) {
-        timingCollector.endTiming(interactionId, TimingEventName.TEXT_WRITER)
-      }
       return false
     }
   }

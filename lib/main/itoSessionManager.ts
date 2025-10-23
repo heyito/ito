@@ -71,14 +71,10 @@ export class ItoSessionManager {
     // Fetch cursor context for grammar rules only if grammar service is enabled
     const { grammarServiceEnabled } = getAdvancedSettings()
     if (grammarServiceEnabled) {
-      timingCollector.startTiming(
+      const cursorContext = await timingCollector.timeAsync(
         this.interactionId,
         TimingEventName.GRAMMAR_SERVICE,
-      )
-      const cursorContext = await contextGrabber.getCursorContextForGrammar()
-      timingCollector.endTiming(
-        this.interactionId,
-        TimingEventName.GRAMMAR_SERVICE,
+        async () => await contextGrabber.getCursorContextForGrammar(),
       )
       this.grammarRulesService = new GrammarRulesService(cursorContext)
     }

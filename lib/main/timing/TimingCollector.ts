@@ -298,6 +298,32 @@ export class TimingCollector {
       analyticsEnabled: this.shouldCollect(),
     }
   }
+
+  /**
+   * Utility function to wrap an async operation with automatic timing
+   * Handles both successful and error cases automatically
+   *
+   * @example
+   * const result = await timingCollector.timeAsync(
+   *   interactionId,
+   *   TimingEventName.TEXT_WRITER,
+   *   async () => await setFocusedText(transcript)
+   * )
+   */
+  async timeAsync<T>(
+    interactionId: string | null,
+    eventName: TimingEventName,
+    fn: () => Promise<T> | T,
+  ): Promise<T> {
+    this.startTiming(interactionId, eventName)
+    try {
+      const result = await fn()
+      return result
+    } finally {
+      // Always end timing, even if the function throws
+      this.endTiming(interactionId, eventName)
+    }
+  }
 }
 
 // Export singleton instance

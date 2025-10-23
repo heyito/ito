@@ -83,7 +83,10 @@ export class HeaderValidator {
 
   static validateTranscriptionPrompt(headerValue: string): string {
     try {
-      console.log('Validating transcription prompt:', headerValue)
+      console.log(
+        'Validating transcription prompt:',
+        headerValue.slice(0, 50) + '...',
+      )
       return LlmPromptSchema.parse(headerValue)
     } catch (error) {
       throw new ConnectError(

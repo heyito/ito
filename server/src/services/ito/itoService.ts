@@ -1,7 +1,6 @@
 import type { ConnectRouter } from '@connectrpc/connect'
 import {
   AudioChunk,
-  TranscriptionResponseSchema,
   ItoService as ItoServiceDesc,
   Note,
   NoteSchema,
@@ -12,11 +11,10 @@ import {
   AdvancedSettings,
   AdvancedSettingsSchema,
   LlmSettingsSchema,
-  ItoMode,
+  TranscribeStreamRequest,
 } from '../../generated/ito_pb.js'
 import { create } from '@bufbuild/protobuf'
 import type { HandlerContext } from '@connectrpc/connect'
-import { getAsrProvider, getLlmProvider } from '../../clients/providerUtils.js'
 import { getStorageClient } from '../../clients/s3storageClient.js'
 import { v4 as uuidv4 } from 'uuid'
 import { createAudioKey } from '../../constants/storage.js'
@@ -34,61 +32,8 @@ import {
 } from '../../db/models.js'
 import { ConnectError, Code } from '@connectrpc/connect'
 import { kUser } from '../../auth/userContext.js'
-import { ItoContext } from './types.js'
-import { HeaderValidator } from '../../validation/HeaderValidator.js'
-import { errorToProtobuf } from '../../clients/errors.js'
-import {
-  getAdvancedSettingsHeaders,
-  detectItoMode,
-  getPromptForMode,
-  getItoMode,
-  createUserPromptWithContext,
-} from './helpers.js'
-import { ITO_MODE_SYSTEM_PROMPT } from './constants.js'
-import { enhancePcm16 } from '../../utils/audio.js'
-
-/**
- * --- NEW: WAV Header Generation Function ---
- * Creates a 44-byte WAV header for raw PCM audio data.
- * @param dataLength The length of the raw audio data in bytes.
- * @param sampleRate The sample rate (e.g., 44100).
- * @param channelCount The number of channels (1 for mono, 2 for stereo).
- * @param bitDepth The bit depth (e.g., 16).
- * @returns A Buffer containing the WAV header.
- */
-function createWavHeader(
-  dataLength: number,
-  sampleRate: number,
-  channelCount: number,
-  bitDepth: number,
-): Buffer {
-  const header = Buffer.alloc(44)
-
-  // RIFF chunk descriptor
-  header.write('RIFF', 0)
-  header.writeUInt32LE(36 + dataLength, 4) // ChunkSize
-  header.write('WAVE', 8)
-
-  // "fmt " sub-chunk
-  header.write('fmt ', 12)
-  header.writeUInt32LE(16, 16) // Subchunk1Size (16 for PCM)
-  header.writeUInt16LE(1, 20) // AudioFormat (1 for PCM)
-  header.writeUInt16LE(channelCount, 22)
-  header.writeUInt32LE(sampleRate, 24)
-
-  const blockAlign = channelCount * (bitDepth / 8)
-  const byteRate = sampleRate * blockAlign
-
-  header.writeUInt32LE(byteRate, 28)
-  header.writeUInt16LE(blockAlign, 32)
-  header.writeUInt16LE(bitDepth, 34)
-
-  // "data" sub-chunk
-  header.write('data', 36)
-  header.writeUInt32LE(dataLength, 40)
-
-  return header
-}
+import { transcribeStreamV2Handler } from './transcribeStreamV2Handler.js'
+import { transcribeStreamHandler } from './transcribeStreamHandler.js'
 
 function dbToNotePb(dbNote: DbNote): Note {
   return create(NoteSchema, {
@@ -174,149 +119,22 @@ function dbToAdvancedSettingsPb(
 // Export the service implementation as a function that takes a ConnectRouter
 export default (router: ConnectRouter) => {
   router.service(ItoServiceDesc, {
+    async transcribeStreamV2(
+      requests: AsyncIterable<TranscribeStreamRequest>,
+      context: HandlerContext,
+    ) {
+      return transcribeStreamV2Handler.process(requests, context)
+    },
+
+    /**
+     * @deprecated Legacy endpoint maintained for backwards compatibility.
+     * New clients should use transcribeStreamV2.
+     */
     async transcribeStream(
       requests: AsyncIterable<AudioChunk>,
       context: HandlerContext,
     ) {
-      const startTime = Date.now()
-      const audioChunks: Uint8Array[] = []
-
-      console.log(
-        `📩 [${new Date().toISOString()}] Starting transcription stream`,
-      )
-
-      // Process each audio chunk from the stream
-      for await (const chunk of requests) {
-        audioChunks.push(chunk.audioData)
-      }
-
-      console.log(
-        `📊 [${new Date().toISOString()}] Processed ${audioChunks.length} audio chunks`,
-      )
-
-      // Concatenate all audio chunks
-      const totalLength = audioChunks.reduce(
-        (sum, chunk) => sum + chunk.length,
-        0,
-      )
-      const fullAudio = new Uint8Array(totalLength)
-      let offset = 0
-      for (const chunk of audioChunks) {
-        fullAudio.set(chunk, offset)
-        offset += chunk.length
-      }
-
-      console.log(
-        `🔧 [${new Date().toISOString()}] Concatenated audio: ${totalLength} bytes`,
-      )
-
-      // Extract settings headers first so they're available in catch block
-      const advancedSettingsHeaders = getAdvancedSettingsHeaders(
-        context.requestHeader,
-      )
-
-      try {
-        // 1. Set audio properties to match the new capture settings.
-        const sampleRate = 16000 // Correct sample rate
-        const bitDepth = 16
-        const channels = 1 // Mono
-
-        // 2. Enhance the PCM and create the header with the correct properties.
-        const enhancedPcm = enhancePcm16(Buffer.from(fullAudio), sampleRate)
-        const wavHeader = createWavHeader(
-          enhancedPcm.length,
-          sampleRate,
-          channels,
-          bitDepth,
-        )
-        const fullAudioWAV = Buffer.concat([wavHeader, enhancedPcm])
-
-        // 3. Extract and validate vocabulary from gRPC metadata
-        const vocabularyHeader = context.requestHeader.get('vocabulary')
-        const vocabulary = vocabularyHeader
-          ? HeaderValidator.validateVocabulary(vocabularyHeader)
-          : []
-
-        // 4. Send the corrected WAV file using the selected ASR provider
-        const asrProvider = getAsrProvider(advancedSettingsHeaders.asrProvider)
-        let transcript = await asrProvider.transcribeAudio(fullAudioWAV, {
-          fileType: 'wav',
-          asrModel: advancedSettingsHeaders.asrModel,
-          noSpeechThreshold: advancedSettingsHeaders.noSpeechThreshold,
-          vocabulary,
-        })
-        console.log(
-          `📝 [${new Date().toISOString()}] Received transcript: "${transcript}"`,
-        )
-
-        const windowTitle = context.requestHeader.get('window-title') || ''
-        const appName = context.requestHeader.get('app-name') || ''
-        const mode = getItoMode(context.requestHeader.get('mode'))
-
-        // Decode context text if it was base64 encoded due to Unicode characters
-        const rawContextText = context.requestHeader.get('context-text') || ''
-        const contextText = rawContextText.startsWith('base64:')
-          ? Buffer.from(rawContextText.substring(7), 'base64').toString('utf8')
-          : rawContextText
-
-        const windowContext: ItoContext = { windowTitle, appName, contextText }
-
-        const detectedMode = mode || detectItoMode(transcript)
-        const userPromptPrefix = getPromptForMode(
-          detectedMode,
-          advancedSettingsHeaders,
-        )
-        const userPrompt = createUserPromptWithContext(
-          transcript,
-          windowContext,
-        )
-
-        console.log(
-          `[${new Date().toISOString()}] Detected mode: ${detectedMode}, adjusting transcript`,
-        )
-
-        if (detectedMode === ItoMode.EDIT) {
-          const llmProvider = getLlmProvider(
-            advancedSettingsHeaders.llmProvider,
-          )
-          transcript = await llmProvider.adjustTranscript(
-            userPromptPrefix + '\n' + userPrompt,
-            {
-              temperature: advancedSettingsHeaders.llmTemperature,
-              model: advancedSettingsHeaders.llmModel,
-              prompt: ITO_MODE_SYSTEM_PROMPT[detectedMode],
-            },
-          )
-          console.log(
-            `📝 [${new Date().toISOString()}] Adjusted transcript: "${transcript}"`,
-          )
-        }
-
-        const duration = Date.now() - startTime
-        console.log(
-          `✅ [${new Date().toISOString()}] Transcription completed in ${duration}ms`,
-        )
-
-        return create(TranscriptionResponseSchema, {
-          transcript,
-        })
-      } catch (error: any) {
-        // Re-throw ConnectError validation errors - these should bubble up
-        if (error instanceof ConnectError) {
-          throw error
-        }
-
-        console.error('Failed to process transcription via GroqClient:', error)
-
-        // Return structured error response
-        return create(TranscriptionResponseSchema, {
-          transcript: '',
-          error: errorToProtobuf(
-            error,
-            advancedSettingsHeaders.asrProvider as any,
-          ),
-        })
-      }
+      return transcribeStreamHandler.process(requests, context)
     },
     async createNote(request, context: HandlerContext) {
       const user = context.values.get(kUser)

@@ -12,15 +12,12 @@ export class TextInserter {
     try {
       // Track text writer timing
       const interactionId = interactionManager.getCurrentInteractionId()
-      if (interactionId) {
-        timingCollector.startTiming(interactionId, TimingEventName.TEXT_WRITER)
-      }
+
+      timingCollector.startTiming(interactionId, TimingEventName.TEXT_WRITER)
 
       const result = await setFocusedText(transcript)
 
-      if (interactionId) {
-        timingCollector.endTiming(interactionId, TimingEventName.TEXT_WRITER)
-      }
+      timingCollector.endTiming(interactionId, TimingEventName.TEXT_WRITER)
 
       return result
     } catch (error) {

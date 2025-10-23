@@ -13,7 +13,6 @@ export const IPC_EVENTS = {
 // IPC Payload Types
 export interface RecordingStatePayload {
   isRecording: boolean
-  deviceId: string
   mode?: ItoMode
 }
 

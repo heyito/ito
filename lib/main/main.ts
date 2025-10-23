@@ -27,7 +27,7 @@ import { initializeMicrophoneSelection } from '../media/microphoneSetUp'
 import { validateStoredTokens, ensureValidTokens } from '../auth/events'
 import { Auth0Config, validateAuth0Config } from '../auth/config'
 import { createAppTray } from './tray'
-import { transcriptionService } from './transcriptionService'
+import { itoSessionManager } from './itoSessionManager'
 import { initializeAutoUpdater } from './autoUpdaterWrapper'
 import { teardown } from './teardown'
 
@@ -116,9 +116,6 @@ app.whenReady().then(async () => {
 
   console.log('Microphone access granted, starting audio recorder.')
   voiceInputService.setUpAudioRecorderListeners()
-
-  // Set main window for transcription service so it can send messages
-  transcriptionService.setMainWindow(mainWindow)
 
   console.log('Starting selected text reader service.')
   selectedTextReaderService.initialize()

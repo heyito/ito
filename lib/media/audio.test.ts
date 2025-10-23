@@ -49,21 +49,11 @@ mock.module('os', () => ({
   },
 }))
 
-const mockElectronLog = {
-  info: mock(),
-  warn: mock(),
-  error: mock(),
-}
-mock.module('electron-log', () => ({
-  default: mockElectronLog,
-}))
-
 // Helper function to wait for async operations
 const waitForProcessing = () => new Promise(resolve => setTimeout(resolve, 10))
 
 // Import after mocking
 import { audioRecorderService } from './audio'
-import { arch } from 'os'
 
 describe('AudioRecorderService', () => {
   beforeEach(() => {
@@ -73,9 +63,6 @@ describe('AudioRecorderService', () => {
     mockChildProcess.stdin.write.mockClear()
     mockChildProcess.on.mockClear()
     mockChildProcess.kill.mockClear()
-    mockElectronLog.info.mockClear()
-    mockElectronLog.warn.mockClear()
-    mockElectronLog.error.mockClear()
 
     // Reset child process to clean state
     mockChildProcess.stdout.removeAllListeners()
@@ -105,15 +92,11 @@ describe('AudioRecorderService', () => {
       // First initialization
       audioRecorderService.initialize()
       mockSpawn.mockClear()
-      mockElectronLog.warn.mockClear()
 
       // Second initialization should be ignored
       audioRecorderService.initialize()
 
       expect(mockSpawn).not.toHaveBeenCalled()
-      expect(mockElectronLog.warn).toHaveBeenCalledWith(
-        '[AudioService] Audio recorder already running.',
-      )
     })
 
     test('should handle spawn errors gracefully', async () => {
@@ -134,10 +117,6 @@ describe('AudioRecorderService', () => {
       // Wait for error handling to complete
       await waitForProcessing()
 
-      expect(mockElectronLog.error).toHaveBeenCalledWith(
-        '[AudioService] Caught an error while spawning audio recorder:',
-        spawnError,
-      )
       expect(errorEmitted).toBe(true)
 
       // Reset the mock back to normal behavior for other tests
@@ -160,9 +139,6 @@ describe('AudioRecorderService', () => {
       expect(mockChildProcess._closeHandler).toBeDefined()
       mockChildProcess._closeHandler!(0)
 
-      expect(mockElectronLog.warn).toHaveBeenCalledWith(
-        '[AudioService] Process exited with code: 0',
-      )
       expect(stoppedEmitted).toBe(true)
     })
 
@@ -177,10 +153,6 @@ describe('AudioRecorderService', () => {
       expect(mockChildProcess._errorHandler).toBeDefined()
       mockChildProcess._errorHandler!(processError)
 
-      expect(mockElectronLog.error).toHaveBeenCalledWith(
-        '[AudioService] Failed to start audio recorder:',
-        processError,
-      )
       expect(errorEmitted).toBe(true)
     })
   })
@@ -198,9 +170,6 @@ describe('AudioRecorderService', () => {
       expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
         JSON.stringify({ command: 'start', device_name: deviceName }) + '\n',
       )
-      expect(mockElectronLog.info).toHaveBeenCalledWith(
-        `[AudioService] Recording started on device: ${deviceName}`,
-      )
     })
 
     test('should send stop recording command', () => {
@@ -208,20 +177,6 @@ describe('AudioRecorderService', () => {
 
       expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
         JSON.stringify({ command: 'stop' }) + '\n',
-      )
-      expect(mockElectronLog.info).toHaveBeenCalledWith(
-        '[AudioService] Recording stopped',
-      )
-    })
-
-    test('should handle recording commands when process not running', () => {
-      audioRecorderService.terminate()
-      mockElectronLog.warn.mockClear()
-
-      audioRecorderService.startRecording('test')
-
-      expect(mockElectronLog.warn).toHaveBeenCalledWith(
-        '[AudioService] Cannot send command, process not running.',
       )
     })
   })
@@ -309,12 +264,6 @@ describe('AudioRecorderService', () => {
 
       // Wait for processing
       await waitForProcessing()
-
-      // Should also log the error
-      expect(mockElectronLog.error).toHaveBeenCalledWith(
-        '[AudioService] Failed to parse JSON response:',
-        expect.any(Error),
-      )
     })
   })
 
@@ -433,10 +382,6 @@ describe('AudioRecorderService', () => {
 
       // Wait for processing
       await waitForProcessing()
-
-      expect(mockElectronLog.warn).toHaveBeenCalledWith(
-        '[AudioService] Unknown message type: 99',
-      )
     })
   })
 

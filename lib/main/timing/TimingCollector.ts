@@ -83,8 +83,8 @@ export class TimingCollector {
   /**
    * Record the start of a timing event
    */
-  startTiming(interactionId: string, eventName: TimingEventName) {
-    if (!this.shouldCollect()) {
+  startTiming(interactionId: string | null, eventName: TimingEventName) {
+    if (!this.shouldCollect() || !interactionId) {
       return
     }
 
@@ -105,8 +105,8 @@ export class TimingCollector {
   /**
    * Record the end of a timing event
    */
-  endTiming(interactionId: string, eventName: TimingEventName) {
-    if (!this.shouldCollect()) {
+  endTiming(interactionId: string | null, eventName: TimingEventName) {
+    if (!this.shouldCollect() || !interactionId) {
       return
     }
 

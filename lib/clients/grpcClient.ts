@@ -21,6 +21,7 @@ import {
   GetAdvancedSettingsRequestSchema,
   UpdateAdvancedSettingsRequestSchema,
   ItoMode,
+  TranscribeStreamRequest,
 } from '@/app/generated/ito_pb'
 import { createClient } from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-node'
@@ -266,6 +267,19 @@ class GrpcClient {
     return this.withRetry(async () => {
       const response = await this.client.transcribeStream(stream, {
         headers: await this.getHeadersWithMetadata(mode),
+      })
+      return response
+    })
+  }
+
+  async transcribeStreamV2(
+    stream: AsyncIterable<TranscribeStreamRequest>,
+    signal?: AbortSignal,
+  ) {
+    return this.withRetry(async () => {
+      const response = await this.client.transcribeStreamV2(stream, {
+        headers: this.getHeaders(),
+        signal,
       })
       return response
     })

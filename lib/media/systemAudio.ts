@@ -58,7 +58,7 @@ export function muteSystemAudio(): boolean {
     // Store current volume before muting
     previousVolume = getSystemVolume()
     if (previousVolume !== null) {
-      log.info(`Muting system audio. Previous volume: ${previousVolume}`)
+      console.log(`Muting system audio. Previous volume: ${previousVolume}`)
       return setSystemVolume(0)
     }
     return false
@@ -79,7 +79,7 @@ export function unmuteSystemAudio(): boolean {
 
   try {
     if (previousVolume !== null) {
-      log.info(`Unmuting system audio. Restoring volume: ${previousVolume}`)
+      console.log(`Unmuting system audio. Restoring volume: ${previousVolume}`)
       const success = setSystemVolume(previousVolume)
       previousVolume = null // Clear stored volume
       return success

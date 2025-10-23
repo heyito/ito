@@ -1,10 +1,14 @@
 import { describe, test, expect, beforeEach } from 'bun:test'
 import { AudioStreamManager } from './AudioStreamManager'
+import { audioRecorderService } from '../../media/audio'
 
 describe('AudioStreamManager', () => {
   let audioManager: AudioStreamManager
 
   beforeEach(() => {
+    // Clean up any existing listeners from previous tests
+    audioRecorderService.removeAllListeners('audio-chunk')
+    audioRecorderService.removeAllListeners('audio-config')
     audioManager = new AudioStreamManager()
   })
 
@@ -12,7 +16,7 @@ describe('AudioStreamManager', () => {
     test('should start and stop streaming correctly', () => {
       expect(audioManager.isCurrentlyStreaming()).toBe(false)
 
-      audioManager.startStreaming()
+      audioManager.initialize()
       expect(audioManager.isCurrentlyStreaming()).toBe(true)
 
       audioManager.stopStreaming()
@@ -21,12 +25,12 @@ describe('AudioStreamManager', () => {
 
     test('should clear audio on start', () => {
       // Add some chunks
-      audioManager.startStreaming()
+      audioManager.initialize()
       audioManager.addAudioChunk(Buffer.from('test'))
       audioManager.stopStreaming()
 
       // Start again - should be clean
-      audioManager.startStreaming()
+      audioManager.initialize()
       const buffer = audioManager.getInteractionAudioBuffer()
       expect(buffer.length).toBe(0)
     })
@@ -34,7 +38,7 @@ describe('AudioStreamManager', () => {
 
   describe('Audio Chunk Management', () => {
     test('should accumulate audio chunks', () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
 
       const chunk1 = Buffer.from('chunk1')
       const chunk2 = Buffer.from('chunk2')
@@ -55,7 +59,7 @@ describe('AudioStreamManager', () => {
     })
 
     test('should clear interaction audio', () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
       audioManager.addAudioChunk(Buffer.from('test'))
 
       audioManager.clearInteractionAudio()
@@ -81,9 +85,9 @@ describe('AudioStreamManager', () => {
     })
   })
 
-  describe('Audio Buffering and Duration Calculation', () => {
+  describe('Audio Duration Calculation', () => {
     test('should calculate duration correctly for 16kHz audio', () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
 
       // 16kHz, 16-bit mono = 2 bytes per sample
       // 1600 samples = 0.1 seconds = 100ms
@@ -91,12 +95,12 @@ describe('AudioStreamManager', () => {
       const chunk = Buffer.alloc(bytes)
 
       audioManager.addAudioChunk(chunk)
-      expect(audioManager.getBufferedDurationMs()).toBe(100)
+      expect(audioManager.getAudioDurationMs()).toBe(100)
     })
 
     test('should calculate duration correctly for different sample rates', () => {
       audioManager.setAudioConfig({ sampleRate: 8000 })
-      audioManager.startStreaming()
+      audioManager.initialize()
 
       // 8kHz, 16-bit mono = 2 bytes per sample
       // 800 samples = 0.1 seconds = 100ms
@@ -104,87 +108,62 @@ describe('AudioStreamManager', () => {
       const chunk = Buffer.alloc(bytes)
 
       audioManager.addAudioChunk(chunk)
-      expect(audioManager.getBufferedDurationMs()).toBe(100)
+      expect(audioManager.getAudioDurationMs()).toBe(100)
     })
 
-    test('should check minimum duration threshold', () => {
-      audioManager.startStreaming()
-
-      expect(audioManager.hasMinimumDuration()).toBe(false)
-
-      // Add 100ms worth of audio (1600 samples * 2 bytes)
-      const chunk = Buffer.alloc(3200)
-      audioManager.addAudioChunk(chunk)
-
-      expect(audioManager.hasMinimumDuration()).toBe(true)
+    test('should return zero duration for no audio', () => {
+      audioManager.initialize()
+      expect(audioManager.getAudioDurationMs()).toBe(0)
     })
   })
 
-  describe('Audio Streaming with Buffering', () => {
-    test('should wait for minimum duration before streaming', async () => {
-      audioManager.startStreaming()
+  describe('Audio Streaming', () => {
+    test('should stream chunks immediately as they arrive', async () => {
+      audioManager.initialize()
 
       const streamPromise = audioManager.streamAudioChunks()
       const iterator = streamPromise[Symbol.asyncIterator]()
 
-      // Should not yield anything yet - waiting for minimum duration
-      const shortChunk = Buffer.alloc(100) // Very small chunk
-      audioManager.addAudioChunk(shortChunk)
+      // Add a chunk
+      const chunk = Buffer.alloc(100)
+      audioManager.addAudioChunk(chunk)
 
-      // Try to get next value with a timeout to avoid hanging
-      const timeoutPromise = new Promise(resolve =>
-        setTimeout(() => resolve('timeout'), 50),
-      )
-      const result = await Promise.race([iterator.next(), timeoutPromise])
-
-      expect(result).toBe('timeout') // Should timeout waiting for minimum duration
-    })
-
-    test('should start streaming after minimum duration is reached', async () => {
-      audioManager.startStreaming()
-
-      const streamPromise = audioManager.streamAudioChunks()
-      const iterator = streamPromise[Symbol.asyncIterator]()
-
-      // Add minimum duration worth of audio
-      const minimumChunk = Buffer.alloc(3200) // 100ms at 16kHz
-      audioManager.addAudioChunk(minimumChunk)
-
-      // Should now yield the chunk
+      // Should yield immediately (no minimum duration wait)
       const result = await iterator.next()
       expect(result.done).toBe(false)
       expect(result.value).toHaveProperty('audioData')
-      expect(result.value?.audioData).toEqual(minimumChunk)
+      expect(result.value?.audioData).toEqual(chunk)
     })
 
     test('should continue streaming additional chunks', async () => {
-      audioManager.startStreaming()
-
-      // Add minimum duration first
-      const minimumChunk = Buffer.alloc(3200) // 100ms
-      audioManager.addAudioChunk(minimumChunk)
+      audioManager.initialize()
 
       const streamPromise = audioManager.streamAudioChunks()
       const iterator = streamPromise[Symbol.asyncIterator]()
 
-      // Get first chunk (minimum duration)
-      await iterator.next()
+      // Add first chunk
+      const chunk1 = Buffer.from('chunk1')
+      audioManager.addAudioChunk(chunk1)
 
-      // Add another chunk
-      const additionalChunk = Buffer.from('additional')
-      audioManager.addAudioChunk(additionalChunk)
+      // Get first chunk
+      const result1 = await iterator.next()
+      expect(result1.done).toBe(false)
+      expect(result1.value?.audioData).toEqual(chunk1)
 
-      // Should yield the additional chunk
-      const result = await iterator.next()
-      expect(result.done).toBe(false)
-      expect(result.value?.audioData).toEqual(additionalChunk)
+      // Add second chunk
+      const chunk2 = Buffer.from('chunk2')
+      audioManager.addAudioChunk(chunk2)
+
+      // Should yield the second chunk
+      const result2 = await iterator.next()
+      expect(result2.done).toBe(false)
+      expect(result2.value?.audioData).toEqual(chunk2)
     })
 
     test('should finish streaming when stopped', async () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
 
-      // Add minimum duration
-      const chunk = Buffer.alloc(3200)
+      const chunk = Buffer.alloc(100)
       audioManager.addAudioChunk(chunk)
 
       const streamPromise = audioManager.streamAudioChunks()
@@ -200,38 +179,129 @@ describe('AudioStreamManager', () => {
       const result = await iterator.next()
       expect(result.done).toBe(true)
     })
+
+    test('should wait for chunks when queue is empty', async () => {
+      audioManager.initialize()
+
+      const streamPromise = audioManager.streamAudioChunks()
+      const iterator = streamPromise[Symbol.asyncIterator]()
+
+      // Create a promise that races between next() and a timeout
+      const timeoutPromise = new Promise(resolve =>
+        setTimeout(() => resolve('timeout'), 50),
+      )
+
+      // Should wait (timeout) because no chunks have been added
+      const result = await Promise.race([iterator.next(), timeoutPromise])
+      expect(result).toBe('timeout')
+    })
+
+    test('should resume streaming after waiting for chunks', async () => {
+      audioManager.initialize()
+
+      const streamPromise = audioManager.streamAudioChunks()
+      const iterator = streamPromise[Symbol.asyncIterator]()
+
+      // Start the iteration (will wait for chunks)
+      const nextPromise = iterator.next()
+
+      // Add a chunk after a short delay
+      setTimeout(() => {
+        const chunk = Buffer.from('delayed-chunk')
+        audioManager.addAudioChunk(chunk)
+      }, 10)
+
+      // Should eventually receive the chunk
+      const result = await nextPromise
+      expect(result.done).toBe(false)
+      expect(result.value?.audioData).toEqual(Buffer.from('delayed-chunk'))
+    })
   })
 
   describe('Edge Cases', () => {
     test('should handle empty chunks', () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
 
       const emptyChunk = Buffer.alloc(0)
       audioManager.addAudioChunk(emptyChunk)
 
-      expect(audioManager.getBufferedDurationMs()).toBe(0)
-      expect(audioManager.hasMinimumDuration()).toBe(false)
+      expect(audioManager.getAudioDurationMs()).toBe(0)
     })
 
     test('should handle very small chunks', () => {
-      audioManager.startStreaming()
+      audioManager.initialize()
 
       const tinyChunk = Buffer.alloc(1) // 1 byte
       audioManager.addAudioChunk(tinyChunk)
 
       // Should be < 1ms duration
-      expect(audioManager.getBufferedDurationMs()).toBe(0) // Floors to 0
+      expect(audioManager.getAudioDurationMs()).toBe(0) // Floors to 0
     })
 
-    test('should reset buffered duration on restart', () => {
-      audioManager.startStreaming()
+    test('should reset audio duration on restart', () => {
+      audioManager.initialize()
       audioManager.addAudioChunk(Buffer.alloc(3200)) // 100ms
-      expect(audioManager.getBufferedDurationMs()).toBe(100)
+      expect(audioManager.getAudioDurationMs()).toBe(100)
 
       audioManager.stopStreaming()
-      audioManager.startStreaming()
+      audioManager.initialize()
 
-      expect(audioManager.getBufferedDurationMs()).toBe(0)
+      expect(audioManager.getAudioDurationMs()).toBe(0)
+    })
+
+    test('should accumulate duration across multiple chunks', () => {
+      audioManager.initialize()
+
+      // Add 50ms worth (800 samples * 2 bytes)
+      audioManager.addAudioChunk(Buffer.alloc(1600))
+      expect(audioManager.getAudioDurationMs()).toBe(50)
+
+      // Add another 50ms
+      audioManager.addAudioChunk(Buffer.alloc(1600))
+      expect(audioManager.getAudioDurationMs()).toBe(100)
+    })
+  })
+
+  describe('Interaction Audio Buffer', () => {
+    test('should maintain complete audio buffer for interaction', () => {
+      audioManager.initialize()
+
+      const chunk1 = Buffer.from('audio1')
+      const chunk2 = Buffer.from('audio2')
+      const chunk3 = Buffer.from('audio3')
+
+      audioManager.addAudioChunk(chunk1)
+      audioManager.addAudioChunk(chunk2)
+      audioManager.addAudioChunk(chunk3)
+
+      const buffer = audioManager.getInteractionAudioBuffer()
+      expect(buffer).toEqual(Buffer.concat([chunk1, chunk2, chunk3]))
+    })
+
+    test('should preserve interaction buffer even after streaming stops', () => {
+      audioManager.initialize()
+
+      const chunk = Buffer.from('preserved')
+      audioManager.addAudioChunk(chunk)
+
+      audioManager.stopStreaming()
+
+      const buffer = audioManager.getInteractionAudioBuffer()
+      expect(buffer).toEqual(chunk)
+    })
+
+    test('should clear buffer only on explicit clear or restart', () => {
+      audioManager.initialize()
+      audioManager.addAudioChunk(Buffer.from('test'))
+
+      audioManager.stopStreaming()
+
+      // Buffer should still exist
+      expect(audioManager.getInteractionAudioBuffer().length).toBeGreaterThan(0)
+
+      // Clear explicitly
+      audioManager.clearInteractionAudio()
+      expect(audioManager.getInteractionAudioBuffer().length).toBe(0)
     })
   })
 })

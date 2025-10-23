@@ -9,7 +9,7 @@ export class InteractionManager {
   private currentInteractionId: string | null = null
   private interactionStartTime: number | null = null
 
-  startInteraction(): string {
+  initialize(): string {
     this.currentInteractionId = uuidv4()
     this.interactionStartTime = Date.now()
     return this.currentInteractionId

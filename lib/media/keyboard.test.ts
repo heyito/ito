@@ -2,7 +2,6 @@ import { ItoMode } from '@/app/generated/ito_pb'
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 import { EventEmitter } from 'events'
 import { fakeTimers } from '../__tests__/helpers/testUtils'
-import { DEBOUNCE_TIME } from './keyboard'
 
 const clock = fakeTimers()
 
@@ -86,19 +85,15 @@ mock.module('./audio', () => ({
   audioRecorderService: mockAudioRecorderService,
 }))
 
-const mockVoiceInputService = {
-  startSTTService: mock(),
-  stopSTTService: mock(),
+const mockitoSessionManager = {
+  startSession: mock(),
+  completeSession: mock(),
+  setMode: mock(),
+  cancelSession: mock(),
 }
-mock.module('../main/voiceInputService', () => ({
-  voiceInputService: mockVoiceInputService,
+mock.module('../main/itoSessionManager', () => ({
+  itoSessionManager: mockitoSessionManager,
 }))
-
-// Helper function to wait for debounce
-const waitForDebounce = async () => {
-  clock.tick(DEBOUNCE_TIME + 1)
-}
-
 // Mock console to avoid spam
 beforeEach(async () => {
   console.log = mock()
@@ -121,8 +116,10 @@ describe('Keyboard Module', () => {
     mockWindow.webContents.send.mockClear()
     mockWindow.webContents.isDestroyed.mockClear()
     mockAudioRecorderService.stopRecording.mockClear()
-    mockVoiceInputService.startSTTService.mockClear()
-    mockVoiceInputService.stopSTTService.mockClear()
+    mockitoSessionManager.startSession.mockClear()
+    mockitoSessionManager.completeSession.mockClear()
+    mockitoSessionManager.setMode.mockClear()
+    mockitoSessionManager.cancelSession.mockClear()
 
     // Reset child process to clean state
     mockChildProcess.stdout.removeAllListeners()
@@ -401,10 +398,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(spaceDown) + '\n'),
       )
 
-      // Wait for debounce delay
-      await waitForDebounce()
-
-      expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).toHaveBeenCalled()
       expect(console.info).toHaveBeenCalledWith(
         'lib Shortcut ACTIVATED, starting recording...',
       )
@@ -447,9 +441,6 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(spaceDown) + '\n'),
       )
 
-      // Wait for debounce delay to activate shortcut
-      await waitForDebounce()
-
       // Release space key
       const spaceUp = {
         type: 'keyup',
@@ -462,7 +453,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(spaceUp) + '\n'),
       )
 
-      expect(mockVoiceInputService.stopSTTService).toHaveBeenCalled()
+      expect(mockitoSessionManager.completeSession).toHaveBeenCalled()
       expect(console.info).toHaveBeenCalledWith(
         'lib Shortcut DEACTIVATED, stopping recording...',
       )
@@ -504,7 +495,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(spaceDown) + '\n'),
       )
 
-      expect(mockVoiceInputService.startSTTService).not.toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).not.toHaveBeenCalled()
     })
 
     test('should stop active recording when shortcut is disabled', async () => {
@@ -545,9 +536,6 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(spaceDown) + '\n'),
       )
 
-      // Wait for debounce delay to activate shortcut
-      await waitForDebounce()
-
       // Disable shortcuts
       isShortcutGloballyEnabled = false
 
@@ -563,7 +551,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(otherKey) + '\n'),
       )
 
-      expect(mockAudioRecorderService.stopRecording).toHaveBeenCalled()
+      expect(mockitoSessionManager.completeSession).toHaveBeenCalled()
       expect(console.info).toHaveBeenCalledWith(
         'Shortcut DEACTIVATED, stopping recording...',
       )
@@ -660,10 +648,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(fDown) + '\n'),
       )
 
-      // Wait for debounce delay
-      await waitForDebounce()
-
-      expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).toHaveBeenCalled()
     })
 
     test('should handle partial shortcut matches correctly', async () => {
@@ -705,7 +690,7 @@ describe('Keyboard Module', () => {
       )
 
       // Should not activate shortcut with partial match
-      expect(mockVoiceInputService.startSTTService).not.toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).not.toHaveBeenCalled()
     })
 
     test('should not activate shortcut when superset of keys is pressed', async () => {
@@ -747,7 +732,7 @@ describe('Keyboard Module', () => {
       )
 
       // Should not activate shortcut when superset is pressed
-      expect(mockVoiceInputService.startSTTService).not.toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).not.toHaveBeenCalled()
     })
 
     test('should require exact key match for shortcut activation', async () => {
@@ -778,11 +763,8 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(fnDown) + '\n'),
       )
 
-      // Wait for debounce delay
-      await waitForDebounce()
-
       // Should activate shortcut with exact match
-      expect(mockVoiceInputService.startSTTService).toHaveBeenCalledWith(
+      expect(mockitoSessionManager.startSession).toHaveBeenCalledWith(
         ItoMode.TRANSCRIBE,
       )
     })
@@ -836,7 +818,7 @@ describe('Keyboard Module', () => {
       )
 
       // Should not activate shortcut when extra keys are pressed
-      expect(mockVoiceInputService.startSTTService).not.toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).not.toHaveBeenCalled()
     })
 
     test('should allow repeated shortcut activations with exact matching', async () => {
@@ -890,10 +872,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(spaceDown1) + '\n'),
       )
 
-      // Wait for debounce delay
-      await waitForDebounce()
-
-      expect(mockVoiceInputService.startSTTService).toHaveBeenCalledTimes(1)
+      expect(mockitoSessionManager.startSession).toHaveBeenCalledTimes(1)
 
       // Release command + space
       mockChildProcess.stdout.emit(
@@ -905,11 +884,11 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(spaceUp1) + '\n'),
       )
 
-      expect(mockVoiceInputService.stopSTTService).toHaveBeenCalledTimes(1)
+      expect(mockitoSessionManager.completeSession).toHaveBeenCalledTimes(1)
 
       // Clear mocks for second cycle
-      mockVoiceInputService.startSTTService.mockClear()
-      mockVoiceInputService.stopSTTService.mockClear()
+      mockitoSessionManager.startSession.mockClear()
+      mockitoSessionManager.completeSession.mockClear()
 
       // Second activation cycle - should work again
       const commandDown2 = {
@@ -935,11 +914,8 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(spaceDown2) + '\n'),
       )
 
-      // Wait for debounce delay
-      await waitForDebounce()
-
       // Should activate shortcut again
-      expect(mockVoiceInputService.startSTTService).toHaveBeenCalledTimes(1)
+      expect(mockitoSessionManager.startSession).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -971,11 +947,8 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(metaLeftDown) + '\n'),
       )
 
-      // Wait for debounce delay
-      await waitForDebounce()
-
-      expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
-      mockVoiceInputService.startSTTService.mockClear()
+      expect(mockitoSessionManager.startSession).toHaveBeenCalled()
+      mockitoSessionManager.startSession.mockClear()
 
       const metaLeftUp = {
         type: 'keyup',
@@ -1000,11 +973,8 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(metaRightDown) + '\n'),
       )
 
-      // Wait for debounce delay
-      await waitForDebounce()
-
       // Should NOT have been called again
-      expect(mockVoiceInputService.startSTTService).not.toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).not.toHaveBeenCalled()
     })
 
     test('should normalize letter keys correctly', async () => {
@@ -1033,10 +1003,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(keyADown) + '\n'),
       )
 
-      // Wait for debounce delay
-      await waitForDebounce()
-
-      expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).toHaveBeenCalled()
     })
 
     test('should normalize number keys correctly', async () => {
@@ -1065,10 +1032,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(digit1Down) + '\n'),
       )
 
-      // Wait for debounce delay
-      await waitForDebounce()
-
-      expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).toHaveBeenCalled()
     })
 
     test('should handle unknown keys by lowercasing them', async () => {
@@ -1097,10 +1061,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(unknownKeyDown) + '\n'),
       )
 
-      // Wait for debounce delay
-      await waitForDebounce()
-
-      expect(mockVoiceInputService.startSTTService).toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).toHaveBeenCalled()
     })
   })
 
@@ -1255,7 +1216,7 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(keyADown) + '\n'),
       )
 
-      expect(mockVoiceInputService.startSTTService).not.toHaveBeenCalled()
+      expect(mockitoSessionManager.startSession).not.toHaveBeenCalled()
     })
   })
 
@@ -1326,9 +1287,6 @@ describe('Keyboard Module', () => {
         Buffer.from(JSON.stringify(spaceDown) + '\n'),
       )
 
-      // Wait for debounce to activate shortcut
-      await waitForDebounce()
-
       // Advance time by more than 5 seconds
       clock.tick(6000)
 
@@ -1386,9 +1344,6 @@ describe('Keyboard Module', () => {
         'data',
         Buffer.from(JSON.stringify(keyADown) + '\n'),
       )
-
-      // Wait for debounce to activate shortcut
-      await waitForDebounce()
 
       // Advance time by more than 5 seconds
       clock.tick(6000)

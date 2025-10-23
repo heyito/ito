@@ -83,6 +83,16 @@ export default function NotesContent() {
 
   const updateNoteContent = (content: string) => {
     setNoteContent(content)
+    const fmt = new Intl.DateTimeFormat('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      fractionalSecondDigits: 3,
+      hour12: false,
+    })
+
+    const timestamp = fmt.format(new Date())
+    console.log(`${timestamp}: Pasted content: ${content}`)
     if (content.trim() !== '') {
       setShowAddNoteButton(true)
     } else {

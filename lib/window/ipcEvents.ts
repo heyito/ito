@@ -33,6 +33,7 @@ import {
 } from '../main/sqlite/repo'
 import { audioRecorderService } from '../media/audio'
 import { voiceInputService } from '../main/voiceInputService'
+import { itoSessionManager } from '../main/itoSessionManager'
 import { ItoMode } from '@/app/generated/ito_pb'
 import {
   getSelectedText,
@@ -57,7 +58,7 @@ export function registerIPC() {
   })
 
   ipcMain.on('audio-devices-changed', () => {
-    log.info('[IPC] Audio devices changed, notifying windows.')
+    console.log('[IPC] Audio devices changed, notifying windows.')
     // Notify all windows to refresh their device lists in the UI.
     if (
       mainWindow &&
@@ -84,7 +85,7 @@ export function registerIPC() {
         openAtLogin: enabled,
         openAsHidden: false,
       })
-      log.info(`Successfully set login item to: ${enabled}`)
+      console.log(`Successfully set login item to: ${enabled}`)
     } catch (error: any) {
       log.error('Failed to set login item settings:', error)
     }
@@ -107,7 +108,7 @@ export function registerIPC() {
         } else {
           app.dock?.hide()
         }
-        log.info(`Successfully set dock visibility to: ${visible}`)
+        console.log(`Successfully set dock visibility to: ${visible}`)
       } else {
         log.warn('Dock visibility setting is only available on macOS')
       }
@@ -137,10 +138,10 @@ export function registerIPC() {
   handleIPC('stop-key-listener', () => stopKeyListener())
   handleIPC('register-hotkeys', () => registerAllHotkeys())
   handleIPC('start-native-recording-service', () =>
-    voiceInputService.startSTTService(ItoMode.TRANSCRIBE),
+    itoSessionManager.startSession(ItoMode.TRANSCRIBE),
   )
   handleIPC('stop-native-recording-service', () =>
-    voiceInputService.stopSTTService(),
+    itoSessionManager.completeSession(),
   )
   handleIPC('block-keys', (_e, keys: string[]) => {
     if (KeyListenerProcess)
@@ -467,7 +468,7 @@ export function registerIPC() {
     }
   })
   handleIPC('get-native-audio-devices', async () => {
-    log.info(
+    console.log(
       '[IPC] Received get-native-audio-devices, calling requestDeviceListPromise...',
     )
     return audioRecorderService.getDeviceList()
@@ -480,15 +481,15 @@ export function registerIPC() {
 
   // Selected Text Reader
   handleIPC('get-selected-text', async (_e, options) => {
-    log.info('[IPC] Received get-selected-text with options:', options)
+    console.log('[IPC] Received get-selected-text with options:', options)
     return getSelectedText(options)
   })
   handleIPC('get-selected-text-string', async (_e, maxLength) => {
-    log.info('[IPC] Received get-selected-text-string')
+    console.log('[IPC] Received get-selected-text-string')
     return getSelectedTextString(maxLength)
   })
   handleIPC('has-selected-text', async () => {
-    log.info('[IPC] Received has-selected-text')
+    console.log('[IPC] Received has-selected-text')
     return hasSelectedText()
   })
 
@@ -616,25 +617,25 @@ export function registerIPC() {
 
   // When the hotkey is pressed, start recording and notify the pill window.
   ipcMain.on('start-native-recording', _event => {
-    log.info(`IPC: Received 'start-native-recording'`)
-    voiceInputService.startSTTService(ItoMode.TRANSCRIBE)
+    console.log(`IPC: Received 'start-native-recording'`)
+    itoSessionManager.startSession(ItoMode.TRANSCRIBE)
   })
 
   ipcMain.on('start-native-recording-test', _event => {
-    log.info(`IPC: Received 'start-native-recording-test'`)
+    console.log(`IPC: Received 'start-native-recording-test'`)
     const deviceId = store.get(STORE_KEYS.SETTINGS).microphoneDeviceId
     audioRecorderService.startRecording(deviceId)
   })
 
   // When the hotkey is released, stop recording and notify the pill window.
   ipcMain.on('stop-native-recording', () => {
-    log.info('IPC: Received stop-native-recording.')
-    voiceInputService.stopSTTService()
+    console.log('IPC: Received stop-native-recording.')
+    itoSessionManager.completeSession()
   })
 
   // Stop recording for microphone test (doesn't stop transcription since it wasn't started)
   ipcMain.on('stop-native-recording-test', () => {
-    log.info('IPC: Received stop-native-recording-test.')
+    console.log('IPC: Received stop-native-recording-test.')
     audioRecorderService.stopRecording()
   })
 
@@ -648,7 +649,10 @@ export function registerIPC() {
         // Generate machine-specific ID if none exists
         deviceId = await machineId()
         await KeyValueStore.set('analytics_device_id', deviceId)
-        log.info('[Analytics] Generated new machine-based device ID:', deviceId)
+        console.log(
+          '[Analytics] Generated new machine-based device ID:',
+          deviceId,
+        )
       }
 
       return deviceId
@@ -763,9 +767,9 @@ export const registerWindowIPC = (mainWindow: BrowserWindow) => {
   handleIPC(
     `check-microphone-permission-${mainWindow.id}`,
     async (_event, prompt: boolean = false) => {
-      log.info('check-microphone-permission prompt', prompt)
+      console.log('check-microphone-permission prompt', prompt)
       const res = await checkMicrophonePermission(prompt)
-      log.info('check-microphone-permission result', res)
+      console.log('check-microphone-permission result', res)
       return res
     },
   )
@@ -805,7 +809,7 @@ ipcMain.on(IPC_EVENTS.VOLUME_UPDATE, (_event, volume: number) => {
 ipcMain.on(IPC_EVENTS.SETTINGS_UPDATE, (_event, settings: any) => {
   getPillWindow()?.webContents.send(IPC_EVENTS.SETTINGS_UPDATE, settings)
 
-  // If microphone selection changed, ensure TranscriptionService config is set
+  // If microphone selection changed, ensure audio config is set
   if (settings && typeof settings.microphoneDeviceId === 'string') {
     // Ask the recorder for the effective output config for the selected mic
     voiceInputService.handleMicrophoneChanged(settings.microphoneDeviceId)

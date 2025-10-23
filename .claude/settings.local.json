@@ -16,7 +16,8 @@
       "Bash(bun:*)",
       "Bash(cargo clippy:*)",
       "Bash(cargo clean:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "WebFetch(domain:connectrpc.com)"
     ],
     "deny": [],
     "ask": []

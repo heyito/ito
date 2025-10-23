@@ -71,7 +71,7 @@ class SelectedTextReaderService extends EventEmitter {
       return
     }
 
-    log.info(
+    console.log(
       `[SelectedTextService] Spawning selected text reader at: ${binaryPath}`,
     )
     try {
@@ -88,7 +88,7 @@ class SelectedTextReaderService extends EventEmitter {
       this.#selectedTextProcess.on('close', this.#onClose.bind(this))
       this.#selectedTextProcess.on('error', this.#onError.bind(this))
 
-      log.info('[SelectedTextService] Selected text reader process started.')
+      console.log('[SelectedTextService] Selected text reader process started.')
     } catch (err) {
       log.error(
         '[SelectedTextService] Caught an error while spawning selected text reader:',
@@ -104,7 +104,9 @@ class SelectedTextReaderService extends EventEmitter {
    */
   public terminate(): void {
     if (this.#selectedTextProcess) {
-      log.info('[SelectedTextService] Stopping selected text reader process.')
+      console.log(
+        '[SelectedTextService] Stopping selected text reader process.',
+      )
       this.#selectedTextProcess.kill()
       this.#selectedTextProcess = null
       this.emit('stopped')

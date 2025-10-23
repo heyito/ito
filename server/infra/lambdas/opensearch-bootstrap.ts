@@ -208,7 +208,7 @@ const timingAnalyticsTemplate = {
         timestamp: { type: 'date' },
         total_duration_ms: { type: 'integer' },
         events: {
-          type: 'nested', // ✅ critical change
+          type: 'nested',
           properties: {
             name: { type: 'keyword' },
             start_ms: { type: 'long' },

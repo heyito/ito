@@ -6,12 +6,6 @@ import {
   DescribeLogStreamsCommand,
 } from '@aws-sdk/client-cloudwatch-logs'
 
-/**
- * Timing analytics types for server
- *
- * IMPORTANT: Keep in sync with lib/types/timing.ts
- * These types are duplicated because client and server are separate build artifacts
- */
 type TimingEvent = {
   name: string
   start_ms: number
@@ -82,22 +76,22 @@ export const registerTimingRoutes = async (
 
     const now = Date.now()
     const entries = reports.map(report => {
-        const structured = {
-          '@timestamp': new Date().toISOString(),
-          event: {
-            dataset: 'ito-timing-analytics',
-          },
-          interaction_id: report.interaction_id,
-          user_id: userSub || report.user_id,
-          platform: report.platform,
-          timestamp: report.timestamp,
-          total_duration_ms: report.total_duration_ms,
-          events: report.events,
-        }
-        return {
-          timestamp: now,
-          message: JSON.stringify(structured),
-        }
+      const structured = {
+        '@timestamp': new Date().toISOString(),
+        event: {
+          dataset: 'ito-timing-analytics',
+        },
+        interaction_id: report.interaction_id,
+        user_id: userSub || report.user_id,
+        platform: report.platform,
+        timestamp: report.timestamp,
+        total_duration_ms: report.total_duration_ms,
+        events: report.events,
+      }
+      return {
+        timestamp: now,
+        message: JSON.stringify(structured),
+      }
     })
 
     if (!logsClient || !timingLogGroupName || !logStreamName) {

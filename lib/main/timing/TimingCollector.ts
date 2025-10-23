@@ -1,9 +1,24 @@
 import log from 'electron-log'
-import { analytics } from '../../../app/components/analytics'
 import store, { getCurrentUserId } from '../store'
 import { STORE_KEYS } from '../../constants/store-keys'
 import { platform } from 'os'
-import type { TimingEvent, TimingReport } from '../../types/timing'
+import { analytics } from '@/app/components/analytics'
+
+export interface TimingEvent {
+  name: TimingEventName
+  start_ms: number
+  end_ms?: number
+  duration_ms?: number
+}
+
+export interface TimingReport {
+  interaction_id: string
+  user_id: string
+  platform: string
+  timestamp: string
+  events: TimingEvent[]
+  total_duration_ms: number
+}
 
 /**
  * Enum for all tracked timing events in the interaction lifecycle
@@ -23,16 +38,10 @@ export enum TimingEventName {
   TEXT_WRITER = 'text_writer',
 }
 
-// Re-export shared types with our enum constraint
-export type { TimingReport }
-export interface TimingEventTyped extends Omit<TimingEvent, 'name'> {
-  name: TimingEventName
-}
-
 interface ActiveTiming {
   interaction_id: string
   start_timestamp: string
-  events: Map<TimingEventName, TimingEventTyped>
+  events: Map<TimingEventName, TimingEvent>
 }
 
 /**
@@ -58,9 +67,7 @@ export class TimingCollector {
    * Check if timing collection should be active
    */
   private shouldCollect(): boolean {
-    // TODO: Fix me for local dev
-    // return analytics.isEnabled()
-    return true
+    return analytics.isEnabled()
   }
 
   /**
@@ -76,8 +83,6 @@ export class TimingCollector {
       start_timestamp: new Date().toISOString(),
       events: new Map(),
     })
-
-    log.info(`[TimingCollector] Started tracking interaction: ${interactionId}`)
   }
 
   /**
@@ -90,7 +95,7 @@ export class TimingCollector {
 
     const active = this.activeTimings.get(interactionId)
     if (!active) {
-      log.warn(
+      console.warn(
         `[TimingCollector] Cannot start timing for unknown interaction: ${interactionId}`,
       )
       return
@@ -134,14 +139,11 @@ export class TimingCollector {
    * Finalize an interaction and move it to completed reports
    */
   finalizeInteraction(interactionId: string) {
-    console.log(`Finalizing interaction: ${interactionId}`)
     if (!this.shouldCollect()) {
-      console.log('no collecting mf')
       return
     }
 
     const active = this.activeTimings.get(interactionId)
-    console.log({ active })
     if (!active) {
       log.warn(
         `[TimingCollector] Cannot finalize unknown interaction: ${interactionId}`,
@@ -171,8 +173,6 @@ export class TimingCollector {
       events: events,
       total_duration_ms: totalDuration,
     }
-
-    console.log({ report })
 
     // Remove from active and add to completed
     this.activeTimings.delete(interactionId)
@@ -208,7 +208,6 @@ export class TimingCollector {
    * Flush completed reports to the server
    */
   async flush() {
-    console.log('completed reports', this.completedReports)
     if (this.completedReports.length === 0) {
       return
     }
@@ -224,12 +223,6 @@ export class TimingCollector {
         import.meta.env.VITE_GRPC_BASE_URL || 'http://localhost:3001'
       const payload = { reports: reportsToSend }
 
-      console.log('[TimingCollector] Sending payload:', {
-        url: `${serverUrl}/timing`,
-        reportsCount: reportsToSend.length,
-        payload: JSON.stringify(payload, null, 2),
-      })
-
       const token = (store.get(STORE_KEYS.ACCESS_TOKEN) as string | null) || ''
       const response = await fetch(`${serverUrl}/timing`, {
         method: 'POST',
@@ -238,12 +231,6 @@ export class TimingCollector {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(payload),
-      })
-
-      console.log('[TimingCollector] Response:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok,
       })
 
       if (!response.ok) {

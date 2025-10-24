@@ -219,6 +219,7 @@ create_windows_installer() {
       --env CSC_IDENTITY_AUTO_DISCOVERY=false \
       --env SKIP_SIGNING=true \
       --env VITE_ITO_VERSION="${VITE_ITO_VERSION}" \
+      --env ITO_ENV="${ITO_ENV}" \
       -v "${PROJECT_PATH}":/project \
       electronuserland/builder:wine \
       bash -c "

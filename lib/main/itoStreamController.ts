@@ -11,6 +11,8 @@ import { grpcClient } from '../clients/grpcClient'
 import { AudioStreamManager } from './audio/AudioStreamManager'
 import { contextGrabber } from './context/ContextGrabber'
 import log from 'electron-log'
+import { interactionManager } from './interactions/InteractionManager'
+import { timingCollector, TimingEventName } from './timing/TimingCollector'
 
 /**
  * ItoStreamController manages the lifecycle of a transcription stream using TranscribeStreamV2.
@@ -24,8 +26,12 @@ export class ItoStreamController {
   private isCancelled = false
   private configQueue: TranscribeStreamRequest[] = []
   private abortController: AbortController | null = null
+  private interactionId: string | null = null
 
-  public async initialize(mode: ItoMode): Promise<boolean> {
+  public async initialize(
+    mode: ItoMode,
+    interactionId: string,
+  ): Promise<boolean> {
     // Guard against multiple concurrent transcriptions
     if (this.audioStreamManager.isCurrentlyStreaming()) {
       log.warn('[ItoStreamController] Stream already in progress.')
@@ -38,6 +44,7 @@ export class ItoStreamController {
     this.isCancelled = false
     this.configQueue = []
     this.abortController = null
+    this.interactionId = interactionId
     console.log('[ItoStreamController] Starting new interaction stream.')
 
     return true
@@ -61,9 +68,14 @@ export class ItoStreamController {
     this.hasStartedGrpc = true
     this.abortController = new AbortController()
 
-    const response = await grpcClient.transcribeStreamV2(
-      this.createStreamGenerator(),
-      this.abortController.signal,
+    const response = await timingCollector.timeAsync(
+      this.interactionId,
+      TimingEventName.SERVER_TRANSCRIBE,
+      async () =>
+        await grpcClient.transcribeStreamV2(
+          this.createStreamGenerator(),
+          this.abortController!.signal,
+        ),
     )
 
     // Return response along with the audio data collected during the stream
@@ -193,7 +205,11 @@ export class ItoStreamController {
 
   private async buildStreamConfig(): Promise<TranscribeStreamRequest> {
     // Gather all config data using ContextGrabber
-    const context = await contextGrabber.gatherContext(this.currentMode)
+    const context = await timingCollector.timeAsync(
+      this.interactionId,
+      TimingEventName.CONTEXT_GATHER,
+      async () => await contextGrabber.gatherContext(this.currentMode),
+    )
 
     return create(TranscribeStreamRequestSchema, {
       payload: {

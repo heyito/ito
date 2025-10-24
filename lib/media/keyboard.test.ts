@@ -94,6 +94,34 @@ const mockitoSessionManager = {
 mock.module('../main/itoSessionManager', () => ({
   itoSessionManager: mockitoSessionManager,
 }))
+
+const mockTimingCollector = {
+  startInteraction: mock(),
+  startTiming: mock(),
+  endTiming: mock(),
+  finalizeInteraction: mock(),
+  clearInteraction: mock(),
+  timeAsync: mock(async (_interactionId, _eventName, fn) => await fn()),
+}
+mock.module('../main/timing/TimingCollector', () => ({
+  timingCollector: mockTimingCollector,
+  TimingEventName: {
+    HOTKEY_PRESS: 'hotkey_press',
+    SERVER_TRANSCRIBE: 'server_transcribe',
+    CONTEXT_GATHER: 'context_gather',
+    GRAMMAR_SERVICE: 'grammar_service',
+    TEXT_WRITER: 'text_writer',
+  },
+}))
+
+const mockInteractionManager = {
+  getCurrentInteractionId: mock(() => 'test-interaction-123'),
+  initialize: mock(() => 'test-interaction-123'),
+}
+mock.module('../main/interactions/InteractionManager', () => ({
+  interactionManager: mockInteractionManager,
+}))
+
 // Mock console to avoid spam
 beforeEach(async () => {
   console.log = mock()
@@ -120,6 +148,17 @@ describe('Keyboard Module', () => {
     mockitoSessionManager.completeSession.mockClear()
     mockitoSessionManager.setMode.mockClear()
     mockitoSessionManager.cancelSession.mockClear()
+    Object.values(mockTimingCollector).forEach(mockFn => mockFn.mockClear())
+    Object.values(mockInteractionManager).forEach(mockFn => mockFn.mockClear())
+
+    // Reset default behaviors
+    mockTimingCollector.timeAsync.mockImplementation(
+      async (_interactionId, _eventName, fn) => await fn(),
+    )
+    mockInteractionManager.getCurrentInteractionId.mockReturnValue(
+      'test-interaction-123',
+    )
+    mockInteractionManager.initialize.mockReturnValue('test-interaction-123')
 
     // Reset child process to clean state
     mockChildProcess.stdout.removeAllListeners()

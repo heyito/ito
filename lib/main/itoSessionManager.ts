@@ -8,6 +8,7 @@ import { contextGrabber } from './context/ContextGrabber'
 import { GrammarRulesService } from './grammar/GrammarRulesService'
 import { getAdvancedSettings } from './store'
 import log from 'electron-log'
+import { timingCollector, TimingEventName } from './timing/TimingCollector'
 
 export class ItoSessionManager {
   private readonly MINIMUM_AUDIO_DURATION_MS = 100
@@ -18,27 +19,28 @@ export class ItoSessionManager {
     sampleRate: number
   }> | null = null
   private grammarRulesService = new GrammarRulesService('')
+  private interactionId: string | null = null
 
   public async startSession(mode: ItoMode) {
     console.log('[itoSessionManager] Starting session with mode:', mode)
 
+    // Reuse existing global interaction ID if present, otherwise create a new one
+    let interactionId = interactionManager.getCurrentInteractionId()
+    if (interactionId) {
+      console.log(
+        '[itoSessionManager] Reusing existing interaction ID:',
+        interactionId,
+      )
+      interactionManager.adoptInteractionId(interactionId)
+    } else {
+      interactionId = interactionManager.initialize()
+    }
+
     // Initialize all necessary components
-    const started = await itoStreamController.initialize(mode)
+    const started = await itoStreamController.initialize(mode, interactionId)
     if (!started) {
       log.error('[itoSessionManager] Failed to initialize itoStreamController')
       return
-    }
-
-    // Reuse existing global interaction ID if present, otherwise create a new one
-    const existingId = interactionManager.getCurrentInteractionId()
-    if (existingId) {
-      console.log(
-        '[itoSessionManager] Reusing existing interaction ID:',
-        existingId,
-      )
-      interactionManager.adoptInteractionId(existingId)
-    } else {
-      interactionManager.initialize()
     }
 
     // Begin gRPC stream immediately (note, no audio is flowing yet)
@@ -57,6 +59,9 @@ export class ItoSessionManager {
     this.fetchAndSendContext().catch(error => {
       log.error('[itoSessionManager] Failed to fetch/send context:', error)
     })
+
+    this.interactionId = interactionId
+    return interactionId
   }
 
   private async fetchAndSendContext() {
@@ -66,7 +71,11 @@ export class ItoSessionManager {
     // Fetch cursor context for grammar rules only if grammar service is enabled
     const { grammarServiceEnabled } = getAdvancedSettings()
     if (grammarServiceEnabled) {
-      const cursorContext = await contextGrabber.getCursorContextForGrammar()
+      const cursorContext = await timingCollector.timeAsync(
+        this.interactionId,
+        TimingEventName.GRAMMAR_SERVICE,
+        async () => await contextGrabber.getCursorContextForGrammar(),
+      )
       this.grammarRulesService = new GrammarRulesService(cursorContext)
     }
   }

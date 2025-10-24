@@ -1,4 +1,6 @@
 import { setFocusedText } from '../../media/text-writer'
+import { timingCollector, TimingEventName } from '../timing/TimingCollector'
+import { interactionManager } from '../interactions/InteractionManager'
 
 export class TextInserter {
   async insertText(transcript: string): Promise<boolean> {
@@ -8,7 +10,13 @@ export class TextInserter {
     }
 
     try {
-      return await setFocusedText(transcript)
+      const interactionId = interactionManager.getCurrentInteractionId()
+
+      return await timingCollector.timeAsync(
+        interactionId,
+        TimingEventName.TEXT_WRITER,
+        async () => await setFocusedText(transcript),
+      )
     } catch (error) {
       console.error('Error inserting text:', error)
       return false

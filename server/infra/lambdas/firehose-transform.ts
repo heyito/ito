@@ -124,7 +124,27 @@ export const handler = async (
       const structured = tryJsonParse<any>(messageStr)
 
       let doc: Record<string, unknown>
-      if (
+
+      // Handle timing analytics data differently
+      if (DATASET === 'ito-timing-analytics' && structured) {
+        // Timing analytics: preserve structure with nested-friendly shape
+        doc = {
+          '@timestamp': structured['@timestamp'] || isoTimestamp(ts),
+          'event.dataset': structured.event?.dataset || DATASET,
+          interaction_id: structured.interaction_id,
+          user_id: structured.user_id,
+          platform: structured.platform,
+          timestamp: structured.timestamp,
+          total_duration_ms: structured.total_duration_ms,
+          // Keep "events" as an array of objects; mapping will handle "nested"
+          events: structured.events?.map((ev: any) => ({
+            name: ev.name,
+            start_ms: ev.start_ms,
+            end_ms: ev.end_ms,
+            duration_ms: ev.duration_ms,
+          })),
+        }
+      } else if (
         structured &&
         typeof structured === 'object' &&
         ('message' in structured || 'level' in structured)

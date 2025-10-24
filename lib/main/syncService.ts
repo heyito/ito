@@ -81,17 +81,16 @@ export class SyncService {
       }
 
       const lastSyncedAtKey = getLastSyncedAtKey(user.id)
-      const lastSyncedAt = await KeyValueStore.get(lastSyncedAtKey)
+      const lastSyncedAt =
+        (await KeyValueStore.get(lastSyncedAtKey)) || new Date(0).toISOString()
 
       // =================================================================
       // PUSH LOCAL CHANGES
       // =================================================================
       let processedChanges = 0
-      if (lastSyncedAt) {
-        processedChanges += await this.pushNotes(lastSyncedAt)
-        processedChanges += await this.pushInteractions(lastSyncedAt)
-        processedChanges += await this.pushDictionaryItems(lastSyncedAt)
-      }
+      processedChanges += await this.pushNotes(lastSyncedAt)
+      processedChanges += await this.pushInteractions(lastSyncedAt)
+      processedChanges += await this.pushDictionaryItems(lastSyncedAt)
 
       // =================================================================
       // PULL REMOTE CHANGES

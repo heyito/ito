@@ -64,7 +64,6 @@ export class SyncService {
   }
 
   private async runSync() {
-    console.log('Running sync cycle...')
     if (this.isSyncing) {
       return
     }
@@ -141,13 +140,11 @@ export class SyncService {
   private async pushInteractions(lastSyncedAt: string): Promise<number> {
     const modifiedInteractions =
       await InteractionsTable.findModifiedSince(lastSyncedAt)
-    console.log('Modified interactions:', modifiedInteractions)
     if (modifiedInteractions.length > 0) {
       for (const interaction of modifiedInteractions) {
         try {
           if (new Date(interaction.created_at) > new Date(lastSyncedAt)) {
             await grpcClient.createInteraction(interaction)
-            console.log('created interaction:', interaction)
           } else if (interaction.deleted_at) {
             await grpcClient.deleteInteraction(interaction)
           } else {
@@ -207,7 +204,6 @@ export class SyncService {
   private async pullInteractions(lastSyncedAt?: string): Promise<number> {
     const remoteInteractions =
       await grpcClient.listInteractionsSince(lastSyncedAt)
-    console.log({ remoteInteractions })
     if (remoteInteractions.length > 0) {
       for (const remoteInteraction of remoteInteractions) {
         if (remoteInteraction.deletedAt) {

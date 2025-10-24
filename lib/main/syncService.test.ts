@@ -347,14 +347,13 @@ describe('SyncService Integration Tests', () => {
       mockKeyValueStore.get.mockResolvedValueOnce(undefined) // No previous sync
 
       await syncService.start()
+      const epoch = new Date(0).toISOString()
 
       // Should still call pull operations (with undefined lastSyncedAt)
-      expect(mockGrpcClient.listNotesSince).toHaveBeenCalledWith(undefined)
-      expect(mockGrpcClient.listInteractionsSince).toHaveBeenCalledWith(
-        undefined,
-      )
+      expect(mockGrpcClient.listNotesSince).toHaveBeenCalledWith(epoch)
+      expect(mockGrpcClient.listInteractionsSince).toHaveBeenCalledWith(epoch)
       expect(mockGrpcClient.listDictionaryItemsSince).toHaveBeenCalledWith(
-        undefined,
+        epoch,
       )
     })
 
@@ -414,25 +413,26 @@ describe('SyncService Integration Tests', () => {
   })
 
   describe('Critical Business Logic', () => {
-    test('should only pull data on first sync (no lastSyncedAt)', async () => {
+    test('first sync', async () => {
       // Clear the default mock and set to return undefined for all calls
       mockKeyValueStore.get.mockReset()
       mockKeyValueStore.get.mockResolvedValue(undefined) // No previous sync
+      const epoch = new Date(0).toISOString()
 
       await syncService.start()
 
       // Should NOT push anything (no lastSyncedAt means first sync)
-      expect(mockNotesTable.findModifiedSince).not.toHaveBeenCalled()
-      expect(mockInteractionsTable.findModifiedSince).not.toHaveBeenCalled()
-      expect(mockDictionaryTable.findModifiedSince).not.toHaveBeenCalled()
+      expect(mockNotesTable.findModifiedSince).toHaveBeenCalledWith(epoch)
+      expect(mockInteractionsTable.findModifiedSince).toHaveBeenCalledWith(
+        epoch,
+      )
+      expect(mockDictionaryTable.findModifiedSince).toHaveBeenCalledWith(epoch)
 
       // Should still pull everything
-      expect(mockGrpcClient.listNotesSince).toHaveBeenCalledWith(undefined)
-      expect(mockGrpcClient.listInteractionsSince).toHaveBeenCalledWith(
-        undefined,
-      )
+      expect(mockGrpcClient.listNotesSince).toHaveBeenCalledWith(epoch)
+      expect(mockGrpcClient.listInteractionsSince).toHaveBeenCalledWith(epoch)
       expect(mockGrpcClient.listDictionaryItemsSince).toHaveBeenCalledWith(
-        undefined,
+        epoch,
       )
     })
 

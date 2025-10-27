@@ -11,7 +11,6 @@ import { grpcClient } from '../clients/grpcClient'
 import { AudioStreamManager } from './audio/AudioStreamManager'
 import { contextGrabber } from './context/ContextGrabber'
 import log from 'electron-log'
-import { interactionManager } from './interactions/InteractionManager'
 import { timingCollector, TimingEventName } from './timing/TimingCollector'
 
 /**
@@ -74,7 +73,7 @@ export class ItoStreamController {
       async () =>
         await grpcClient.transcribeStreamV2(
           this.createStreamGenerator(),
-          this.abortController!.signal,
+          this.abortController?.signal,
         ),
     )
 

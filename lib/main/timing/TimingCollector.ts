@@ -1,8 +1,9 @@
-import log from 'electron-log'
 import store, { getCurrentUserId } from '../store'
 import { STORE_KEYS } from '../../constants/store-keys'
-import { platform } from 'os'
+import { platform, hostname, arch } from 'os'
+import { performance } from 'perf_hooks'
 import { analytics } from '@/app/components/analytics'
+import { app } from 'electron'
 
 export interface TimingEvent {
   name: TimingEventName
@@ -15,6 +16,9 @@ export interface TimingReport {
   interaction_id: string
   user_id: string
   platform: string
+  app_version: string
+  hostname: string
+  architecture: string
   timestamp: string
   events: TimingEvent[]
   total_duration_ms: number
@@ -54,18 +58,15 @@ export class TimingCollector {
   private flushTimer: NodeJS.Timeout | null = null
 
   // Configuration
-  private readonly FLUSH_INTERVAL_MS = 5_000 // 60 seconds
+  private readonly FLUSH_INTERVAL_MS = 5_000
   private readonly BATCH_SIZE = 10
   private readonly MAX_QUEUE_SIZE = 100
 
   constructor() {
     this.scheduleFlush()
-    log.info('[TimingCollector] Service initialized')
+    console.log('[TimingCollector] Service initialized')
   }
 
-  /**
-   * Check if timing collection should be active
-   */
   private shouldCollect(): boolean {
     return analytics.isEnabled()
   }
@@ -85,9 +86,6 @@ export class TimingCollector {
     })
   }
 
-  /**
-   * Record the start of a timing event
-   */
   startTiming(interactionId: string | null, eventName: TimingEventName) {
     if (!this.shouldCollect() || !interactionId) {
       return
@@ -103,13 +101,10 @@ export class TimingCollector {
 
     active.events.set(eventName, {
       name: eventName,
-      start_ms: Date.now(),
+      start_ms: performance.now(),
     })
   }
 
-  /**
-   * Record the end of a timing event
-   */
   endTiming(interactionId: string | null, eventName: TimingEventName) {
     if (!this.shouldCollect() || !interactionId) {
       return
@@ -117,7 +112,7 @@ export class TimingCollector {
 
     const active = this.activeTimings.get(interactionId)
     if (!active) {
-      log.warn(
+      console.warn(
         `[TimingCollector] Cannot end timing for unknown interaction: ${interactionId}`,
       )
       return
@@ -125,13 +120,13 @@ export class TimingCollector {
 
     const event = active.events.get(eventName)
     if (!event) {
-      log.warn(
+      console.warn(
         `[TimingCollector] Cannot end timing for unknown event: ${eventName}`,
       )
       return
     }
 
-    event.end_ms = Date.now()
+    event.end_ms = performance.now()
     event.duration_ms = event.end_ms - event.start_ms
   }
 
@@ -145,7 +140,7 @@ export class TimingCollector {
 
     const active = this.activeTimings.get(interactionId)
     if (!active) {
-      log.warn(
+      console.warn(
         `[TimingCollector] Cannot finalize unknown interaction: ${interactionId}`,
       )
       return
@@ -169,6 +164,9 @@ export class TimingCollector {
       interaction_id: interactionId,
       user_id: getCurrentUserId() || 'unknown',
       platform: platform(),
+      app_version: app.getVersion(),
+      hostname: hostname(),
+      architecture: arch(),
       timestamp: active.start_timestamp,
       events: events,
       total_duration_ms: totalDuration,
@@ -180,13 +178,13 @@ export class TimingCollector {
 
     // Enforce max queue size
     if (this.completedReports.length > this.MAX_QUEUE_SIZE) {
-      log.warn(
+      console.warn(
         `[TimingCollector] Queue size exceeded ${this.MAX_QUEUE_SIZE}, dropping oldest reports`,
       )
       this.completedReports = this.completedReports.slice(-this.MAX_QUEUE_SIZE)
     }
 
-    log.info(
+    console.log(
       `[TimingCollector] Finalized interaction: ${interactionId} (${events.length} events, ${totalDuration}ms total)`,
     )
 
@@ -201,7 +199,7 @@ export class TimingCollector {
    */
   clearInteraction(interactionId: string) {
     this.activeTimings.delete(interactionId)
-    log.info(`[TimingCollector] Cleared interaction: ${interactionId}`)
+    console.log(`[TimingCollector] Cleared interaction: ${interactionId}`)
   }
 
   /**
@@ -214,7 +212,7 @@ export class TimingCollector {
 
     const reportsToSend = this.completedReports.splice(0, this.BATCH_SIZE)
 
-    log.info(
+    console.log(
       `[TimingCollector] Flushing ${reportsToSend.length} timing reports to server`,
     )
 
@@ -239,11 +237,11 @@ export class TimingCollector {
         )
       }
 
-      log.info(
+      console.log(
         `[TimingCollector] Successfully submitted ${reportsToSend.length} reports`,
       )
     } catch (error) {
-      log.error('[TimingCollector] Failed to submit timing data:', error)
+      console.error('[TimingCollector] Failed to submit timing data:', error)
       // Re-add reports to the front of the queue for retry
       this.completedReports.unshift(...reportsToSend)
     }
@@ -272,18 +270,7 @@ export class TimingCollector {
     // Flush any remaining reports
     await this.flush()
 
-    log.info('[TimingCollector] Service shutdown complete')
-  }
-
-  /**
-   * Get current queue stats (for debugging)
-   */
-  getStats() {
-    return {
-      activeInteractions: this.activeTimings.size,
-      queuedReports: this.completedReports.length,
-      analyticsEnabled: this.shouldCollect(),
-    }
+    console.log('[TimingCollector] Service shutdown complete')
   }
 
   /**
@@ -313,5 +300,4 @@ export class TimingCollector {
   }
 }
 
-// Export singleton instance
 export const timingCollector = new TimingCollector()

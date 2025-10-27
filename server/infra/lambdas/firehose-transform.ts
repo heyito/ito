@@ -134,6 +134,9 @@ export const handler = async (
           interaction_id: structured.interaction_id,
           user_id: structured.user_id,
           platform: structured.platform,
+          app_version: structured.app_version,
+          hostname: structured.hostname,
+          architecture: structured.architecture,
           timestamp: structured.timestamp,
           total_duration_ms: structured.total_duration_ms,
           // Keep "events" as an array of objects; mapping will handle "nested"

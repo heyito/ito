@@ -17,6 +17,9 @@ type TimingReport = {
   interaction_id: string
   user_id: string
   platform: string
+  app_version: string
+  hostname: string
+  architecture: string
   timestamp: string
   events: TimingEvent[]
   total_duration_ms: number
@@ -77,13 +80,16 @@ export const registerTimingRoutes = async (
     const now = Date.now()
     const entries = reports.map(report => {
       const structured = {
-        '@timestamp': new Date().toISOString(),
+        '@timestamp': report.timestamp,
         event: {
           dataset: 'ito-timing-analytics',
         },
         interaction_id: report.interaction_id,
         user_id: userSub || report.user_id,
         platform: report.platform,
+        app_version: report.app_version,
+        hostname: report.hostname,
+        architecture: report.architecture,
         timestamp: report.timestamp,
         total_duration_ms: report.total_duration_ms,
         events: report.events,

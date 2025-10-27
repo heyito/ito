@@ -29,8 +29,7 @@ export const startServer = async () => {
   // Register the Auth0 plugin
   const REQUIRE_AUTH = process.env.REQUIRE_AUTH === 'true'
   const CLIENT_LOG_GROUP_NAME = process.env.CLIENT_LOG_GROUP_NAME
-  const TIMING_LOG_GROUP_NAME =
-    process.env.TIMING_LOG_GROUP_NAME || CLIENT_LOG_GROUP_NAME
+  const TIMING_LOG_GROUP_NAME = process.env.TIMING_LOG_GROUP_NAME
 
   if (REQUIRE_AUTH) {
     const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN

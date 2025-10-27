@@ -45,10 +45,10 @@
     "build:rust:mac": "bash ./build-binaries.sh --mac",
     "build:rust:mac:x64": "bash ./build-binaries.sh --mac --x64",
     "build:rust:win": "bash ./build-binaries.sh --windows",
-    "build:win": "ITO_ENV=dev bash ./build-app.sh windows",
-    "build:mac": "ITO_ENV=dev bash ./build-app.sh mac",
+    "build:win": "bash ./build-app.sh windows",
+    "build:mac": "bash ./build-app.sh mac",
     "generate:constants": "bun scripts/generate-constants.js",
-    "build:app": "ITO_ENV=dev bash ./build-app.sh",
+    "build:app": "bash ./build-app.sh",
     "prepare": "husky"
   },
   "repository": {

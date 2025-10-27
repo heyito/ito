@@ -67,7 +67,7 @@ module.exports = {
     hardenedRuntime: true,
     gatekeeperAssess: false,
     identity: 'Demox Labs, Inc. (294ZSTM7UB)',
-    notarize: true,
+    notarize: stage === 'prod',
     entitlements: 'build/entitlements.mac.plist',
     entitlementsInherit: 'build/entitlements.mac.inherit.plist',
     extendInfo: {
@@ -83,7 +83,7 @@ module.exports = {
     artifactName:
       stage === 'prod'
         ? 'Ito-Installer.${ext}'
-        : `Ito-${stage}-Installer.${ext}`,
+        : `Ito-${stage}-Installer.\${ext}`,
   },
   win: {
     target: [

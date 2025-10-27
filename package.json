@@ -9,8 +9,6 @@
     "url": "https://github.com/demox-labs"
   },
   "build": {
-    "appId": "ai.ito.ito",
-    "asar": true,
     "extraResources": [
       {
         "from": "lib/generated",
@@ -22,8 +20,8 @@
     ]
   },
   "scripts": {
-    "dev": "ITO_ENV=local electron-vite dev -w",
-    "dev:rust": "ITO_ENV=local bun build:rust:mac && bun dev",
+    "dev": "electron-vite dev -w",
+    "dev:rust": "bun build:rust:mac && bun dev",
     "format:fix:app": "prettier --write app lib",
     "format:fix": "prettier --write .",
     "lint:fix:app": "eslint app lib --ext .ts,.tsx --fix",

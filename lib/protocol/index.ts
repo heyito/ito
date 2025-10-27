@@ -1,9 +1,10 @@
 import { app, BrowserWindow } from 'electron'
 import path from 'path'
 import { mainWindow } from '../main/app'
+import { ITO_ENV } from '../main/env'
 
 // Protocol handling for deep links
-const PROTOCOL = 'ito'
+const PROTOCOL = ITO_ENV === 'prod' ? 'ito' : `ito-${ITO_ENV}`
 
 // Handle protocol URL
 function handleProtocolUrl(url: string) {

@@ -195,10 +195,8 @@ try {
 }
 
 // 2) Ensure node:path join maps to path.join when tests mock path
-try {
-  const pathMod = await import('path')
-  mock.module('node:path', () => ({ join: (pathMod as any).join }))
-} catch {}
+const pathMod = await import('path')
+mock.module('node:path', () => ({ join: (pathMod as any).join }))
 
 // Initialize SQLite once for tests that touch the KeyValueStore
 beforeAll(async () => {

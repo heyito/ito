@@ -76,9 +76,7 @@ describe('AudioRecorderService', () => {
     // reset via terminate which clears listeners in implementation
     // Attempt to terminate if available; some tests may have mocked the service
     if (typeof (audioRecorderService as any).terminate === 'function') {
-      try {
-        ;(audioRecorderService as any).terminate()
-      } catch {}
+      ;(audioRecorderService as any).terminate()
     }
   })
 

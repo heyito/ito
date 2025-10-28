@@ -7,14 +7,12 @@ describe('AudioStreamManager', () => {
 
   beforeEach(() => {
     // Clean up any existing listeners from previous tests (guarded for cross-mocks)
-    try {
-      if (
-        typeof (audioRecorderService as any).removeAllListeners === 'function'
-      ) {
-        ;(audioRecorderService as any).removeAllListeners('audio-chunk')
-        ;(audioRecorderService as any).removeAllListeners('audio-config')
-      }
-    } catch {}
+    if (
+      typeof (audioRecorderService as any).removeAllListeners === 'function'
+    ) {
+      ;(audioRecorderService as any).removeAllListeners('audio-chunk')
+      ;(audioRecorderService as any).removeAllListeners('audio-config')
+    }
     audioManager = new AudioStreamManager()
   })
 

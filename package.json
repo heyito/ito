@@ -9,8 +9,6 @@
     "url": "https://github.com/demox-labs"
   },
   "build": {
-    "appId": "ai.ito.ito",
-    "asar": true,
     "extraResources": [
       {
         "from": "lib/generated",

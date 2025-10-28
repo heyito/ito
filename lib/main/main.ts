@@ -1,3 +1,4 @@
+import './env'
 import './sentry'
 import { app, protocol } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
@@ -30,6 +31,7 @@ import { createAppTray } from './tray'
 import { itoSessionManager } from './itoSessionManager'
 import { initializeAutoUpdater } from './autoUpdaterWrapper'
 import { teardown } from './teardown'
+import { ITO_ENV } from './env'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -84,8 +86,9 @@ app.whenReady().then(async () => {
   preventAppNap()
 
   // Register the handler for the 'res' protocol now that the app is ready.
+  const appId = ITO_ENV === 'prod' ? 'ai.ito.ito' : `ai.ito.ito-${ITO_ENV}`
   registerResourcesProtocol()
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId(appId)
 
   // IMPORTANT: Register IPC handlers BEFORE creating windows
   // This prevents the renderer from making IPC calls before handlers are ready

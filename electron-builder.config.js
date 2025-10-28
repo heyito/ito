@@ -19,9 +19,10 @@ const getWindowsResources = () =>
     to: `binaries/${binary}.exe`,
   }))
 
+const stage = process.env.ITO_ENV || 'prod'
 module.exports = {
-  appId: 'ai.ito.ito',
-  productName: 'Ito',
+  appId: stage === 'prod' ? 'ai.ito.ito' : `ai.ito.ito-${stage.toLowerCase()}`,
+  productName: stage === 'prod' ? 'Ito' : `Ito (${stage})`,
   copyright: 'Copyright © 2025 Demox Labs',
   directories: {
     buildResources: 'resources',
@@ -57,7 +58,7 @@ module.exports = {
   },
   protocols: {
     name: 'ito',
-    schemes: ['ito'],
+    schemes: stage === 'prod' ? ['ito'] : [`ito-${stage}`],
   },
   mac: {
     target: 'default',
@@ -66,7 +67,7 @@ module.exports = {
     hardenedRuntime: true,
     gatekeeperAssess: false,
     identity: 'Demox Labs, Inc. (294ZSTM7UB)',
-    notarize: true,
+    notarize: stage === 'prod',
     entitlements: 'build/entitlements.mac.plist',
     entitlementsInherit: 'build/entitlements.mac.inherit.plist',
     extendInfo: {
@@ -79,7 +80,10 @@ module.exports = {
     ],
   },
   dmg: {
-    artifactName: 'Ito-Installer.${ext}',
+    artifactName:
+      stage === 'prod'
+        ? 'Ito-Installer.${ext}'
+        : `Ito-${stage}-Installer.\${ext}`,
   },
   win: {
     target: [

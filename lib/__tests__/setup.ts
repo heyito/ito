@@ -2,15 +2,23 @@ import { mock, afterEach, beforeEach } from 'bun:test'
 
 // Simple, direct electron mock following Bun documentation pattern
 mock.module('electron', () => {
+  let userDataPath = '/tmp/test-ito-app'
+  let appName = 'Ito'
   return {
     app: {
       getPath: (type: string) => {
-        if (type === 'userData') return '/tmp/test-ito-app'
+        if (type === 'userData') return userDataPath
         return '/tmp/test-path'
+      },
+      setPath: (type: string, newPath: string) => {
+        if (type === 'userData') userDataPath = newPath
       },
       quit: () => {},
       on: () => {},
-      getName: () => 'Ito',
+      getName: () => appName,
+      setName: (name: string) => {
+        appName = name
+      },
       getVersion: () => '1.0.0',
       whenReady: () => Promise.resolve(),
       isReady: () => true,

@@ -261,10 +261,13 @@ create_windows_installer() {
         # Run electron-builder
         bunx electron-builder --config electron-builder.config.js --win --x64 --publish=never
 
-        # Copy versioned installer to static name for CDN
-        if ls dist/Ito-*.exe 1> /dev/null 2>&1; then
-          echo 'Copying versioned installer to static Ito-Installer.exe for CDN'
-          cp dist/Ito-*.exe dist/Ito-Installer.exe
+        # Copy versioned installer to static name for CDN (supports prod and dev names)
+        exe_path=\$(ls -t dist/Ito*.exe 2>/dev/null | head -n 1)
+        if [ -n "\$exe_path" ]; then
+          echo "Copying \$exe_path to dist/Ito-Installer.exe for CDN"
+          cp "\$exe_path" dist/Ito-Installer.exe
+        else
+          echo 'No Windows installer .exe found to copy'
         fi
       "
     

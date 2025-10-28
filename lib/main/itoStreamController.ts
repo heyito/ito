@@ -150,6 +150,10 @@ export class ItoStreamController {
     this.audioStreamManager.stopStreaming()
   }
 
+  public clearInteractionAudio() {
+    this.audioStreamManager.clearInteractionAudio()
+  }
+
   private async *createStreamGenerator(): AsyncGenerator<TranscribeStreamRequest> {
     console.log(
       '[ItoStreamController] Starting stream generator (audio-first mode)',

@@ -220,6 +220,7 @@ export class ItoSessionManager {
       }
 
       interactionManager.clearCurrentInteraction()
+      itoStreamController.clearInteractionAudio()
     }
   }
 

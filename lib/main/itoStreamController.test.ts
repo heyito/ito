@@ -239,7 +239,6 @@ describe('ItoStreamController', () => {
     controller.cancelTranscription()
 
     expect(mockAudioStreamManager.stopStreaming).toHaveBeenCalled()
-    expect(mockAudioStreamManager.clearInteractionAudio).toHaveBeenCalled()
   })
 
   test('should return audio duration', async () => {

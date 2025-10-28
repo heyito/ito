@@ -1,5 +1,13 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 import { ItoMode } from '@/app/generated/ito_pb'
+import { createMockTimingCollector } from '../__tests__/setup'
+import { TimingEventName } from './timing/TimingCollector'
+
+const mockTimingCollector = createMockTimingCollector()
+mock.module('./timing/TimingCollector', () => ({
+  timingCollector: mockTimingCollector,
+  TimingEventName: TimingEventName,
+}))
 
 const mockVoiceInputService = {
   startAudioRecording: mock(() => Promise.resolve()),
@@ -89,25 +97,6 @@ mock.module('electron-log', () => ({
   },
 }))
 
-const mockTimingCollector = {
-  startInteraction: mock(),
-  startTiming: mock(),
-  endTiming: mock(),
-  finalizeInteraction: mock(),
-  clearInteraction: mock(),
-  timeAsync: mock(async (_interactionId, _eventName, fn) => await fn()),
-}
-mock.module('./timing/TimingCollector', () => ({
-  timingCollector: mockTimingCollector,
-  TimingEventName: {
-    HOTKEY_PRESS: 'hotkey_press',
-    SERVER_TRANSCRIBE: 'server_transcribe',
-    CONTEXT_GATHER: 'context_gather',
-    GRAMMAR_SERVICE: 'grammar_service',
-    TEXT_WRITER: 'text_writer',
-  },
-}))
-
 beforeEach(() => {
   console.log = mock()
   console.error = mock()
@@ -130,9 +119,6 @@ describe('itoSessionManager', () => {
     mockGetAdvancedSettings.mockClear()
 
     // Reset default behaviors
-    mockTimingCollector.timeAsync.mockImplementation(
-      async (_interactionId, _eventName, fn) => await fn(),
-    )
     mockItoStreamController.initialize.mockResolvedValue(true)
     mockItoStreamController.startGrpcStream.mockResolvedValue({
       response: { transcript: 'test transcript' },
@@ -156,7 +142,6 @@ describe('itoSessionManager', () => {
 
     expect(mockItoStreamController.initialize).toHaveBeenCalledWith(
       ItoMode.TRANSCRIBE,
-      'test-interaction-123',
     )
     expect(mockItoStreamController.startGrpcStream).toHaveBeenCalled()
     expect(mockItoStreamController.setMode).toHaveBeenCalledWith(

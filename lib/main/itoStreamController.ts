@@ -25,12 +25,8 @@ export class ItoStreamController {
   private isCancelled = false
   private configQueue: TranscribeStreamRequest[] = []
   private abortController: AbortController | null = null
-  private interactionId: string | null = null
 
-  public async initialize(
-    mode: ItoMode,
-    interactionId: string,
-  ): Promise<boolean> {
+  public async initialize(mode: ItoMode): Promise<boolean> {
     // Guard against multiple concurrent transcriptions
     if (this.audioStreamManager.isCurrentlyStreaming()) {
       log.warn('[ItoStreamController] Stream already in progress.')
@@ -43,7 +39,6 @@ export class ItoStreamController {
     this.isCancelled = false
     this.configQueue = []
     this.abortController = null
-    this.interactionId = interactionId
     console.log('[ItoStreamController] Starting new interaction stream.')
 
     return true
@@ -68,7 +63,6 @@ export class ItoStreamController {
     this.abortController = new AbortController()
 
     const response = await timingCollector.timeAsync(
-      this.interactionId,
       TimingEventName.SERVER_TRANSCRIBE,
       async () =>
         await grpcClient.transcribeStreamV2(
@@ -205,7 +199,6 @@ export class ItoStreamController {
   private async buildStreamConfig(): Promise<TranscribeStreamRequest> {
     // Gather all config data using ContextGrabber
     const context = await timingCollector.timeAsync(
-      this.interactionId,
       TimingEventName.CONTEXT_GATHER,
       async () => await contextGrabber.gatherContext(this.currentMode),
     )

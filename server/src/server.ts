@@ -3,6 +3,7 @@ import { fastifyConnectPlugin } from '@connectrpc/connect-fastify'
 import { createContextValues } from '@connectrpc/connect'
 import Auth0 from '@auth0/auth0-fastify-api'
 import itoServiceRoutes from './services/ito/itoService.js'
+import timingServiceRoutes from './services/ito/timingService.js'
 import { kUser } from './auth/userContext.js'
 import { errorInterceptor } from './services/errorInterceptor.js'
 import { loggingInterceptor } from './services/loggingInterceptor.js'
@@ -10,7 +11,6 @@ import { createValidationInterceptor } from './services/validationInterceptor.js
 import { renderCallbackPage } from './utils/renderCallback.js'
 import dotenv from 'dotenv'
 import { registerLoggingRoutes } from './services/logging.js'
-import { registerTimingRoutes } from './services/timing.js'
 import { registerAuth0Routes } from './services/auth0.js'
 import { IpLinkRepository } from './db/repo.js'
 import cors from '@fastify/cors'
@@ -29,7 +29,6 @@ export const startServer = async () => {
   // Register the Auth0 plugin
   const REQUIRE_AUTH = process.env.REQUIRE_AUTH === 'true'
   const CLIENT_LOG_GROUP_NAME = process.env.CLIENT_LOG_GROUP_NAME
-  const TIMING_LOG_GROUP_NAME = process.env.TIMING_LOG_GROUP_NAME
 
   if (REQUIRE_AUTH) {
     const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN
@@ -144,7 +143,10 @@ export const startServer = async () => {
 
     // Register the Connect RPC plugin with our service routes and interceptors
     await fastify.register(fastifyConnectPlugin, {
-      routes: itoServiceRoutes,
+      routes: router => {
+        itoServiceRoutes(router)
+        timingServiceRoutes(router)
+      },
       // Order matters: logging -> validation -> error handling
       interceptors: [
         loggingInterceptor,
@@ -164,11 +166,6 @@ export const startServer = async () => {
       requireAuth: REQUIRE_AUTH,
       clientLogGroupName: CLIENT_LOG_GROUP_NAME,
       showClientLogs: process.env.SHOW_CLIENT_LOGS === 'true',
-    })
-
-    await registerTimingRoutes(fastify, {
-      requireAuth: REQUIRE_AUTH,
-      timingLogGroupName: TIMING_LOG_GROUP_NAME,
     })
   })
 

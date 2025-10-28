@@ -104,9 +104,6 @@ export class InteractionManager {
           durationMs,
         })
       })
-
-      // Finalize timing collection for this interaction
-      timingCollector.finalizeInteraction(this.currentInteractionId)
     } catch (error) {
       log.error('[InteractionManager] Failed to create interaction:', error)
       // Clear timing on error

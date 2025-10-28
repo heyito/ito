@@ -1,35 +1,18 @@
-import store, { getCurrentUserId } from '../store'
-import { STORE_KEYS } from '../../constants/store-keys'
+import { getCurrentUserId } from '../store'
 import { platform, hostname, arch } from 'os'
 import { performance } from 'perf_hooks'
 import { analytics } from '@/app/components/analytics'
 import { app } from 'electron'
-
-export interface TimingEvent {
-  name: TimingEventName
-  start_ms: number
-  end_ms?: number
-  duration_ms?: number
-}
-
-export interface TimingReport {
-  interaction_id: string
-  user_id: string
-  platform: string
-  app_version: string
-  hostname: string
-  architecture: string
-  timestamp: string
-  events: TimingEvent[]
-  total_duration_ms: number
-}
+import { TimingReport, TimingEvent } from '@/app/generated/ito_pb'
+import { grpcClient } from '../../clients/grpcClient'
+import { interactionManager } from '../interactions/InteractionManager'
 
 /**
  * Enum for all tracked timing events in the interaction lifecycle
  */
 export enum TimingEventName {
   // Core interaction events
-  HOTKEY_PRESS = 'hotkey_press',
+  INTERACTION_ACTIVE = 'interaction_active',
 
   // Server communication
   SERVER_TRANSCRIBE = 'server_transcribe',
@@ -43,8 +26,8 @@ export enum TimingEventName {
 }
 
 interface ActiveTiming {
-  interaction_id: string
-  start_timestamp: string
+  interactionId: string
+  startTimestamp: string
   events: Map<TimingEventName, TimingEvent>
 }
 
@@ -56,6 +39,7 @@ export class TimingCollector {
   private activeTimings = new Map<string, ActiveTiming>()
   private completedReports: TimingReport[] = []
   private flushTimer: NodeJS.Timeout | null = null
+  private FIRST_EVENT = TimingEventName.INTERACTION_ACTIVE
 
   // Configuration
   private readonly FLUSH_INTERVAL_MS = 5_000
@@ -68,112 +52,145 @@ export class TimingCollector {
   }
 
   private shouldCollect(): boolean {
-    return analytics.isEnabled()
+    return true
+    // return analytics.isEnabled()
   }
 
   /**
    * Start a new timing session for an interaction
    */
-  startInteraction(interactionId: string) {
+  startInteraction(interactionId?: string) {
     if (!this.shouldCollect()) {
       return
     }
 
-    this.activeTimings.set(interactionId, {
-      interaction_id: interactionId,
-      start_timestamp: new Date().toISOString(),
+    const id = interactionId || interactionManager.getCurrentInteractionId()
+    if (!id) {
+      console.warn(
+        '[TimingCollector] Cannot start timing: no interaction ID available',
+      )
+      return
+    }
+
+    this.activeTimings.set(id, {
+      interactionId: id,
+      startTimestamp: new Date().toISOString(),
       events: new Map(),
     })
   }
 
-  startTiming(interactionId: string | null, eventName: TimingEventName) {
-    if (!this.shouldCollect() || !interactionId) {
+  startTiming(eventName: TimingEventName, interactionId?: string) {
+    if (!this.shouldCollect()) {
       return
     }
 
-    const active = this.activeTimings.get(interactionId)
+    const id = interactionId || interactionManager.getCurrentInteractionId()
+
+    if (!id) {
+      return
+    }
+
+    const active = this.activeTimings.get(id)
     if (!active) {
       console.warn(
-        `[TimingCollector] Cannot start timing for unknown interaction: ${interactionId}`,
+        `[TimingCollector] Cannot start timing for unknown interaction: ${id}`,
       )
       return
     }
 
-    active.events.set(eventName, {
+    const timingEvent = {
       name: eventName,
-      start_ms: performance.now(),
-    })
+      startMs: performance.now(),
+    } as TimingEvent
+    active.events.set(eventName, timingEvent)
   }
 
-  endTiming(interactionId: string | null, eventName: TimingEventName) {
-    if (!this.shouldCollect() || !interactionId) {
+  endTiming(eventName: TimingEventName, interactionId?: string) {
+    if (!this.shouldCollect()) {
       return
     }
 
-    const active = this.activeTimings.get(interactionId)
+    const id = interactionId || interactionManager.getCurrentInteractionId()
+
+    if (!id) {
+      return
+    }
+
+    const active = this.activeTimings.get(id)
     if (!active) {
       console.warn(
-        `[TimingCollector] Cannot end timing for unknown interaction: ${interactionId}`,
+        `[TimingCollector] Cannot end timing for unknown interaction: ${id}`,
       )
       return
     }
 
-    const event = active.events.get(eventName)
-    if (!event) {
+    const timingEvent = active.events.get(eventName)
+    if (!timingEvent) {
       console.warn(
         `[TimingCollector] Cannot end timing for unknown event: ${eventName}`,
       )
       return
     }
 
-    event.end_ms = performance.now()
-    event.duration_ms = event.end_ms - event.start_ms
+    timingEvent.endMs = performance.now()
+    timingEvent.durationMs = timingEvent.endMs - timingEvent.startMs
   }
 
   /**
    * Finalize an interaction and move it to completed reports
+   * If no interactionId is provided, uses the current interaction from interactionManager
    */
-  finalizeInteraction(interactionId: string) {
+  finalizeInteraction(interactionId?: string) {
+    console.log('finalizing interaction', interactionId)
     if (!this.shouldCollect()) {
       return
     }
 
-    const active = this.activeTimings.get(interactionId)
+    const id = interactionId || interactionManager.getCurrentInteractionId()
+    console.log('id', id)
+    if (!id) {
+      console.warn(
+        '[TimingCollector] Cannot finalize: no interaction ID available',
+      )
+      return
+    }
+
+    const active = this.activeTimings.get(id)
     if (!active) {
       console.warn(
-        `[TimingCollector] Cannot finalize unknown interaction: ${interactionId}`,
+        `[TimingCollector] Cannot finalize unknown interaction: ${id}`,
       )
       return
     }
 
     // Calculate total duration
     const events = Array.from(active.events.values())
-    const firstEvent = events.find(e => e.name === TimingEventName.HOTKEY_PRESS)
+    const firstEvent = events.find(e => e.name === this.FIRST_EVENT)
     const lastEvent = events.reduce((latest, event) => {
-      const eventEnd = event.end_ms || event.start_ms
-      const latestEnd = latest.end_ms || latest.start_ms
+      const eventEnd = event.endMs || event.startMs
+      const latestEnd = latest.endMs || latest.startMs
       return eventEnd > latestEnd ? event : latest
     }, events[0])
 
     const totalDuration = firstEvent
-      ? (lastEvent.end_ms || lastEvent.start_ms) - firstEvent.start_ms
+      ? (lastEvent.endMs || lastEvent.startMs) - firstEvent.startMs
       : 0
 
     // Create timing report
-    const report: TimingReport = {
-      interaction_id: interactionId,
-      user_id: getCurrentUserId() || 'unknown',
+    const report = {
+      interactionId: id,
+      userId: getCurrentUserId() || 'unknown',
       platform: platform(),
-      app_version: app.getVersion(),
+      appVersion: app.getVersion(),
       hostname: hostname(),
       architecture: arch(),
-      timestamp: active.start_timestamp,
-      events: events,
-      total_duration_ms: totalDuration,
-    }
+      timestamp: active.startTimestamp,
+      events,
+      totalDurationMs: totalDuration,
+    } as TimingReport
 
     // Remove from active and add to completed
-    this.activeTimings.delete(interactionId)
+    this.activeTimings.delete(id)
     this.completedReports.push(report)
 
     // Enforce max queue size
@@ -185,7 +202,7 @@ export class TimingCollector {
     }
 
     console.log(
-      `[TimingCollector] Finalized interaction: ${interactionId} (${events.length} events, ${totalDuration}ms total)`,
+      `[TimingCollector] Finalized interaction: ${id} (${events.length} events, ${totalDuration}ms total)`,
     )
 
     // Check if we should flush
@@ -196,14 +213,20 @@ export class TimingCollector {
 
   /**
    * Clear an interaction without finalizing (for errors/cancellations)
+   * If no interactionId is provided, uses the current interaction from interactionManager
    */
-  clearInteraction(interactionId: string) {
-    this.activeTimings.delete(interactionId)
-    console.log(`[TimingCollector] Cleared interaction: ${interactionId}`)
+  clearInteraction(interactionId?: string) {
+    const id = interactionId || interactionManager.getCurrentInteractionId()
+    if (!id) {
+      return
+    }
+
+    this.activeTimings.delete(id)
+    console.log(`[TimingCollector] Cleared interaction: ${id}`)
   }
 
   /**
-   * Flush completed reports to the server
+   * Flush completed reports to the server via gRPC
    */
   async flush() {
     if (this.completedReports.length === 0) {
@@ -217,25 +240,7 @@ export class TimingCollector {
     )
 
     try {
-      const serverUrl =
-        import.meta.env.VITE_GRPC_BASE_URL || 'http://localhost:3001'
-      const payload = { reports: reportsToSend }
-
-      const token = (store.get(STORE_KEYS.ACCESS_TOKEN) as string | null) || ''
-      const response = await fetch(`${serverUrl}/timing`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(payload),
-      })
-
-      if (!response.ok) {
-        throw new Error(
-          `Timing submission failed: ${response.status} ${response.statusText}`,
-        )
-      }
+      await grpcClient.submitTimingReports(reportsToSend)
 
       console.log(
         `[TimingCollector] Successfully submitted ${reportsToSend.length} reports`,
@@ -285,17 +290,17 @@ export class TimingCollector {
    * )
    */
   async timeAsync<T>(
-    interactionId: string | null,
     eventName: TimingEventName,
     fn: () => Promise<T> | T,
+    interactionId?: string,
   ): Promise<T> {
-    this.startTiming(interactionId, eventName)
+    this.startTiming(eventName, interactionId)
     try {
       const result = await fn()
       return result
     } finally {
       // Always end timing, even if the function throws
-      this.endTiming(interactionId, eventName)
+      this.endTiming(eventName, interactionId)
     }
   }
 }

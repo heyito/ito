@@ -5,11 +5,6 @@ import { getNativeBinaryPath } from './native-interface'
 import { BrowserWindow } from 'electron'
 import { itoSessionManager } from '../main/itoSessionManager'
 import { KeyName, keyNameMap, normalizeLegacyKey } from '../types/keyboard'
-import { interactionManager } from '../main/interactions/InteractionManager'
-import {
-  timingCollector,
-  TimingEventName,
-} from '../main/timing/TimingCollector'
 
 interface KeyEvent {
   type: 'keydown' | 'keyup'
@@ -236,14 +231,7 @@ async function handleKeyEventInMain(event: KeyEvent) {
       // Starting a new session
       activeShortcutId = currentlyHeldShortcut.id
       console.info('lib Shortcut ACTIVATED, starting recording...')
-      const interactionId = await itoSessionManager.startSession(
-        currentlyHeldShortcut.mode,
-      )
-
-      if (interactionId) {
-        timingCollector.startInteraction(interactionId)
-        timingCollector.startTiming(interactionId, TimingEventName.HOTKEY_PRESS)
-      }
+      await itoSessionManager.startSession(currentlyHeldShortcut.mode)
     } else if (activeShortcutId !== currentlyHeldShortcut.id) {
       // Different shortcut detected while already recording - change mode
       activeShortcutId = currentlyHeldShortcut.id
@@ -258,11 +246,6 @@ async function handleKeyEventInMain(event: KeyEvent) {
       // Shortcut released - deactivate immediately (no debounce on release)
       activeShortcutId = null
       console.info('lib Shortcut DEACTIVATED, stopping recording...')
-      const interactionId = interactionManager.getCurrentInteractionId()
-      if (interactionId) {
-        timingCollector.endTiming(interactionId, TimingEventName.HOTKEY_PRESS)
-      }
-
       itoSessionManager.completeSession()
     }
   }

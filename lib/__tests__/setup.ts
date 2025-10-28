@@ -178,6 +178,20 @@ mock.module('electron', () => {
 
 console.log('✓ Electron module mocked')
 
+// Export a reusable mock TimingCollector factory for tests
+// Note: This is NOT globally mocked - tests must mock it themselves
+export const createMockTimingCollector = () => ({
+  startInteraction: mock(),
+  startTiming: mock(),
+  endTiming: mock(),
+  finalizeInteraction: mock(),
+  clearInteraction: mock(),
+  timeAsync: mock(async (_eventName: any, fn: any, _interactionId?: any) => {
+    // Execute the function parameter
+    return await fn()
+  }),
+})
+
 // Store original console methods for restoration
 const originalConsole = {
   log: console.log,

@@ -52,8 +52,7 @@ export class TimingCollector {
   }
 
   private shouldCollect(): boolean {
-    return true
-    // return analytics.isEnabled()
+    return analytics.isEnabled()
   }
 
   /**

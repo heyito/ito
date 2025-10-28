@@ -104,8 +104,8 @@ describe('TimingCollector', () => {
       const interactionId = 'test-interaction-1'
       timingCollector.startInteraction(interactionId)
 
-      timingCollector.startTiming(interactionId, TimingEventName.TEXT_WRITER)
-      timingCollector.endTiming(interactionId, TimingEventName.TEXT_WRITER)
+      timingCollector.startTiming(TimingEventName.TEXT_WRITER, interactionId)
+      timingCollector.endTiming(TimingEventName.TEXT_WRITER, interactionId)
 
       timingCollector.finalizeInteraction(interactionId)
 
@@ -116,8 +116,8 @@ describe('TimingCollector', () => {
     })
 
     test('should handle null interaction ID gracefully', async () => {
-      timingCollector.startTiming(null, TimingEventName.TEXT_WRITER)
-      timingCollector.endTiming(null, TimingEventName.TEXT_WRITER)
+      timingCollector.startTiming(TimingEventName.TEXT_WRITER)
+      timingCollector.endTiming(TimingEventName.TEXT_WRITER)
 
       await timingCollector.flush()
 
@@ -127,8 +127,8 @@ describe('TimingCollector', () => {
 
     test('should warn when ending timing for unknown interaction', async () => {
       timingCollector.endTiming(
-        'unknown-interaction',
         TimingEventName.TEXT_WRITER,
+        'unknown-interaction',
       )
 
       await timingCollector.flush()
@@ -142,7 +142,7 @@ describe('TimingCollector', () => {
       timingCollector.startInteraction(interactionId)
 
       // End timing without starting it
-      timingCollector.endTiming(interactionId, TimingEventName.TEXT_WRITER)
+      timingCollector.endTiming(TimingEventName.TEXT_WRITER, interactionId)
       timingCollector.finalizeInteraction(interactionId)
 
       await timingCollector.flush()
@@ -234,12 +234,12 @@ describe('TimingCollector', () => {
       timingCollector.startInteraction(interactionId)
 
       timingCollector.startTiming(
-        interactionId,
         TimingEventName.INTERACTION_ACTIVE,
+        interactionId,
       )
       timingCollector.endTiming(
-        interactionId,
         TimingEventName.INTERACTION_ACTIVE,
+        interactionId,
       )
 
       timingCollector.finalizeInteraction(interactionId)
@@ -313,12 +313,12 @@ describe('TimingCollector', () => {
       const interactionId = 'test-interaction-1'
       timingCollector.startInteraction(interactionId)
       timingCollector.startTiming(
-        interactionId,
         TimingEventName.INTERACTION_ACTIVE,
+        interactionId,
       )
       timingCollector.endTiming(
-        interactionId,
         TimingEventName.INTERACTION_ACTIVE,
+        interactionId,
       )
       timingCollector.finalizeInteraction(interactionId)
 

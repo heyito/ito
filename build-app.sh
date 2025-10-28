@@ -263,9 +263,10 @@ create_windows_installer() {
 
         # Copy versioned installer to static name for CDN (supports prod and dev names)
         exe_path=\$(ls -t dist/Ito*.exe 2>/dev/null | head -n 1)
-        if [ -n "\$exe_path" ]; then
-          echo "Copying \$exe_path to dist/Ito-Installer.exe for CDN"
-          cp "\$exe_path" dist/Ito-Installer.exe
+        if [ -n \"\$exe_path\" ]; then
+          dest_name=\$([ \"\${ITO_ENV:-dev}\" = \"prod\" ] && echo \"Ito-Installer.exe\" || echo \"Ito-\${ITO_ENV}-Installer.exe\")
+          echo \"Copying \$exe_path to dist/\$dest_name for CDN\"
+          cp \"\$exe_path\" \"dist/\$dest_name\"
         else
           echo 'No Windows installer .exe found to copy'
         fi

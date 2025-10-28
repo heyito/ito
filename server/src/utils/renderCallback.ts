@@ -1,3 +1,6 @@
+const ITO_ENV = (process.env.ITO_ENV || 'prod').toLowerCase()
+const DEEPLINK_SCHEME = ITO_ENV === 'prod' ? 'ito' : `ito-dev`
+
 interface CallbackPageParams {
   code: string
   state: string
@@ -118,7 +121,7 @@ export function renderCallbackPage(params: CallbackPageParams): string {
         const state = '${params.state || ''}'
         
         if (authCode && state) {
-          window.location.href = \`ito://auth/callback?code=\${authCode}&state=\${state}\`
+          window.location.href = \`${DEEPLINK_SCHEME}://auth/callback?code=\${authCode}&state=\${state}\`
         } else {
           console.error('Missing required authentication parameters')
         }

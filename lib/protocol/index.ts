@@ -4,7 +4,7 @@ import { mainWindow } from '../main/app'
 import { ITO_ENV } from '../main/env'
 
 // Protocol handling for deep links
-const PROTOCOL = ITO_ENV === 'prod' ? 'ito' : `ito-${ITO_ENV}`
+const PROTOCOL = ITO_ENV === 'prod' ? 'ito' : `ito-dev`
 
 // Handle protocol URL
 function handleProtocolUrl(url: string) {

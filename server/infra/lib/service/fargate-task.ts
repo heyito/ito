@@ -112,6 +112,7 @@ export function createFargateTask(
       ...(config.blobStorageBucketName && {
         BLOB_STORAGE_BUCKET: config.blobStorageBucketName,
       }),
+      ITO_ENV: config.stageName,
     },
     logging: new AwsLogDriver({
       streamPrefix: 'ito-server',

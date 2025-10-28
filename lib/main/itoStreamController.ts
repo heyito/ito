@@ -148,7 +148,6 @@ export class ItoStreamController {
 
   private stopStreaming() {
     this.audioStreamManager.stopStreaming()
-    this.audioStreamManager.clearInteractionAudio()
   }
 
   private async *createStreamGenerator(): AsyncGenerator<TranscribeStreamRequest> {

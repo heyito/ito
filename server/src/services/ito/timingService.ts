@@ -62,7 +62,6 @@ export default (router: ConnectRouter) => {
       const sent = await cloudWatchLogger.sendLogs(entries)
 
       if (!sent) {
-        // No CloudWatch configured, log to stdout
         for (const e of entries) {
           try {
             process.stdout.write(`${e.message}\n`)

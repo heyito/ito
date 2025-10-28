@@ -100,8 +100,7 @@ export class CloudWatchLogger {
         return true
       }
 
-      // Re-throw other errors
-      throw err
+      return false
     }
   }
 

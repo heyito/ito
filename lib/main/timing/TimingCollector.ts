@@ -141,13 +141,11 @@ export class TimingCollector {
    * If no interactionId is provided, uses the current interaction from interactionManager
    */
   finalizeInteraction(interactionId?: string) {
-    console.log('finalizing interaction', interactionId)
     if (!this.shouldCollect()) {
       return
     }
 
     const id = interactionId || interactionManager.getCurrentInteractionId()
-    console.log('id', id)
     if (!id) {
       console.warn(
         '[TimingCollector] Cannot finalize: no interaction ID available',

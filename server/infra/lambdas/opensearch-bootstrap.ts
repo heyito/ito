@@ -205,6 +205,9 @@ const timingAnalyticsTemplate = {
         interaction_id: { type: 'keyword' },
         user_id: { type: 'keyword' },
         platform: { type: 'keyword' },
+        app_version: { type: 'keyword' },
+        hostname: { type: 'keyword' },
+        architecture: { type: 'keyword' },
         timestamp: { type: 'date' },
         total_duration_ms: { type: 'integer' },
         events: {

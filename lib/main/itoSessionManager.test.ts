@@ -26,7 +26,7 @@ mock.module('./recordingStateNotifier', () => ({
 }))
 
 const mockItoStreamController = {
-  initialize: mock((_mode, _interactionId) => Promise.resolve(true)),
+  initialize: mock(_mode => Promise.resolve(true)),
   startGrpcStream: mock(() =>
     Promise.resolve({
       response: { transcript: 'test transcript' },

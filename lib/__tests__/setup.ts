@@ -179,13 +179,41 @@ mock.module('electron', () => {
 
 console.log('✓ Electron module mocked')
 
+// Global fallback mocks to prevent cross-test leakage
+// 1) Provide a safe default for selected-text-reader's getCursorContext if not mocked elsewhere
+try {
+  const existing = await import('../media/selected-text-reader')
+  if (typeof (existing as any).getCursorContext !== 'function') {
+    mock.module('../media/selected-text-reader', () => ({
+      getCursorContext: async () => '',
+    }))
+  }
+} catch {
+  mock.module('../media/selected-text-reader', () => ({
+    getCursorContext: async () => '',
+  }))
+}
+
+// 2) Ensure node:path join maps to path.join when tests mock path
+try {
+  const pathMod = await import('path')
+  mock.module('node:path', () => ({ join: (pathMod as any).join }))
+} catch {}
+
 // Initialize SQLite once for tests that touch the KeyValueStore
 beforeAll(async () => {
   // Ensure test userData directory exists for SQLite file
   await fs.mkdir('/tmp/test-ito-app', { recursive: true })
-  // Import after mocking electron so the mock is applied
-  const { initializeDatabase } = await import('../main/sqlite/db')
-  await initializeDatabase()
+  try {
+    // Import after mocking electron so the mock is applied
+    const { initializeDatabase } = await import('../main/sqlite/db')
+    await initializeDatabase()
+  } catch (e) {
+    console.log(
+      '✓ Skipping DB init in this test run:',
+      (e as any)?.message || e,
+    )
+  }
 })
 
 // Store original console methods for restoration

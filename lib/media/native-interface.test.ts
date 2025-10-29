@@ -5,6 +5,10 @@ const mockJoin = mock((...paths: string[]) => paths.join('/'))
 mock.module('path', () => ({
   join: mockJoin,
 }))
+// Some environments resolve to node:path; mock that as well
+mock.module('node:path', () => ({
+  join: mockJoin,
+}))
 
 const mockApp = {
   isPackaged: false,
@@ -52,6 +56,8 @@ describe('Native Interface Module', () => {
     test('should resolve Darwin development binary path correctly', async () => {
       mockOs.platform.mockReturnValue('darwin')
       mockOs.arch.mockReturnValue('arm64')
+      // ensure dev mode
+      mockApp.isPackaged = false
       const { getNativeBinaryPath } = await import('./native-interface')
 
       const result = getNativeBinaryPath('global-key-listener')
@@ -67,6 +73,7 @@ describe('Native Interface Module', () => {
 
     test('should resolve Windows development binary path correctly', async () => {
       mockOs.platform.mockReturnValue('win32')
+      mockApp.isPackaged = false
       const { getNativeBinaryPath } = await import('./native-interface')
 
       const result = getNativeBinaryPath('audio-recorder')
@@ -82,6 +89,7 @@ describe('Native Interface Module', () => {
 
     test('should handle unsupported development platforms gracefully', async () => {
       mockOs.platform.mockReturnValue('linux')
+      mockApp.isPackaged = false
       const { getNativeBinaryPath } = await import('./native-interface')
 
       const result = getNativeBinaryPath('test-module')
@@ -94,6 +102,7 @@ describe('Native Interface Module', () => {
 
     test('should handle FreeBSD development platform gracefully', async () => {
       mockOs.platform.mockReturnValue('freebsd')
+      mockApp.isPackaged = false
       const { getNativeBinaryPath } = await import('./native-interface')
 
       const result = getNativeBinaryPath('test-module')

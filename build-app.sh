@@ -150,27 +150,41 @@ build_electron_app() {
 create_dmg() {
     print_status "Creating macOS DMG installer..."
     
-    # Check for notarization credentials if notarize is enabled in config
-    if grep -q "notarize: true" electron-builder.config.js; then
+    # Determine stage and handle notarization: only enforce in prod
+    local stage="${ITO_ENV:-prod}"
+    if [ "$stage" = "prod" ]; then
       if [ -z "$APPLE_ID" ] || [ -z "$APPLE_APP_SPECIFIC_PASSWORD" ] || [ -z "$APPLE_TEAM_ID" ]; then
-        print_error "Notarization is enabled, but the required environment variables are not set."
-        print_error "Please set APPLE_ID, APPLE_TEAM_ID, and APPLE_APP_SPECIFIC_PASSWORD."
+        print_error "Prod build requires notarization credentials (APPLE_ID, APPLE_TEAM_ID, APPLE_APP_SPECIFIC_PASSWORD)."
         exit 1
       else
-        print_info "Notarization credentials found. Proceeding with notarized build."
+        print_info "Prod build: notarization credentials found."
       fi
+    else
+      print_info "Non-prod build ('$stage'): skipping notarization and code signing auto-discovery."
+      export CSC_IDENTITY_AUTO_DISCOVERY=false
     fi
     
-    print_info "Packaging application with Electron Builder..."
+    print_info "Packaging application with Electron Builder (forcing DMG target)..."
+    # Ensure Vite embeds the stage for runtime
+    if [ -z "${VITE_ITO_ENV}" ]; then
+      export VITE_ITO_ENV="${ITO_ENV:-dev}"
+      print_info "Set VITE_ITO_ENV=${VITE_ITO_ENV} for build-time embedding"
+    fi
     bun run electron-vite build
-    bun run electron-builder --config electron-builder.config.js --mac --universal --publish never
+    bunx electron-builder --config electron-builder.config.js --mac dmg zip --universal --publish=never
     
     print_status "macOS DMG installer created successfully!"
     
-    # Show output location
+    # Show output location and stage-specific DMG name
     if [ -d "dist" ]; then
         print_info "Build output location: $(pwd)/dist"
-        ls -la dist/Ito-Installer.dmg 2>/dev/null || print_warning "Ito-Installer.dmg not found in dist directory"
+        local dmg_name
+        if [ "$stage" = "prod" ]; then
+          dmg_name="Ito-Installer.dmg"
+        else
+          dmg_name="Ito-${stage}-Installer.dmg"
+        fi
+        ls -la "dist/${dmg_name}" 2>/dev/null || print_warning "${dmg_name} not found in dist directory"
     fi
 }
 
@@ -219,6 +233,7 @@ create_windows_installer() {
       --env CSC_IDENTITY_AUTO_DISCOVERY=false \
       --env SKIP_SIGNING=true \
       --env VITE_ITO_VERSION="${VITE_ITO_VERSION}" \
+      --env ITO_ENV="${ITO_ENV}" \
       -v "${PROJECT_PATH}":/project \
       electronuserland/builder:wine \
       bash -c "
@@ -246,10 +261,14 @@ create_windows_installer() {
         # Run electron-builder
         bunx electron-builder --config electron-builder.config.js --win --x64 --publish=never
 
-        # Copy versioned installer to static name for CDN
-        if ls dist/Ito-*.exe 1> /dev/null 2>&1; then
-          echo 'Copying versioned installer to static Ito-Installer.exe for CDN'
-          cp dist/Ito-*.exe dist/Ito-Installer.exe
+        # Copy versioned installer to static name for CDN (supports prod and dev names)
+        exe_path=\$(ls -t dist/Ito*.exe 2>/dev/null | head -n 1)
+        if [ -n \"\$exe_path\" ]; then
+          dest_name=\$([ \"\${ITO_ENV:-dev}\" = \"prod\" ] && echo \"Ito-Installer.exe\" || echo \"Ito-\${ITO_ENV}-Installer.exe\")
+          echo \"Copying \$exe_path to dist/\$dest_name for CDN\"
+          cp \"\$exe_path\" \"dist/\$dest_name\"
+        else
+          echo 'No Windows installer .exe found to copy'
         fi
       "
     
@@ -353,7 +372,11 @@ main() {
             create_dmg
             echo
             print_status "macOS build process completed successfully! 🎉"
-            print_info "Your DMG installer is ready: dist/Ito-Installer.dmg"
+            if [ -z "${ITO_ENV}" ] || [ "${ITO_ENV}" = "prod" ]; then
+              print_info "Your DMG installer is ready: dist/Ito-Installer.dmg"
+            else
+              print_info "Your DMG installer is ready: dist/Ito-${ITO_ENV}-Installer.dmg"
+            fi
             ;;
         "windows")
             create_windows_installer

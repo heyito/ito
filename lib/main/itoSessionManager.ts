@@ -236,6 +236,7 @@ export class ItoSessionManager {
       }
       timingCollector.finalizeInteraction()
       interactionManager.clearCurrentInteraction()
+      itoStreamController.clearInteractionAudio()
     }
   }
 

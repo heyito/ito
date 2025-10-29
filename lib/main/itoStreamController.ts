@@ -153,6 +153,9 @@ export class ItoStreamController {
 
   private stopStreaming() {
     this.audioStreamManager.stopStreaming()
+  }
+
+  public clearInteractionAudio() {
     this.audioStreamManager.clearInteractionAudio()
   }
 

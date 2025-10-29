@@ -176,7 +176,7 @@ describe('itoSessionManager', () => {
     await session.startSession(ItoMode.TRANSCRIBE)
 
     // Wait for background context fetch
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await new Promise(resolve => setTimeout(resolve, 60))
 
     expect(mockContextGrabber.getCursorContextForGrammar).toHaveBeenCalledTimes(
       1,
@@ -306,6 +306,8 @@ describe('itoSessionManager', () => {
     const session = new ItoSessionManager()
 
     await session.startSession(ItoMode.TRANSCRIBE)
+    // Allow background context fetch to set up grammarRulesService
+    await new Promise(resolve => setTimeout(resolve, 60))
     await session.completeSession()
 
     expect(mockGrammarRulesService.setCaseFirstWord).toHaveBeenCalledWith(

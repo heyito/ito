@@ -39,6 +39,7 @@ mock.module('../store', () => ({
 // Mock file system
 const mockFs = {
   unlink: mock(),
+  mkdir: mock(() => Promise.resolve()),
 }
 mock.module('fs', () => ({
   promises: mockFs,

@@ -9,6 +9,11 @@ service ItoService {
   // This is the ideal method for dictation to reduce latency and memory usage.
   rpc TranscribeStream(stream AudioChunk) returns (TranscriptionResponse);
 
+  // Enhanced streaming transcription that accepts configuration data in-stream.
+  // Config can be sent before, during, or omitted entirely. Multiple config messages
+  // are merged by the server. This allows immediate streaming without waiting for context.
+  rpc TranscribeStreamV2(stream TranscribeStreamRequest) returns (TranscriptionResponse);
+
   // Note Service
   rpc CreateNote(CreateNoteRequest) returns (Note);
   rpc GetNote(GetNoteRequest) returns (Note);
@@ -35,6 +40,11 @@ service ItoService {
   // Advanced Settings Service
   rpc GetAdvancedSettings(GetAdvancedSettingsRequest) returns (AdvancedSettings);
   rpc UpdateAdvancedSettings(UpdateAdvancedSettingsRequest) returns (AdvancedSettings);
+}
+
+service TimingService {
+  // Submit timing reports for interaction analytics
+  rpc SubmitTimingReports(SubmitTimingReportsRequest) returns (SubmitTimingReportsResponse);
 }
 
 // =================================================================
@@ -77,6 +87,32 @@ message ClientError {
 // A chunk of audio data for streaming.
 message AudioChunk {
   bytes audio_data = 1 [(buf.validate.field).bytes.max_len = 1048576]; // 1 MB limit per chunk
+}
+
+// Context information for transcription.
+message ContextInfo {
+  optional string window_title = 1;
+  optional string app_name = 2;
+  optional string context_text = 3;
+  optional ItoMode mode = 4;
+}
+
+// Configuration that can be sent in-stream for TranscribeStreamV2.
+// All fields are optional and will be merged by the server.
+// Multiple config messages received during the stream are progressively merged.
+message StreamConfig {
+  optional ContextInfo context = 1;
+  optional LlmSettings llm_settings = 2;
+  repeated string vocabulary = 3;
+}
+
+// Request message for TranscribeStreamV2.
+// Can contain either configuration or audio data.
+message TranscribeStreamRequest {
+  oneof payload {
+    StreamConfig config = 1;      // Configuration/context data
+    bytes audio_data = 2 [(buf.validate.field).bytes.max_len = 1048576]; // Audio chunk (1 MB limit)
+  }
 }
 
 // The response message containing the final transcript.
@@ -242,4 +278,33 @@ message GetAdvancedSettingsRequest {
 
 message UpdateAdvancedSettingsRequest {
   LlmSettings llm = 1;
+}
+
+// Timing Analytics
+// -----------------------------------------------------------------
+message TimingEvent {
+  string name = 1;
+  double start_ms = 2;
+  optional double end_ms = 3;
+  optional double duration_ms = 4;
+}
+
+message TimingReport {
+  string interaction_id = 1;
+  string user_id = 2;
+  string platform = 3;
+  string app_version = 4;
+  string hostname = 5;
+  string architecture = 6;
+  string timestamp = 7;
+  repeated TimingEvent events = 8;
+  double total_duration_ms = 9;
+}
+
+message SubmitTimingReportsRequest {
+  repeated TimingReport reports = 1;
+}
+
+message SubmitTimingReportsResponse {
+  // Empty response
 }

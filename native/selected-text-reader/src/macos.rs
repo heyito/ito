@@ -1,12 +1,14 @@
 use arboard::Clipboard;
 use libc::c_void;
-use lru::LruCache;
-use parking_lot::Mutex;
 use std::ptr;
 use std::thread;
 use std::time::Duration;
 
-static GET_SELECTED_TEXT_METHOD: Mutex<Option<LruCache<String, u8>>> = Mutex::new(None);
+// Count characters as the editor sees them (on macOS, just use normal char
+// count)
+pub fn count_editor_chars(text: &str) -> usize {
+    text.chars().count()
+}
 
 // Raw Quartz C API bindings for CGEventCreateKeyboardEvent
 #[repr(C)]
@@ -17,10 +19,8 @@ type CGKeyCode = u16;
 type CGEventFlags = u64;
 const CG_EVENT_FLAG_MASK_COMMAND: CGEventFlags = 0x100000;
 const CG_EVENT_FLAG_MASK_SHIFT: CGEventFlags = 0x020000;
-const CG_EVENT_FLAG_MASK_CONTROL: CGEventFlags = 0x040000;
 
 type CGEventTapLocation = u32;
-const CG_HID_EVENT_TAP: CGEventTapLocation = 0;
 const CG_SESSION_EVENT_TAP: CGEventTapLocation = 1;
 
 extern "C" {
@@ -55,13 +55,15 @@ pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
     // Get the copied text from clipboard (this is what was selected)
     let selected_text = clipboard.get_text().unwrap_or_default();
 
-    // Always restore original clipboard contents - ITO is cutting on behalf of user for context
+    // Always restore original clipboard contents - ITO is cutting on behalf of user
+    // for context
     let _ = clipboard.set_text(original_clipboard);
 
     Ok(selected_text)
 }
 
-// Native macOS Cmd+C implementation using raw Quartz C API - matching Python exactly
+// Native macOS Cmd+C implementation using raw Quartz C API - matching Python
+// exactly
 pub fn native_cmd_c() -> Result<(), Box<dyn std::error::Error>> {
     unsafe {
         // Key code for 'C' is 8 on macOS
@@ -107,8 +109,9 @@ pub fn select_previous_chars_and_copy(
     char_count: usize,
     clipboard: &mut Clipboard,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    // Send Shift+Left N times to select precursor text (copied from working get_context)
-    for i in 0..char_count {
+    // Send Shift+Left N times to select precursor text (copied from working
+    // get_context)
+    for _i in 0..char_count {
         unsafe {
             let key_down_event = CGEventCreateKeyboardEvent(ptr::null_mut(), 123, true); // Left arrow
             let key_up_event = CGEventCreateKeyboardEvent(ptr::null_mut(), 123, false);
@@ -167,14 +170,15 @@ pub fn select_previous_chars_and_copy(
     Ok(context_text)
 }
 
-
 // Shift cursor right while deselecting text
-pub fn shift_cursor_right_with_deselect(char_count: usize) -> Result<(), Box<dyn std::error::Error>> {
+pub fn shift_cursor_right_with_deselect(
+    char_count: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
     if char_count == 0 {
         return Ok(());
     }
 
-    for i in 0..char_count {
+    for _i in 0..char_count {
         unsafe {
             let right_arrow_key_code: CGKeyCode = 124; // Right Arrow key code
             let key_down = CGEventCreateKeyboardEvent(ptr::null_mut(), right_arrow_key_code, true);
@@ -204,4 +208,17 @@ pub fn shift_cursor_right_with_deselect(char_count: usize) -> Result<(), Box<dyn
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_count_editor_chars() {
+        assert_eq!(count_editor_chars("hello"), 5);
+        assert_eq!(count_editor_chars("Hello 世界"), 8);
+        assert_eq!(count_editor_chars("Hi 👋"), 4);
+        assert_eq!(count_editor_chars(""), 0);
+    }
 }

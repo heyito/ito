@@ -1,6 +1,9 @@
 import { app } from 'electron'
+import log from 'electron-log'
 import { autoUpdater } from 'electron-updater'
 import { mainWindow } from './app'
+import { hardKillAll, teardown } from './teardown'
+import { ITO_ENV } from './env'
 
 export interface UpdateStatus {
   updateAvailable: boolean
@@ -44,14 +47,21 @@ export function initializeAutoUpdater() {
         autoUpdater.forceDevUpdateConfig = true
       }
 
+      const channel = ITO_ENV === 'prod' ? 'latest' : ITO_ENV
       autoUpdater.setFeedURL({
         provider: 's3',
         bucket,
         path: 'releases/',
         region: 'us-west-2',
+        channel,
       })
 
+      log.transports.file.level = 'debug'
+      autoUpdater.logger = log
+
       autoUpdater.autoRunAppAfterInstall = true
+      autoUpdater.autoDownload = true
+      autoUpdater.autoInstallOnAppQuit = false
 
       setupAutoUpdaterEvents()
       autoUpdater.checkForUpdates()
@@ -101,4 +111,35 @@ function setupAutoUpdaterEvents() {
     const log_message = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent.toFixed(2)}% (${progressObj.transferred}/${progressObj.total})`
     console.log(log_message)
   })
+}
+
+let installing = false
+
+export async function installUpdateNow() {
+  if (installing) return
+  installing = true
+  console.log('[Updater] Preparing to install…')
+
+  try {
+    // Try to gracefully shut down processes
+    teardown()
+    await new Promise(resolve => setTimeout(resolve, 1_500))
+
+    console.log('[Updater] Forcibly kill all straggler processes')
+    // Force-kill stragglers + crashpad/helpers
+    await hardKillAll()
+
+    console.log('[Updater] calling autoUpdater quit and install')
+    // Fire the installer (UI visible for debugging recommended)
+    autoUpdater.quitAndInstall(false /* isSilent */, true /* forceRunAfter */)
+  } catch (e) {
+    log.error('[Updater] installUpdateNow error', e)
+    // Try again, but don’t loop forever
+    try {
+      await hardKillAll()
+      autoUpdater.quitAndInstall(false, true)
+    } catch {
+      /* empty */
+    }
+  }
 }

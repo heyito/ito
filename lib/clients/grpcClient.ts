@@ -1,10 +1,13 @@
 import {
   ItoService,
+  TimingService,
   AudioChunk,
   Note as NotePb,
   Interaction as InteractionPb,
   DictionaryItem as DictionaryItemPb,
   AdvancedSettings as AdvancedSettingsPb,
+  TimingReport,
+  TimingEvent,
   CreateNoteRequestSchema,
   UpdateNoteRequestSchema,
   DeleteNoteRequestSchema,
@@ -20,7 +23,11 @@ import {
   DeleteUserDataRequestSchema,
   GetAdvancedSettingsRequestSchema,
   UpdateAdvancedSettingsRequestSchema,
+  SubmitTimingReportsRequestSchema,
+  TimingReportSchema,
+  TimingEventSchema,
   ItoMode,
+  TranscribeStreamRequest,
 } from '@/app/generated/ito_pb'
 import { createClient } from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-node'
@@ -41,6 +48,7 @@ import { getActiveWindow } from '../media/active-application'
 
 class GrpcClient {
   private client: ReturnType<typeof createClient<typeof ItoService>>
+  private timingClient: ReturnType<typeof createClient<typeof TimingService>>
   private authToken: string | null = null
   private mainWindow: BrowserWindow | null = null
   private isRefreshingTokens: boolean = false
@@ -50,7 +58,12 @@ class GrpcClient {
       baseUrl: import.meta.env.VITE_GRPC_BASE_URL,
       httpVersion: '1.1',
     })
+    console.log(
+      'Creating gRPC client with base URL:',
+      import.meta.env.VITE_GRPC_BASE_URL,
+    )
     this.client = createClient(ItoService, transport)
+    this.timingClient = createClient(TimingService, transport)
   }
 
   setMainWindow(window: BrowserWindow) {
@@ -161,10 +174,6 @@ class GrpcClient {
         'no-speech-threshold',
         advancedSettings.llm.noSpeechThreshold.toString(),
       )
-      headers.set(
-        'low-quality-threshold',
-        advancedSettings.llm.lowQualityThreshold.toString(),
-      )
 
       headers.set('mode', mode.toString())
 
@@ -266,6 +275,19 @@ class GrpcClient {
     return this.withRetry(async () => {
       const response = await this.client.transcribeStream(stream, {
         headers: await this.getHeadersWithMetadata(mode),
+      })
+      return response
+    })
+  }
+
+  async transcribeStreamV2(
+    stream: AsyncIterable<TranscribeStreamRequest>,
+    signal?: AbortSignal,
+  ) {
+    return this.withRetry(async () => {
+      const response = await this.client.transcribeStreamV2(stream, {
+        headers: this.getHeaders(),
+        signal,
       })
       return response
     })
@@ -495,10 +517,20 @@ class GrpcClient {
           transcriptionPrompt: settings.llm.transcriptionPrompt,
           editingPrompt: settings.llm.editingPrompt,
           noSpeechThreshold: settings.llm.noSpeechThreshold,
-          lowQualityThreshold: settings.llm.lowQualityThreshold,
         },
       })
       return await this.client.updateAdvancedSettings(request, {
+        headers: this.getHeaders(),
+      })
+    })
+  }
+
+  async submitTimingReports(reports: TimingReport[]) {
+    return this.withRetry(async () => {
+      const request = create(SubmitTimingReportsRequestSchema, {
+        reports,
+      })
+      return await this.timingClient.submitTimingReports(request, {
         headers: this.getHeaders(),
       })
     })

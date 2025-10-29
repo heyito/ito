@@ -1,10 +1,7 @@
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process'
-import { join } from 'path'
-import { app } from 'electron'
-import os from 'os'
 import log from 'electron-log'
 import { EventEmitter } from 'events'
-import { traceLogger } from '../main/traceLogger'
+import { getNativeBinaryPath } from './native-interface'
 
 // Message types from the native binary
 const MSG_TYPE_JSON = 1
@@ -22,6 +19,10 @@ class AudioRecorderService extends EventEmitter {
     resolve: (value: string[]) => void
     reject: (reason?: any) => void
   } | null = null
+  #drainPromise: {
+    resolve: () => void
+    reject: (reason?: any) => void
+  } | null = null
 
   constructor() {
     super()
@@ -36,7 +37,7 @@ class AudioRecorderService extends EventEmitter {
       return
     }
 
-    const binaryPath = this.#getBinaryPath()
+    const binaryPath = getNativeBinaryPath('audio-recorder')
     if (!binaryPath) {
       log.error(
         '[AudioService] Could not determine audio recorder binary path.',
@@ -46,7 +47,7 @@ class AudioRecorderService extends EventEmitter {
       return
     }
 
-    log.info(`[AudioService] Spawning audio recorder at: ${binaryPath}`)
+    console.log(`[AudioService] Spawning audio recorder at: ${binaryPath}`)
     try {
       this.#audioRecorderProcess = spawn(binaryPath, [], {
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -73,7 +74,7 @@ class AudioRecorderService extends EventEmitter {
    */
   public terminate(): void {
     if (this.#audioRecorderProcess) {
-      log.info('[AudioService] Stopping audio recorder process.')
+      console.log('[AudioService] Stopping audio recorder process.')
       this.#audioRecorderProcess.kill()
       this.#audioRecorderProcess = null
       this.emit('stopped')
@@ -84,33 +85,16 @@ class AudioRecorderService extends EventEmitter {
    * Sends a command to start recording from a specific device.
    */
   public startRecording(deviceName: string): void {
-    // Get current interaction ID for trace logging
-    const interactionId = (globalThis as any).currentInteractionId
-    if (interactionId) {
-      traceLogger.logStep(interactionId, 'AUDIO_RECORDING_START', {
-        deviceName,
-        hasProcess: !!this.#audioRecorderProcess,
-      })
-    }
-
     this.#sendCommand({ command: 'start', device_name: deviceName })
-    log.info(`[AudioService] Recording started on device: ${deviceName}`)
+    console.log(`[AudioService] Recording started on device: ${deviceName}`)
   }
 
   /**
    * Sends a command to stop the current recording.
    */
   public stopRecording(): void {
-    // Get current interaction ID for trace logging
-    const interactionId = (globalThis as any).currentInteractionId
-    if (interactionId) {
-      traceLogger.logStep(interactionId, 'AUDIO_RECORDING_STOP', {
-        hasProcess: !!this.#audioRecorderProcess,
-      })
-    }
-
     this.#sendCommand({ command: 'stop' })
-    log.info('[AudioService] Recording stopped')
+    console.log('[AudioService] Recording stopped')
   }
 
   /**
@@ -222,6 +206,11 @@ class AudioRecorderService extends EventEmitter {
             outputSampleRate: outputRate,
             channels,
           })
+        } else if (jsonResponse.type === 'drain-complete') {
+          if (this.#drainPromise) {
+            this.#drainPromise.resolve()
+            this.#drainPromise = null
+          }
         }
         // You could emit a generic 'json-message' event here if needed
       } catch (err) {
@@ -233,6 +222,10 @@ class AudioRecorderService extends EventEmitter {
           )
           this.#deviceListPromise = null
         }
+        if (this.#drainPromise) {
+          this.#drainPromise.reject(err as Error)
+          this.#drainPromise = null
+        }
       }
     } else if (message.type === 'audio') {
       const volume = this.#calculateVolume(message.payload)
@@ -240,6 +233,41 @@ class AudioRecorderService extends EventEmitter {
       this.emit('volume-update', volume)
       this.emit('audio-chunk', message.payload)
     }
+  }
+
+  public awaitDrainComplete(timeoutMs: number = 500): Promise<void> {
+    if (this.#drainPromise) {
+      return new Promise((resolve, reject) => {
+        this.once('error', reject)
+        this.#drainPromise = { resolve, reject }
+      })
+    }
+    return new Promise((resolve, reject) => {
+      let settled = false
+      const onTimeout = setTimeout(() => {
+        if (!settled) {
+          settled = true
+          this.#drainPromise = null
+          resolve() // fallback: do not hang the stop flow
+        }
+      }, timeoutMs)
+      this.#drainPromise = {
+        resolve: () => {
+          if (!settled) {
+            settled = true
+            clearTimeout(onTimeout)
+            resolve()
+          }
+        },
+        reject: (err?: any) => {
+          if (!settled) {
+            settled = true
+            clearTimeout(onTimeout)
+            reject(err)
+          }
+        },
+      }
+    })
   }
 
   #sendCommand(command: object): void {
@@ -260,33 +288,6 @@ class AudioRecorderService extends EventEmitter {
     }
     const rms = Math.sqrt(sumOfSquares / (buffer.length / 2))
     return Math.min(rms / 32767, 1.0)
-  }
-
-  #getBinaryPath(): string | null {
-    const isDev = !app.isPackaged
-    const platform = os.platform()
-    const binaryName =
-      platform === 'win32' ? 'audio-recorder.exe' : 'audio-recorder'
-    const baseDir = isDev
-      ? join(__dirname, '../../native/audio-recorder/target')
-      : join(process.resourcesPath, 'binaries')
-
-    if (isDev) {
-      let archPath
-      if (platform === 'darwin') {
-        archPath = 'universal'
-      } else if (platform === 'win32') {
-        archPath = 'x86_64-pc-windows-gnu/release'
-      } else {
-        log.error(
-          `Unsupported development platform for audio-recorder: ${platform}`,
-        )
-        return null
-      }
-      return join(baseDir, archPath, binaryName)
-    } else {
-      return join(process.resourcesPath, 'binaries', binaryName)
-    }
   }
 }
 

@@ -4,12 +4,13 @@ import { STORE_KEYS } from '../../constants/store-keys'
 import log from 'electron-log'
 import { v4 as uuidv4 } from 'uuid'
 import { BrowserWindow } from 'electron'
+import { timingCollector } from '../timing/TimingCollector'
 
 export class InteractionManager {
   private currentInteractionId: string | null = null
   private interactionStartTime: number | null = null
 
-  startInteraction(): string {
+  initialize(): string {
     this.currentInteractionId = uuidv4()
     this.interactionStartTime = Date.now()
     return this.currentInteractionId
@@ -33,6 +34,7 @@ export class InteractionManager {
     audioBuffer: Buffer,
     sampleRate: number,
     errorMessage?: string,
+    errorCode?: string,
   ) {
     if (!this.currentInteractionId) {
       log.warn(
@@ -63,6 +65,7 @@ export class InteractionManager {
         transcript,
         totalAudioBytes: audioBuffer.length,
         error: errorMessage || null,
+        errorCode: errorCode || null,
         timestamp: new Date().toISOString(),
         durationMs,
       }
@@ -103,6 +106,10 @@ export class InteractionManager {
       })
     } catch (error) {
       log.error('[InteractionManager] Failed to create interaction:', error)
+      // Clear timing on error
+      if (this.currentInteractionId) {
+        timingCollector.clearInteraction(this.currentInteractionId)
+      }
     }
   }
 
@@ -111,3 +118,5 @@ export class InteractionManager {
     this.interactionStartTime = null
   }
 }
+
+export const interactionManager = new InteractionManager()

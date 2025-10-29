@@ -28,17 +28,22 @@ enum Command {
 }
 
 // Global state for registered hotkeys and currently pressed keys
+#[allow(static_mut_refs)]
 static mut REGISTERED_HOTKEYS: Vec<HotkeyCombo> = Vec::new();
+#[allow(static_mut_refs)]
 static mut CURRENTLY_PRESSED: Vec<String> = Vec::new();
 
 // Global state for tracking modifier keys to detect Cmd+C/Ctrl+C combinations
+#[allow(static_mut_refs)]
 static mut CMD_PRESSED: bool = false;
+#[allow(static_mut_refs)]
 static mut CTRL_PRESSED: bool = false;
+#[allow(static_mut_refs)]
 static mut COPY_IN_PROGRESS: bool = false;
 
 /// Prevents macOS App Nap from suspending this process.
-/// Returns an activity token that must be retained for the entire process lifetime.
-/// On non-macOS platforms, returns a dummy value.
+/// Returns an activity token that must be retained for the entire process
+/// lifetime. On non-macOS platforms, returns a dummy value.
 #[cfg(target_os = "macos")]
 fn prevent_app_nap() -> id {
     unsafe {
@@ -70,12 +75,10 @@ fn main() {
     // Spawn a thread to read commands from stdin
     thread::spawn(|| {
         let stdin = io::stdin();
-        for line in stdin.lock().lines() {
-            if let Ok(line) = line {
-                match serde_json::from_str::<Command>(&line) {
-                    Ok(command) => handle_command(command),
-                    Err(e) => eprintln!("Error parsing command: {}", e),
-                }
+        for line in stdin.lock().lines().map_while(Result::ok) {
+            match serde_json::from_str::<Command>(&line) {
+                Ok(command) => handle_command(command),
+                Err(e) => eprintln!("Error parsing command: {}", e),
             }
         }
     });
@@ -141,12 +144,14 @@ fn callback(event: Event) -> Option<Event> {
             let key_name = format!("{:?}", key);
 
             // Check for copy combinations before updating modifier states
-            // Ignore Cmd+C (macOS) and Ctrl+C (Windows/Linux) combinations to prevent feedback loops with selected-text-reader
+            // Ignore Cmd+C (macOS) and Ctrl+C (Windows/Linux) combinations to prevent
+            // feedback loops with selected-text-reader
             if matches!(key, Key::KeyC) && unsafe { CMD_PRESSED || CTRL_PRESSED } {
                 unsafe {
                     COPY_IN_PROGRESS = true;
                 }
-                // Still pass through the event to the system but don't output it to our listener
+                // Still pass through the event to the system but don't output it to our
+                // listener
                 return Some(event);
             }
 
@@ -179,6 +184,7 @@ fn callback(event: Event) -> Option<Event> {
             output_event("keydown", &key);
 
             // Check if we should block based on exact hotkey match
+            #[allow(clippy::if_same_then_else)]
             if should_block() {
                 // Windows-specific: Prevent Start menu from opening when Windows key is used in hotkeys
                 // Windows shows the Start menu if it sees "Win down → Win up" with no other keys in between.
@@ -193,9 +199,13 @@ fn callback(event: Event) -> Option<Event> {
                     }
                 }
                 None // Block the event from reaching the OS
-            } else if key_name == "Unknown(179)" && unsafe {
-                REGISTERED_HOTKEYS.iter().any(|hotkey| hotkey.keys.contains(&"Function".to_string()))
-            } {
+            } else if key_name == "Unknown(179)"
+                && unsafe {
+                    REGISTERED_HOTKEYS
+                        .iter()
+                        .any(|hotkey| hotkey.keys.contains(&"Function".to_string()))
+                }
+            {
                 None // Block Unknown(179) if any hotkey uses Function
             } else {
                 Some(event) // Let it through
@@ -217,14 +227,14 @@ fn callback(event: Event) -> Option<Event> {
             }
 
             // Check for C key release while copy is in progress or modifiers are still held
-            if matches!(key, Key::KeyC) {
-                if unsafe { COPY_IN_PROGRESS || CMD_PRESSED || CTRL_PRESSED } {
-                    unsafe {
-                        COPY_IN_PROGRESS = false;
-                    }
-                    // Don't output this C key release event
-                    return Some(event);
+            if matches!(key, Key::KeyC)
+                && unsafe { COPY_IN_PROGRESS || CMD_PRESSED || CTRL_PRESSED }
+            {
+                unsafe {
+                    COPY_IN_PROGRESS = false;
                 }
+                // Don't output this C key release event
+                return Some(event);
             }
 
             // Track modifier key states

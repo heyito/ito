@@ -34,7 +34,8 @@ jobs:
           echo "VITE_AUTH0_DOMAIN=\"${{ secrets.VITE_AUTH0_DOMAIN }}\"" >> .env
           echo "VITE_AUTH0_CLIENT_ID=\"${{ secrets.VITE_AUTH0_CLIENT_ID }}\"" >> .env
           echo "VITE_AUTH0_AUDIENCE=\"${{ secrets.VITE_AUTH0_AUDIENCE }}\"" >> .env
-          echo "VITE_AMPLITUDE_API_KEY=\"${{ secrets.VITE_AMPLITUDE_API_KEY }}\"" >> .env
+          echo "VITE_POSTHOG_API_KEY=\"${{ secrets.VITE_POSTHOG_API_KEY }}\"" >> .env
+          echo "VITE_POSTHOG_HOST=\"${{ secrets.VITE_POSTHOG_HOST }}\"" >> .env
           echo "VITE_GRPC_BASE_URL=\"${{ vars.VITE_GRPC_BASE_URL }}\"" >> .env
           echo "VITE_UPDATER_BUCKET=\"${{ vars.VITE_UPDATER_BUCKET }}\"" >> .env
           echo "VITE_SENTRY_DSN=\"${{ vars.VITE_SENTRY_DSN }}\"" >> .env
@@ -42,6 +43,8 @@ jobs:
           echo "VITE_SENTRY_TRACES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE }}\"" >> .env
           echo "VITE_SENTRY_PROFILES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_PROFILES_SAMPLE_RATE }}\"" >> .env
           echo "VITE_ITO_VERSION=\"${GITHUB_REF#refs/tags/v}\"" >> .env
+          echo "ITO_ENV=\"${{ github.event.release.target_commitish == 'main' && 'prod' || 'dev' }}\"" >> .env
+          echo "VITE_ITO_ENV=\"${{ github.event.release.target_commitish == 'main' && 'prod' || 'dev' }}\"" >> .env
           echo "APPLE_ID=\"${{ secrets.APPLE_ID }}\"" >> .env
           echo "APPLE_TEAM_ID=\"${{ secrets.APPLE_TEAM_ID }}\"" >> .env
           echo "APPLE_APP_SPECIFIC_PASSWORD=\"${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}\"" >> .env
@@ -61,11 +64,14 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: ./build-app.sh mac
 
+      - name: Compute DMG name
+        run: echo "DMG_NAME=Ito-${{ github.event.release.target_commitish == 'main' && 'Installer' || 'Installer-dev' }}.dmg" >> $GITHUB_ENV
+
       - name: Upload Mac Installer DMG
         uses: actions/upload-artifact@v4
         with:
           name: Ito-Mac-Installer
-          path: dist/Ito-Installer.dmg
+          path: dist/Ito-${{ github.event.release.target_commitish == 'main' && 'Installer' || 'dev-Installer' }}.dmg
 
       - name: Upload Mac Build Artifacts
         uses: actions/upload-artifact@v4
@@ -105,7 +111,8 @@ jobs:
           echo "VITE_AUTH0_DOMAIN=\"${{ secrets.VITE_AUTH0_DOMAIN }}\"" >> .env
           echo "VITE_AUTH0_CLIENT_ID=\"${{ secrets.VITE_AUTH0_CLIENT_ID }}\"" >> .env
           echo "VITE_AUTH0_AUDIENCE=\"${{ secrets.VITE_AUTH0_AUDIENCE }}\"" >> .env
-          echo "VITE_AMPLITUDE_API_KEY=\"${{ secrets.VITE_AMPLITUDE_API_KEY }}\"" >> .env
+          echo "VITE_POSTHOG_API_KEY=\"${{ secrets.VITE_POSTHOG_API_KEY }}\"" >> .env
+          echo "VITE_POSTHOG_HOST=\"${{ secrets.VITE_POSTHOG_HOST }}\"" >> .env
           echo "VITE_GRPC_BASE_URL=\"${{ vars.VITE_GRPC_BASE_URL }}\"" >> .env
           echo "VITE_UPDATER_BUCKET=\"${{ vars.VITE_UPDATER_BUCKET }}\"" >> .env
           echo "VITE_SENTRY_DSN=\"${{ vars.VITE_SENTRY_DSN }}\"" >> .env
@@ -113,6 +120,8 @@ jobs:
           echo "VITE_SENTRY_TRACES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE }}\"" >> .env
           echo "VITE_SENTRY_PROFILES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_PROFILES_SAMPLE_RATE }}\"" >> .env
           echo "VITE_ITO_VERSION=\"${GITHUB_REF#refs/tags/v}\"" >> .env
+          echo "ITO_ENV=\"${{ github.event.release.target_commitish == 'main' && 'prod' || 'dev' }}\"" >> .env
+          echo "VITE_ITO_ENV=\"${{ github.event.release.target_commitish == 'main' && 'prod' || 'dev' }}\"" >> .env
           echo "GH_TOKEN=\"${{ secrets.GITHUB_TOKEN }}\"" >> .env
           echo "GRPC_BASE_URL=\"${{ vars.GRPC_BASE_URL }}\"" >> .env
           echo "Created .env file:"

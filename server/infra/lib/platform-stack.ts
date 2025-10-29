@@ -268,6 +268,7 @@ export class PlatformStack extends Stack {
             'aws:SourceArn': [
               `arn:aws:firehose:${this.region}:${this.account}:deliverystream/${stageName}-ito-client-logs`,
               `arn:aws:firehose:${this.region}:${this.account}:deliverystream/${stageName}-ito-server-logs`,
+              `arn:aws:firehose:${this.region}:${this.account}:deliverystream/${stageName}-ito-timing-analytics`,
             ],
           },
         },

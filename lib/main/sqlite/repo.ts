@@ -437,4 +437,9 @@ export class KeyValueStore {
     )
     return row?.value
   }
+
+  static async delete(key: string): Promise<void> {
+    const query = 'DELETE FROM key_value_store WHERE key = ?'
+    await run(query, [key])
+  }
 }

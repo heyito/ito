@@ -108,44 +108,46 @@ export function MicrophoneSelector({
         </Button>
       </DialogTrigger>
       <DialogContent
-        className="!border-0 shadow-lg p-8"
+        className="!border-0 shadow-lg p-0"
         showCloseButton={false}
       >
         <DialogTitle className="sr-only">Select Microphone</DialogTitle>
         <DialogDescription className="sr-only">
           Choose a microphone from the list below to use for voice input
         </DialogDescription>
-        {availableMicrophones.map(mic => {
-          const { title, description } = microphoneToRender(mic)
-          return (
-            <div
-              key={mic.deviceId}
-              className={`p-6 rounded-md cursor-pointer transition-colors max-w-full overflow-hidden ${
-                tempSelectedMicrophone === mic.deviceId
-                  ? 'bg-purple-50 border-2 border-purple-100'
-                  : 'bg-neutral-100 border-2 border-neutral-100 hover:bg-neutral-200'
-              }`}
-              onClick={() => handleMicrophoneSelect(mic.deviceId)}
-              style={{ minWidth: 0 }}
-            >
+        <div className="max-h-[60vh] overflow-y-auto space-y-3 pl-8 pr-6 pt-8">
+          {availableMicrophones.map(mic => {
+            const { title, description } = microphoneToRender(mic)
+            return (
               <div
-                className="font-medium text-base truncate"
-                style={{ maxWidth: '100%' }}
+                key={mic.deviceId}
+                className={`p-6 rounded-md cursor-pointer transition-colors max-w-full overflow-hidden ${
+                  tempSelectedMicrophone === mic.deviceId
+                    ? 'bg-purple-50 border-2 border-purple-100'
+                    : 'bg-neutral-100 border-2 border-neutral-100 hover:bg-neutral-200'
+                }`}
+                onClick={() => handleMicrophoneSelect(mic.deviceId)}
+                style={{ minWidth: 0 }}
               >
-                {title}
-              </div>
-              {description && (
                 <div
-                  className="text-sm text-muted-foreground text-wrap mt-2"
+                  className="font-medium text-base truncate"
                   style={{ maxWidth: '100%' }}
                 >
-                  {description}
+                  {title}
                 </div>
-              )}
-            </div>
-          )
-        })}
-        <div className="flex justify-end mt-6">
+                {description && (
+                  <div
+                    className="text-sm text-muted-foreground text-wrap mt-2"
+                    style={{ maxWidth: '100%' }}
+                  >
+                    {description}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+        <div className="flex justify-end px-8 pb-8 pt-6">
           <DialogClose asChild>
             <Button className="w-32" type="button" onClick={handleDialogClose}>
               Save and close

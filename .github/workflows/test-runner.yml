@@ -6,6 +6,8 @@ on:
 jobs:
   test:
     runs-on: macos-latest
+    env:
+      ITO_ENV: dev
 
     steps:
       - name: Checkout repository
@@ -13,6 +15,14 @@ jobs:
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v1
+
+      - name: Set ITO_ENV based on branch
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == "main" || "${GITHUB_BASE_REF}" == "main" ]]; then
+            echo "ITO_ENV=prod" >> "$GITHUB_ENV"
+          else
+            echo "ITO_ENV=dev" >> "$GITHUB_ENV"
+          fi
 
       - name: Install dependencies
         run: bun install && cd server && bun install && cd ..
@@ -25,3 +35,9 @@ jobs:
 
       - name: Check code linting
         run: bun lint:app
+
+      - name: Check Rust formatting
+        run: bun format:native
+
+      - name: Check Rust linting
+        run: bun lint:native

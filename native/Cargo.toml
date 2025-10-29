@@ -1,0 +1,25 @@
+[workspace]
+members = [
+    "global-key-listener",
+    "audio-recorder",
+    "text-writer",
+    "active-application",
+    "selected-text-reader",
+]
+
+resolver = "2"
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Workspace-wide linting configuration
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+dbg_macro = "deny"                      # No debug prints should reach production
+todo = "warn"                           # Flag TODO comments for review
+
+[workspace.lints.rust]
+# Allow warnings that are unavoidable with current architecture
+unexpected_cfgs = "allow" # Third-party objc macro issues
+static_mut_refs = "allow" # Global state for hotkey tracking

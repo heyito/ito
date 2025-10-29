@@ -1,10 +1,4 @@
-import {
-  init,
-  track,
-  identify,
-  setUserId,
-  Identify,
-} from '@amplitude/analytics-browser'
+import posthog from 'posthog-js'
 import log from 'electron-log'
 import { STORE_KEYS } from '../../../lib/constants/store-keys'
 import { v4 as uuidv4 } from 'uuid'
@@ -16,7 +10,7 @@ const getSharedDeviceId = async (): Promise<string> => {
     // Just request the device ID - main process handles generation/caching
     const deviceId = await window.api?.invoke('analytics:get-device-id')
     if (deviceId) {
-      log.info('[Analytics] Using machine-based device ID:', deviceId)
+      console.log('[Analytics] Using machine-based device ID:', deviceId)
       return deviceId
     }
     throw new Error('No device ID returned from main process')
@@ -29,13 +23,10 @@ const getSharedDeviceId = async (): Promise<string> => {
 
 // Check if analytics should be enabled
 const getAnalyticsEnabled = (): boolean => {
-  // First check if API key is available
-  if (!import.meta.env.VITE_AMPLITUDE_API_KEY) {
-    console.warn('[Analytics] No API key found, analytics disabled')
+  if (!import.meta.env.VITE_POSTHOG_API_KEY) {
+    console.warn('[Analytics] No PostHog API key found, analytics disabled')
     return false
   }
-
-  // Then check user settings
   try {
     const settings = window.electron?.store?.get(STORE_KEYS.SETTINGS)
     return settings?.shareAnalytics ?? true
@@ -48,18 +39,44 @@ const getAnalyticsEnabled = (): boolean => {
   }
 }
 
-// Initialize Amplitude only if analytics is enabled
+const initPostHog = () => {
+  const isPill =
+    typeof window !== 'undefined' &&
+    typeof window.location !== 'undefined' &&
+    typeof window.location.hash === 'string' &&
+    window.location.hash.startsWith('#/pill')
+
+  posthog.init(import.meta.env.VITE_POSTHOG_API_KEY, {
+    api_host: import.meta.env.VITE_POSTHOG_HOST,
+    disable_session_recording: true,
+    disable_surveys: true,
+    advanced_disable_decide: true,
+    persistence: 'cookie',
+    // Disable default web auto-capture and pageviews for the pill window only
+    autocapture: !isPill,
+    capture_pageview: !isPill,
+    sanitize_properties: (props: Record<string, unknown>) => {
+      const p = { ...props }
+      delete (p as any).$current_url
+      delete (p as any).$pathname
+      delete (p as any).$host
+      delete (p as any).$referrer
+      return p
+    },
+  })
+}
+
+// Initialize PostHog only if analytics is enabled
 let isAnalyticsInitialized = false
 let sharedDeviceId: string | null = null
 const analyticsEnabled = getAnalyticsEnabled()
 
-console.log('VITE_AMPLITUDE_API_KEY', import.meta.env.VITE_AMPLITUDE_API_KEY)
 console.log('[Analytics] Analytics enabled:', analyticsEnabled)
 
-// Initialize Amplitude asynchronously
+// Initialize PostHog asynchronously
 const initializeAnalytics = async () => {
   if (!analyticsEnabled) {
-    log.info('[Analytics] Amplitude disabled by user settings')
+    console.log('[Analytics] PostHog disabled by user settings')
     return
   }
 
@@ -67,23 +84,34 @@ const initializeAnalytics = async () => {
     sharedDeviceId = await getSharedDeviceId()
     console.log('[Analytics] Using shared device ID:', sharedDeviceId)
 
-    init(import.meta.env.VITE_AMPLITUDE_API_KEY, {
-      deviceId: sharedDeviceId, // Use shared device ID across all windows
-      autocapture: {
-        elementInteractions: false,
-        pageViews: false,
-        sessions: true, // Keep session tracking enabled
-        formInteractions: false,
-        fileDownloads: false,
-      },
-    })
+    initPostHog()
+
+    if (sharedDeviceId) {
+      posthog.register({ device_id: sharedDeviceId })
+    }
+    // Attempt to resolve and alias install token to website distinct id
+    try {
+      const result = await window.api?.invoke('analytics:resolve-install-token')
+      if (result && result.success && result.websiteDistinctId) {
+        try {
+          posthog.alias(result.websiteDistinctId)
+          console.log(
+            '[Analytics] Aliased to website distinct_id from install token',
+          )
+        } catch (aliasErr) {
+          log.warn('[Analytics] alias() failed:', aliasErr)
+        }
+      }
+    } catch (err) {
+      log.warn('[Analytics] resolve-install-token failed:', err)
+    }
     isAnalyticsInitialized = true
 
     // Update the service instance after successful initialization
     analytics.updateInitializationStatus(true, sharedDeviceId)
 
-    log.info(
-      '[Analytics] Amplitude initialized with shared device ID:',
+    console.log(
+      '[Analytics] PostHog initialized with shared device ID:',
       sharedDeviceId,
     )
   } catch (error) {
@@ -192,7 +220,7 @@ class AnalyticsService {
   constructor() {
     // Device ID will be set after async initialization
     this.deviceId = sharedDeviceId
-    log.info(
+    console.log(
       `[Analytics] Service initialized (enabled: ${this.isInitialized}, deviceId: ${this.deviceId || 'pending'})`,
     )
   }
@@ -201,22 +229,16 @@ class AnalyticsService {
    * Enable analytics (re-initialize if needed)
    */
   async enableAnalytics() {
-    if (!this.isInitialized && import.meta.env.VITE_AMPLITUDE_API_KEY) {
+    if (!this.isInitialized && import.meta.env.VITE_POSTHOG_API_KEY) {
       try {
         const deviceId = await getSharedDeviceId()
         this.deviceId = deviceId
-        init(import.meta.env.VITE_AMPLITUDE_API_KEY, {
-          deviceId: deviceId, // Use shared device ID for consistency
-          autocapture: {
-            elementInteractions: false,
-            pageViews: false,
-            sessions: true,
-            formInteractions: false,
-            fileDownloads: false,
-          },
-        })
+        initPostHog()
+        if (deviceId) {
+          posthog.register({ device_id: deviceId })
+        }
         this.isInitialized = true
-        log.info(
+        console.log(
           '[Analytics] Analytics enabled and initialized with shared device ID:',
           deviceId,
         )
@@ -233,7 +255,12 @@ class AnalyticsService {
     this.isInitialized = false
     this.currentUserId = null
     this.currentProvider = null
-    log.info('[Analytics] Analytics disabled')
+    try {
+      posthog.opt_out_capturing()
+    } catch (error) {
+      log.warn('[Analytics] Failed to opt-out capturing:', error)
+    }
+    console.log('[Analytics] Analytics disabled')
   }
 
   /**
@@ -259,7 +286,7 @@ class AnalyticsService {
     }
 
     if (!this.shouldTrack()) {
-      log.info(
+      console.log(
         '[Analytics] User identification skipped - analytics disabled or self-hosted user',
       )
       return
@@ -268,25 +295,20 @@ class AnalyticsService {
     try {
       if (this.currentUserId !== userId) {
         this.currentUserId = userId
-
-        const identifyObj = new Identify()
-
-        // Set user properties using the Identify object
-        identifyObj.set('user_id', userId)
-        identifyObj.set('last_active', new Date().toISOString())
-
-        // Set additional properties
-        Object.entries(properties).forEach(([key, value]) => {
-          if (value !== undefined) {
-            identifyObj.set(key, value)
-          }
-        })
-
-        identify(identifyObj, { user_id: userId })
-        setUserId(userId)
-        log.info(
+        const props = {
+          user_id: userId,
+          last_active: new Date().toISOString(),
+          ...properties,
+        }
+        posthog.identify(userId, props)
+        console.log(
           `[Analytics] User identified: ${userId} (deviceId: ${this.deviceId || 'pending'})`,
         )
+      } else if (Object.keys(properties).length > 0) {
+        posthog.identify(undefined, {
+          ...properties,
+          last_active: new Date().toISOString(),
+        })
       }
     } catch (error) {
       log.error('[Analytics] Failed to identify user:', error)
@@ -298,23 +320,15 @@ class AnalyticsService {
    */
   updateUserProperties(properties: Partial<UserProperties>) {
     if (!this.shouldTrack() || !this.currentUserId) {
-      log.info(
+      console.log(
         '[Analytics] User properties update skipped - analytics disabled, self-hosted user, or user not identified',
       )
       return
     }
 
     try {
-      const identifyObj = new Identify()
-
-      Object.entries(properties).forEach(([key, value]) => {
-        if (value !== undefined) {
-          identifyObj.set(key, value)
-        }
-      })
-
-      identify(identifyObj, { user_id: this.currentUserId })
-      log.info('[Analytics] User properties updated')
+      posthog.identify(undefined, properties)
+      console.log('[Analytics] User properties updated')
     } catch (error) {
       log.error('[Analytics] Failed to update user properties:', error)
     }
@@ -335,12 +349,11 @@ class AnalyticsService {
         ...properties,
       }
 
-      const trackOptions = this.currentUserId
-        ? { user_id: this.currentUserId }
-        : undefined
-
-      track(eventName, eventProperties, trackOptions)
-      log.info(
+      posthog.capture(eventName, {
+        ...eventProperties,
+        ...(this.currentUserId ? { user_id: this.currentUserId } : {}),
+      })
+      console.log(
         `[Analytics] Event tracked: ${eventName} (deviceId: ${this.deviceId || 'pending'}, userId: ${this.currentUserId || 'anonymous'})`,
       )
     } catch (error) {
@@ -422,15 +435,15 @@ class AnalyticsService {
    */
   resetUser() {
     if (!this.isInitialized) {
-      log.info('[Analytics] User reset skipped - analytics disabled')
+      console.log('[Analytics] User reset skipped - analytics disabled')
       return
     }
 
     try {
-      // Note: Node.js SDK doesn't have a reset function, so we just clear local state
+      posthog.reset()
       this.currentUserId = null
       this.currentProvider = null
-      log.info('[Analytics] User session reset')
+      console.log('[Analytics] User session reset')
     } catch (error) {
       log.error('[Analytics] Failed to reset user session:', error)
     }
@@ -463,7 +476,7 @@ class AnalyticsService {
   updateInitializationStatus(isInitialized: boolean, deviceId: string | null) {
     this.isInitialized = isInitialized
     this.deviceId = deviceId
-    log.info(
+    console.log(
       `[Analytics] Service status updated (enabled: ${this.isInitialized}, deviceId: ${this.deviceId})`,
     )
   }
@@ -478,7 +491,7 @@ class AnalyticsService {
 
     // Skip tracking for self-hosted users
     if (this.currentProvider === 'self-hosted') {
-      log.info('[Analytics] Tracking skipped - self-hosted user')
+      console.log('[Analytics] Tracking skipped - self-hosted user')
       return false
     }
 
@@ -493,10 +506,10 @@ export const analytics = new AnalyticsService()
 export const updateAnalyticsFromSettings = (shareAnalytics: boolean) => {
   if (shareAnalytics && !analytics.isEnabled()) {
     analytics.enableAnalytics()
-    log.info('[Analytics] Analytics enabled by settings change')
+    console.log('[Analytics] Analytics enabled by settings change')
   } else if (!shareAnalytics && analytics.isEnabled()) {
     analytics.disableAnalytics()
-    log.info('[Analytics] Analytics disabled by settings change')
+    console.log('[Analytics] Analytics disabled by settings change')
   }
 }
 

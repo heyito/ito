@@ -148,6 +148,8 @@ const api = {
   // Analytics device ID methods
   'analytics:get-device-id': () =>
     ipcRenderer.invoke('analytics:get-device-id'),
+  'analytics:resolve-install-token': () =>
+    ipcRenderer.invoke('analytics:resolve-install-token'),
 
   // Onboarding state for current user
   getOnboardingState: () => ipcRenderer.invoke('get-onboarding-state'),

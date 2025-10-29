@@ -37,13 +37,10 @@ export default function AccountSettingsContent() {
       // Server now extracts userId from authenticated user's token
       await window.api.deleteUserData()
 
-      // Clear all electron store data
+      // Clear KV-backed app state
       window.electron.store.set('settings', {})
       window.electron.store.set('main', {})
-      window.electron.store.set('notes', [])
-      window.electron.store.set('dictionary', [])
       window.electron.store.set('onboarding', {})
-      window.electron.store.set('interactions', [])
       window.electron.store.set('auth', {})
 
       // Clear auth state
@@ -61,11 +58,9 @@ export default function AccountSettingsContent() {
     } catch (error) {
       console.error('Failed to delete account data:', error)
       // Still proceed with local cleanup even if server deletion fails
-      // Clear all electron store data
+      // Clear KV-backed app state
       window.electron.store.set('settings', {})
       window.electron.store.set('main', {})
-      window.electron.store.set('notes', [])
-      window.electron.store.set('dictionary', [])
       window.electron.store.set('onboarding', {})
       window.electron.store.set('auth', {})
 

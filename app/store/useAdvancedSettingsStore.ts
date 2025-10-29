@@ -11,12 +11,13 @@ export interface LlmSettings {
   transcriptionPrompt: string
   editingPrompt: string
   noSpeechThreshold: number
-  lowQualityThreshold: number
 }
 
 interface AdvancedSettingsState {
   llm: LlmSettings
+  grammarServiceEnabled: boolean
   setLlmSettings: (settings: Partial<LlmSettings>) => void
+  setGrammarServiceEnabled: (enabled: boolean) => void
 }
 
 // Initialize from electron store
@@ -36,8 +37,9 @@ const getInitialState = () => {
       transcriptionPrompt: storedAdvancedSettings.llm.transcriptionPrompt,
       editingPrompt: storedAdvancedSettings.llm.editingPrompt,
       noSpeechThreshold: storedAdvancedSettings.llm.noSpeechThreshold,
-      lowQualityThreshold: storedAdvancedSettings.llm.lowQualityThreshold,
     },
+    grammarServiceEnabled:
+      storedAdvancedSettings.grammarServiceEnabled ?? false,
   }
 }
 
@@ -66,6 +68,13 @@ export const useAdvancedSettingsStore = create<AdvancedSettingsState>(set => {
       set(state => {
         const newLlmSettings = { ...state.llm, ...settings }
         const partialState = { llm: newLlmSettings }
+        syncToStore(partialState)
+        return partialState
+      })
+    },
+    setGrammarServiceEnabled: (enabled: boolean) => {
+      set(() => {
+        const partialState = { grammarServiceEnabled: enabled }
         syncToStore(partialState)
         return partialState
       })

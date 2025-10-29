@@ -1,0 +1,4 @@
+# Mark generated protobuf/buf code as generated
+# This makes GitHub collapse these files by default in PRs
+app/generated/** linguist-generated=true
+server/src/generated/** linguist-generated=true

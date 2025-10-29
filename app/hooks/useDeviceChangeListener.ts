@@ -10,7 +10,7 @@ export const useDeviceChangeListener = (): void => {
   useEffect(() => {
     // Define the handler function that will be called on the event.
     const handleDeviceChange = () => {
-      log.info(
+      console.log(
         '[Renderer] `devicechange` event detected. Notifying main process.',
       )
       window.api.send('audio-devices-changed')
@@ -26,7 +26,7 @@ export const useDeviceChangeListener = (): void => {
         'devicechange',
         handleDeviceChange,
       )
-      log.info('[useDeviceChangeListener] Removed devicechange listener.')
+      console.log('[useDeviceChangeListener] Removed devicechange listener.')
     }
   }, []) // The empty dependency array ensures this effect runs only once on mount.
 }

@@ -1,4 +1,7 @@
 use chrono::Utc;
+#[cfg(target_os = "windows")]
+use rdev::{grab, simulate, Event, EventType, Key};
+#[cfg(not(target_os = "windows"))]
 use rdev::{grab, Event, EventType, Key};
 use serde::{Deserialize, Serialize};
 use serde_json::json;

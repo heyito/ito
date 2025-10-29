@@ -1,5 +1,5 @@
 use chrono::Utc;
-use rdev::{grab, simulate, Event, EventType, Key};
+use rdev::{grab, Event, EventType, Key};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::io::{self, BufRead, Write};

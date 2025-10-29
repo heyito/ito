@@ -123,9 +123,7 @@ const api = {
     upsert: (metadata: UserMetadata): Promise<void> =>
       ipcRenderer.invoke('user-metadata:upsert', metadata),
     update: (
-      updates: Partial<
-        Omit<UserMetadata, 'id' | 'user_id' | 'created_at'>
-      >,
+      updates: Partial<Omit<UserMetadata, 'id' | 'user_id' | 'created_at'>>,
     ): Promise<void> => ipcRenderer.invoke('user-metadata:update', updates),
   },
   interactions: {

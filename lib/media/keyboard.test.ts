@@ -35,6 +35,10 @@ const mockSpawn = mock(() => mockChildProcess)
 mock.module('child_process', () => ({
   spawn: mockSpawn,
 }))
+// Some environments resolve to node:child_process; mock that as well
+mock.module('node:child_process', () => ({
+  spawn: mockSpawn,
+}))
 
 const mockMainStore = {
   get: mock(() => ({

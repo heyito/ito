@@ -28,11 +28,6 @@ const mockEnsureValidTokens = mock(() =>
   }),
 )
 
-// Mock all external modules
-mock.module('electron', () => ({
-  BrowserWindow: mockElectronWindow,
-}))
-
 mock.module('../media/text-writer', () => ({
   setFocusedText: mockSetFocusedText,
 }))

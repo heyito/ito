@@ -1,4 +1,5 @@
-import { mock, afterEach, beforeEach } from 'bun:test'
+import { mock, afterEach, beforeEach, beforeAll } from 'bun:test'
+import { promises as fs } from 'fs'
 
 // Simple, direct electron mock following Bun documentation pattern
 mock.module('electron', () => {
@@ -185,6 +186,26 @@ mock.module('electron', () => {
 })
 
 console.log('✓ Electron module mocked')
+
+// Ensure node:path join maps to path.join when tests mock path
+const pathMod = await import('path')
+mock.module('node:path', () => ({ join: (pathMod as any).join }))
+
+// Initialize SQLite once for tests that touch the KeyValueStore
+beforeAll(async () => {
+  // Ensure test userData directory exists for SQLite file
+  await fs.mkdir('/tmp/test-ito-app', { recursive: true })
+  try {
+    // Import after mocking electron so the mock is applied
+    const { initializeDatabase } = await import('../main/sqlite/db')
+    await initializeDatabase()
+  } catch (e) {
+    console.log(
+      '✓ Skipping DB init in this test run:',
+      (e as any)?.message || e,
+    )
+  }
+})
 
 // Store original console methods for restoration
 const originalConsole = {

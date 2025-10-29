@@ -104,6 +104,7 @@ export class ServiceStack extends Stack {
       domainName,
       clientLogGroup: logGroupResources.clientLogGroup,
       serverLogGroup: logGroupResources.serverLogGroup,
+      timingLogGroup: logGroupResources.timingLogGroup,
       blobStorageBucketName: props.blobStorageBucket.bucketName,
     })
 
@@ -202,6 +203,9 @@ export class ServiceStack extends Stack {
     fargateService.service.node.addDependency(
       logGroupResources.ensureServerLogGroup,
     )
+    fargateService.service.node.addDependency(
+      logGroupResources.ensureTimingLogGroup,
+    )
 
     // Import Firehose role created in platform stack
     const firehoseRole = IamRole.fromRoleArn(
@@ -261,8 +265,10 @@ export class ServiceStack extends Stack {
       firehoseRole,
       clientLogGroup: logGroupResources.clientLogGroup,
       serverLogGroup: logGroupResources.serverLogGroup,
+      timingLogGroup: logGroupResources.timingLogGroup,
       ensureClientLogGroup: logGroupResources.ensureClientLogGroup,
       ensureServerLogGroup: logGroupResources.ensureServerLogGroup,
+      ensureTimingLogGroup: logGroupResources.ensureTimingLogGroup,
     })
 
     // Create OpenSearch bootstrap

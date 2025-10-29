@@ -42,6 +42,11 @@ service ItoService {
   rpc UpdateAdvancedSettings(UpdateAdvancedSettingsRequest) returns (AdvancedSettings);
 }
 
+service TimingService {
+  // Submit timing reports for interaction analytics
+  rpc SubmitTimingReports(SubmitTimingReportsRequest) returns (SubmitTimingReportsResponse);
+}
+
 // =================================================================
 // Messages
 // =================================================================
@@ -273,4 +278,33 @@ message GetAdvancedSettingsRequest {
 
 message UpdateAdvancedSettingsRequest {
   LlmSettings llm = 1;
+}
+
+// Timing Analytics
+// -----------------------------------------------------------------
+message TimingEvent {
+  string name = 1;
+  double start_ms = 2;
+  optional double end_ms = 3;
+  optional double duration_ms = 4;
+}
+
+message TimingReport {
+  string interaction_id = 1;
+  string user_id = 2;
+  string platform = 3;
+  string app_version = 4;
+  string hostname = 5;
+  string architecture = 6;
+  string timestamp = 7;
+  repeated TimingEvent events = 8;
+  double total_duration_ms = 9;
+}
+
+message SubmitTimingReportsRequest {
+  repeated TimingReport reports = 1;
+}
+
+message SubmitTimingReportsResponse {
+  // Empty response
 }

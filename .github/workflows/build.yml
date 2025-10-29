@@ -64,11 +64,14 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: ./build-app.sh mac
 
+      - name: Compute DMG name
+        run: echo "DMG_NAME=Ito-${{ github.event.release.target_commitish == 'main' && 'Installer' || 'Installer-dev' }}.dmg" >> $GITHUB_ENV
+
       - name: Upload Mac Installer DMG
         uses: actions/upload-artifact@v4
         with:
           name: Ito-Mac-Installer
-          path: dist/Ito-Installer.dmg
+          path: dist/Ito-${{ github.event.release.target_commitish == 'main' && 'Installer' || 'dev-Installer' }}.dmg
 
       - name: Upload Mac Build Artifacts
         uses: actions/upload-artifact@v4

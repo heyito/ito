@@ -39,6 +39,8 @@ mock.module('path', () => ({
 mock.module('electron', () => ({
   app: {
     isPackaged: false,
+    getPath: (type: string) =>
+      type === 'userData' ? '/tmp/test-ito-app' : '/tmp',
   },
 }))
 
@@ -70,7 +72,6 @@ describe('AudioRecorderService', () => {
     mockChildProcess._closeHandler = null
     mockChildProcess._errorHandler = null
 
-    // Clear service event listeners
     const events = [
       'started',
       'stopped',

@@ -8,6 +8,7 @@ import {
 } from '../../media/selected-text-reader'
 import { canGetContextFromCurrentApp } from '../../utils/applicationDetection'
 import log from 'electron-log'
+import { timingCollector, TimingEventName } from '../timing/TimingCollector'
 
 export interface ContextData {
   vocabularyWords: string[]
@@ -32,7 +33,10 @@ export class ContextGrabber {
     const vocabularyWords = await this.getVocabulary()
 
     // Get active window context
-    const { windowTitle, appName } = await this.getWindowContext()
+    const { windowTitle, appName } = await timingCollector.timeAsync(
+      TimingEventName.WINDOW_CONTEXT_GATHER,
+      async () => await this.getWindowContext(),
+    )
 
     // Get selected text if in EDIT mode
     const contextText = await this.getContextText(mode)
@@ -89,7 +93,11 @@ export class ContextGrabber {
     }
 
     try {
-      const text = await getSelectedTextString(10000)
+      const text = await timingCollector.timeAsync(
+        TimingEventName.SELCTED_TEXT_GATHER,
+        async () => await getSelectedTextString(),
+      )
+      console.log('[ContextGrabber] Selected text:', text)
       return text && text.trim().length > 0 ? text : ''
     } catch (error) {
       log.error('[ContextGrabber] Error getting context text:', error)

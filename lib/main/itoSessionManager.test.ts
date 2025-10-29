@@ -1,5 +1,13 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 import { ItoMode } from '@/app/generated/ito_pb'
+import { createMockTimingCollector } from '../__tests__/setup'
+import { TimingEventName } from './timing/TimingCollector'
+
+const mockTimingCollector = createMockTimingCollector()
+mock.module('./timing/TimingCollector', () => ({
+  timingCollector: mockTimingCollector,
+  TimingEventName: TimingEventName,
+}))
 
 const mockVoiceInputService = {
   startAudioRecording: mock(() => Promise.resolve()),
@@ -18,7 +26,7 @@ mock.module('./recordingStateNotifier', () => ({
 }))
 
 const mockItoStreamController = {
-  initialize: mock(() => Promise.resolve(true)),
+  initialize: mock(_mode => Promise.resolve(true)),
   startGrpcStream: mock(() =>
     Promise.resolve({
       response: { transcript: 'test transcript' },
@@ -106,6 +114,7 @@ describe('itoSessionManager', () => {
     Object.values(mockInteractionManager).forEach(mockFn => mockFn.mockClear())
     Object.values(mockContextGrabber).forEach(mockFn => mockFn.mockClear())
     Object.values(mockGrammarRulesService).forEach(mockFn => mockFn.mockClear())
+    Object.values(mockTimingCollector).forEach(mockFn => mockFn.mockClear())
 
     mockGetAdvancedSettings.mockClear()
 
@@ -167,7 +176,7 @@ describe('itoSessionManager', () => {
     await session.startSession(ItoMode.TRANSCRIBE)
 
     // Wait for background context fetch
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await new Promise(resolve => setTimeout(resolve, 60))
 
     expect(mockContextGrabber.getCursorContextForGrammar).toHaveBeenCalledTimes(
       1,
@@ -297,6 +306,8 @@ describe('itoSessionManager', () => {
     const session = new ItoSessionManager()
 
     await session.startSession(ItoMode.TRANSCRIBE)
+    // Allow background context fetch to set up grammarRulesService
+    await new Promise(resolve => setTimeout(resolve, 60))
     await session.completeSession()
 
     expect(mockGrammarRulesService.setCaseFirstWord).toHaveBeenCalledWith(

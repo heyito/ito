@@ -8,6 +8,7 @@ import { contextGrabber } from './context/ContextGrabber'
 import { GrammarRulesService } from './grammar/GrammarRulesService'
 import { getAdvancedSettings } from './store'
 import log from 'electron-log'
+import { timingCollector, TimingEventName } from './timing/TimingCollector'
 
 export class ItoSessionManager {
   private readonly MINIMUM_AUDIO_DURATION_MS = 100
@@ -22,23 +23,23 @@ export class ItoSessionManager {
   public async startSession(mode: ItoMode) {
     console.log('[itoSessionManager] Starting session with mode:', mode)
 
+    // Reuse existing global interaction ID if present, otherwise create a new one
+    let interactionId = interactionManager.getCurrentInteractionId()
+    if (interactionId) {
+      console.log(
+        '[itoSessionManager] Reusing existing interaction ID:',
+        interactionId,
+      )
+      interactionManager.adoptInteractionId(interactionId)
+    } else {
+      interactionId = interactionManager.initialize()
+    }
+
     // Initialize all necessary components
     const started = await itoStreamController.initialize(mode)
     if (!started) {
       log.error('[itoSessionManager] Failed to initialize itoStreamController')
       return
-    }
-
-    // Reuse existing global interaction ID if present, otherwise create a new one
-    const existingId = interactionManager.getCurrentInteractionId()
-    if (existingId) {
-      console.log(
-        '[itoSessionManager] Reusing existing interaction ID:',
-        existingId,
-      )
-      interactionManager.adoptInteractionId(existingId)
-    } else {
-      interactionManager.initialize()
     }
 
     // Begin gRPC stream immediately (note, no audio is flowing yet)
@@ -57,6 +58,12 @@ export class ItoSessionManager {
     this.fetchAndSendContext().catch(error => {
       log.error('[itoSessionManager] Failed to fetch/send context:', error)
     })
+
+    // Start timing the interaction
+    timingCollector.startInteraction()
+    timingCollector.startTiming(TimingEventName.INTERACTION_ACTIVE)
+
+    return interactionId
   }
 
   private async fetchAndSendContext() {
@@ -66,7 +73,10 @@ export class ItoSessionManager {
     // Fetch cursor context for grammar rules only if grammar service is enabled
     const { grammarServiceEnabled } = getAdvancedSettings()
     if (grammarServiceEnabled) {
-      const cursorContext = await contextGrabber.getCursorContextForGrammar()
+      const cursorContext = await timingCollector.timeAsync(
+        TimingEventName.GRAMMAR_SERVICE,
+        async () => await contextGrabber.getCursorContextForGrammar(),
+      )
       this.grammarRulesService = new GrammarRulesService(cursorContext)
     }
   }
@@ -83,6 +93,9 @@ export class ItoSessionManager {
     // Capture the promise in a local variable immediately so new sessions can start
     const responsePromise = this.streamResponsePromise
     this.streamResponsePromise = null
+
+    // Clear timing for the interaction on cancel
+    timingCollector.clearInteraction()
 
     // Cancel the transcription (will not create interaction)
     itoStreamController.cancelTranscription()
@@ -109,6 +122,9 @@ export class ItoSessionManager {
     // Capture the promise in a local variable immediately so new sessions can start
     const responsePromise = this.streamResponsePromise
     this.streamResponsePromise = null
+
+    // End timing for the interaction
+    timingCollector.endTiming(TimingEventName.INTERACTION_ACTIVE)
 
     // Stop audio recording and wait for drain
     await voiceInputService.stopAudioRecording()
@@ -187,7 +203,7 @@ export class ItoSessionManager {
         sampleRate,
         errorMessage,
       )
-
+      timingCollector.clearInteraction()
       interactionManager.clearCurrentInteraction()
     } else {
       // Handle text insertion with grammar-corrected text
@@ -218,7 +234,7 @@ export class ItoSessionManager {
           hasError: !!response.error,
         })
       }
-
+      timingCollector.finalizeInteraction()
       interactionManager.clearCurrentInteraction()
       itoStreamController.clearInteractionAudio()
     }
@@ -229,6 +245,8 @@ export class ItoSessionManager {
       '[itoSessionManager] An unexpected error occurred during transcription:',
       error,
     )
+    // Clear timing for the interaction on error
+    timingCollector.clearInteraction()
 
     // Clear current interaction on error
     interactionManager.clearCurrentInteraction()

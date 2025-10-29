@@ -312,18 +312,7 @@ export const startKeyListener = () => {
               // Process the event here in the main process for hotkey detection.
               handleKeyEventInMain(event)
 
-              // Filter out Windows key on non-macOS platforms before broadcasting
-              const platform = process.platform
-              const isWindowsKey =
-                event.key === 'MetaLeft' || event.key === 'MetaRight'
-
-              // On Windows, don't broadcast Windows key events to UI
-              if (platform !== 'darwin' && isWindowsKey) {
-                // Silently ignore Windows key for UI components
-                continue
-              }
-
-              // 3. Continue to broadcast the raw event to all renderer windows for UI updates.
+              // Broadcast the raw event to all renderer windows for UI updates.
               BrowserWindow.getAllWindows().forEach(window => {
                 if (!window.webContents.isDestroyed()) {
                   window.webContents.send('key-event', event)

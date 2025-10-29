@@ -476,6 +476,14 @@ export function registerIPC() {
 
   // Platform info
   handleIPC('get-platform', () => {
+    // Allow overriding platform for testing cross-platform UI behavior
+    const overridePlatform = import.meta.env.VITE_OVERRIDE_PLATFORM
+    if (overridePlatform) {
+      log.info(
+        `[Platform] Using override: ${overridePlatform} (actual: ${process.platform})`,
+      )
+      return overridePlatform as NodeJS.Platform
+    }
     return process.platform
   })
 

@@ -13,6 +13,7 @@ interface UserMetadataStore {
   setProStatus: (status: ProStatus) => Promise<void>
   setFreeWords: (count: number | null) => Promise<void>
   setProTrialStartDate: (date: string | null) => Promise<void>
+  setProTrialEndDate: (date: string | null) => Promise<void>
   setProSubscriptionStartDate: (date: string | null) => Promise<void>
   setProSubscriptionEndDate: (date: string | null) => Promise<void>
 }
@@ -22,6 +23,7 @@ const DEFAULT_METADATA = {
   pro_status: ProStatus.FREE,
   free_words_remaining: 4000,
   pro_trial_start_date: null,
+  pro_trial_end_date: null,
   pro_subscription_start_date: null,
   pro_subscription_end_date: null,
 }
@@ -79,6 +81,10 @@ export const useUserMetadataStore = create<UserMetadataStore>((set, get) => ({
 
   setProTrialStartDate: async (date: string | null) => {
     await get().updateMetadata({ pro_trial_start_date: date })
+  },
+
+  setProTrialEndDate: async (date: string | null) => {
+    await get().updateMetadata({ pro_trial_end_date: date })
   },
 
   setProSubscriptionStartDate: async (date: string | null) => {

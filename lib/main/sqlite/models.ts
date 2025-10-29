@@ -45,6 +45,7 @@ export interface UserMetadata {
   pro_status: ProStatus
   free_words_remaining: number | null
   pro_trial_start_date: string | null
+  pro_trial_end_date: string | null
   pro_subscription_start_date: string | null
   pro_subscription_end_date: string | null
   created_at: string

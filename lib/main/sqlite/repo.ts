@@ -466,11 +466,11 @@ export class UserMetadataTable {
     const query = `
       INSERT INTO user_metadata (
         id, user_id, pro_status, free_words_remaining,
-        pro_trial_start_date,
+        pro_trial_start_date, pro_trial_end_date,
         pro_subscription_start_date, pro_subscription_end_date,
         created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
     const params = [
       newMetadata.id,
@@ -478,6 +478,7 @@ export class UserMetadataTable {
       newMetadata.pro_status,
       newMetadata.free_words_remaining,
       newMetadata.pro_trial_start_date,
+      newMetadata.pro_trial_end_date,
       newMetadata.pro_subscription_start_date,
       newMetadata.pro_subscription_end_date,
       newMetadata.created_at,
@@ -519,6 +520,10 @@ export class UserMetadataTable {
       fields.push('pro_trial_start_date = ?')
       params.push(updates.pro_trial_start_date)
     }
+    if (updates.pro_trial_end_date !== undefined) {
+      fields.push('pro_trial_end_date = ?')
+      params.push(updates.pro_trial_end_date)
+    }
     if (updates.pro_subscription_start_date !== undefined) {
       fields.push('pro_subscription_start_date = ?')
       params.push(updates.pro_subscription_start_date)
@@ -541,15 +546,16 @@ export class UserMetadataTable {
     const query = `
       INSERT INTO user_metadata (
         id, user_id, pro_status, free_words_remaining,
-        pro_trial_start_date,
+        pro_trial_start_date, pro_trial_end_date,
         pro_subscription_start_date, pro_subscription_end_date,
         created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
         pro_status = excluded.pro_status,
         free_words_remaining = excluded.free_words_remaining,
         pro_trial_start_date = excluded.pro_trial_start_date,
+        pro_trial_end_date = excluded.pro_trial_end_date,
         pro_subscription_start_date = excluded.pro_subscription_start_date,
         pro_subscription_end_date = excluded.pro_subscription_end_date,
         updated_at = excluded.updated_at;
@@ -560,6 +566,7 @@ export class UserMetadataTable {
       metadata.pro_status,
       metadata.free_words_remaining,
       metadata.pro_trial_start_date,
+      metadata.pro_trial_end_date,
       metadata.pro_subscription_start_date,
       metadata.pro_subscription_end_date,
       metadata.created_at,

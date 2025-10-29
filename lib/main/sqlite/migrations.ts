@@ -52,6 +52,7 @@ export const MIGRATIONS: Migration[] = [
         pro_status TEXT NOT NULL DEFAULT 'FREE',
         free_words_remaining INTEGER,
         pro_trial_start_date TEXT,
+        pro_trial_end_date TEXT,
         pro_subscription_start_date TEXT,
         pro_subscription_end_date TEXT,
         created_at TEXT NOT NULL,

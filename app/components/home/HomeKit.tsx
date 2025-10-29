@@ -7,6 +7,8 @@ import {
 } from '@mynaui/icons-react'
 import { ItoIcon } from '../icons/ItoIcon'
 import { useMainStore } from '@/app/store/useMainStore'
+import { useUserMetadataStore } from '@/app/store/useUserMetadataStore'
+import { ProStatus } from '@/lib/main/sqlite/models'
 import { useEffect, useState } from 'react'
 import { NavItem } from '../ui/nav-item'
 import HomeContent from './contents/HomeContent'
@@ -17,7 +19,12 @@ import AboutContent from './contents/AboutContent'
 
 export default function HomeKit() {
   const { navExpanded, currentPage, setCurrentPage } = useMainStore()
+  const { metadata } = useUserMetadataStore()
   const [showText, setShowText] = useState(navExpanded)
+
+  const isPro =
+    metadata?.pro_status === ProStatus.PRO ||
+    metadata?.pro_status === ProStatus.PRO_TRIAL
 
   // Handle text and positioning animation timing
   useEffect(() => {
@@ -68,6 +75,13 @@ export default function HomeKit() {
             >
               ito
             </span>
+            {isPro && (
+              <span
+                className={`text-xs font-semibold px-2 py-0.5 rounded-md bg-gradient-to-r from-purple-500 to-pink-500 text-white transition-opacity duration-100 ${showText ? 'opacity-100' : 'opacity-0'} ${showText ? 'ml-2' : 'w-0 overflow-hidden'}`}
+              >
+                PRO
+              </span>
+            )}
           </div>
           {/* Nav */}
           <div className="flex flex-col gap-1 text-sm">

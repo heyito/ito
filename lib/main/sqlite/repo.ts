@@ -1,5 +1,6 @@
 import { run, get, all } from './utils'
-import type { Interaction, Note, DictionaryItem } from './models'
+import type { Interaction, Note, DictionaryItem, UserMetadata } from './models'
+import { ProStatus } from './models'
 import { v4 as uuidv4 } from 'uuid'
 
 // SQLite error codes (from better-sqlite3 and node-sqlite3)
@@ -441,5 +442,135 @@ export class KeyValueStore {
   static async delete(key: string): Promise<void> {
     const query = 'DELETE FROM key_value_store WHERE key = ?'
     await run(query, [key])
+  }
+}
+
+// =================================================================
+// UserMetadata
+// =================================================================
+
+/**
+ * Data required to create or update UserMetadata.
+ */
+type InsertUserMetadata = Omit<UserMetadata, 'id' | 'created_at' | 'updated_at'>
+
+export class UserMetadataTable {
+  static async insert(metadataData: InsertUserMetadata): Promise<UserMetadata> {
+    const newMetadata: UserMetadata = {
+      id: uuidv4(),
+      ...metadataData,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    const query = `
+      INSERT INTO user_metadata (
+        id, user_id, pro_status, free_words_remaining,
+        pro_trial_start_date,
+        pro_subscription_start_date, pro_subscription_end_date,
+        created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `
+    const params = [
+      newMetadata.id,
+      newMetadata.user_id,
+      newMetadata.pro_status,
+      newMetadata.free_words_remaining,
+      newMetadata.pro_trial_start_date,
+      newMetadata.pro_subscription_start_date,
+      newMetadata.pro_subscription_end_date,
+      newMetadata.created_at,
+      newMetadata.updated_at,
+    ]
+
+    await run(query, params)
+    return newMetadata
+  }
+
+  static async findByUserId(userId: string): Promise<UserMetadata | undefined> {
+    const row = await get<UserMetadata>(
+      'SELECT * FROM user_metadata WHERE user_id = ?',
+      [userId],
+    )
+    return row
+  }
+
+  /**
+   * Allows updating specific fields of user metadata. If
+   * the field is not provided, it will remain unchanged.
+   */
+  static async update(
+    userId: string,
+    updates: Partial<Omit<UserMetadata, 'id' | 'user_id' | 'created_at'>>,
+  ): Promise<void> {
+    const fields: string[] = []
+    const params: any[] = []
+
+    if (updates.pro_status !== undefined) {
+      fields.push('pro_status = ?')
+      params.push(updates.pro_status)
+    }
+    if (updates.free_words_remaining !== undefined) {
+      fields.push('free_words_remaining = ?')
+      params.push(updates.free_words_remaining)
+    }
+    if (updates.pro_trial_start_date !== undefined) {
+      fields.push('pro_trial_start_date = ?')
+      params.push(updates.pro_trial_start_date)
+    }
+    if (updates.pro_subscription_start_date !== undefined) {
+      fields.push('pro_subscription_start_date = ?')
+      params.push(updates.pro_subscription_start_date)
+    }
+    if (updates.pro_subscription_end_date !== undefined) {
+      fields.push('pro_subscription_end_date = ?')
+      params.push(updates.pro_subscription_end_date)
+    }
+
+    fields.push('updated_at = ?')
+    params.push(new Date().toISOString())
+
+    params.push(userId)
+
+    const query = `UPDATE user_metadata SET ${fields.join(', ')} WHERE user_id = ?`
+    await run(query, params)
+  }
+
+  static async upsert(metadata: UserMetadata): Promise<void> {
+    const query = `
+      INSERT INTO user_metadata (
+        id, user_id, pro_status, free_words_remaining,
+        pro_trial_start_date,
+        pro_subscription_start_date, pro_subscription_end_date,
+        created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(user_id) DO UPDATE SET
+        pro_status = excluded.pro_status,
+        free_words_remaining = excluded.free_words_remaining,
+        pro_trial_start_date = excluded.pro_trial_start_date,
+        pro_subscription_start_date = excluded.pro_subscription_start_date,
+        pro_subscription_end_date = excluded.pro_subscription_end_date,
+        updated_at = excluded.updated_at;
+    `
+    const params = [
+      metadata.id,
+      metadata.user_id,
+      metadata.pro_status,
+      metadata.free_words_remaining,
+      metadata.pro_trial_start_date,
+      metadata.pro_subscription_start_date,
+      metadata.pro_subscription_end_date,
+      metadata.created_at,
+      metadata.updated_at,
+    ]
+
+    await run(query, params)
+  }
+
+  static async deleteByUserId(userId: string): Promise<void> {
+    const query = 'DELETE FROM user_metadata WHERE user_id = ?'
+    await run(query, [userId])
   }
 }

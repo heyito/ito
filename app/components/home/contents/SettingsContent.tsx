@@ -13,11 +13,12 @@ export default function SettingsContent() {
     { id: 'general', label: 'General', active: settingsPage === 'general' },
     { id: 'keyboard', label: 'Keyboard', active: settingsPage === 'keyboard' },
     { id: 'audio', label: 'Audio & Mic', active: settingsPage === 'audio' },
-    {
-      id: 'pricing-billing',
-      label: 'Pricing & Billing',
-      active: settingsPage === 'pricing-billing',
-    },
+    // TODO: Integrate with Pro backend
+    // {
+    //   id: 'pricing-billing',
+    //   label: 'Pricing & Billing',
+    //   active: settingsPage === 'pricing-billing',
+    // },
     { id: 'account', label: 'Account', active: settingsPage === 'account' },
     { id: 'advanced', label: 'Advanced', active: settingsPage === 'advanced' },
   ]

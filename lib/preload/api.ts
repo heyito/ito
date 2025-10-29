@@ -1,7 +1,7 @@
 import { IpcRendererEvent, ipcRenderer } from 'electron'
 import { AdvancedSettings } from '../main/store'
 import { DbResult } from '../main/sqlite/repo'
-import { DictionaryItem } from '../main/sqlite/models'
+import { DictionaryItem, UserMetadata } from '../main/sqlite/models'
 
 const api = {
   /**
@@ -116,6 +116,17 @@ const api = {
     ): Promise<DbResult<void>> =>
       ipcRenderer.invoke('dictionary:update', { id, word, pronunciation }),
     delete: (id: string) => ipcRenderer.invoke('dictionary:delete', id),
+  },
+  userMetadata: {
+    get: (): Promise<UserMetadata | null> =>
+      ipcRenderer.invoke('user-metadata:get'),
+    upsert: (metadata: UserMetadata): Promise<void> =>
+      ipcRenderer.invoke('user-metadata:upsert', metadata),
+    update: (
+      updates: Partial<
+        Omit<UserMetadata, 'id' | 'user_id' | 'created_at'>
+      >,
+    ): Promise<void> => ipcRenderer.invoke('user-metadata:update', updates),
   },
   interactions: {
     getAll: () => ipcRenderer.invoke('interactions:get-all'),

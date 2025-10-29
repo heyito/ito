@@ -465,12 +465,6 @@ export default function HomeContent() {
               Welcome back{firstName ? `, ${firstName}!` : '!'}
             </h1>
           </div>
-          <button
-            onClick={() => setShowProDialog(true)}
-            className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-semibold hover:opacity-90 transition-opacity"
-          >
-            View Pro
-          </button>
         </div>
         <div className="flex gap-4 w-full mb-6">
           <div className="flex w-full items-center text-sm text-gray-700 gap-2">

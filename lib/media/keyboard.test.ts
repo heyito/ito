@@ -80,11 +80,6 @@ const mockBrowserWindow = {
 }
 mock.module('electron', () => ({
   BrowserWindow: mockBrowserWindow,
-  app: {
-    isPackaged: false,
-    getPath: (type: string) =>
-      type === 'userData' ? '/tmp/test-ito-app' : '/tmp',
-  },
 }))
 
 const mockAudioRecorderService = {

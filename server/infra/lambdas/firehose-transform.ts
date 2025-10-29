@@ -124,7 +124,30 @@ export const handler = async (
       const structured = tryJsonParse<any>(messageStr)
 
       let doc: Record<string, unknown>
-      if (
+
+      // Handle timing analytics data differently
+      if (DATASET === 'ito-timing-analytics' && structured) {
+        // Timing analytics: map camelCase to snake_case for OpenSearch
+        doc = {
+          '@timestamp': structured['@timestamp'] || isoTimestamp(ts),
+          'event.dataset': structured.event?.dataset || DATASET,
+          interaction_id: structured.interactionId,
+          user_id: structured.userId,
+          platform: structured.platform,
+          app_version: structured.appVersion,
+          hostname: structured.hostname,
+          architecture: structured.architecture,
+          timestamp: structured.timestamp,
+          total_duration_ms: structured.totalDurationMs,
+          // Keep "events" as an array of objects; mapping will handle "nested"
+          events: structured.events?.map((ev: any) => ({
+            name: ev.name,
+            start_ms: ev.startMs,
+            end_ms: ev.endMs,
+            duration_ms: ev.durationMs,
+          })),
+        }
+      } else if (
         structured &&
         typeof structured === 'object' &&
         ('message' in structured || 'level' in structured)

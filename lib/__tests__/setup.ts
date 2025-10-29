@@ -187,6 +187,19 @@ mock.module('electron', () => {
 
 console.log('✓ Electron module mocked')
 
+// Export a reusable mock TimingCollector factory for tests
+// Note: This is NOT globally mocked - tests must mock it themselves
+export const createMockTimingCollector = () => ({
+  startInteraction: mock(),
+  startTiming: mock(),
+  endTiming: mock(),
+  finalizeInteraction: mock(),
+  clearInteraction: mock(),
+  timeAsync: mock(async (_eventName: any, fn: any, _interactionId?: any) => {
+    // Execute the function parameter
+    return await fn()
+  }),
+})
 // Ensure node:path join maps to path.join when tests mock path
 const pathMod = await import('path')
 mock.module('node:path', () => ({ join: (pathMod as any).join }))

@@ -32,6 +32,7 @@ export interface FargateTaskConfig {
   domainName: string
   clientLogGroup: ILogGroup
   serverLogGroup: ILogGroup
+  timingLogGroup: ILogGroup
   blobStorageBucketName?: string
 }
 
@@ -109,6 +110,7 @@ export function createFargateTask(
       AUTH0_CALLBACK_URL: `https://${config.domainName}/callback`,
       GROQ_TRANSCRIPTION_MODEL: 'whisper-large-v3',
       CLIENT_LOG_GROUP_NAME: config.clientLogGroup.logGroupName,
+      TIMING_LOG_GROUP_NAME: config.timingLogGroup.logGroupName,
       ...(config.blobStorageBucketName && {
         BLOB_STORAGE_BUCKET: config.blobStorageBucketName,
       }),
@@ -135,6 +137,8 @@ export function createFargateTask(
           `arn:aws:logs:${stack.region}:${stack.account}:log-group:/ito/${config.stageName}/client:log-stream:*`,
           `arn:aws:logs:${stack.region}:${stack.account}:log-group:/ito/${config.stageName}/server`,
           `arn:aws:logs:${stack.region}:${stack.account}:log-group:/ito/${config.stageName}/server:log-stream:*`,
+          `arn:aws:logs:${stack.region}:${stack.account}:log-group:/ito/${config.stageName}/timing-analytics`,
+          `arn:aws:logs:${stack.region}:${stack.account}:log-group:/ito/${config.stageName}/timing-analytics:log-stream:*`,
         ],
       }),
     ],

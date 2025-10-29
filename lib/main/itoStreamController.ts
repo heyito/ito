@@ -11,6 +11,7 @@ import { grpcClient } from '../clients/grpcClient'
 import { AudioStreamManager } from './audio/AudioStreamManager'
 import { contextGrabber } from './context/ContextGrabber'
 import log from 'electron-log'
+import { timingCollector, TimingEventName } from './timing/TimingCollector'
 
 /**
  * ItoStreamController manages the lifecycle of a transcription stream using TranscribeStreamV2.
@@ -60,10 +61,19 @@ export class ItoStreamController {
     console.log('[ItoStreamController] Starting gRPC stream immediately')
     this.hasStartedGrpc = true
     this.abortController = new AbortController()
+    const abortSignal = this.abortController.signal
+    const timingEventName =
+      this.currentMode === ItoMode.EDIT
+        ? TimingEventName.SERVER_EDITING
+        : TimingEventName.SERVER_DICTATION
 
-    const response = await grpcClient.transcribeStreamV2(
-      this.createStreamGenerator(),
-      this.abortController.signal,
+    const response = await timingCollector.timeAsync(
+      timingEventName,
+      async () =>
+        await grpcClient.transcribeStreamV2(
+          this.createStreamGenerator(),
+          abortSignal,
+        ),
     )
 
     // Return response along with the audio data collected during the stream

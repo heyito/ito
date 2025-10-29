@@ -1,5 +1,13 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 import { ItoMode } from '@/app/generated/ito_pb'
+import { createMockTimingCollector } from '../__tests__/setup'
+import { TimingEventName } from './timing/TimingCollector'
+
+const mockTimingCollector = createMockTimingCollector()
+mock.module('./timing/TimingCollector', () => ({
+  timingCollector: mockTimingCollector,
+  TimingEventName: TimingEventName,
+}))
 
 const mockVoiceInputService = {
   startAudioRecording: mock(() => Promise.resolve()),
@@ -18,7 +26,7 @@ mock.module('./recordingStateNotifier', () => ({
 }))
 
 const mockItoStreamController = {
-  initialize: mock(() => Promise.resolve(true)),
+  initialize: mock(_mode => Promise.resolve(true)),
   startGrpcStream: mock(() =>
     Promise.resolve({
       response: { transcript: 'test transcript' },
@@ -106,6 +114,7 @@ describe('itoSessionManager', () => {
     Object.values(mockInteractionManager).forEach(mockFn => mockFn.mockClear())
     Object.values(mockContextGrabber).forEach(mockFn => mockFn.mockClear())
     Object.values(mockGrammarRulesService).forEach(mockFn => mockFn.mockClear())
+    Object.values(mockTimingCollector).forEach(mockFn => mockFn.mockClear())
 
     mockGetAdvancedSettings.mockClear()
 

@@ -174,7 +174,7 @@ function stopStuckKeyChecker() {
   }
 }
 
-function handleKeyEventInMain(event: KeyEvent) {
+async function handleKeyEventInMain(event: KeyEvent) {
   const { isShortcutGloballyEnabled, keyboardShortcuts } = store.get(
     STORE_KEYS.SETTINGS,
   )
@@ -231,7 +231,7 @@ function handleKeyEventInMain(event: KeyEvent) {
       // Starting a new session
       activeShortcutId = currentlyHeldShortcut.id
       console.info('lib Shortcut ACTIVATED, starting recording...')
-      itoSessionManager.startSession(currentlyHeldShortcut.mode)
+      await itoSessionManager.startSession(currentlyHeldShortcut.mode)
     } else if (activeShortcutId !== currentlyHeldShortcut.id) {
       // Different shortcut detected while already recording - change mode
       activeShortcutId = currentlyHeldShortcut.id

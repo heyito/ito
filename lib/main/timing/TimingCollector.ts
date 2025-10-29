@@ -15,10 +15,12 @@ export enum TimingEventName {
   INTERACTION_ACTIVE = 'interaction_active',
 
   // Server communication
-  SERVER_TRANSCRIBE = 'server_transcribe',
+  SERVER_DICTATION = 'server_transcribe',
+  SERVER_EDITING = 'server_editing',
 
   // Context and processing
-  CONTEXT_GATHER = 'context_gather',
+  SELCTED_TEXT_GATHER = 'selected_text_gather',
+  WINDOW_CONTEXT_GATHER = 'window_context_gather',
   GRAMMAR_SERVICE = 'grammar_service',
 
   // Output

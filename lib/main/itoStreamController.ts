@@ -61,13 +61,18 @@ export class ItoStreamController {
     console.log('[ItoStreamController] Starting gRPC stream immediately')
     this.hasStartedGrpc = true
     this.abortController = new AbortController()
+    const abortSignal = this.abortController.signal
+    const timingEventName =
+      this.currentMode === ItoMode.EDIT
+        ? TimingEventName.SERVER_EDITING
+        : TimingEventName.SERVER_DICTATION
 
     const response = await timingCollector.timeAsync(
-      TimingEventName.SERVER_TRANSCRIBE,
+      timingEventName,
       async () =>
         await grpcClient.transcribeStreamV2(
           this.createStreamGenerator(),
-          this.abortController?.signal,
+          abortSignal,
         ),
     )
 
@@ -201,10 +206,7 @@ export class ItoStreamController {
 
   private async buildStreamConfig(): Promise<TranscribeStreamRequest> {
     // Gather all config data using ContextGrabber
-    const context = await timingCollector.timeAsync(
-      TimingEventName.CONTEXT_GATHER,
-      async () => await contextGrabber.gatherContext(this.currentMode),
-    )
+    const context = await contextGrabber.gatherContext(this.currentMode)
 
     return create(TranscribeStreamRequestSchema, {
       payload: {

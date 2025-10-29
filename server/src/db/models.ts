@@ -67,3 +67,12 @@ export interface UserTrial {
   created_at: Date
   updated_at: Date
 }
+
+export interface UserSubscription {
+  user_id: string
+  stripe_customer_id: string | null
+  stripe_subscription_id: string | null
+  subscription_start_at: Date | null
+  created_at: Date
+  updated_at: Date
+}

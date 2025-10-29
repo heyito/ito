@@ -47,6 +47,12 @@ CEREBRAS_API_KEY=your_CEREBRAS_API_KEY_here
 REQUIRE_AUTH=false
 AUTH0_DOMAIN=your_auth0_domain.auth0.com
 AUTH0_AUDIENCE=http://localhost:3000
+
+# Billing (Stripe)
+STRIPE_SECRET_KEY=sk_test_xxx
+STRIPE_PRICE_ID=price_1SIeOV3eVZmJxoRGNfqZmbLP
+APP_PROTOCOL=ito-dev
+PUBLIC_BASE_URL=http://localhost:3000
 ```
 
 ### 2. Get Required API Keys

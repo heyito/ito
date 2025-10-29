@@ -543,6 +543,24 @@ export default function HomeContent() {
           >
             Explore use cases
           </button>
+          <button
+            className="bg-indigo-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-indigo-500 cursor-pointer ml-3"
+            onClick={async () => {
+              try {
+                const res = await window.api.billing.createCheckoutSession()
+                console.log('res', res)
+                if (res?.success && res?.url) {
+                  await window.api.invoke('web-open-url', res.url)
+                } else {
+                  console.error('Failed to create Stripe checkout session', res)
+                }
+              } catch (err) {
+                console.error('Checkout error', err)
+              }
+            }}
+          >
+            Upgrade Now
+          </button>
         </div>
 
         {/* Recent Activity Header */}

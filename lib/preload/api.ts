@@ -137,6 +137,13 @@ const api = {
     status: () => ipcRenderer.invoke('trial:status'),
     complete: () => ipcRenderer.invoke('trial:complete'),
   },
+  billing: {
+    createCheckoutSession: () =>
+      ipcRenderer.invoke('billing:create-checkout-session'),
+    confirmSession: (sessionId: string) =>
+      ipcRenderer.invoke('billing:confirm-session', { sessionId }),
+    status: () => ipcRenderer.invoke('billing:status'),
+  },
   loginItem: {
     setSettings: (enabled: boolean) =>
       ipcRenderer.invoke('set-login-item-settings', enabled),

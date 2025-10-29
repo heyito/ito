@@ -6,6 +6,7 @@ import {
   LlmSettings,
   AdvancedSettings,
   UserTrial,
+  UserSubscription,
 } from './models.js'
 import {
   CreateNoteRequest,
@@ -471,6 +472,40 @@ export class TrialsRepository {
        WHERE user_id = $1
        RETURNING *`,
       [userId],
+    )
+    return res.rows[0]
+  }
+}
+
+export class SubscriptionsRepository {
+  static async getByUserId(
+    userId: string,
+  ): Promise<UserSubscription | undefined> {
+    const res = await pool.query<UserSubscription>(
+      'SELECT * FROM user_subscriptions WHERE user_id = $1',
+      [userId],
+    )
+    return res.rows[0]
+  }
+
+  static async upsertActive(
+    userId: string,
+    stripeCustomerId: string | null,
+    stripeSubscriptionId: string | null,
+    startAt: Date | null,
+  ): Promise<UserSubscription> {
+    const res = await pool.query<UserSubscription>(
+      `INSERT INTO user_subscriptions (
+         user_id, stripe_customer_id, stripe_subscription_id, subscription_start_at, updated_at
+       ) VALUES ($1, $2, $3, $4, current_timestamp)
+       ON CONFLICT (user_id)
+       DO UPDATE SET
+         stripe_customer_id = EXCLUDED.stripe_customer_id,
+         stripe_subscription_id = EXCLUDED.stripe_subscription_id,
+         subscription_start_at = EXCLUDED.subscription_start_at,
+         updated_at = current_timestamp
+       RETURNING *`,
+      [userId, stripeCustomerId, stripeSubscriptionId, startAt],
     )
     return res.rows[0]
   }

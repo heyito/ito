@@ -518,6 +518,87 @@ export function registerIPC() {
       return { success: false, error: error?.message || 'Network error' }
     }
   })
+
+  // Billing routes proxy
+  handleIPC('billing:create-checkout-session', async () => {
+    try {
+      const baseUrl = import.meta.env.VITE_GRPC_BASE_URL
+      const token = (store.get(STORE_KEYS.ACCESS_TOKEN) as string | null) || ''
+      const url = new URL('/billing/checkout', baseUrl)
+      const res = await fetch(url.toString(), {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      })
+      const data: any = await res.json().catch(() => undefined)
+      if (!res.ok) {
+        return {
+          success: false,
+          error: data?.error || `Checkout create failed (${res.status})`,
+          status: res.status,
+        }
+      }
+      return data
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Network error' }
+    }
+  })
+
+  handleIPC(
+    'billing:confirm-session',
+    async (_e, { sessionId }: { sessionId: string }) => {
+      try {
+        const baseUrl = import.meta.env.VITE_GRPC_BASE_URL
+        const token =
+          (store.get(STORE_KEYS.ACCESS_TOKEN) as string | null) || ''
+        const url = new URL('/billing/confirm', baseUrl)
+        const res = await fetch(url.toString(), {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ session_id: sessionId }),
+        })
+        const data: any = await res.json().catch(() => undefined)
+        if (!res.ok) {
+          return {
+            success: false,
+            error: data?.error || `Confirm failed (${res.status})`,
+            status: res.status,
+          }
+        }
+        return data
+      } catch (error: any) {
+        return { success: false, error: error?.message || 'Network error' }
+      }
+    },
+  )
+
+  handleIPC('billing:status', async () => {
+    try {
+      const baseUrl = import.meta.env.VITE_GRPC_BASE_URL
+      const token = (store.get(STORE_KEYS.ACCESS_TOKEN) as string | null) || ''
+      const url = new URL('/billing/status', baseUrl)
+      const res = await fetch(url.toString(), {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      })
+      const data: any = await res.json().catch(() => undefined)
+      if (!res.ok) {
+        return {
+          success: false,
+          error: data?.error || `Status failed (${res.status})`,
+          status: res.status,
+        }
+      }
+      return data
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Network error' }
+    }
+  })
   handleIPC('open-auth-window', async (_e, { url, redirectUri }) => {
     try {
       if (!url || !redirectUri)

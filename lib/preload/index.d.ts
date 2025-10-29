@@ -119,6 +119,28 @@ declare global {
         status: () => Promise<TrialStatus>
         complete: () => Promise<TrialStatus>
       }
+      billing: {
+        createCheckoutSession: () => Promise<{
+          success: boolean
+          url?: string
+          error?: string
+          status?: number
+        }>
+        confirmSession: (sessionId: string) => Promise<{
+          success: boolean
+          pro_status?: 'active_pro' | 'free_trial' | 'none'
+          subscriptionStartAt?: string
+          error?: string
+          status?: number
+        }>
+        status: () => Promise<{
+          success: boolean
+          pro_status: 'active_pro' | 'free_trial' | 'none'
+          subscriptionStartAt?: string
+          error?: string
+          status?: number
+        }>
+      }
       deleteUserData: () => Promise<void>
       selectedText: SelectedTextAPI
     }

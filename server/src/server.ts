@@ -14,6 +14,10 @@ import { registerLoggingRoutes } from './services/logging.js'
 import { registerAuth0Routes } from './services/auth0.js'
 import { IpLinkRepository } from './db/repo.js'
 import { registerTrialRoutes } from './services/trial.js'
+import {
+  registerBillingRoutes,
+  registerBillingPublicRoutes,
+} from './services/billing.js'
 import cors from '@fastify/cors'
 
 dotenv.config()
@@ -76,6 +80,9 @@ export const startServer = async () => {
 
   // Register Auth0 management proxy routes at the root level (no auth required)
   await registerAuth0Routes(connectRpcServer)
+
+  // Public billing routes (no auth)
+  await registerBillingPublicRoutes(connectRpcServer)
 
   // Register IP correlation candidate (from website click)
   connectRpcServer.post('/link/register-ip', async (request, reply) => {
@@ -170,6 +177,7 @@ export const startServer = async () => {
     })
 
     await registerTrialRoutes(fastify, { requireAuth: REQUIRE_AUTH })
+    await registerBillingRoutes(fastify, { requireAuth: REQUIRE_AUTH })
   })
 
   // Error handling - this handles Fastify-level errors, not RPC errors

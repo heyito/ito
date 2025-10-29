@@ -26,6 +26,33 @@ export default function HomeKit() {
     metadata?.paid_status === PaidStatus.PRO ||
     metadata?.paid_status === PaidStatus.PRO_TRIAL
 
+  // Listen for billing deep-link events and finalize subscription
+  useEffect(() => {
+    const offSuccess = window.api.on(
+      'billing-session-completed',
+      async (sessionId: string) => {
+        try {
+          if (sessionId) {
+            await window.api.billing.confirmSession(sessionId)
+          }
+          // Ensure trial is completed locally and on server
+          await window.api.trial.complete()
+        } catch (err) {
+          console.error('Failed to finalize billing session', err)
+        }
+      },
+    )
+
+    const offCancel = window.api.on('billing-session-cancelled', () => {
+      // No-op for now; could show a toast in the future
+    })
+
+    return () => {
+      offSuccess?.()
+      offCancel?.()
+    }
+  }, [])
+
   // Handle text and positioning animation timing
   useEffect(() => {
     if (navExpanded) {

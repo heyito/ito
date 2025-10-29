@@ -179,22 +179,7 @@ mock.module('electron', () => {
 
 console.log('✓ Electron module mocked')
 
-// Global fallback mocks to prevent cross-test leakage
-// 1) Provide a safe default for selected-text-reader's getCursorContext if not mocked elsewhere
-try {
-  const existing = await import('../media/selected-text-reader')
-  if (typeof (existing as any).getCursorContext !== 'function') {
-    mock.module('../media/selected-text-reader', () => ({
-      getCursorContext: async () => '',
-    }))
-  }
-} catch {
-  mock.module('../media/selected-text-reader', () => ({
-    getCursorContext: async () => '',
-  }))
-}
-
-// 2) Ensure node:path join maps to path.join when tests mock path
+// Ensure node:path join maps to path.join when tests mock path
 const pathMod = await import('path')
 mock.module('node:path', () => ({ join: (pathMod as any).join }))
 

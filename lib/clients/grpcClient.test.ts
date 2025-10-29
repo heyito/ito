@@ -28,8 +28,6 @@ const mockEnsureValidTokens = mock(() =>
   }),
 )
 
-// Use the global Electron mock from test setup; we'll inject our own window via setMainWindow
-
 mock.module('../media/text-writer', () => ({
   setFocusedText: mockSetFocusedText,
 }))

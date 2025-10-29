@@ -5,6 +5,8 @@ import store, { getCurrentUserId } from './store'
 import { STORE_KEYS } from '../constants/store-keys'
 import { interactionManager } from './interactions/InteractionManager'
 
+const LOG_QUEUE_KEY = 'log_queue:events'
+
 export function initializeLogging() {
   // Overriding console methods with electron-log
   Object.assign(console, log.functions)
@@ -44,11 +46,11 @@ export function initializeLogging() {
 
   const MAX_QUEUE = 5000
   const initialEvents =
-    (store.get('log_queue:events') as LogEvent[] | undefined) ?? []
+    (store.get(LOG_QUEUE_KEY) as LogEvent[] | undefined) ?? []
   const queue: LogEvent[] = [...initialEvents]
 
   const persistQueue = () => {
-    store.set('log_queue:events', queue)
+    store.set(LOG_QUEUE_KEY, queue)
   }
   let isSending = false
   let flushTimer: ReturnType<typeof setTimeout> | null = null

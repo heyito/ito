@@ -6,13 +6,8 @@ describe('AudioStreamManager', () => {
   let audioManager: AudioStreamManager
 
   beforeEach(() => {
-    // Clean up any existing listeners from previous tests (guarded for cross-mocks)
-    if (
-      typeof (audioRecorderService as any).removeAllListeners === 'function'
-    ) {
-      ;(audioRecorderService as any).removeAllListeners('audio-chunk')
-      ;(audioRecorderService as any).removeAllListeners('audio-config')
-    }
+    audioRecorderService.removeAllListeners('audio-chunk')
+    audioRecorderService.removeAllListeners('audio-config')
     audioManager = new AudioStreamManager()
   })
 

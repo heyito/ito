@@ -1,5 +1,6 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 import type api from './api'
+import type { TrialStatus } from '../../app/hooks/useFreeTrial'
 
 interface KeyEvent {
   type: 'keydown' | 'keyup'
@@ -113,6 +114,11 @@ declare global {
         idToken: string | null,
         accessToken: string | null,
       ) => Promise<void>
+      trial: {
+        start: () => Promise<TrialStatus>
+        status: () => Promise<TrialStatus>
+        complete: () => Promise<TrialStatus>
+      }
       deleteUserData: () => Promise<void>
       selectedText: SelectedTextAPI
     }

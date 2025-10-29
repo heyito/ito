@@ -5,6 +5,7 @@ import {
   DictionaryItem,
   LlmSettings,
   AdvancedSettings,
+  UserTrial,
 } from './models.js'
 import {
   CreateNoteRequest,
@@ -398,5 +399,79 @@ export class IpLinkRepository {
       [ipHash],
     )
     return res.rows[0]?.website_distinct_id ?? null
+  }
+}
+
+export class TrialsRepository {
+  static async getByUserId(userId: string): Promise<UserTrial | undefined> {
+    const res = await pool.query<UserTrial>(
+      'SELECT * FROM user_trials WHERE user_id = $1',
+      [userId],
+    )
+    return res.rows[0]
+  }
+
+  static async startTrial(userId: string, startAt?: Date): Promise<UserTrial> {
+    // Ensure a row exists; idempotently set start when not completed and not already set
+    const existing = await this.getByUserId(userId)
+    if (!existing) {
+      const res = await pool.query<UserTrial>(
+        `INSERT INTO user_trials (user_id, trial_start_at, has_completed_trial)
+         VALUES ($1, $2, false)
+         RETURNING *`,
+        [userId, startAt ?? new Date()],
+      )
+      return res.rows[0]
+    }
+
+    if (existing.has_completed_trial) {
+      return existing
+    }
+
+    if (existing.trial_start_at == null) {
+      const res = await pool.query<UserTrial>(
+        `UPDATE user_trials
+         SET trial_start_at = $2, updated_at = current_timestamp
+         WHERE user_id = $1
+         RETURNING *`,
+        [userId, startAt ?? new Date()],
+      )
+      return res.rows[0]
+    }
+
+    return existing
+  }
+
+  static async completeTrial(userId: string): Promise<UserTrial> {
+    const res = await pool.query<UserTrial>(
+      `UPDATE user_trials
+       SET has_completed_trial = true,
+           trial_start_at = NULL,
+           updated_at = current_timestamp
+       WHERE user_id = $1
+       RETURNING *`,
+      [userId],
+    )
+
+    if (res.rows[0]) return res.rows[0]
+
+    const insert = await pool.query<UserTrial>(
+      `INSERT INTO user_trials (user_id, has_completed_trial)
+       VALUES ($1, true)
+       RETURNING *`,
+      [userId],
+    )
+    return insert.rows[0]
+  }
+
+  static async clearTrialStart(userId: string): Promise<UserTrial | undefined> {
+    const res = await pool.query<UserTrial>(
+      `UPDATE user_trials
+       SET trial_start_at = NULL, updated_at = current_timestamp
+       WHERE user_id = $1
+       RETURNING *`,
+      [userId],
+    )
+    return res.rows[0]
   }
 }

@@ -59,3 +59,11 @@ export interface AdvancedSettings {
   created_at: Date
   updated_at: Date
 }
+
+export interface UserTrial {
+  user_id: string
+  trial_start_at: Date | null
+  has_completed_trial: boolean
+  created_at: Date
+  updated_at: Date
+}

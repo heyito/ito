@@ -13,6 +13,7 @@ import dotenv from 'dotenv'
 import { registerLoggingRoutes } from './services/logging.js'
 import { registerAuth0Routes } from './services/auth0.js'
 import { IpLinkRepository } from './db/repo.js'
+import { registerTrialRoutes } from './services/trial.js'
 import cors from '@fastify/cors'
 
 dotenv.config()
@@ -167,6 +168,8 @@ export const startServer = async () => {
       clientLogGroupName: CLIENT_LOG_GROUP_NAME,
       showClientLogs: process.env.SHOW_CLIENT_LOGS === 'true',
     })
+
+    await registerTrialRoutes(fastify, { requireAuth: REQUIRE_AUTH })
   })
 
   // Error handling - this handles Fastify-level errors, not RPC errors

@@ -132,6 +132,11 @@ const api = {
 
     delete: (id: string) => ipcRenderer.invoke('interactions:delete', id),
   },
+  trial: {
+    start: () => ipcRenderer.invoke('trial:start'),
+    status: () => ipcRenderer.invoke('trial:status'),
+    complete: () => ipcRenderer.invoke('trial:complete'),
+  },
   loginItem: {
     setSettings: (enabled: boolean) =>
       ipcRenderer.invoke('set-login-item-settings', enabled),

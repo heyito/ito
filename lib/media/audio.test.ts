@@ -72,12 +72,20 @@ describe('AudioRecorderService', () => {
     mockChildProcess._closeHandler = null
     mockChildProcess._errorHandler = null
 
-    // Clear service event listeners
-    // reset via terminate which clears listeners in implementation
-    // Attempt to terminate if available; some tests may have mocked the service
-    if (typeof (audioRecorderService as any).terminate === 'function') {
-      ;(audioRecorderService as any).terminate()
-    }
+    const events = [
+      'started',
+      'stopped',
+      'error',
+      'volume-update',
+      'audio-chunk',
+    ]
+    events.forEach(event => {
+      audioRecorderService.removeAllListeners(event)
+    })
+
+    // Since we can't directly access private fields, we'll terminate the service
+    // to reset its state, then initialize it fresh for each test
+    audioRecorderService.terminate()
   })
 
   describe('Initialization Business Logic', () => {

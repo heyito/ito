@@ -133,8 +133,9 @@ const api = {
     delete: (id: string) => ipcRenderer.invoke('interactions:delete', id),
   },
   trial: {
-    start: () => ipcRenderer.invoke('trial:start'),
     complete: () => ipcRenderer.invoke('trial:complete'),
+    startAfterOnboarding: () =>
+      ipcRenderer.invoke('start-trial-after-onboarding'),
   },
   billing: {
     createCheckoutSession: () =>

@@ -1,12 +1,83 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Switch } from '@/app/components/ui/switch'
 import { Button } from '@/app/components/ui/button'
 import { Check } from '@mynaui/icons-react'
+import useBillingState from '@/app/hooks/useBillingState'
 
 type BillingPeriod = 'monthly' | 'annual'
 
 export default function PricingBillingSettingsContent() {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('annual')
+  const billingState = useBillingState()
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
+
+  // Refresh billing state when checkout session completes
+  useEffect(() => {
+    const offSuccess = window.api.on('billing-session-completed', async () => {
+      // Refresh billing state to reflect the new subscription
+      await billingState.refresh()
+      setCheckoutError(null)
+    })
+
+    return () => {
+      offSuccess?.()
+    }
+  }, [billingState])
+
+  const handleCheckout = async () => {
+    setCheckoutLoading(true)
+    setCheckoutError(null)
+    try {
+      const res = await window.api.billing.createCheckoutSession()
+      if (res?.success && res?.url) {
+        await window.api.invoke('web-open-url', res.url)
+      } else {
+        setCheckoutError(
+          res?.error || 'Failed to create checkout session. Please try again.',
+        )
+      }
+    } catch (err: any) {
+      setCheckoutError(
+        err?.message || 'Failed to create checkout session. Please try again.',
+      )
+    } finally {
+      setCheckoutLoading(false)
+    }
+  }
+
+  // Determine button states based on billing status
+  const getStarterButtonText = () => {
+    if (billingState.isLoading) return 'Loading...'
+    if (billingState.proStatus === 'active_pro') return 'Downgrade plan'
+    if (billingState.proStatus === 'none' && !billingState.isTrialActive) {
+      return 'Current plan'
+    }
+    return 'Current plan'
+  }
+
+  const getStarterButtonDisabled = () => {
+    return (
+      billingState.proStatus === 'none' &&
+      !billingState.isTrialActive &&
+      !billingState.isLoading
+    )
+  }
+
+  const getProButtonText = () => {
+    if (checkoutLoading) return 'Loading...'
+    if (billingState.isLoading) return 'Loading...'
+    if (billingState.proStatus === 'active_pro') return 'Current plan'
+    return 'Upgrade'
+  }
+
+  const getProButtonDisabled = () => {
+    return (
+      billingState.proStatus === 'active_pro' ||
+      billingState.isLoading ||
+      checkoutLoading
+    )
+  }
 
   return (
     <div className="space-y-8">
@@ -32,6 +103,13 @@ export default function PricingBillingSettingsContent() {
         <span className="text-sm text-green-600 font-medium">Saved 20%</span>
       </div> */}
 
+      {/* Error Message */}
+      {checkoutError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800">
+          {checkoutError}
+        </div>
+      )}
+
       {/* Pricing Cards */}
       <div className="grid grid-cols-3 gap-6">
         {/* Starter Card */}
@@ -49,9 +127,9 @@ export default function PricingBillingSettingsContent() {
               variant="outline"
               size="lg"
               className="w-full rounded-xl"
-              disabled
+              disabled={getStarterButtonDisabled()}
             >
-              Current plan
+              {getStarterButtonText()}
             </Button>
           }
         />
@@ -74,8 +152,10 @@ export default function PricingBillingSettingsContent() {
               variant="default"
               size="lg"
               className="w-full bg-gray-900 hover:bg-gray-800 text-white rounded-xl"
+              disabled={getProButtonDisabled()}
+              onClick={handleCheckout}
             >
-              Upgrade for free
+              {getProButtonText()}
             </Button>
           }
         />

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState, useRef } from 'react'
 import {
   ChartNoAxesColumn,
   InfoCircle,
@@ -29,6 +29,7 @@ import { createStereo48kWavFromMonoPCM } from '@/app/utils/audioUtils'
 import { KeyName } from '@/lib/types/keyboard'
 import { usePlatform } from '@/app/hooks/usePlatform'
 import { ProUpgradeDialog } from '../ProUpgradeDialog'
+import useBillingState from '@/app/hooks/useBillingState'
 
 // Interface for interaction statistics
 interface InteractionStats {
@@ -62,7 +63,13 @@ const StatCard = ({
   )
 }
 
-export default function HomeContent() {
+interface HomeContentProps {
+  isStartingTrial?: boolean
+}
+
+export default function HomeContent({
+  isStartingTrial = false,
+}: HomeContentProps) {
   const { getItoModeShortcuts } = useSettingsStore()
   const keyboardShortcut = getItoModeShortcuts(ItoMode.TRANSCRIBE)[0].keys
   const { user } = useAuthStore()
@@ -82,6 +89,55 @@ export default function HomeContent() {
     averageWPM: 0,
   })
   const [showProDialog, setShowProDialog] = useState(false)
+  const billingState = useBillingState()
+  const hasShownTrialDialogRef = useRef(false)
+
+  // Show trial dialog when trial starts
+  useEffect(() => {
+    if (
+      billingState.isTrialActive &&
+      billingState.proStatus === 'free_trial' &&
+      !hasShownTrialDialogRef.current &&
+      !billingState.isLoading
+    ) {
+      setShowProDialog(true)
+      hasShownTrialDialogRef.current = true
+    }
+  }, [
+    billingState.isTrialActive,
+    billingState.proStatus,
+    billingState.isLoading,
+    isStartingTrial,
+  ])
+
+  // Listen for trial start event to refresh billing state
+  useEffect(() => {
+    const offTrialStarted = window.api.on('trial-started', async () => {
+      await billingState.refresh()
+    })
+
+    const offBillingSuccess = window.api.on(
+      'billing-session-completed',
+      async () => {
+        await billingState.refresh()
+      },
+    )
+
+    return () => {
+      offTrialStarted?.()
+      offBillingSuccess?.()
+    }
+  }, [billingState])
+
+  // Reset dialog flag when trial is no longer active or user becomes pro
+  useEffect(() => {
+    if (
+      billingState.proStatus !== 'free_trial' ||
+      !billingState.isTrialActive
+    ) {
+      hasShownTrialDialogRef.current = false
+    }
+  }, [billingState.proStatus, billingState.isTrialActive])
 
   // Calculate statistics from interactions
   const calculateStats = useCallback(
@@ -542,24 +598,6 @@ export default function HomeContent() {
             }
           >
             Explore use cases
-          </button>
-          <button
-            className="bg-indigo-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-indigo-500 cursor-pointer ml-3"
-            onClick={async () => {
-              try {
-                const res = await window.api.billing.createCheckoutSession()
-                console.log('res', res)
-                if (res?.success && res?.url) {
-                  await window.api.invoke('web-open-url', res.url)
-                } else {
-                  console.error('Failed to create Stripe checkout session', res)
-                }
-              } catch (err) {
-                console.error('Checkout error', err)
-              }
-            }}
-          >
-            Upgrade Now
           </button>
         </div>
 

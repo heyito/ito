@@ -10,6 +10,7 @@ node_modules
 dist/*
 .DS_Store
 native/**/target
+native/target-rust-analyzer
 out.json
 tsconfig.node.tsbuildinfo
 # Sentry Config File

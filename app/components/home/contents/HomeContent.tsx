@@ -28,6 +28,7 @@ import { getKeyDisplay } from '@/app/utils/keyboard'
 import { createStereo48kWavFromMonoPCM } from '@/app/utils/audioUtils'
 import { KeyName } from '@/lib/types/keyboard'
 import { usePlatform } from '@/app/hooks/usePlatform'
+import { ProUpgradeDialog } from '../ProUpgradeDialog'
 
 // Interface for interaction statistics
 interface InteractionStats {
@@ -80,6 +81,7 @@ export default function HomeContent() {
     totalWords: 0,
     averageWPM: 0,
   })
+  const [showProDialog, setShowProDialog] = useState(false)
 
   // Calculate statistics from interactions
   const calculateStats = useCallback(
@@ -696,6 +698,9 @@ export default function HomeContent() {
           )
         )}
       </div>
+
+      {/* Pro Upgrade Dialog */}
+      <ProUpgradeDialog open={showProDialog} onOpenChange={setShowProDialog} />
     </div>
   )
 }

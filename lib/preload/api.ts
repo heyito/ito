@@ -134,7 +134,6 @@ const api = {
   },
   trial: {
     start: () => ipcRenderer.invoke('trial:start'),
-    status: () => ipcRenderer.invoke('trial:status'),
     complete: () => ipcRenderer.invoke('trial:complete'),
   },
   billing: {

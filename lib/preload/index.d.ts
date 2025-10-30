@@ -1,6 +1,15 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 import type api from './api'
-import type { TrialStatus } from '../../app/hooks/useFreeTrial'
+type TrialStatus = {
+  success: boolean
+  trialDays: number
+  trialStartAt: string | null
+  daysLeft: number
+  isTrialActive: boolean
+  hasCompletedTrial: boolean
+  error?: string
+  status?: number
+}
 
 interface KeyEvent {
   type: 'keydown' | 'keyup'
@@ -116,7 +125,6 @@ declare global {
       ) => Promise<void>
       trial: {
         start: () => Promise<TrialStatus>
-        status: () => Promise<TrialStatus>
         complete: () => Promise<TrialStatus>
       }
       billing: {
@@ -137,6 +145,13 @@ declare global {
           success: boolean
           pro_status: 'active_pro' | 'free_trial' | 'none'
           subscriptionStartAt?: string
+          trial?: {
+            trialDays: number
+            trialStartAt: string | null
+            daysLeft: number
+            isTrialActive: boolean
+            hasCompletedTrial: boolean
+          }
           error?: string
           status?: number
         }>

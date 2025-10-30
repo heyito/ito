@@ -143,30 +143,49 @@ export const registerBillingRoutes = async (
       }
 
       const sub = await SubscriptionsRepository.getByUserId(userSub)
+
+      const trial = await TrialsRepository.getByUserId(userSub)
+      const now = Date.now()
+      const startMs = trial?.trial_start_at?.getTime()
+      const TRIAL_DAYS = 14
+      const dayMs = 24 * 60 * 60 * 1000
+      const isTrialActive =
+        !!startMs &&
+        now - startMs < TRIAL_DAYS * dayMs &&
+        !trial?.has_completed_trial
+      const daysElapsed = startMs ? Math.floor((now - startMs) / dayMs) : 0
+      const daysLeft = Math.max(0, TRIAL_DAYS - daysElapsed)
+
+      const trialBlock = {
+        trialDays: TRIAL_DAYS,
+        trialStartAt: trial?.trial_start_at
+          ? trial.trial_start_at.toISOString()
+          : null,
+        daysLeft,
+        isTrialActive,
+        hasCompletedTrial: !!trial?.has_completed_trial,
+      }
+
       if (sub) {
         reply.send({
           success: true,
           pro_status: 'active_pro',
           subscriptionStartAt: sub.subscription_start_at,
+          trial: trialBlock,
         })
         return
       }
 
-      const trial = await TrialsRepository.getByUserId(userSub)
-      const now = Date.now()
-      const start = trial?.trial_start_at?.getTime()
-      const TRIAL_DAYS = 14
-      const isTrialActive =
-        !!start &&
-        now - start < TRIAL_DAYS * 24 * 60 * 60 * 1000 &&
-        !trial?.has_completed_trial
-
       if (isTrialActive) {
-        reply.send({ success: true, pro_status: 'free_trial' })
+        reply.send({
+          success: true,
+          pro_status: 'free_trial',
+          trial: trialBlock,
+        })
         return
       }
 
-      reply.send({ success: true, pro_status: 'none' })
+      reply.send({ success: true, pro_status: 'none', trial: trialBlock })
     } catch (error: any) {
       reply
         .code(500)

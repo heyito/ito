@@ -469,30 +469,6 @@ export function registerIPC() {
     }
   })
 
-  handleIPC('trial:status', async () => {
-    try {
-      const baseUrl = import.meta.env.VITE_GRPC_BASE_URL
-      const token = (store.get(STORE_KEYS.ACCESS_TOKEN) as string | null) || ''
-      const url = new URL('/trial/status', baseUrl)
-      const res = await fetch(url.toString(), {
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      })
-      const data: any = await res.json().catch(() => undefined)
-      if (!res.ok) {
-        return {
-          success: false,
-          error: data?.error || `Trial status failed (${res.status})`,
-          status: res.status,
-        }
-      }
-      return data
-    } catch (error: any) {
-      return { success: false, error: error?.message || 'Network error' }
-    }
-  })
-
   handleIPC('trial:complete', async () => {
     try {
       const baseUrl = import.meta.env.VITE_GRPC_BASE_URL

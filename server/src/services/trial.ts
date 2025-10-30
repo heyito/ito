@@ -51,25 +51,6 @@ export const registerTrialRoutes = async (
     }
   })
 
-  fastify.get('/trial/status', async (request, reply) => {
-    try {
-      const userSub = (requireAuth && (request as any).user?.sub) || undefined
-      if (!userSub) {
-        reply.code(401).send({ success: false, error: 'Unauthorized' })
-        return
-      }
-      const row =
-        (await TrialsRepository.getByUserId(userSub)) ||
-        (await TrialsRepository.startTrial(userSub)) // ensure a row exists for status
-
-      reply.send(computeStatus(row))
-    } catch (error: any) {
-      reply
-        .code(500)
-        .send({ success: false, error: error?.message || 'Server error' })
-    }
-  })
-
   fastify.post('/trial/complete', async (request, reply) => {
     try {
       const userSub = (requireAuth && (request as any).user?.sub) || undefined

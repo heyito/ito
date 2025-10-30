@@ -137,6 +137,36 @@ export const registerBillingRoutes = async (
     }
   })
 
+  fastify.post('/billing/cancel', async (request, reply) => {
+    try {
+      const userSub = (requireAuth && (request as any).user?.sub) || undefined
+      if (!userSub) {
+        reply.code(401).send({ success: false, error: 'Unauthorized' })
+        return
+      }
+
+      const sub = await SubscriptionsRepository.getByUserId(userSub)
+      if (!sub || !sub.stripe_subscription_id) {
+        reply
+          .code(400)
+          .send({ success: false, error: 'No active subscription found' })
+        return
+      }
+
+      await stripe.subscriptions.cancel(sub.stripe_subscription_id)
+
+      reply.send({ success: true })
+    } catch (error: any) {
+      fastify.log.error(
+        { err: error },
+        'Stripe subscription cancellation failed',
+      )
+      reply
+        .code(500)
+        .send({ success: false, error: error?.message || 'Server error' })
+    }
+  })
+
   fastify.get('/billing/status', async (request, reply) => {
     try {
       const userSub = (requireAuth && (request as any).user?.sub) || undefined

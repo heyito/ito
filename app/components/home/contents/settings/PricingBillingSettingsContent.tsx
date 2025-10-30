@@ -11,6 +11,7 @@ export default function PricingBillingSettingsContent() {
   const billingState = useBillingState()
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [downgradeLoading, setDowngradeLoading] = useState(false)
 
   // Refresh billing state when checkout session completes
   useEffect(() => {
@@ -46,9 +47,31 @@ export default function PricingBillingSettingsContent() {
     }
   }
 
+  const handleDowngrade = async () => {
+    setDowngradeLoading(true)
+    setCheckoutError(null)
+    try {
+      const res = await window.api.billing.cancelSubscription()
+      if (res?.success) {
+        await billingState.refresh()
+      } else {
+        setCheckoutError(
+          res?.error || 'Failed to cancel subscription. Please try again.',
+        )
+      }
+    } catch (err: any) {
+      setCheckoutError(
+        err?.message || 'Failed to cancel subscription. Please try again.',
+      )
+    } finally {
+      setDowngradeLoading(false)
+    }
+  }
+
   // Determine button states based on billing status
   const getStarterButtonText = () => {
     if (billingState.isLoading) return 'Loading...'
+    if (downgradeLoading) return 'Cancelling...'
     if (billingState.proStatus === 'active_pro') return 'Downgrade plan'
     if (billingState.proStatus === 'none' && !billingState.isTrialActive) {
       return 'Current plan'
@@ -58,9 +81,9 @@ export default function PricingBillingSettingsContent() {
 
   const getStarterButtonDisabled = () => {
     return (
-      billingState.proStatus === 'none' &&
-      !billingState.isTrialActive &&
-      !billingState.isLoading
+      (billingState.proStatus === 'none' && !billingState.isTrialActive) ||
+      billingState.isLoading ||
+      downgradeLoading
     )
   }
 
@@ -128,6 +151,7 @@ export default function PricingBillingSettingsContent() {
               size="lg"
               className="w-full rounded-xl"
               disabled={getStarterButtonDisabled()}
+              onClick={handleDowngrade}
             >
               {getStarterButtonText()}
             </Button>

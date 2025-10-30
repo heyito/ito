@@ -583,6 +583,31 @@ export function registerIPC() {
       return { success: false, error: error?.message || 'Network error' }
     }
   })
+
+  handleIPC('billing:cancel-subscription', async () => {
+    try {
+      const baseUrl = import.meta.env.VITE_GRPC_BASE_URL
+      const token = (store.get(STORE_KEYS.ACCESS_TOKEN) as string | null) || ''
+      const url = new URL('/billing/cancel', baseUrl)
+      const res = await fetch(url.toString(), {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      })
+      const data: any = await res.json().catch(() => undefined)
+      if (!res.ok) {
+        return {
+          success: false,
+          error: data?.error || `Cancel failed (${res.status})`,
+          status: res.status,
+        }
+      }
+      return data
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Network error' }
+    }
+  })
   handleIPC('open-auth-window', async (_e, { url, redirectUri }) => {
     try {
       if (!url || !redirectUri)

@@ -143,6 +143,7 @@ const api = {
     confirmSession: (sessionId: string) =>
       ipcRenderer.invoke('billing:confirm-session', { sessionId }),
     status: () => ipcRenderer.invoke('billing:status'),
+    cancelSubscription: () => ipcRenderer.invoke('billing:cancel-subscription'),
   },
   loginItem: {
     setSettings: (enabled: boolean) =>

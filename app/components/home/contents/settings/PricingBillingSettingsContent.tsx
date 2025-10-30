@@ -10,8 +10,9 @@ export default function PricingBillingSettingsContent() {
 
   return (
     <div className="space-y-8">
+      {/* TODO: Integrate later  */}
       {/* Billing Period Toggle */}
-      <div className="flex items-center justify-center gap-3">
+      {/* <div className="flex items-center justify-center gap-3">
         <span
           className={`text-sm font-medium ${billingPeriod === 'monthly' ? 'text-gray-900' : 'text-gray-500'}`}
         >
@@ -29,7 +30,7 @@ export default function PricingBillingSettingsContent() {
           Annual
         </span>
         <span className="text-sm text-green-600 font-medium">Saved 20%</span>
-      </div>
+      </div> */}
 
       {/* Pricing Cards */}
       <div className="grid grid-cols-3 gap-6">

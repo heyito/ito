@@ -8,7 +8,7 @@ import {
 import { ItoIcon } from '../icons/ItoIcon'
 import { useMainStore } from '@/app/store/useMainStore'
 import { useUserMetadataStore } from '@/app/store/useUserMetadataStore'
-import { ProStatus } from '@/lib/main/sqlite/models'
+import { PaidStatus } from '@/lib/main/sqlite/models'
 import { useEffect, useState } from 'react'
 import { NavItem } from '../ui/nav-item'
 import HomeContent from './contents/HomeContent'
@@ -23,8 +23,8 @@ export default function HomeKit() {
   const [showText, setShowText] = useState(navExpanded)
 
   const isPro =
-    metadata?.pro_status === ProStatus.PRO ||
-    metadata?.pro_status === ProStatus.PRO_TRIAL
+    metadata?.paid_status === PaidStatus.PRO ||
+    metadata?.paid_status === PaidStatus.PRO_TRIAL
 
   // Handle text and positioning animation timing
   useEffect(() => {

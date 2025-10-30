@@ -49,7 +49,7 @@ export const MIGRATIONS: Migration[] = [
       CREATE TABLE user_metadata (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL UNIQUE,
-        pro_status TEXT NOT NULL DEFAULT 'FREE',
+        paid_status TEXT NOT NULL DEFAULT 'FREE',
         free_words_remaining INTEGER,
         pro_trial_start_date TEXT,
         pro_trial_end_date TEXT,

@@ -33,7 +33,7 @@ export interface DictionaryItem {
   deleted_at: string | null
 }
 
-export enum ProStatus {
+export enum PaidStatus {
   FREE = 'FREE',
   PRO_TRIAL = 'PRO_TRIAL',
   PRO = 'PRO',
@@ -42,12 +42,12 @@ export enum ProStatus {
 export interface UserMetadata {
   id: string
   user_id: string
-  pro_status: ProStatus
+  paid_status: PaidStatus
   free_words_remaining: number | null
-  pro_trial_start_date: string | null
-  pro_trial_end_date: string | null
-  pro_subscription_start_date: string | null
-  pro_subscription_end_date: string | null
-  created_at: string
-  updated_at: string
+  pro_trial_start_date: Date | null
+  pro_trial_end_date: Date | null
+  pro_subscription_start_date: Date | null
+  pro_subscription_end_date: Date | null
+  created_at: Date
+  updated_at: Date
 }

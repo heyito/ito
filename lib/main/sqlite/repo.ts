@@ -1,6 +1,6 @@
 import { run, get, all } from './utils'
 import type { Interaction, Note, DictionaryItem, UserMetadata } from './models'
-import { ProStatus } from './models'
+import { PaidStatus } from './models'
 import { v4 as uuidv4 } from 'uuid'
 
 // SQLite error codes (from better-sqlite3 and node-sqlite3)
@@ -450,22 +450,62 @@ export class KeyValueStore {
 // =================================================================
 
 /**
+ * Raw UserMetadata row from SQLite (dates are strings).
+ */
+type UserMetadataRow = {
+  id: string
+  user_id: string
+  paid_status: PaidStatus
+  free_words_remaining: number | null
+  pro_trial_start_date: string | null
+  pro_trial_end_date: string | null
+  pro_subscription_start_date: string | null
+  pro_subscription_end_date: string | null
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * Transforms a raw DB row to UserMetadata with Date objects.
+ */
+function parseUserMetadataRow(row: UserMetadataRow): UserMetadata {
+  return {
+    ...row,
+    pro_trial_start_date: row.pro_trial_start_date
+      ? new Date(row.pro_trial_start_date)
+      : null,
+    pro_trial_end_date: row.pro_trial_end_date
+      ? new Date(row.pro_trial_end_date)
+      : null,
+    pro_subscription_start_date: row.pro_subscription_start_date
+      ? new Date(row.pro_subscription_start_date)
+      : null,
+    pro_subscription_end_date: row.pro_subscription_end_date
+      ? new Date(row.pro_subscription_end_date)
+      : null,
+    created_at: new Date(row.created_at),
+    updated_at: new Date(row.updated_at),
+  }
+}
+
+/**
  * Data required to create or update UserMetadata.
  */
 type InsertUserMetadata = Omit<UserMetadata, 'id' | 'created_at' | 'updated_at'>
 
 export class UserMetadataTable {
   static async insert(metadataData: InsertUserMetadata): Promise<UserMetadata> {
+    const now = new Date()
     const newMetadata: UserMetadata = {
       id: uuidv4(),
       ...metadataData,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: now,
+      updated_at: now,
     }
 
     const query = `
       INSERT INTO user_metadata (
-        id, user_id, pro_status, free_words_remaining,
+        id, user_id, paid_status, free_words_remaining,
         pro_trial_start_date, pro_trial_end_date,
         pro_subscription_start_date, pro_subscription_end_date,
         created_at, updated_at
@@ -475,14 +515,14 @@ export class UserMetadataTable {
     const params = [
       newMetadata.id,
       newMetadata.user_id,
-      newMetadata.pro_status,
+      newMetadata.paid_status,
       newMetadata.free_words_remaining,
-      newMetadata.pro_trial_start_date,
-      newMetadata.pro_trial_end_date,
-      newMetadata.pro_subscription_start_date,
-      newMetadata.pro_subscription_end_date,
-      newMetadata.created_at,
-      newMetadata.updated_at,
+      newMetadata.pro_trial_start_date?.toISOString() ?? null,
+      newMetadata.pro_trial_end_date?.toISOString() ?? null,
+      newMetadata.pro_subscription_start_date?.toISOString() ?? null,
+      newMetadata.pro_subscription_end_date?.toISOString() ?? null,
+      newMetadata.created_at.toISOString(),
+      newMetadata.updated_at.toISOString(),
     ]
 
     await run(query, params)
@@ -490,11 +530,11 @@ export class UserMetadataTable {
   }
 
   static async findByUserId(userId: string): Promise<UserMetadata | undefined> {
-    const row = await get<UserMetadata>(
+    const row = await get<UserMetadataRow>(
       'SELECT * FROM user_metadata WHERE user_id = ?',
       [userId],
     )
-    return row
+    return row ? parseUserMetadataRow(row) : undefined
   }
 
   /**
@@ -508,9 +548,9 @@ export class UserMetadataTable {
     const fields: string[] = []
     const params: any[] = []
 
-    if (updates.pro_status !== undefined) {
-      fields.push('pro_status = ?')
-      params.push(updates.pro_status)
+    if (updates.paid_status !== undefined) {
+      fields.push('paid_status = ?')
+      params.push(updates.paid_status)
     }
     if (updates.free_words_remaining !== undefined) {
       fields.push('free_words_remaining = ?')
@@ -518,19 +558,19 @@ export class UserMetadataTable {
     }
     if (updates.pro_trial_start_date !== undefined) {
       fields.push('pro_trial_start_date = ?')
-      params.push(updates.pro_trial_start_date)
+      params.push(updates.pro_trial_start_date?.toISOString() ?? null)
     }
     if (updates.pro_trial_end_date !== undefined) {
       fields.push('pro_trial_end_date = ?')
-      params.push(updates.pro_trial_end_date)
+      params.push(updates.pro_trial_end_date?.toISOString() ?? null)
     }
     if (updates.pro_subscription_start_date !== undefined) {
       fields.push('pro_subscription_start_date = ?')
-      params.push(updates.pro_subscription_start_date)
+      params.push(updates.pro_subscription_start_date?.toISOString() ?? null)
     }
     if (updates.pro_subscription_end_date !== undefined) {
       fields.push('pro_subscription_end_date = ?')
-      params.push(updates.pro_subscription_end_date)
+      params.push(updates.pro_subscription_end_date?.toISOString() ?? null)
     }
 
     fields.push('updated_at = ?')
@@ -545,14 +585,14 @@ export class UserMetadataTable {
   static async upsert(metadata: UserMetadata): Promise<void> {
     const query = `
       INSERT INTO user_metadata (
-        id, user_id, pro_status, free_words_remaining,
+        id, user_id, paid_status, free_words_remaining,
         pro_trial_start_date, pro_trial_end_date,
         pro_subscription_start_date, pro_subscription_end_date,
         created_at, updated_at
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
-        pro_status = excluded.pro_status,
+        paid_status = excluded.paid_status,
         free_words_remaining = excluded.free_words_remaining,
         pro_trial_start_date = excluded.pro_trial_start_date,
         pro_trial_end_date = excluded.pro_trial_end_date,
@@ -563,14 +603,14 @@ export class UserMetadataTable {
     const params = [
       metadata.id,
       metadata.user_id,
-      metadata.pro_status,
+      metadata.paid_status,
       metadata.free_words_remaining,
-      metadata.pro_trial_start_date,
-      metadata.pro_trial_end_date,
-      metadata.pro_subscription_start_date,
-      metadata.pro_subscription_end_date,
-      metadata.created_at,
-      metadata.updated_at,
+      metadata.pro_trial_start_date?.toISOString() ?? null,
+      metadata.pro_trial_end_date?.toISOString() ?? null,
+      metadata.pro_subscription_start_date?.toISOString() ?? null,
+      metadata.pro_subscription_end_date?.toISOString() ?? null,
+      metadata.created_at.toISOString(),
+      metadata.updated_at.toISOString(),
     ]
 
     await run(query, params)

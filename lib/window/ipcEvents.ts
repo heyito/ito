@@ -1,6 +1,7 @@
 import { BrowserWindow, ipcMain, shell, app } from 'electron'
 import log from 'electron-log'
 import os from 'os'
+import { exec } from 'child_process'
 import store, { getCurrentUserId } from '../main/store'
 import { STORE_KEYS } from '../constants/store-keys'
 import {
@@ -327,6 +328,23 @@ export function registerIPC() {
     window?.setFullScreen(!window.isFullScreen())
   })
   handleIPC('web-open-url', (_e, url) => shell.openExternal(url))
+
+  handleIPC('open-mailto', (_e, email: string) => {
+    const mailtoUrl = `mailto:${email}`
+    // On macOS, use the 'open' command which is more reliable for mailto links
+    if (process.platform === 'darwin') {
+      exec(`open "${mailtoUrl}"`, error => {
+        if (error) {
+          console.error('Failed to open mailto link:', error)
+          // Fallback to shell.openExternal
+          shell.openExternal(mailtoUrl)
+        }
+      })
+    } else {
+      // On other platforms, use shell.openExternal
+      shell.openExternal(mailtoUrl)
+    }
+  })
   // Auth0 DB signup proxy (avoids CORS issues from custom schemes)
   handleIPC('auth0-db-signup', async (_e, { email, password, name }) => {
     try {

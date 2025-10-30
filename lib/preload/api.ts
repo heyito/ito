@@ -145,6 +145,7 @@ const api = {
     status: () => ipcRenderer.invoke('billing:status'),
     cancelSubscription: () => ipcRenderer.invoke('billing:cancel-subscription'),
   },
+  openMailto: (email: string) => ipcRenderer.invoke('open-mailto', email),
   loginItem: {
     setSettings: (enabled: boolean) =>
       ipcRenderer.invoke('set-login-item-settings', enabled),

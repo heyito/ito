@@ -68,6 +68,10 @@ export default function PricingBillingSettingsContent() {
     }
   }
 
+  const handleContactUs = () => {
+    window.api.openMailto('support@ito.ai')
+  }
+
   // Determine button states based on billing status
   const getStarterButtonText = () => {
     if (billingState.isLoading) return 'Loading...'
@@ -199,6 +203,7 @@ export default function PricingBillingSettingsContent() {
               variant="outline"
               size="lg"
               className="w-full rounded-xl border-gray-200"
+              onClick={handleContactUs}
             >
               Contact Us
             </Button>

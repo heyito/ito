@@ -12,6 +12,7 @@ import { AudioStreamManager } from './audio/AudioStreamManager'
 import { contextGrabber } from './context/ContextGrabber'
 import log from 'electron-log'
 import { timingCollector, TimingEventName } from './timing/TimingCollector'
+import { interactionManager } from './interactions/InteractionManager'
 
 /**
  * ItoStreamController manages the lifecycle of a transcription stream using TranscribeStreamV2.
@@ -111,10 +112,14 @@ export class ItoStreamController {
   private sendModeUpdate(mode: ItoMode) {
     console.log(`[ItoStreamController] Sending mode update: ${mode}`)
 
-    // Create a minimal config with just the mode
+    // Create a minimal config with just the mode and interaction ID
     // IMPORTANT: Only set the mode field, leave others undefined so server merge works correctly
+    const interactionId = interactionManager.getCurrentInteractionId()
     const contextInfo = create(ContextInfoSchema, {})
     contextInfo.mode = mode
+    if (interactionId) {
+      contextInfo.interactionId = interactionId
+    }
     // Don't set windowTitle, appName, or contextText - let server keep existing values
 
     const modeUpdate = create(TranscribeStreamRequestSchema, {
@@ -207,6 +212,7 @@ export class ItoStreamController {
   private async buildStreamConfig(): Promise<TranscribeStreamRequest> {
     // Gather all config data using ContextGrabber
     const context = await contextGrabber.gatherContext(this.currentMode)
+    const interactionId = interactionManager.getCurrentInteractionId()
 
     return create(TranscribeStreamRequestSchema, {
       payload: {
@@ -217,6 +223,7 @@ export class ItoStreamController {
             appName: context.appName,
             contextText: context.contextText,
             mode: this.currentMode,
+            interactionId: interactionId || undefined,
           }),
           llmSettings: create(LlmSettingsSchema, {
             asrModel: context.advancedSettings.llm.asrModel,

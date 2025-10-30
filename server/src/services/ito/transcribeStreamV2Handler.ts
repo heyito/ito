@@ -24,6 +24,10 @@ import {
   concatenateAudioChunks,
   prepareAudioForTranscription,
 } from '../../utils/audioProcessing.js'
+import {
+  serverTimingCollector,
+  ServerTimingEventName,
+} from '../timing/ServerTimingCollector.js'
 
 export class TranscribeStreamV2Handler {
   private readonly MODE_CHANGE_GRACE_PERIOD_MS = 100
@@ -46,8 +50,24 @@ export class TranscribeStreamV2Handler {
 
     const streamEndTime = Date.now()
 
+    // Extract interaction ID and user ID for timing
+    const interactionId = initialConfig.context?.interactionId
+    const userId = (context as any)?.values?.get?.('kUser')?.sub || 'unknown'
+
+    // Initialize timing collection if interaction ID is available
+    if (interactionId) {
+      serverTimingCollector.startInteraction(interactionId, userId)
+      serverTimingCollector.startTiming(
+        ServerTimingEventName.TOTAL_PROCESSING,
+        interactionId,
+      )
+    }
+
     // Check if client cancelled the stream
     if (context?.signal.aborted) {
+      if (interactionId) {
+        serverTimingCollector.clearInteraction(interactionId)
+      }
       console.log(
         `🚫 [${new Date().toISOString()}] Stream cancelled by client, aborting processing`,
       )
@@ -70,17 +90,26 @@ export class TranscribeStreamV2Handler {
     const fullAudio = concatenateAudioChunks(audioChunks)
 
     try {
-      const fullAudioWAV = prepareAudioForTranscription(fullAudio)
+      // Time audio processing
+      const fullAudioWAV = interactionId
+        ? await serverTimingCollector.timeAsync(
+            ServerTimingEventName.AUDIO_PROCESSING,
+            interactionId,
+            () => prepareAudioForTranscription(fullAudio),
+          )
+        : prepareAudioForTranscription(fullAudio)
 
       // Extract configuration
       const asrConfig = this.extractAsrConfig(mergedConfig)
 
-      // Transcribe audio
-      let transcript = await this.transcribeAudioData(
-        fullAudioWAV,
-        asrConfig,
-        context,
-      )
+      // Time transcription
+      let transcript = interactionId
+        ? await serverTimingCollector.timeAsync(
+            ServerTimingEventName.ASR_TRANSCRIPTION,
+            interactionId,
+            () => this.transcribeAudioData(fullAudioWAV, asrConfig, context),
+          )
+        : await this.transcribeAudioData(fullAudioWAV, asrConfig, context)
 
       // Prepare context and settings
       const windowContext: ItoContext = {
@@ -98,15 +127,37 @@ export class TranscribeStreamV2Handler {
         asrConfig.noSpeechThreshold,
       )
 
-      // Adjust transcript based on mode
-      transcript = await this.adjustTranscriptForMode(
-        transcript,
-        mode,
-        windowContext,
-        advancedSettings,
-      )
+      // Time transcript adjustment (only happens in EDIT mode)
+      transcript = interactionId
+        ? await serverTimingCollector.timeAsync(
+            ServerTimingEventName.LLM_ADJUSTMENT,
+            interactionId,
+            () =>
+              this.adjustTranscriptForMode(
+                transcript,
+                mode,
+                windowContext,
+                advancedSettings,
+              ),
+          )
+        : await this.adjustTranscriptForMode(
+            transcript,
+            mode,
+            windowContext,
+            advancedSettings,
+          )
 
       const duration = Date.now() - startTime
+
+      // Finalize timing
+      if (interactionId) {
+        serverTimingCollector.endTiming(
+          ServerTimingEventName.TOTAL_PROCESSING,
+          interactionId,
+        )
+        serverTimingCollector.finalizeInteraction(interactionId)
+      }
+
       console.log(
         `✅ [${new Date().toISOString()}] TranscribeStreamV2 completed in ${duration}ms`,
       )
@@ -115,6 +166,11 @@ export class TranscribeStreamV2Handler {
         transcript,
       })
     } catch (error: any) {
+      // Clear timing on error
+      if (interactionId) {
+        serverTimingCollector.clearInteraction(interactionId)
+      }
+
       if (error instanceof ConnectError) {
         throw error
       }

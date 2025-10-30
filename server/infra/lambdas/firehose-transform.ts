@@ -131,20 +131,21 @@ export const handler = async (
         doc = {
           '@timestamp': structured['@timestamp'] || isoTimestamp(ts),
           'event.dataset': structured.event?.dataset || DATASET,
-          interaction_id: structured.interactionId,
-          user_id: structured.userId,
+          interaction_id: structured.interactionId || structured.interaction_id,
+          user_id: structured.userId || structured.user_id,
           platform: structured.platform,
-          app_version: structured.appVersion,
+          app_version: structured.appVersion || structured.app_version,
           hostname: structured.hostname,
           architecture: structured.architecture,
           timestamp: structured.timestamp,
-          total_duration_ms: structured.totalDurationMs,
+          total_duration_ms: structured.totalDurationMs || structured.total_duration_ms,
+          source: structured.source || 'client', // Default to 'client' for backwards compatibility
           // Keep "events" as an array of objects; mapping will handle "nested"
           events: structured.events?.map((ev: any) => ({
             name: ev.name,
-            start_ms: ev.startMs,
-            end_ms: ev.endMs,
-            duration_ms: ev.durationMs,
+            start_ms: ev.startMs || ev.start_ms,
+            end_ms: ev.endMs || ev.end_ms,
+            duration_ms: ev.durationMs || ev.duration_ms,
           })),
         }
       } else if (

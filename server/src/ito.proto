@@ -95,6 +95,7 @@ message ContextInfo {
   optional string app_name = 2;
   optional string context_text = 3;
   optional ItoMode mode = 4;
+  optional string interaction_id = 5;
 }
 
 // Configuration that can be sent in-stream for TranscribeStreamV2.

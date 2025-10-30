@@ -1,5 +1,15 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 import type api from './api'
+type TrialStatus = {
+  success: boolean
+  trialDays: number
+  trialStartAt: string | null
+  daysLeft: number
+  isTrialActive: boolean
+  hasCompletedTrial: boolean
+  error?: string
+  status?: number
+}
 
 interface KeyEvent {
   type: 'keydown' | 'keyup'
@@ -113,6 +123,39 @@ declare global {
         idToken: string | null,
         accessToken: string | null,
       ) => Promise<void>
+      trial: {
+        start: () => Promise<TrialStatus>
+        complete: () => Promise<TrialStatus>
+      }
+      billing: {
+        createCheckoutSession: () => Promise<{
+          success: boolean
+          url?: string
+          error?: string
+          status?: number
+        }>
+        confirmSession: (sessionId: string) => Promise<{
+          success: boolean
+          pro_status?: 'active_pro' | 'free_trial' | 'none'
+          subscriptionStartAt?: string
+          error?: string
+          status?: number
+        }>
+        status: () => Promise<{
+          success: boolean
+          pro_status: 'active_pro' | 'free_trial' | 'none'
+          subscriptionStartAt?: string
+          trial?: {
+            trialDays: number
+            trialStartAt: string | null
+            daysLeft: number
+            isTrialActive: boolean
+            hasCompletedTrial: boolean
+          }
+          error?: string
+          status?: number
+        }>
+      }
       deleteUserData: () => Promise<void>
       selectedText: SelectedTextAPI
     }

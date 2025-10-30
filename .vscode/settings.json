@@ -24,5 +24,6 @@
     "./native/audio-recorder/Cargo.toml",
     "./native/active-application/Cargo.toml",
     "./native/global-key-listener/Cargo.toml"
-  ]
+  ],
+  "rust-analyzer.cargo.targetDir": "${workspaceFolder}/native/target-rust-analyzer"
 }

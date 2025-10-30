@@ -1,6 +1,6 @@
 import { performance } from 'perf_hooks'
 import { platform, hostname, arch } from 'os'
-import { CloudWatchLogger } from '../cloudWatchLogger.js'
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 
 /**
  * Enum for server-side timing events in the transcription pipeline
@@ -13,6 +13,10 @@ export enum ServerTimingEventName {
   TOTAL_PROCESSING = 'server_total_processing',
 }
 
+// Configuration for S3
+const TIMING_BUCKET = process.env.TIMING_BUCKET
+const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' })
+
 interface TimingEvent {
   name: string
   startMs: number
@@ -23,12 +27,7 @@ interface TimingEvent {
 interface TimingReport {
   interactionId: string
   userId: string
-  platform: string
-  hostname: string
-  architecture: string
-  timestamp: string
   events: TimingEvent[]
-  totalDurationMs: number
   source: 'server'
 }
 
@@ -38,13 +37,6 @@ interface ActiveTiming {
   startTimestamp: string
   events: Map<ServerTimingEventName, TimingEvent>
 }
-
-// Configuration for CloudWatch
-const TIMING_LOG_GROUP_NAME = process.env.TIMING_LOG_GROUP_NAME || null
-const cloudWatchLogger = new CloudWatchLogger(
-  TIMING_LOG_GROUP_NAME,
-  'server-timing-analytics',
-)
 
 /**
  * ServerTimingCollector for collecting server-side transcription pipeline timing data
@@ -68,7 +60,7 @@ export class ServerTimingCollector {
   /**
    * Start a new timing session for a transcription request
    */
-  startInteraction(interactionId: string, userId: string) {
+  startInteraction(interactionId?: string, userId?: string) {
     if (!interactionId) {
       console.warn(
         '[ServerTimingCollector] Cannot start timing: no interaction ID provided',
@@ -87,7 +79,7 @@ export class ServerTimingCollector {
   /**
    * Start timing for a specific event
    */
-  startTiming(eventName: ServerTimingEventName, interactionId: string) {
+  startTiming(eventName: ServerTimingEventName, interactionId?: string) {
     if (!interactionId) {
       return
     }
@@ -110,7 +102,7 @@ export class ServerTimingCollector {
   /**
    * End timing for a specific event
    */
-  endTiming(eventName: ServerTimingEventName, interactionId: string) {
+  endTiming(eventName: ServerTimingEventName, interactionId?: string) {
     if (!interactionId) {
       return
     }
@@ -138,7 +130,7 @@ export class ServerTimingCollector {
   /**
    * Finalize an interaction and move it to completed reports
    */
-  finalizeInteraction(interactionId: string) {
+  finalizeInteraction(interactionId?: string) {
     if (!interactionId) {
       console.warn(
         '[ServerTimingCollector] Cannot finalize: no interaction ID provided',
@@ -171,12 +163,7 @@ export class ServerTimingCollector {
     const report: TimingReport = {
       interactionId,
       userId: active.userId,
-      platform: platform(),
-      hostname: hostname(),
-      architecture: arch(),
-      timestamp: active.startTimestamp,
       events,
-      totalDurationMs: totalDuration,
       source: 'server',
     }
 
@@ -205,7 +192,7 @@ export class ServerTimingCollector {
   /**
    * Clear an interaction without finalizing (for errors/cancellations)
    */
-  clearInteraction(interactionId: string) {
+  clearInteraction(interactionId?: string) {
     if (!interactionId) {
       return
     }
@@ -215,69 +202,90 @@ export class ServerTimingCollector {
   }
 
   /**
-   * Flush completed reports to CloudWatch
+   * Flush completed reports to S3
    */
   async flush() {
     if (this.completedReports.length === 0) {
       return
     }
 
+    if (!TIMING_BUCKET) {
+      console.warn('[ServerTimingCollector] No timing bucket configured, skipping flush')
+      this.completedReports = [] // Clear reports to avoid memory leak
+      return
+    }
+
     const reportsToSend = this.completedReports.splice(0, this.BATCH_SIZE)
 
     console.log(
-      `[ServerTimingCollector] Flushing ${reportsToSend.length} timing reports to CloudWatch`,
+      `[ServerTimingCollector] Flushing ${reportsToSend.length} timing reports to S3`,
     )
 
-    try {
-      const entries = reportsToSend.map(report => {
-        const structured = {
-          '@timestamp': report.timestamp,
-          event: {
-            dataset: 'ito-timing-analytics',
-          },
-          interaction_id: report.interactionId,
-          user_id: report.userId,
-          platform: report.platform,
-          hostname: report.hostname,
-          architecture: report.architecture,
-          timestamp: report.timestamp,
-          total_duration_ms: report.totalDurationMs,
-          source: report.source,
-          events: report.events.map(event => ({
-            name: event.name,
-            start_ms: event.startMs,
-            end_ms: event.endMs,
-            duration_ms: event.durationMs,
-          })),
-        }
-
-        return {
-          timestamp: Date.now(),
-          message: JSON.stringify(structured),
-        }
-      })
-
-      const sent = await cloudWatchLogger.sendLogs(entries)
-
-      if (!sent) {
-        // Fallback to stdout
-        for (const e of entries) {
-          try {
-            process.stdout.write(`${e.message}\n`)
-          } catch (err) {
-            console.error('Failed to write timing data to stdout:', err)
-          }
-        }
+    // Upload each report to S3
+    const uploadPromises = reportsToSend.map(async report => {
+      const timingData = {
+        source: 'server',
+        interactionId: report.interactionId,
+        userId: report.userId,
+        hostname: hostname(),
+        architecture: arch(),
+        timestamp: new Date().toISOString(),
+        totalDurationMs: 0, // Will be calculated from events
+        events: report.events.map(event => ({
+          name: event.name,
+          startMs: event.startMs,
+          endMs: event.endMs,
+          durationMs: event.durationMs,
+        })),
       }
 
-      console.log(
-        `[ServerTimingCollector] Successfully submitted ${reportsToSend.length} reports`,
+      // Calculate total duration from events
+      if (timingData.events.length > 0) {
+        const maxEndMs = Math.max(...timingData.events.map(e => e.endMs || 0))
+        const minStartMs = Math.min(...timingData.events.map(e => e.startMs))
+        timingData.totalDurationMs = maxEndMs - minStartMs
+      }
+
+      // S3 key pattern: server/{interaction-id}/{timestamp}.json
+      const key = `server/${report.interactionId}/${Date.now()}.json`
+
+      try {
+        await s3Client.send(
+          new PutObjectCommand({
+            Bucket: TIMING_BUCKET,
+            Key: key,
+            Body: JSON.stringify(timingData),
+            ContentType: 'application/json',
+          }),
+        )
+        console.log(`[ServerTimingCollector] Uploaded server timing to S3: ${key}`)
+      } catch (error) {
+        console.error(
+          `[ServerTimingCollector] Failed to upload timing to S3: ${key}`,
+          error,
+        )
+        throw error // Will be caught by Promise.allSettled below
+      }
+    })
+
+    // Wait for all uploads, but don't fail if some fail
+    const results = await Promise.allSettled(uploadPromises)
+
+    const successCount = results.filter(r => r.status === 'fulfilled').length
+    const failCount = results.filter(r => r.status === 'rejected').length
+
+    if (failCount > 0) {
+      console.error(
+        `[ServerTimingCollector] Failed to upload ${failCount}/${reportsToSend.length} reports`,
       )
-    } catch (error) {
-      console.error('[ServerTimingCollector] Failed to submit timing data:', error)
-      // Re-add reports to the front of the queue for retry
-      this.completedReports.unshift(...reportsToSend)
+      // Re-add failed reports to the front of the queue for retry
+      const failedReports = reportsToSend.filter((_, i) => results[i].status === 'rejected')
+      this.completedReports.unshift(...failedReports)
     }
+
+    console.log(
+      `[ServerTimingCollector] Successfully submitted ${successCount}/${reportsToSend.length} reports`,
+    )
   }
 
   /**
@@ -312,8 +320,8 @@ export class ServerTimingCollector {
    */
   async timeAsync<T>(
     eventName: ServerTimingEventName,
-    interactionId: string,
     fn: () => Promise<T> | T,
+    interactionId?: string,
   ): Promise<T> {
     this.startTiming(eventName, interactionId)
     try {

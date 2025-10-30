@@ -44,6 +44,7 @@ import {
   UserPoolClient,
   CfnIdentityPoolRoleAttachment,
 } from 'aws-cdk-lib/aws-cognito'
+import { createTimingInfrastructure } from './timing-config'
 
 export interface PlatformStackProps extends StackProps {
   vpc: Vpc
@@ -56,6 +57,7 @@ export class PlatformStack extends Stack {
   public readonly serviceRepo: Repository
   public readonly opensearchDomain: Domain
   public readonly blobStorageBucket: Bucket
+  public readonly timingBucketName: string
 
   constructor(scope: Construct, id: string, props: PlatformStackProps) {
     super(scope, id, props)
@@ -268,7 +270,6 @@ export class PlatformStack extends Stack {
             'aws:SourceArn': [
               `arn:aws:firehose:${this.region}:${this.account}:deliverystream/${stageName}-ito-client-logs`,
               `arn:aws:firehose:${this.region}:${this.account}:deliverystream/${stageName}-ito-server-logs`,
-              `arn:aws:firehose:${this.region}:${this.account}:deliverystream/${stageName}-ito-timing-analytics`,
             ],
           },
         },
@@ -297,12 +298,26 @@ export class PlatformStack extends Stack {
     )
     this.opensearchDomain = domain
 
+    // Create timing infrastructure (S3 + Lambda merger)
+    const timingResources = createTimingInfrastructure(this, {
+      stageName,
+      opensearchDomain: domain,
+      accountId: this.account,
+      region: this.region,
+    })
+    this.timingBucketName = timingResources.timingBucket.bucketName
+
     new CfnOutput(this, 'OpenSearchEndpoint', {
       value: domain.domainEndpoint,
     })
 
     new CfnOutput(this, 'BlobStorageBucketArn', {
       value: this.blobStorageBucket.bucketArn,
+    })
+
+    new CfnOutput(this, 'TimingBucketName', {
+      value: this.timingBucketName,
+      description: 'S3 bucket for raw timing analytics data',
     })
 
     Tags.of(this).add('Project', 'Ito')

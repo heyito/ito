@@ -114,12 +114,8 @@ export class ItoStreamController {
 
     // Create a minimal config with just the mode and interaction ID
     // IMPORTANT: Only set the mode field, leave others undefined so server merge works correctly
-    const interactionId = interactionManager.getCurrentInteractionId()
     const contextInfo = create(ContextInfoSchema, {})
     contextInfo.mode = mode
-    if (interactionId) {
-      contextInfo.interactionId = interactionId
-    }
     // Don't set windowTitle, appName, or contextText - let server keep existing values
 
     const modeUpdate = create(TranscribeStreamRequestSchema, {
@@ -213,6 +209,7 @@ export class ItoStreamController {
     // Gather all config data using ContextGrabber
     const context = await contextGrabber.gatherContext(this.currentMode)
     const interactionId = interactionManager.getCurrentInteractionId()
+    console.log({ interactionId })
 
     return create(TranscribeStreamRequestSchema, {
       payload: {
@@ -223,7 +220,6 @@ export class ItoStreamController {
             appName: context.appName,
             contextText: context.contextText,
             mode: this.currentMode,
-            interactionId: interactionId || undefined,
           }),
           llmSettings: create(LlmSettingsSchema, {
             asrModel: context.advancedSettings.llm.asrModel,
@@ -238,6 +234,7 @@ export class ItoStreamController {
             editingPrompt: context.advancedSettings.llm.editingPrompt,
           }),
           vocabulary: context.vocabularyWords,
+          interactionId: interactionId || undefined,
         }),
       },
     })

@@ -45,6 +45,7 @@ export interface ServiceStackProps extends StackProps {
   vpc: Vpc
   opensearchDomain: Domain
   blobStorageBucket: IBucket
+  timingBucketName: string
 }
 
 export class ServiceStack extends Stack {
@@ -91,6 +92,13 @@ export class ServiceStack extends Stack {
     // Create log groups
     const logGroupResources = createLogGroups(this, { stageName })
 
+    // Import timing bucket from platform stack
+    const timingBucket = Bucket.fromBucketName(
+      this,
+      'TimingBucket',
+      props.timingBucketName,
+    )
+
     // Create Fargate task
     const fargateTaskResources = createFargateTask(this, {
       stageName,
@@ -104,13 +112,16 @@ export class ServiceStack extends Stack {
       domainName,
       clientLogGroup: logGroupResources.clientLogGroup,
       serverLogGroup: logGroupResources.serverLogGroup,
-      timingLogGroup: logGroupResources.timingLogGroup,
       blobStorageBucketName: props.blobStorageBucket.bucketName,
+      timingBucketName: props.timingBucketName,
     })
 
     // Grant Fargate task permissions to access blob storage
     props.blobStorageBucket.grantReadWrite(fargateTaskResources.taskRole)
     props.blobStorageBucket.grantDelete(fargateTaskResources.taskRole)
+
+    // Grant Fargate task permissions to write timing data to S3
+    timingBucket.grantPut(fargateTaskResources.taskRole)
 
     // Create ECS cluster
     const cluster = new Cluster(this, 'ItoEcsCluster', {
@@ -203,9 +214,6 @@ export class ServiceStack extends Stack {
     fargateService.service.node.addDependency(
       logGroupResources.ensureServerLogGroup,
     )
-    fargateService.service.node.addDependency(
-      logGroupResources.ensureTimingLogGroup,
-    )
 
     // Import Firehose role created in platform stack
     const firehoseRole = IamRole.fromRoleArn(
@@ -265,10 +273,8 @@ export class ServiceStack extends Stack {
       firehoseRole,
       clientLogGroup: logGroupResources.clientLogGroup,
       serverLogGroup: logGroupResources.serverLogGroup,
-      timingLogGroup: logGroupResources.timingLogGroup,
       ensureClientLogGroup: logGroupResources.ensureClientLogGroup,
       ensureServerLogGroup: logGroupResources.ensureServerLogGroup,
-      ensureTimingLogGroup: logGroupResources.ensureTimingLogGroup,
     })
 
     // Create OpenSearch bootstrap

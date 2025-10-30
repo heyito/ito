@@ -125,30 +125,7 @@ export const handler = async (
 
       let doc: Record<string, unknown>
 
-      // Handle timing analytics data differently
-      if (DATASET === 'ito-timing-analytics' && structured) {
-        // Timing analytics: map camelCase to snake_case for OpenSearch
-        doc = {
-          '@timestamp': structured['@timestamp'] || isoTimestamp(ts),
-          'event.dataset': structured.event?.dataset || DATASET,
-          interaction_id: structured.interactionId || structured.interaction_id,
-          user_id: structured.userId || structured.user_id,
-          platform: structured.platform,
-          app_version: structured.appVersion || structured.app_version,
-          hostname: structured.hostname,
-          architecture: structured.architecture,
-          timestamp: structured.timestamp,
-          total_duration_ms: structured.totalDurationMs || structured.total_duration_ms,
-          source: structured.source || 'client', // Default to 'client' for backwards compatibility
-          // Keep "events" as an array of objects; mapping will handle "nested"
-          events: structured.events?.map((ev: any) => ({
-            name: ev.name,
-            start_ms: ev.startMs || ev.start_ms,
-            end_ms: ev.endMs || ev.end_ms,
-            duration_ms: ev.durationMs || ev.duration_ms,
-          })),
-        }
-      } else if (
+      if (
         structured &&
         typeof structured === 'object' &&
         ('message' in structured || 'level' in structured)

@@ -28,6 +28,7 @@ import {
   serverTimingCollector,
   ServerTimingEventName,
 } from '../timing/ServerTimingCollector.js'
+import { kUser } from '../../auth/userContext.js'
 
 export class TranscribeStreamV2Handler {
   private readonly MODE_CHANGE_GRACE_PERIOD_MS = 100
@@ -51,23 +52,20 @@ export class TranscribeStreamV2Handler {
     const streamEndTime = Date.now()
 
     // Extract interaction ID and user ID for timing
-    const interactionId = initialConfig.context?.interactionId
-    const userId = (context as any)?.values?.get?.('kUser')?.sub || 'unknown'
+    const interactionId = initialConfig?.interactionId
+    const userId = context?.values.get(kUser)?.sub
 
-    // Initialize timing collection if interaction ID is available
-    if (interactionId) {
-      serverTimingCollector.startInteraction(interactionId, userId)
-      serverTimingCollector.startTiming(
-        ServerTimingEventName.TOTAL_PROCESSING,
-        interactionId,
-      )
-    }
+    // Initialize timing collection
+    serverTimingCollector.startInteraction(interactionId, userId)
+    serverTimingCollector.startTiming(
+      ServerTimingEventName.TOTAL_PROCESSING,
+      interactionId,
+    )
 
     // Check if client cancelled the stream
     if (context?.signal.aborted) {
-      if (interactionId) {
-        serverTimingCollector.clearInteraction(interactionId)
-      }
+      serverTimingCollector.clearInteraction(interactionId)
+
       console.log(
         `🚫 [${new Date().toISOString()}] Stream cancelled by client, aborting processing`,
       )
@@ -94,8 +92,8 @@ export class TranscribeStreamV2Handler {
       const fullAudioWAV = interactionId
         ? await serverTimingCollector.timeAsync(
             ServerTimingEventName.AUDIO_PROCESSING,
-            interactionId,
             () => prepareAudioForTranscription(fullAudio),
+            interactionId,
           )
         : prepareAudioForTranscription(fullAudio)
 
@@ -103,13 +101,11 @@ export class TranscribeStreamV2Handler {
       const asrConfig = this.extractAsrConfig(mergedConfig)
 
       // Time transcription
-      let transcript = interactionId
-        ? await serverTimingCollector.timeAsync(
-            ServerTimingEventName.ASR_TRANSCRIPTION,
-            interactionId,
-            () => this.transcribeAudioData(fullAudioWAV, asrConfig, context),
-          )
-        : await this.transcribeAudioData(fullAudioWAV, asrConfig, context)
+      let transcript = await serverTimingCollector.timeAsync(
+        ServerTimingEventName.ASR_TRANSCRIPTION,
+        () => this.transcribeAudioData(fullAudioWAV, asrConfig, context),
+        interactionId,
+      )
 
       // Prepare context and settings
       const windowContext: ItoContext = {
@@ -128,35 +124,26 @@ export class TranscribeStreamV2Handler {
       )
 
       // Time transcript adjustment (only happens in EDIT mode)
-      transcript = interactionId
-        ? await serverTimingCollector.timeAsync(
-            ServerTimingEventName.LLM_ADJUSTMENT,
-            interactionId,
-            () =>
-              this.adjustTranscriptForMode(
-                transcript,
-                mode,
-                windowContext,
-                advancedSettings,
-              ),
-          )
-        : await this.adjustTranscriptForMode(
+      transcript = await serverTimingCollector.timeAsync(
+        ServerTimingEventName.LLM_ADJUSTMENT,
+        () =>
+          this.adjustTranscriptForMode(
             transcript,
             mode,
             windowContext,
             advancedSettings,
-          )
+          ),
+        interactionId,
+      )
 
       const duration = Date.now() - startTime
 
       // Finalize timing
-      if (interactionId) {
-        serverTimingCollector.endTiming(
-          ServerTimingEventName.TOTAL_PROCESSING,
-          interactionId,
-        )
-        serverTimingCollector.finalizeInteraction(interactionId)
-      }
+      serverTimingCollector.endTiming(
+        ServerTimingEventName.TOTAL_PROCESSING,
+        interactionId,
+      )
+      serverTimingCollector.finalizeInteraction(interactionId)
 
       console.log(
         `✅ [${new Date().toISOString()}] TranscribeStreamV2 completed in ${duration}ms`,
@@ -418,6 +405,7 @@ export class TranscribeStreamV2Handler {
         : base.llmSettings,
       vocabulary:
         update.vocabulary.length > 0 ? update.vocabulary : base.vocabulary,
+      interactionId: update.interactionId || base.interactionId,
     }
   }
 }

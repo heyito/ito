@@ -50,9 +50,10 @@ AUTH0_AUDIENCE=http://localhost:3000
 
 # Billing (Stripe)
 STRIPE_SECRET_KEY=sk_test_xxx
-STRIPE_PRICE_ID=price_1SIeOV3eVZmJxoRGNfqZmbLP
+STRIPE_WEBHOOK_SECRET=whsec_xxx
+STRIPE_PRICE_ID=price_xxx
 APP_PROTOCOL=ito-dev
-PUBLIC_BASE_URL=http://localhost:3000
+STRIPE_PUBLIC_BASE_URL=http://localhost:3000
 ```
 
 ### 2. Get Required API Keys

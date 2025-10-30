@@ -49,6 +49,9 @@ export const registerBillingRoutes = async (
         mode: 'subscription',
         client_reference_id: userSub,
         metadata: { user_sub: userSub },
+        subscription_data: {
+          metadata: { user_sub: userSub },
+        },
         line_items: [
           {
             price: STRIPE_PRICE_ID,

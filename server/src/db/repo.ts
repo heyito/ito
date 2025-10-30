@@ -509,4 +509,14 @@ export class SubscriptionsRepository {
     )
     return res.rows[0]
   }
+
+  static async deleteByStripeSubscriptionId(
+    stripeSubscriptionId: string,
+  ): Promise<boolean> {
+    const res = await pool.query(
+      'DELETE FROM user_subscriptions WHERE stripe_subscription_id = $1',
+      [stripeSubscriptionId],
+    )
+    return (res.rowCount ?? 0) > 0
+  }
 }

@@ -1,5 +1,4 @@
 import { performance } from 'perf_hooks'
-import { platform, hostname, arch } from 'os'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 
 /**
@@ -227,8 +226,6 @@ export class ServerTimingCollector {
         source: 'server',
         interactionId: report.interactionId,
         userId: report.userId,
-        hostname: hostname(),
-        architecture: arch(),
         timestamp: new Date().toISOString(),
         totalDurationMs: 0, // Will be calculated from events
         events: report.events.map(event => ({

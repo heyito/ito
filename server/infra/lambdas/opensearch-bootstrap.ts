@@ -204,15 +204,30 @@ const timingAnalyticsTemplate = {
         'event.dataset': { type: 'keyword' },
         interaction_id: { type: 'keyword' },
         user_id: { type: 'keyword' },
-        platform: { type: 'keyword' },
-        app_version: { type: 'keyword' },
-        hostname: { type: 'keyword' },
-        architecture: { type: 'keyword' },
-        timestamp: { type: 'date' },
-        total_duration_ms: { type: 'integer' },
+        stage: { type: 'keyword' },
+        data_completeness: { type: 'keyword' }, // 'both', 'client_only', 'server_only'
+        client_received_at: { type: 'date' },
+        server_received_at: { type: 'date' },
+
+        // Client-specific metadata
+        client_metadata: {
+          type: 'object',
+          properties: {
+            platform: { type: 'keyword' },
+            app_version: { type: 'keyword' },
+            hostname: { type: 'keyword' },
+          },
+        },
+        client_total_duration_ms: { type: 'integer' },
+
+        // Server-specific metadata
+        server_total_duration_ms: { type: 'integer' },
+
+        // Unified events array (nested for proper querying)
         events: {
           type: 'nested',
           properties: {
+            source: { type: 'keyword' }, // 'client' or 'server'
             name: { type: 'keyword' },
             start_ms: { type: 'long' },
             end_ms: { type: 'long' },

@@ -47,14 +47,20 @@ interface ServerTimingData {
   source: 'server'
   interactionId: string
   userId: string
-  hostname: string
-  architecture: string
   timestamp: string
   totalDurationMs: number
   events: TimingEvent[]
 }
 
 type TimingData = ClientTimingData | ServerTimingData
+
+interface MergedEvent {
+  source: 'client' | 'server'
+  name: string
+  start_ms: number
+  end_ms?: number
+  duration_ms?: number
+}
 
 async function getS3Object(bucket: string, key: string): Promise<string> {
   const command = new GetObjectCommand({ Bucket: bucket, Key: key })
@@ -94,6 +100,7 @@ async function mergeAndUpsertTimingReport(
         `[TimingMerger] Found existing document for ${interactionId}, merging...`,
       )
 
+      // Start with existing document structure
       mergedDoc = {
         ...existingSource,
         '@timestamp': existingSource['@timestamp'] || new Date().toISOString(),
@@ -103,45 +110,49 @@ async function mergeAndUpsertTimingReport(
         stage: STAGE,
       }
 
-      // Merge source-specific data
+      // Get existing events or initialize empty array
+      const existingEvents: MergedEvent[] = existingSource.events || []
+
+      // Add new events with source tag
+      const newEvents: MergedEvent[] = timingData.events.map(e => ({
+        source: source,
+        name: e.name,
+        start_ms: e.startMs,
+        end_ms: e.endMs,
+        duration_ms: e.durationMs,
+      }))
+
+      // Combine events (filter out duplicates from same source)
+      const filteredExisting = existingEvents.filter(
+        (e: MergedEvent) => e.source !== source,
+      )
+      mergedDoc.events = [...filteredExisting, ...newEvents]
+
+      // Update @timestamp to earliest event across all sources
+      const allEvents = mergedDoc.events as MergedEvent[]
+      if (allEvents.length > 0) {
+        const earliestMs = Math.min(...allEvents.map(e => e.start_ms))
+        mergedDoc['@timestamp'] = new Date(earliestMs).toISOString()
+      }
+
+      // Update data completeness
+      const hasClient = allEvents.some((e: MergedEvent) => e.source === 'client')
+      const hasServer = allEvents.some((e: MergedEvent) => e.source === 'server')
+      mergedDoc.data_completeness = hasClient && hasServer ? 'both' : hasClient ? 'client_only' : 'server_only'
+
+      // Update source-specific metadata and track receipt time
       if (source === 'client') {
         const clientData = timingData as ClientTimingData
-        mergedDoc.client = {
+        mergedDoc.client_metadata = {
           platform: clientData.platform,
           app_version: clientData.appVersion,
           hostname: clientData.hostname,
-          architecture: clientData.architecture,
-          timestamp: clientData.timestamp,
-          total_duration_ms: clientData.totalDurationMs,
-          events: clientData.events.map(e => ({
-            name: e.name,
-            start_ms: e.startMs,
-            end_ms: e.endMs,
-            duration_ms: e.durationMs,
-          })),
         }
-        // Keep existing server data if present
-        if (existingSource.server) {
-          mergedDoc.server = existingSource.server
-        }
+        mergedDoc.client_total_duration_ms = clientData.totalDurationMs
+        mergedDoc.client_received_at = new Date().toISOString()
       } else {
-        const serverData = timingData as ServerTimingData
-        mergedDoc.server = {
-          hostname: serverData.hostname,
-          architecture: serverData.architecture,
-          timestamp: serverData.timestamp,
-          total_duration_ms: serverData.totalDurationMs,
-          events: serverData.events.map(e => ({
-            name: e.name,
-            start_ms: e.startMs,
-            end_ms: e.endMs,
-            duration_ms: e.durationMs,
-          })),
-        }
-        // Keep existing client data if present
-        if (existingSource.client) {
-          mergedDoc.client = existingSource.client
-        }
+        mergedDoc.server_total_duration_ms = timingData.totalDurationMs
+        mergedDoc.server_received_at = new Date().toISOString()
       }
     } else {
       // Create new document
@@ -149,44 +160,47 @@ async function mergeAndUpsertTimingReport(
         `[TimingMerger] Creating new document for ${interactionId}...`,
       )
 
+      // Map events with source tag
+      const events: MergedEvent[] = timingData.events.map(e => ({
+        source: source,
+        name: e.name,
+        start_ms: e.startMs,
+        end_ms: e.endMs,
+        duration_ms: e.durationMs,
+      }))
+
+      // Use earliest event as document timestamp
+      const earliestEventMs =
+        events.length > 0 ? Math.min(...events.map(e => e.start_ms)) : Date.now()
+
       mergedDoc = {
-        '@timestamp': new Date().toISOString(),
+        '@timestamp': new Date(earliestEventMs).toISOString(),
         'event.dataset': 'ito-timing-analytics',
         interaction_id: interactionId,
         user_id: timingData.userId,
         stage: STAGE,
+        events: events,
+        data_completeness: source === 'client' ? 'client_only' : 'server_only',
       }
 
+      // Track when each source's data arrived
+      if (source === 'client') {
+        mergedDoc.client_received_at = new Date().toISOString()
+      } else {
+        mergedDoc.server_received_at = new Date().toISOString()
+      }
+
+      // Add source-specific metadata
       if (source === 'client') {
         const clientData = timingData as ClientTimingData
-        mergedDoc.client = {
+        mergedDoc.client_metadata = {
           platform: clientData.platform,
           app_version: clientData.appVersion,
           hostname: clientData.hostname,
-          architecture: clientData.architecture,
-          timestamp: clientData.timestamp,
-          total_duration_ms: clientData.totalDurationMs,
-          events: clientData.events.map(e => ({
-            name: e.name,
-            start_ms: e.startMs,
-            end_ms: e.endMs,
-            duration_ms: e.durationMs,
-          })),
         }
+        mergedDoc.client_total_duration_ms = clientData.totalDurationMs
       } else {
-        const serverData = timingData as ServerTimingData
-        mergedDoc.server = {
-          hostname: serverData.hostname,
-          architecture: serverData.architecture,
-          timestamp: serverData.timestamp,
-          total_duration_ms: serverData.totalDurationMs,
-          events: serverData.events.map(e => ({
-            name: e.name,
-            start_ms: e.startMs,
-            end_ms: e.endMs,
-            duration_ms: e.durationMs,
-          })),
-        }
+        mergedDoc.server_total_duration_ms = timingData.totalDurationMs
       }
     }
 

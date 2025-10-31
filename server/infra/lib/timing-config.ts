@@ -3,8 +3,10 @@ import { Duration, RemovalPolicy } from 'aws-cdk-lib'
 import { Bucket, BlockPublicAccess, EventType } from 'aws-cdk-lib/aws-s3'
 import { Domain } from 'aws-cdk-lib/aws-opensearchservice'
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
-import { LambdaDestination } from 'aws-cdk-lib/aws-s3-notifications'
+import { SqsDestination } from 'aws-cdk-lib/aws-s3-notifications'
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam'
+import { Queue } from 'aws-cdk-lib/aws-sqs'
+import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources'
 
 export interface TimingConfig {
   stageName: string
@@ -16,6 +18,8 @@ export interface TimingConfig {
 export interface TimingResources {
   timingBucket: Bucket
   timingMergerLambda: NodejsFunction
+  timingQueue: Queue
+  timingDLQ: Queue
 }
 
 export function createTimingInfrastructure(
@@ -38,6 +42,25 @@ export function createTimingInfrastructure(
         enabled: true,
       },
     ],
+  })
+
+  // Create DLQ for failed timing events
+  const timingDLQ = new Queue(scope, 'ItoTimingDLQ', {
+    queueName: `${config.stageName}-ito-timing-dlq`,
+    retentionPeriod: Duration.days(14), // Keep failed messages for 14 days
+    removalPolicy: isDev ? RemovalPolicy.DESTROY : RemovalPolicy.RETAIN,
+  })
+
+  // Create main queue for timing events with DLQ
+  const timingQueue = new Queue(scope, 'ItoTimingQueue', {
+    queueName: `${config.stageName}-ito-timing-queue`,
+    visibilityTimeout: Duration.seconds(60), // Should be >= Lambda timeout
+    retentionPeriod: Duration.days(7),
+    deadLetterQueue: {
+      queue: timingDLQ,
+      maxReceiveCount: 3, // Retry failed messages 3 times before sending to DLQ
+    },
+    removalPolicy: isDev ? RemovalPolicy.DESTROY : RemovalPolicy.RETAIN,
   })
 
   // Create timing merger Lambda
@@ -75,10 +98,10 @@ export function createTimingInfrastructure(
     }),
   )
 
-  // Configure S3 to trigger Lambda on object creation
+  // Configure S3 to send notifications to SQS on object creation
   timingBucket.addEventNotification(
     EventType.OBJECT_CREATED,
-    new LambdaDestination(timingMergerLambda),
+    new SqsDestination(timingQueue),
     {
       // Filter for timing data objects (client/ or server/ prefix)
       prefix: '',
@@ -86,8 +109,19 @@ export function createTimingInfrastructure(
     },
   )
 
+  // Configure Lambda to consume from SQS
+  timingMergerLambda.addEventSource(
+    new SqsEventSource(timingQueue, {
+      batchSize: 10, // Process up to 10 messages at once
+      maxBatchingWindow: Duration.seconds(5), // Wait up to 5s to collect batch
+      reportBatchItemFailures: true, // Enable partial batch failure reporting
+    }),
+  )
+
   return {
     timingBucket,
     timingMergerLambda,
+    timingQueue,
+    timingDLQ,
   }
 }

@@ -112,7 +112,7 @@ export class ItoStreamController {
   private sendModeUpdate(mode: ItoMode) {
     console.log(`[ItoStreamController] Sending mode update: ${mode}`)
 
-    // Create a minimal config with just the mode and interaction ID
+    // Create a minimal config with just the mode
     // IMPORTANT: Only set the mode field, leave others undefined so server merge works correctly
     const contextInfo = create(ContextInfoSchema, {})
     contextInfo.mode = mode
@@ -209,7 +209,6 @@ export class ItoStreamController {
     // Gather all config data using ContextGrabber
     const context = await contextGrabber.gatherContext(this.currentMode)
     const interactionId = interactionManager.getCurrentInteractionId()
-    console.log({ interactionId })
 
     return create(TranscribeStreamRequestSchema, {
       payload: {

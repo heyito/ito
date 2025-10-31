@@ -1,4 +1,4 @@
-import { S3Event } from 'aws-lambda'
+import { SQSEvent, SQSBatchItemFailure, S3Event } from 'aws-lambda'
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
 import { Client } from '@opensearch-project/opensearch'
 import { AwsSigv4Signer } from '@opensearch-project/opensearch/aws'
@@ -6,7 +6,6 @@ import { defaultProvider } from '@aws-sdk/credential-provider-node'
 
 const OPENSEARCH_ENDPOINT = process.env.OPENSEARCH_ENDPOINT
 const OPENSEARCH_INDEX = process.env.OPENSEARCH_INDEX || 'ito-timing-analytics'
-const STAGE = process.env.STAGE || 'dev'
 
 if (!OPENSEARCH_ENDPOINT) {
   throw new Error('OPENSEARCH_ENDPOINT environment variable is required')
@@ -107,7 +106,6 @@ async function mergeAndUpsertTimingReport(
         'event.dataset': 'ito-timing-analytics',
         interaction_id: interactionId,
         user_id: timingData.userId || existingSource.user_id,
-        stage: STAGE,
       }
 
       // Get existing events or initialize empty array
@@ -136,9 +134,18 @@ async function mergeAndUpsertTimingReport(
       }
 
       // Update data completeness
-      const hasClient = allEvents.some((e: MergedEvent) => e.source === 'client')
-      const hasServer = allEvents.some((e: MergedEvent) => e.source === 'server')
-      mergedDoc.data_completeness = hasClient && hasServer ? 'both' : hasClient ? 'client_only' : 'server_only'
+      const hasClient = allEvents.some(
+        (e: MergedEvent) => e.source === 'client',
+      )
+      const hasServer = allEvents.some(
+        (e: MergedEvent) => e.source === 'server',
+      )
+      mergedDoc.data_completeness =
+        hasClient && hasServer
+          ? 'both'
+          : hasClient
+            ? 'client_only'
+            : 'server_only'
 
       // Update source-specific metadata and track receipt time
       if (source === 'client') {
@@ -151,6 +158,9 @@ async function mergeAndUpsertTimingReport(
         mergedDoc.client_total_duration_ms = clientData.totalDurationMs
         mergedDoc.client_received_at = new Date().toISOString()
       } else {
+        mergedDoc.server_metadata = {
+          // Extensible for future server-specific fields
+        }
         mergedDoc.server_total_duration_ms = timingData.totalDurationMs
         mergedDoc.server_received_at = new Date().toISOString()
       }
@@ -171,14 +181,15 @@ async function mergeAndUpsertTimingReport(
 
       // Use earliest event as document timestamp
       const earliestEventMs =
-        events.length > 0 ? Math.min(...events.map(e => e.start_ms)) : Date.now()
+        events.length > 0
+          ? Math.min(...events.map(e => e.start_ms))
+          : Date.now()
 
       mergedDoc = {
         '@timestamp': new Date(earliestEventMs).toISOString(),
         'event.dataset': 'ito-timing-analytics',
         interaction_id: interactionId,
         user_id: timingData.userId,
-        stage: STAGE,
         events: events,
         data_completeness: source === 'client' ? 'client_only' : 'server_only',
       }
@@ -200,6 +211,9 @@ async function mergeAndUpsertTimingReport(
         }
         mergedDoc.client_total_duration_ms = clientData.totalDurationMs
       } else {
+        mergedDoc.server_metadata = {
+          // Extensible for future server-specific fields
+        }
         mergedDoc.server_total_duration_ms = timingData.totalDurationMs
       }
     }
@@ -224,43 +238,74 @@ async function mergeAndUpsertTimingReport(
   }
 }
 
-export const handler = async (event: S3Event): Promise<void> => {
-  console.log(
-    `[TimingMerger] Processing ${event.Records.length} S3 events`,
-  )
+export const handler = async (
+  event: SQSEvent,
+): Promise<{ batchItemFailures: SQSBatchItemFailure[] }> => {
+  console.log(`[TimingMerger] Processing ${event.Records.length} SQS messages`)
 
-  // Process all records in parallel
+  const batchItemFailures: SQSBatchItemFailure[] = []
+
+  // Process each SQS message (which contains an S3 event)
   await Promise.all(
-    event.Records.map(async record => {
+    event.Records.map(async sqsRecord => {
       try {
-        const bucket = record.s3.bucket.name
-        const key = decodeURIComponent(record.s3.object.key.replace(/\+/g, ' '))
+        // Parse S3 event from SQS message body
+        const s3Event = JSON.parse(sqsRecord.body) as S3Event
 
-        console.log(`[TimingMerger] Processing S3 object: ${bucket}/${key}`)
+        console.log(
+          `[TimingMerger] Processing SQS message with ${s3Event.Records.length} S3 events`,
+        )
 
-        // Read timing data from S3
-        const jsonContent = await getS3Object(bucket, key)
-        const timingData = JSON.parse(jsonContent) as TimingData
+        // Process all S3 records in this message
+        for (const s3Record of s3Event.Records) {
+          try {
+            const bucket = s3Record.s3.bucket.name
+            const key = decodeURIComponent(
+              s3Record.s3.object.key.replace(/\+/g, ' '),
+            )
 
-        // Validate required fields
-        if (!timingData.interactionId || !timingData.source) {
-          console.error(
-            `[TimingMerger] Invalid timing data in ${key}: missing interactionId or source`,
-          )
-          return
+            console.log(`[TimingMerger] Processing S3 object: ${bucket}/${key}`)
+
+            // Read timing data from S3
+            const jsonContent = await getS3Object(bucket, key)
+            const timingData = JSON.parse(jsonContent) as TimingData
+
+            // Validate required fields
+            if (!timingData.interactionId || !timingData.source) {
+              console.error(
+                `[TimingMerger] Invalid timing data in ${key}: missing interactionId or source`,
+              )
+              // Invalid data is not retryable, skip it
+              continue
+            }
+
+            // Merge and upsert to OpenSearch
+            await mergeAndUpsertTimingReport(timingData)
+          } catch (error) {
+            console.error(
+              `[TimingMerger] Failed to process S3 record ${s3Record.s3.object.key}:`,
+              error,
+            )
+            // Mark this SQS message as failed so it can be retried
+            throw error
+          }
         }
-
-        // Merge and upsert to OpenSearch
-        await mergeAndUpsertTimingReport(timingData)
       } catch (error) {
         console.error(
-          `[TimingMerger] Failed to process record ${record.s3.object.key}:`,
+          `[TimingMerger] Failed to process SQS message ${sqsRecord.messageId}:`,
           error,
         )
-        // Don't throw - we want to continue processing other records
+        // Add to batch item failures for retry
+        batchItemFailures.push({
+          itemIdentifier: sqsRecord.messageId,
+        })
       }
     }),
   )
 
-  console.log(`[TimingMerger] Finished processing batch`)
+  console.log(
+    `[TimingMerger] Finished processing batch. Failures: ${batchItemFailures.length}/${event.Records.length}`,
+  )
+
+  return { batchItemFailures }
 }

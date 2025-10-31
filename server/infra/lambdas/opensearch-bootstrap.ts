@@ -221,6 +221,12 @@ const timingAnalyticsTemplate = {
         client_total_duration_ms: { type: 'integer' },
 
         // Server-specific metadata
+        server_metadata: {
+          type: 'object',
+          properties: {
+            // Extensible for future server-specific fields
+          },
+        },
         server_total_duration_ms: { type: 'integer' },
 
         // Unified events array (nested for proper querying)

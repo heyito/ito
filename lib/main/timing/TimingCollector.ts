@@ -54,8 +54,7 @@ export class TimingCollector {
   }
 
   private shouldCollect(): boolean {
-    return true
-    // TODO: Add me back return analytics.isEnabled()
+    return analytics.isEnabled()
   }
 
   /**

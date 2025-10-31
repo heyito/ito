@@ -320,6 +320,16 @@ export class PlatformStack extends Stack {
       description: 'S3 bucket for raw timing analytics data',
     })
 
+    new CfnOutput(this, 'TimingQueueUrl', {
+      value: timingResources.timingQueue.queueUrl,
+      description: 'SQS queue for timing events',
+    })
+
+    new CfnOutput(this, 'TimingDLQUrl', {
+      value: timingResources.timingDLQ.queueUrl,
+      description: 'Dead letter queue for failed timing events',
+    })
+
     Tags.of(this).add('Project', 'Ito')
   }
 }

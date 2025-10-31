@@ -104,6 +104,7 @@ message StreamConfig {
   optional ContextInfo context = 1;
   optional LlmSettings llm_settings = 2;
   repeated string vocabulary = 3;
+  optional string interaction_id = 4;
 }
 
 // Request message for TranscribeStreamV2.

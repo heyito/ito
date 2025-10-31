@@ -12,6 +12,7 @@ import { AudioStreamManager } from './audio/AudioStreamManager'
 import { contextGrabber } from './context/ContextGrabber'
 import log from 'electron-log'
 import { timingCollector, TimingEventName } from './timing/TimingCollector'
+import { interactionManager } from './interactions/InteractionManager'
 
 /**
  * ItoStreamController manages the lifecycle of a transcription stream using TranscribeStreamV2.
@@ -207,6 +208,7 @@ export class ItoStreamController {
   private async buildStreamConfig(): Promise<TranscribeStreamRequest> {
     // Gather all config data using ContextGrabber
     const context = await contextGrabber.gatherContext(this.currentMode)
+    const interactionId = interactionManager.getCurrentInteractionId()
 
     return create(TranscribeStreamRequestSchema, {
       payload: {
@@ -231,6 +233,7 @@ export class ItoStreamController {
             editingPrompt: context.advancedSettings.llm.editingPrompt,
           }),
           vocabulary: context.vocabularyWords,
+          interactionId: interactionId || undefined,
         }),
       },
     })

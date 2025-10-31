@@ -29,17 +29,34 @@ jobs:
               - server/infra/**
           list-files: 'none'
 
-  deploy-infra:
+  # Step 1: Build and push Docker image first (if server code changed)
+  # This ensures :latest tag is updated before CDK references it
+  build-image:
     needs: paths-check
-    if: ${{ needs.paths-check.outputs.infra_changed == 'true' || needs.paths-check.outputs.server_changed == 'true'}}
+    if: ${{ needs.paths-check.outputs.server_changed == 'true' }}
+    uses: ./.github/workflows/build-image.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  # Step 2: Deploy infrastructure (always runs if anything changed)
+  # If task definition changes, ECS will automatically restart with new :latest
+  deploy-infra:
+    needs:
+      - paths-check
+      - build-image
+    if: ${{ always() && (needs.paths-check.outputs.infra_changed == 'true' || needs.paths-check.outputs.server_changed == 'true') && (needs.build-image.result == 'success' || needs.build-image.result == 'skipped') }}
     uses: ./.github/workflows/infra-deploy.yml
     with:
       environment: ${{ inputs.environment }}
     secrets: inherit
 
+  # Step 3: Run migrations and force ECS deployment (only if server changed)
+  # Migration + force-new-deployment ensures ECS picks up new image even if task def didn't change
   deploy-app:
     needs:
       - paths-check
+      - build-image
       - deploy-infra
     if: ${{ needs.paths-check.outputs.server_changed == 'true' }}
     uses: ./.github/workflows/app-deploy.yml

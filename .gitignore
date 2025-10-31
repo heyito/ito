@@ -12,6 +12,8 @@ dist/*
 native/**/target
 out.json
 tsconfig.node.tsbuildinfo
+server/deploy-dev.sh
+
 # Sentry Config File
 .env.sentry-build-plugin
 .electron-builder-cache

@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-ecs": "^3.844.0",
+    "@aws-sdk/client-s3": "^3.922.0",
     "@aws-sdk/credential-provider-node": "^3.850.0",
     "@opensearch-project/opensearch": "^2.13.0",
     "aws-cdk-lib": "2.200.1",

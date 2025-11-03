@@ -47,7 +47,6 @@ interface ServerTimingData {
   interactionId: string
   userId: string
   timestamp: string
-  totalDurationMs: number
   events: TimingEvent[]
 }
 
@@ -161,7 +160,13 @@ async function mergeAndUpsertTimingReport(
         mergedDoc.server_metadata = {
           // Extensible for future server-specific fields
         }
-        mergedDoc.server_total_duration_ms = timingData.totalDurationMs
+        // Calculate server total duration from events
+        const serverTotalDuration =
+          timingData.events.length > 0
+            ? Math.max(...timingData.events.map(e => e.endMs || e.startMs)) -
+              Math.min(...timingData.events.map(e => e.startMs))
+            : 0
+        mergedDoc.server_total_duration_ms = serverTotalDuration
         mergedDoc.server_received_at = new Date().toISOString()
       }
     } else {
@@ -214,7 +219,13 @@ async function mergeAndUpsertTimingReport(
         mergedDoc.server_metadata = {
           // Extensible for future server-specific fields
         }
-        mergedDoc.server_total_duration_ms = timingData.totalDurationMs
+        // Calculate server total duration from events
+        const serverTotalDuration =
+          timingData.events.length > 0
+            ? Math.max(...timingData.events.map(e => e.endMs || e.startMs)) -
+              Math.min(...timingData.events.map(e => e.startMs))
+            : 0
+        mergedDoc.server_total_duration_ms = serverTotalDuration
       }
     }
 

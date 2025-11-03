@@ -227,12 +227,15 @@ export class TimingCollector {
   /**
    * Flush completed reports to the server via gRPC
    */
-  async flush() {
+  async flush({ flushAll = false } = {}) {
     if (this.completedReports.length === 0) {
       return
     }
 
-    const reportsToSend = this.completedReports.splice(0, this.BATCH_SIZE)
+    const reportsToSend = this.completedReports.splice(
+      0,
+      flushAll ? this.completedReports.length : this.BATCH_SIZE,
+    )
 
     console.log(
       `[TimingCollector] Flushing ${reportsToSend.length} timing reports to server`,
@@ -272,7 +275,7 @@ export class TimingCollector {
     }
 
     // Flush any remaining reports
-    await this.flush()
+    await this.flush({ flushAll: true })
 
     console.log('[TimingCollector] Service shutdown complete')
   }

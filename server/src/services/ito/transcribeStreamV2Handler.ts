@@ -124,16 +124,22 @@ export class TranscribeStreamV2Handler {
       )
 
       // Time transcript adjustment (only happens in EDIT mode)
-      transcript = await serverTimingCollector.timeAsync(
-        ServerTimingEventName.LLM_ADJUSTMENT,
-        () =>
-          this.adjustTranscriptForMode(
-            transcript,
-            mode,
-            windowContext,
-            advancedSettings,
-          ),
-        interactionId,
+      // transcript = await serverTimingCollector.timeAsync(
+      //   ServerTimingEventName.LLM_ADJUSTMENT,
+      //   () =>
+      //     this.adjustTranscriptForMode(
+      //       transcript,
+      //       mode,
+      //       windowContext,
+      //       advancedSettings,
+      //     ),
+      //   interactionId,
+      // )
+      transcript = await this.adjustTranscriptForMode(
+        transcript,
+        mode,
+        windowContext,
+        advancedSettings,
       )
 
       const duration = Date.now() - startTime
@@ -355,13 +361,14 @@ export class TranscribeStreamV2Handler {
     const userPrompt = createUserPromptWithContext(transcript, windowContext)
     const llmProvider = getLlmProvider(advancedSettings.llmProvider)
 
-    const adjustedTranscript = await llmProvider.adjustTranscript(
-      userPromptPrefix + '\n' + userPrompt,
-      {
-        temperature: advancedSettings.llmTemperature,
-        model: advancedSettings.llmModel,
-        prompt: ITO_MODE_SYSTEM_PROMPT[mode],
-      },
+    const adjustedTranscript = await serverTimingCollector.timeAsync(
+      ServerTimingEventName.LLM_ADJUSTMENT,
+      () =>
+        llmProvider.adjustTranscript(userPromptPrefix + '\n' + userPrompt, {
+          temperature: advancedSettings.llmTemperature,
+          model: advancedSettings.llmModel,
+          prompt: ITO_MODE_SYSTEM_PROMPT[mode],
+        }),
     )
 
     console.log(

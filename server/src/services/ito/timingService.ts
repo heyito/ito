@@ -55,7 +55,6 @@ export default (router: ConnectRouter) => {
           })),
         }
 
-        // S3 key pattern: client/{interaction-id}/{timestamp}.json
         const key = `client/${report.interactionId}/${Date.now()}.json`
 
         try {

@@ -203,18 +203,23 @@ export class ServerTimingCollector {
   /**
    * Flush completed reports to S3
    */
-  async flush() {
+  async flush({ flushAll = false } = {}) {
     if (this.completedReports.length === 0) {
       return
     }
 
     if (!TIMING_BUCKET) {
-      console.warn('[ServerTimingCollector] No timing bucket configured, skipping flush')
+      console.warn(
+        '[ServerTimingCollector] No timing bucket configured, skipping flush',
+      )
       this.completedReports = [] // Clear reports to avoid memory leak
       return
     }
 
-    const reportsToSend = this.completedReports.splice(0, this.BATCH_SIZE)
+    const reportsToSend = this.completedReports.splice(
+      0,
+      flushAll ? this.completedReports.length : this.BATCH_SIZE,
+    )
 
     console.log(
       `[ServerTimingCollector] Flushing ${reportsToSend.length} timing reports to S3`,
@@ -227,20 +232,12 @@ export class ServerTimingCollector {
         interactionId: report.interactionId,
         userId: report.userId,
         timestamp: new Date().toISOString(),
-        totalDurationMs: 0, // Will be calculated from events
         events: report.events.map(event => ({
           name: event.name,
           startMs: event.startMs,
           endMs: event.endMs,
           durationMs: event.durationMs,
         })),
-      }
-
-      // Calculate total duration from events
-      if (timingData.events.length > 0) {
-        const maxEndMs = Math.max(...timingData.events.map(e => e.endMs || 0))
-        const minStartMs = Math.min(...timingData.events.map(e => e.startMs))
-        timingData.totalDurationMs = maxEndMs - minStartMs
       }
 
       // S3 key pattern: server/{interaction-id}/{timestamp}.json
@@ -255,7 +252,9 @@ export class ServerTimingCollector {
             ContentType: 'application/json',
           }),
         )
-        console.log(`[ServerTimingCollector] Uploaded server timing to S3: ${key}`)
+        console.log(
+          `[ServerTimingCollector] Uploaded server timing to S3: ${key}`,
+        )
       } catch (error) {
         console.error(
           `[ServerTimingCollector] Failed to upload timing to S3: ${key}`,
@@ -276,7 +275,9 @@ export class ServerTimingCollector {
         `[ServerTimingCollector] Failed to upload ${failCount}/${reportsToSend.length} reports`,
       )
       // Re-add failed reports to the front of the queue for retry
-      const failedReports = reportsToSend.filter((_, i) => results[i].status === 'rejected')
+      const failedReports = reportsToSend.filter(
+        (_, i) => results[i].status === 'rejected',
+      )
       this.completedReports.unshift(...failedReports)
     }
 
@@ -306,7 +307,7 @@ export class ServerTimingCollector {
     }
 
     // Flush any remaining reports
-    await this.flush()
+    await this.flush({ flushAll: true })
 
     console.log('[ServerTimingCollector] Service shutdown complete')
   }

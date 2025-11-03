@@ -8,17 +8,15 @@ import {
 import { create } from '@bufbuild/protobuf'
 import type { HandlerContext } from '@connectrpc/connect'
 import { kUser } from '../../auth/userContext.js'
-import { CloudWatchLogger } from '../cloudWatchLogger.js'
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 
-// Configuration for CloudWatch
-const TIMING_LOG_GROUP_NAME = process.env.TIMING_LOG_GROUP_NAME || null
-const cloudWatchLogger = new CloudWatchLogger(
-  TIMING_LOG_GROUP_NAME,
-  'timing-analytics',
-)
+// Configuration for S3
+const TIMING_BUCKET = process.env.TIMING_BUCKET
+const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-west-2' })
 
-// Initialize stream on startup
-await cloudWatchLogger.ensureStream()
+if (!TIMING_BUCKET) {
+  console.warn('[TimingService] TIMING_BUCKET environment variable not set')
+}
 
 // Export the service implementation as a function that takes a ConnectRouter
 export default (router: ConnectRouter) => {
@@ -27,49 +25,59 @@ export default (router: ConnectRouter) => {
       request: SubmitTimingReportsRequest,
       context: HandlerContext,
     ): Promise<SubmitTimingReportsResponse> {
+      if (!TIMING_BUCKET) {
+        console.warn(
+          '[TimingService] Skipping timing report - no bucket configured',
+        )
+        return create(SubmitTimingReportsResponseSchema, {})
+      }
+
       const user = context.values.get(kUser)
       const userSub = user?.sub
 
-      const now = Date.now()
-      const entries = request.reports.map(report => {
-        const structured = {
-          '@timestamp': report.timestamp,
-          event: {
-            dataset: 'ito-timing-analytics',
-          },
-          interaction_id: report.interactionId,
-          user_id: userSub || report.userId,
+      // Write each timing report to S3 as a separate JSON file
+      const uploadPromises = request.reports.map(async report => {
+        const timingData = {
+          source: 'client',
+          interactionId: report.interactionId,
+          userId: userSub || report.userId,
           platform: report.platform,
-          app_version: report.appVersion,
+          appVersion: report.appVersion,
           hostname: report.hostname,
           architecture: report.architecture,
           timestamp: report.timestamp,
-          total_duration_ms: report.totalDurationMs,
+          totalDurationMs: report.totalDurationMs,
           events: report.events.map(event => ({
             name: event.name,
-            start_ms: event.startMs,
-            end_ms: event.endMs,
-            duration_ms: event.durationMs,
+            startMs: event.startMs,
+            endMs: event.endMs,
+            durationMs: event.durationMs,
           })),
         }
-        return {
-          timestamp: now,
-          message: JSON.stringify(structured),
+
+        const key = `client/${report.interactionId}/${Date.now()}.json`
+
+        try {
+          await s3Client.send(
+            new PutObjectCommand({
+              Bucket: TIMING_BUCKET,
+              Key: key,
+              Body: JSON.stringify(timingData),
+              ContentType: 'application/json',
+            }),
+          )
+          console.log(`[TimingService] Uploaded client timing to S3: ${key}`)
+        } catch (error) {
+          console.error(
+            `[TimingService] Failed to upload timing to S3: ${key}`,
+            error,
+          )
+          // Don't throw - we don't want to fail the request if timing upload fails
         }
       })
 
-      // Try to send to CloudWatch, fallback to stdout
-      const sent = await cloudWatchLogger.sendLogs(entries)
-
-      if (!sent) {
-        for (const e of entries) {
-          try {
-            process.stdout.write(`${e.message}\n`)
-          } catch (err) {
-            console.error('Failed to write timing data to stdout:', err)
-          }
-        }
-      }
+      // Wait for all uploads to complete
+      await Promise.allSettled(uploadPromises)
 
       return create(SubmitTimingReportsResponseSchema, {})
     },

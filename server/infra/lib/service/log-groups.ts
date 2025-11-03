@@ -10,10 +10,8 @@ export interface LogGroupConfig {
 export interface LogGroupResources {
   clientLogGroup: ILogGroup
   serverLogGroup: ILogGroup
-  timingLogGroup: ILogGroup
   ensureClientLogGroup: cr.AwsCustomResource
   ensureServerLogGroup: cr.AwsCustomResource
-  ensureTimingLogGroup: cr.AwsCustomResource
 }
 
 export function createLogGroups(
@@ -64,30 +62,6 @@ export function createLogGroups(
     },
   )
 
-  const ensureTimingLogGroup = new cr.AwsCustomResource(
-    scope,
-    'EnsureTimingLogGroup',
-    {
-      onCreate: {
-        service: 'CloudWatchLogs',
-        action: 'createLogGroup',
-        parameters: {
-          logGroupName: `/ito/${config.stageName}/timing-analytics`,
-        },
-        physicalResourceId: cr.PhysicalResourceId.of(
-          `loggroup-${config.stageName}-timing-analytics`,
-        ),
-        ignoreErrorCodesMatching: 'ResourceAlreadyExistsException',
-      },
-      policy: cr.AwsCustomResourcePolicy.fromStatements([
-        new PolicyStatement({
-          actions: ['logs:CreateLogGroup'],
-          resources: ['*'],
-        }),
-      ]),
-    },
-  )
-
   const clientLogGroup = LogGroup.fromLogGroupName(
     scope,
     'ItoClientLogsGroup',
@@ -100,18 +74,10 @@ export function createLogGroups(
     `/ito/${config.stageName}/server`,
   )
 
-  const timingLogGroup = LogGroup.fromLogGroupName(
-    scope,
-    'ItoTimingLogsGroup',
-    `/ito/${config.stageName}/timing-analytics`,
-  )
-
   return {
     clientLogGroup,
     serverLogGroup,
-    timingLogGroup,
     ensureClientLogGroup,
     ensureServerLogGroup,
-    ensureTimingLogGroup,
   }
 }

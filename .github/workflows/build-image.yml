@@ -1,0 +1,44 @@
+name: Build and Push Docker Image
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+        description: 'The environment to build for'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::287641434880:role/ItoGitHubCiCdRole
+          aws-region: us-west-2
+
+      - name: Login to ECR
+        run: |
+          aws ecr get-login-password \
+            | docker login \
+                --username AWS \
+                --password-stdin 287641434880.dkr.ecr.us-west-2.amazonaws.com
+
+      - name: Build & push multi-arch image
+        working-directory: server
+        run: |
+          docker buildx create --use
+          docker buildx build \
+            --platform linux/arm64,linux/amd64 \
+            --tag 287641434880.dkr.ecr.us-west-2.amazonaws.com/${{ vars.AWS_STAGE }}-ito-server:latest \
+            --push .

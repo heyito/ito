@@ -12,6 +12,7 @@
     "dev-cdk": "dotenv -e ../.env -- cdk"
   },
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
     "@types/jest": "^29.5.14",
     "@types/node": "22.7.9",
     "aws-cdk-lib": "2.200.1",
@@ -22,6 +23,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-ecs": "^3.844.0",
+    "@aws-sdk/credential-provider-node": "^3.850.0",
+    "@opensearch-project/opensearch": "^2.13.0",
     "aws-cdk-lib": "2.200.1",
     "constructs": "^10.0.0",
     "dotenv": "^17.2.1",

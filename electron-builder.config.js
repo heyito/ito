@@ -22,7 +22,7 @@ const getWindowsResources = () =>
 const stage = process.env.ITO_ENV || 'prod'
 module.exports = {
   appId: stage === 'prod' ? 'ai.ito.ito' : `ai.ito.ito-${stage.toLowerCase()}`,
-  productName: stage === 'prod' ? 'Ito' : `Ito (${stage})`,
+  productName: stage === 'prod' ? 'Ito' : `Ito-${stage}`,
   copyright: 'Copyright © 2025 Demox Labs',
   directories: {
     buildResources: 'resources',

@@ -314,10 +314,22 @@ jobs:
 
           # Compare and find stale files (exist in bucket but not in upload list)
           # Exclude .blockmap files from deletion to preserve differential update capability
-          comm -23 <(sort existing_files.txt) <(sort uploaded_root_files.txt) | grep -v '\.blockmap$' > stale_files.txt
+          echo "Existing files in bucket root:"
+          cat existing_files.txt
+          echo ""
+          echo "Files uploaded to bucket root:"
+          cat uploaded_root_files.txt
+          echo ""
+          echo "Computing stale files (existing - uploaded)..."
+          comm -23 <(sort existing_files.txt) <(sort uploaded_root_files.txt) > all_stale_files.txt
+          echo "All stale files before filtering:"
+          cat all_stale_files.txt || echo "(none)"
+          echo ""
+          echo "Filtering out .blockmap files..."
+          grep -v '\.blockmap$' all_stale_files.txt > stale_files.txt || echo "(no non-blockmap stale files found)"
 
           echo "Stale files identified for deletion (excluding .blockmap files for differential updates):"
-          cat stale_files.txt
+          cat stale_files.txt || echo "(none)"
 
           # Delete each stale file (but preserve blockmaps)
           while IFS= read -r file; do

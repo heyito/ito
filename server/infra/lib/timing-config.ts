@@ -69,7 +69,6 @@ export function createTimingInfrastructure(
     handler: 'handler',
     environment: {
       OPENSEARCH_ENDPOINT: config.opensearchDomain.domainEndpoint,
-      OPENSEARCH_INDEX: 'ito-timing-analytics',
       STAGE: config.stageName,
     },
     timeout: Duration.seconds(30),

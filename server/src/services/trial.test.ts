@@ -1,7 +1,9 @@
-import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test'
-import { fastify } from 'fastify'
-
-type AnyObject = Record<string, any>
+import { describe, it, expect, mock, beforeEach } from 'bun:test'
+import {
+  type AnyObject,
+  createTestAppWithAuth,
+  createTestApp,
+} from './__tests__/helpers.js'
 
 const mockTrialsRepo: {
   startTrial: AnyObject | null
@@ -65,7 +67,7 @@ describe('registerTrialRoutes', () => {
 
   describe('POST /trial/start', () => {
     it('returns 401 when requireAuth is true and user is missing', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerTrialRoutes(app, { requireAuth: true })
 
       const res = await app.inject({
@@ -81,12 +83,8 @@ describe('registerTrialRoutes', () => {
     })
 
     it('starts trial successfully when authenticated', async () => {
-      const app = fastify()
+      const app = createTestAppWithAuth()
       await registerTrialRoutes(app, { requireAuth: true })
-
-      app.addHook('preHandler', async req => {
-        ;(req as any).user = { sub: 'user-123' }
-      })
 
       const trialStartAt = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
       mockTrialsRepo.startTrial = {
@@ -113,12 +111,8 @@ describe('registerTrialRoutes', () => {
     })
 
     it('returns correct status for newly started trial', async () => {
-      const app = fastify()
+      const app = createTestAppWithAuth()
       await registerTrialRoutes(app, { requireAuth: true })
-
-      app.addHook('preHandler', async req => {
-        ;(req as any).user = { sub: 'user-123' }
-      })
 
       const now = new Date()
       mockTrialsRepo.startTrial = {
@@ -143,12 +137,8 @@ describe('registerTrialRoutes', () => {
     })
 
     it('returns correct status for expired trial', async () => {
-      const app = fastify()
+      const app = createTestAppWithAuth()
       await registerTrialRoutes(app, { requireAuth: true })
-
-      app.addHook('preHandler', async req => {
-        ;(req as any).user = { sub: 'user-123' }
-      })
 
       const trialStartAt = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000)
       mockTrialsRepo.startTrial = {
@@ -173,12 +163,8 @@ describe('registerTrialRoutes', () => {
     })
 
     it('returns correct status when trial is already completed', async () => {
-      const app = fastify()
+      const app = createTestAppWithAuth()
       await registerTrialRoutes(app, { requireAuth: true })
-
-      app.addHook('preHandler', async req => {
-        ;(req as any).user = { sub: 'user-123' }
-      })
 
       mockTrialsRepo.startTrial = {
         user_id: 'user-123',
@@ -203,12 +189,8 @@ describe('registerTrialRoutes', () => {
     })
 
     it('handles errors gracefully', async () => {
-      const app = fastify()
+      const app = createTestAppWithAuth()
       await registerTrialRoutes(app, { requireAuth: true })
-
-      app.addHook('preHandler', async req => {
-        ;(req as any).user = { sub: 'user-123' }
-      })
 
       mockTrialsRepo.shouldThrow = 'startTrial'
 
@@ -225,12 +207,8 @@ describe('registerTrialRoutes', () => {
     })
 
     it('handles errors with no message', async () => {
-      const app = fastify()
+      const app = createTestAppWithAuth()
       await registerTrialRoutes(app, { requireAuth: true })
-
-      app.addHook('preHandler', async req => {
-        ;(req as any).user = { sub: 'user-123' }
-      })
 
       mockTrialsRepo.startTrial = () => {
         throw new Error()
@@ -251,7 +229,7 @@ describe('registerTrialRoutes', () => {
 
   describe('POST /trial/complete', () => {
     it('returns 401 when requireAuth is true and user is missing', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerTrialRoutes(app, { requireAuth: true })
 
       const res = await app.inject({
@@ -267,12 +245,8 @@ describe('registerTrialRoutes', () => {
     })
 
     it('completes trial successfully when authenticated', async () => {
-      const app = fastify()
+      const app = createTestAppWithAuth()
       await registerTrialRoutes(app, { requireAuth: true })
-
-      app.addHook('preHandler', async req => {
-        ;(req as any).user = { sub: 'user-123' }
-      })
 
       mockTrialsRepo.completeTrial = {
         user_id: 'user-123',
@@ -297,12 +271,8 @@ describe('registerTrialRoutes', () => {
     })
 
     it('handles errors gracefully', async () => {
-      const app = fastify()
+      const app = createTestAppWithAuth()
       await registerTrialRoutes(app, { requireAuth: true })
-
-      app.addHook('preHandler', async req => {
-        ;(req as any).user = { sub: 'user-123' }
-      })
 
       mockTrialsRepo.shouldThrow = 'completeTrial'
 
@@ -319,12 +289,8 @@ describe('registerTrialRoutes', () => {
     })
 
     it('handles errors with no message', async () => {
-      const app = fastify()
+      const app = createTestAppWithAuth()
       await registerTrialRoutes(app, { requireAuth: true })
-
-      app.addHook('preHandler', async req => {
-        ;(req as any).user = { sub: 'user-123' }
-      })
 
       mockTrialsRepo.completeTrial = () => {
         throw new Error()

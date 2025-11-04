@@ -1,7 +1,10 @@
 import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test'
-import { fastify } from 'fastify'
-
-type AnyObject = Record<string, any>
+import {
+  type AnyObject,
+  createTestAppWithAuth,
+  createTestApp,
+  createEnvReset,
+} from './__tests__/helpers.js'
 
 const mockStripeState: {
   checkoutSessionsCreate: AnyObject | null
@@ -166,7 +169,7 @@ mock.module('../db/repo.js', () => {
   }
 })
 
-const originalEnv = process.env
+const envReset = createEnvReset()
 
 import {
   registerBillingRoutes,
@@ -175,13 +178,12 @@ import {
 
 describe('registerBillingRoutes', () => {
   beforeEach(() => {
-    process.env = {
-      ...originalEnv,
+    envReset.set({
       STRIPE_SECRET_KEY: 'sk_test_123',
       STRIPE_PRICE_ID: 'price_test_123',
       STRIPE_PUBLIC_BASE_URL: 'http://localhost:3000',
       APP_PROTOCOL: 'ito-dev',
-    }
+    })
     mockStripeState.checkoutSessionsCreate = null
     mockStripeState.checkoutSessionsRetrieve = null
     mockStripeState.subscriptionsRetrieve = null
@@ -194,12 +196,12 @@ describe('registerBillingRoutes', () => {
   })
 
   afterEach(() => {
-    process.env = originalEnv
+    envReset.reset()
   })
 
   describe('POST /billing/checkout', () => {
     it('returns 401 when requireAuth is true and user is missing', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       const res = await app.inject({
@@ -215,12 +217,8 @@ describe('registerBillingRoutes', () => {
     })
 
     it('creates checkout session when authenticated', async () => {
-      const app = fastify()
+      const app = createTestAppWithAuth()
       await registerBillingRoutes(app, { requireAuth: true })
-
-      app.addHook('preHandler', async req => {
-        ;(req as any).user = { sub: 'user-123' }
-      })
 
       const res = await app.inject({
         method: 'POST',
@@ -246,7 +244,7 @@ describe('registerBillingRoutes', () => {
     })
 
     it('handles Stripe errors gracefully', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       app.addHook('preHandler', async req => {
@@ -270,7 +268,7 @@ describe('registerBillingRoutes', () => {
 
   describe('POST /billing/confirm', () => {
     it('returns 401 when requireAuth is true and user is missing', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       const res = await app.inject({
@@ -287,12 +285,8 @@ describe('registerBillingRoutes', () => {
     })
 
     it('returns 400 when session_id is missing', async () => {
-      const app = fastify()
+      const app = createTestAppWithAuth()
       await registerBillingRoutes(app, { requireAuth: true })
-
-      app.addHook('preHandler', async req => {
-        ;(req as any).user = { sub: 'user-123' }
-      })
 
       const res = await app.inject({
         method: 'POST',
@@ -308,7 +302,7 @@ describe('registerBillingRoutes', () => {
     })
 
     it('returns 400 when session mode is not subscription', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       app.addHook('preHandler', async req => {
@@ -331,7 +325,7 @@ describe('registerBillingRoutes', () => {
     })
 
     it('returns 400 when session is not completed or paid', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       app.addHook('preHandler', async req => {
@@ -358,7 +352,7 @@ describe('registerBillingRoutes', () => {
     })
 
     it('accepts completed session', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       app.addHook('preHandler', async req => {
@@ -386,7 +380,7 @@ describe('registerBillingRoutes', () => {
     })
 
     it('accepts paid session', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       app.addHook('preHandler', async req => {
@@ -413,7 +407,7 @@ describe('registerBillingRoutes', () => {
     })
 
     it('throws error when session missing customer ID', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       app.addHook('preHandler', async req => {
@@ -442,7 +436,7 @@ describe('registerBillingRoutes', () => {
     })
 
     it('throws error when session missing subscription ID', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       app.addHook('preHandler', async req => {
@@ -471,7 +465,7 @@ describe('registerBillingRoutes', () => {
     })
 
     it('throws error when subscription missing current_period_start', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       app.addHook('preHandler', async req => {
@@ -507,7 +501,7 @@ describe('registerBillingRoutes', () => {
     })
 
     it('handles Stripe errors gracefully', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       app.addHook('preHandler', async req => {
@@ -532,7 +526,7 @@ describe('registerBillingRoutes', () => {
 
   describe('POST /billing/cancel', () => {
     it('returns 401 when requireAuth is true and user is missing', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       const res = await app.inject({
@@ -548,12 +542,8 @@ describe('registerBillingRoutes', () => {
     })
 
     it('returns 400 when no subscription is found', async () => {
-      const app = fastify()
+      const app = createTestAppWithAuth()
       await registerBillingRoutes(app, { requireAuth: true })
-
-      app.addHook('preHandler', async req => {
-        ;(req as any).user = { sub: 'user-123' }
-      })
 
       const res = await app.inject({
         method: 'POST',
@@ -568,7 +558,7 @@ describe('registerBillingRoutes', () => {
     })
 
     it('returns 400 when subscription has no stripe_subscription_id', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       app.addHook('preHandler', async req => {
@@ -593,7 +583,7 @@ describe('registerBillingRoutes', () => {
     })
 
     it('cancels subscription successfully', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       app.addHook('preHandler', async req => {
@@ -620,7 +610,7 @@ describe('registerBillingRoutes', () => {
     })
 
     it('handles Stripe errors gracefully', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       app.addHook('preHandler', async req => {
@@ -649,7 +639,7 @@ describe('registerBillingRoutes', () => {
 
   describe('GET /billing/status', () => {
     it('returns 401 when requireAuth is true and user is missing', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       const res = await app.inject({
@@ -665,7 +655,7 @@ describe('registerBillingRoutes', () => {
     })
 
     it('returns active_pro when subscription exists', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       app.addHook('preHandler', async req => {
@@ -696,7 +686,7 @@ describe('registerBillingRoutes', () => {
     })
 
     it('returns free_trial when trial is active', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       app.addHook('preHandler', async req => {
@@ -726,7 +716,7 @@ describe('registerBillingRoutes', () => {
     })
 
     it('returns none when no subscription and trial expired', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       app.addHook('preHandler', async req => {
@@ -755,7 +745,7 @@ describe('registerBillingRoutes', () => {
     })
 
     it('returns none when no subscription and trial completed', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       app.addHook('preHandler', async req => {
@@ -783,7 +773,7 @@ describe('registerBillingRoutes', () => {
     })
 
     it('handles errors gracefully', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerBillingRoutes(app, { requireAuth: true })
 
       app.addHook('preHandler', async req => {
@@ -810,18 +800,17 @@ describe('registerBillingRoutes', () => {
 
 describe('registerBillingPublicRoutes', () => {
   beforeEach(() => {
-    process.env = {
-      ...originalEnv,
+    envReset.set({
       APP_PROTOCOL: 'ito-dev',
-    }
+    })
   })
 
   afterEach(() => {
-    process.env = originalEnv
+    envReset.reset()
   })
 
   it('renders success page with session_id', async () => {
-    const app = fastify()
+    const app = createTestApp()
     await registerBillingPublicRoutes(app)
 
     const res = await app.inject({
@@ -839,7 +828,7 @@ describe('registerBillingPublicRoutes', () => {
   })
 
   it('renders success page without session_id', async () => {
-    const app = fastify()
+    const app = createTestApp()
     await registerBillingPublicRoutes(app)
 
     const res = await app.inject({
@@ -855,7 +844,7 @@ describe('registerBillingPublicRoutes', () => {
   })
 
   it('renders cancel page', async () => {
-    const app = fastify()
+    const app = createTestApp()
     await registerBillingPublicRoutes(app)
 
     const res = await app.inject({
@@ -871,7 +860,7 @@ describe('registerBillingPublicRoutes', () => {
   })
 
   it('escapes quotes in deeplink URL', async () => {
-    const app = fastify()
+    const app = createTestApp()
     await registerBillingPublicRoutes(app)
 
     process.env.APP_PROTOCOL = 'ito-dev'

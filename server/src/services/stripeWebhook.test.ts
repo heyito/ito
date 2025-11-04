@@ -1,7 +1,9 @@
 import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test'
-import { fastify } from 'fastify'
-
-type AnyObject = Record<string, any>
+import {
+  type AnyObject,
+  createTestApp,
+  createEnvReset,
+} from './__tests__/helpers.js'
 
 const mockStripeState: {
   webhooksConstructEvent: AnyObject | null
@@ -151,17 +153,16 @@ mock.module('../db/repo.js', () => {
   }
 })
 
-const originalEnv = process.env
+const envReset = createEnvReset()
 
 import { registerStripeWebhook } from './stripeWebhook.js'
 
 describe('registerStripeWebhook', () => {
   beforeEach(() => {
-    process.env = {
-      ...originalEnv,
+    envReset.set({
       STRIPE_SECRET_KEY: 'sk_test_123',
       STRIPE_WEBHOOK_SECRET: 'whsec_test_123',
-    }
+    })
     mockStripeState.webhooksConstructEvent = null
     mockStripeState.subscriptionsRetrieve = null
     mockStripeState.shouldThrow = null
@@ -173,12 +174,12 @@ describe('registerStripeWebhook', () => {
   })
 
   afterEach(() => {
-    process.env = originalEnv
+    envReset.reset()
   })
 
   describe('POST /stripe/webhook', () => {
     it('returns 400 when signature is missing', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerStripeWebhook(app)
 
       const res = await app.inject({
@@ -196,7 +197,7 @@ describe('registerStripeWebhook', () => {
     })
 
     it('returns 400 when signature verification fails', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerStripeWebhook(app)
 
       mockStripeState.constructEventShouldThrow = true
@@ -217,7 +218,7 @@ describe('registerStripeWebhook', () => {
     })
 
     it('handles checkout.session.completed event for subscription', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerStripeWebhook(app)
 
       const eventPayload = {
@@ -264,7 +265,7 @@ describe('registerStripeWebhook', () => {
     })
 
     it('handles checkout.session.async_payment_succeeded event', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerStripeWebhook(app)
 
       const eventPayload = {
@@ -301,7 +302,7 @@ describe('registerStripeWebhook', () => {
     })
 
     it('skips checkout.session.completed when mode is not subscription', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerStripeWebhook(app)
 
       const eventPayload = {
@@ -335,7 +336,7 @@ describe('registerStripeWebhook', () => {
     })
 
     it('skips checkout.session.completed when user_sub is missing', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerStripeWebhook(app)
 
       const eventPayload = {
@@ -370,7 +371,7 @@ describe('registerStripeWebhook', () => {
     })
 
     it('handles customer.subscription.created event', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerStripeWebhook(app)
 
       const eventPayload = {
@@ -412,7 +413,7 @@ describe('registerStripeWebhook', () => {
     })
 
     it('handles customer.subscription.updated event with active status', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerStripeWebhook(app)
 
       const eventPayload = {
@@ -454,7 +455,7 @@ describe('registerStripeWebhook', () => {
     })
 
     it('handles customer.subscription.updated event with canceled status', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerStripeWebhook(app)
 
       const eventPayload = {
@@ -490,7 +491,7 @@ describe('registerStripeWebhook', () => {
     })
 
     it('skips customer.subscription.updated when status is not active', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerStripeWebhook(app)
 
       const eventPayload = {
@@ -524,7 +525,7 @@ describe('registerStripeWebhook', () => {
     })
 
     it('skips customer.subscription events when user_sub is missing', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerStripeWebhook(app)
 
       const eventPayload = {
@@ -564,7 +565,7 @@ describe('registerStripeWebhook', () => {
     })
 
     it('handles customer.subscription.deleted event', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerStripeWebhook(app)
 
       const eventPayload = {
@@ -598,7 +599,7 @@ describe('registerStripeWebhook', () => {
     })
 
     it('handles customer.subscription.deleted when id is missing', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerStripeWebhook(app)
 
       const eventPayload = {
@@ -630,7 +631,7 @@ describe('registerStripeWebhook', () => {
     })
 
     it('handles unknown event types gracefully', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerStripeWebhook(app)
 
       const eventPayload = {
@@ -661,7 +662,7 @@ describe('registerStripeWebhook', () => {
     })
 
     it('handles processing errors gracefully', async () => {
-      const app = fastify()
+      const app = createTestApp()
       await registerStripeWebhook(app)
 
       const eventPayload = {

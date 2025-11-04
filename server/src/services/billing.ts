@@ -101,17 +101,27 @@ export const registerBillingRoutes = async (
         return
       }
 
-      const stripeCustomerId = (session.customer as string) || null
-      const stripeSubscriptionId = (session.subscription as string) || null
-
-      let subscriptionStartAt: Date | null = null
-      if (stripeSubscriptionId) {
-        const subscription =
-          await stripe.subscriptions.retrieve(stripeSubscriptionId)
-        const startSec =
-          subscription.items.data[0]?.current_period_start || null
-        subscriptionStartAt = startSec ? new Date(startSec * 1000) : null
+      if (!session.customer || typeof session.customer !== 'string') {
+        throw new Error('Session missing customer ID')
       }
+
+      if (!session.subscription || typeof session.subscription !== 'string') {
+        throw new Error('Session missing subscription ID')
+      }
+
+      const stripeCustomerId = session.customer
+      const stripeSubscriptionId = session.subscription
+
+      const subscription =
+        await stripe.subscriptions.retrieve(stripeSubscriptionId)
+
+      if (!subscription.items.data[0]?.current_period_start) {
+        throw new Error('Subscription missing current_period_start')
+      }
+
+      const subscriptionStartAt = new Date(
+        subscription.items.data[0].current_period_start * 1000,
+      )
 
       const upserted = await SubscriptionsRepository.upsertActive(
         userSub,

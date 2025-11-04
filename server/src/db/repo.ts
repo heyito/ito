@@ -464,17 +464,6 @@ export class TrialsRepository {
     )
     return insert.rows[0]
   }
-
-  static async clearTrialStart(userId: string): Promise<UserTrial | undefined> {
-    const res = await pool.query<UserTrial>(
-      `UPDATE user_trials
-       SET trial_start_at = NULL, updated_at = current_timestamp
-       WHERE user_id = $1
-       RETURNING *`,
-      [userId],
-    )
-    return res.rows[0]
-  }
 }
 
 export class SubscriptionsRepository {

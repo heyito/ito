@@ -1,0 +1,889 @@
+import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test'
+import { fastify } from 'fastify'
+
+type AnyObject = Record<string, any>
+
+const mockStripeState: {
+  checkoutSessionsCreate: AnyObject | null
+  checkoutSessionsRetrieve: AnyObject | null
+  subscriptionsRetrieve: AnyObject | null
+  subscriptionsCancel: AnyObject | null
+  shouldThrow: string | null
+} = {
+  checkoutSessionsCreate: null,
+  checkoutSessionsRetrieve: null,
+  subscriptionsRetrieve: null,
+  subscriptionsCancel: null,
+  shouldThrow: null,
+}
+
+mock.module('stripe', () => {
+  class Stripe {
+    checkout: any
+    subscriptions: any
+
+    constructor(_apiKey: string) {
+      this.checkout = {
+        sessions: {
+          create: async (params: AnyObject) => {
+            if (mockStripeState.shouldThrow === 'checkout.create') {
+              mockStripeState.shouldThrow = null
+              throw new Error('Stripe API error')
+            }
+            mockStripeState.checkoutSessionsCreate = params
+            return {
+              id: 'cs_test_123',
+              url: 'https://checkout.stripe.com/test',
+              mode: 'subscription',
+              status: 'open',
+              ...mockStripeState.checkoutSessionsCreate,
+            }
+          },
+          retrieve: async (sessionId: string) => {
+            if (mockStripeState.shouldThrow === 'checkout.retrieve') {
+              mockStripeState.shouldThrow = null
+              throw new Error('Stripe API error')
+            }
+            return {
+              id: sessionId,
+              mode: 'subscription',
+              status: 'complete',
+              payment_status: 'paid',
+              customer: 'cus_test_123',
+              subscription: 'sub_test_123',
+              ...mockStripeState.checkoutSessionsRetrieve,
+            }
+          },
+        },
+      }
+
+      this.subscriptions = {
+        retrieve: async (subscriptionId: string) => {
+          if (mockStripeState.shouldThrow === 'subscriptions.retrieve') {
+            mockStripeState.shouldThrow = null
+            throw new Error('Stripe API error')
+          }
+          return {
+            id: subscriptionId,
+            items: {
+              data: [
+                {
+                  current_period_start: Math.floor(Date.now() / 1000),
+                },
+              ],
+            },
+            ...mockStripeState.subscriptionsRetrieve,
+          }
+        },
+        cancel: async (subscriptionId: string) => {
+          if (mockStripeState.shouldThrow === 'subscriptions.cancel') {
+            mockStripeState.shouldThrow = null
+            throw new Error('Stripe API error')
+          }
+          mockStripeState.subscriptionsCancel = { subscriptionId }
+          return { id: subscriptionId, status: 'canceled' }
+        },
+      }
+    }
+  }
+  return {
+    default: Stripe,
+    __mockStripeState: mockStripeState,
+  }
+})
+
+const mockSubscriptionsRepo: {
+  getByUserId: AnyObject | null
+  upsertActive: AnyObject | null
+} = {
+  getByUserId: null,
+  upsertActive: null,
+}
+
+const mockTrialsRepo: {
+  getByUserId: AnyObject | null
+  completeTrial: boolean
+} = {
+  getByUserId: null,
+  completeTrial: false,
+}
+
+mock.module('../db/repo.js', () => {
+  return {
+    SubscriptionsRepository: {
+      getByUserId: async (userId: string) => {
+        if (mockSubscriptionsRepo.getByUserId === null) {
+          return undefined
+        }
+        if (typeof mockSubscriptionsRepo.getByUserId === 'function') {
+          return mockSubscriptionsRepo.getByUserId(userId)
+        }
+        return mockSubscriptionsRepo.getByUserId
+      },
+      upsertActive: async (
+        userId: string,
+        stripeCustomerId: string | null,
+        stripeSubscriptionId: string | null,
+        startAt: Date | null,
+      ) => {
+        if (mockSubscriptionsRepo.upsertActive === null) {
+          return {
+            user_id: userId,
+            stripe_customer_id: stripeCustomerId,
+            stripe_subscription_id: stripeSubscriptionId,
+            subscription_start_at: startAt,
+          }
+        }
+        if (typeof mockSubscriptionsRepo.upsertActive === 'function') {
+          return mockSubscriptionsRepo.upsertActive(
+            userId,
+            stripeCustomerId,
+            stripeSubscriptionId,
+            startAt,
+          )
+        }
+        return mockSubscriptionsRepo.upsertActive
+      },
+    },
+    TrialsRepository: {
+      getByUserId: async (userId: string) => {
+        if (mockTrialsRepo.getByUserId === null) {
+          return undefined
+        }
+        if (typeof mockTrialsRepo.getByUserId === 'function') {
+          return mockTrialsRepo.getByUserId(userId)
+        }
+        return mockTrialsRepo.getByUserId
+      },
+      completeTrial: async (userId: string) => {
+        mockTrialsRepo.completeTrial = true
+        return {
+          user_id: userId,
+          has_completed_trial: true,
+        }
+      },
+    },
+  }
+})
+
+const originalEnv = process.env
+
+import {
+  registerBillingRoutes,
+  registerBillingPublicRoutes,
+} from './billing.js'
+
+describe('registerBillingRoutes', () => {
+  beforeEach(() => {
+    process.env = {
+      ...originalEnv,
+      STRIPE_SECRET_KEY: 'sk_test_123',
+      STRIPE_PRICE_ID: 'price_test_123',
+      STRIPE_PUBLIC_BASE_URL: 'http://localhost:3000',
+      APP_PROTOCOL: 'ito-dev',
+    }
+    mockStripeState.checkoutSessionsCreate = null
+    mockStripeState.checkoutSessionsRetrieve = null
+    mockStripeState.subscriptionsRetrieve = null
+    mockStripeState.subscriptionsCancel = null
+    mockStripeState.shouldThrow = null
+    mockSubscriptionsRepo.getByUserId = null
+    mockSubscriptionsRepo.upsertActive = null
+    mockTrialsRepo.getByUserId = null
+    mockTrialsRepo.completeTrial = false
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  describe('POST /billing/checkout', () => {
+    it('returns 401 when requireAuth is true and user is missing', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/checkout',
+      })
+
+      expect(res.statusCode).toBe(401)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Unauthorized')
+      await app.close()
+    })
+
+    it('creates checkout session when authenticated', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/checkout',
+      })
+
+      expect(res.statusCode).toBe(200)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(true)
+      expect(body.url).toBe('https://checkout.stripe.com/test')
+      expect(mockStripeState.checkoutSessionsCreate).toMatchObject({
+        mode: 'subscription',
+        client_reference_id: 'user-123',
+        metadata: { user_sub: 'user-123' },
+        line_items: [
+          {
+            price: 'price_test_123',
+            quantity: 1,
+          },
+        ],
+      })
+      await app.close()
+    })
+
+    it('handles Stripe errors gracefully', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      mockStripeState.shouldThrow = 'checkout.create'
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/checkout',
+      })
+
+      expect(res.statusCode).toBe(500)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Stripe API error')
+      await app.close()
+    })
+  })
+
+  describe('POST /billing/confirm', () => {
+    it('returns 401 when requireAuth is true and user is missing', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/confirm',
+        payload: { session_id: 'cs_test_123' },
+      })
+
+      expect(res.statusCode).toBe(401)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Unauthorized')
+      await app.close()
+    })
+
+    it('returns 400 when session_id is missing', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/confirm',
+        payload: {},
+      })
+
+      expect(res.statusCode).toBe(400)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Missing session_id')
+      await app.close()
+    })
+
+    it('returns 400 when session mode is not subscription', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      mockStripeState.checkoutSessionsRetrieve = { mode: 'payment' }
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/confirm',
+        payload: { session_id: 'cs_test_123' },
+      })
+
+      expect(res.statusCode).toBe(400)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Invalid session mode')
+      await app.close()
+    })
+
+    it('returns 400 when session is not completed or paid', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      mockStripeState.checkoutSessionsRetrieve = {
+        mode: 'subscription',
+        status: 'open',
+        payment_status: 'unpaid',
+      }
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/confirm',
+        payload: { session_id: 'cs_test_123' },
+      })
+
+      expect(res.statusCode).toBe(400)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Session not completed')
+      await app.close()
+    })
+
+    it('accepts completed session', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      mockStripeState.checkoutSessionsRetrieve = {
+        mode: 'subscription',
+        status: 'complete',
+        payment_status: 'unpaid',
+      }
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/confirm',
+        payload: { session_id: 'cs_test_123' },
+      })
+
+      expect(res.statusCode).toBe(200)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(true)
+      expect(body.pro_status).toBe('active_pro')
+      expect(mockTrialsRepo.completeTrial).toBe(true)
+      await app.close()
+    })
+
+    it('accepts paid session', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      mockStripeState.checkoutSessionsRetrieve = {
+        mode: 'subscription',
+        status: 'open',
+        payment_status: 'paid',
+      }
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/confirm',
+        payload: { session_id: 'cs_test_123' },
+      })
+
+      expect(res.statusCode).toBe(200)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(true)
+      expect(body.pro_status).toBe('active_pro')
+      await app.close()
+    })
+
+    it('throws error when session missing customer ID', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      mockStripeState.checkoutSessionsRetrieve = {
+        mode: 'subscription',
+        status: 'complete',
+        payment_status: 'paid',
+        customer: null,
+        subscription: 'sub_test_123',
+      }
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/confirm',
+        payload: { session_id: 'cs_test_123' },
+      })
+
+      expect(res.statusCode).toBe(500)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Session missing customer ID')
+      await app.close()
+    })
+
+    it('throws error when session missing subscription ID', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      mockStripeState.checkoutSessionsRetrieve = {
+        mode: 'subscription',
+        status: 'complete',
+        payment_status: 'paid',
+        customer: 'cus_test_123',
+        subscription: null,
+      }
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/confirm',
+        payload: { session_id: 'cs_test_123' },
+      })
+
+      expect(res.statusCode).toBe(500)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Session missing subscription ID')
+      await app.close()
+    })
+
+    it('throws error when subscription missing current_period_start', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      mockStripeState.checkoutSessionsRetrieve = {
+        mode: 'subscription',
+        status: 'complete',
+        payment_status: 'paid',
+        customer: 'cus_test_123',
+        subscription: 'sub_test_123',
+      }
+
+      mockStripeState.subscriptionsRetrieve = {
+        id: 'sub_test_123',
+        items: {
+          data: [],
+        },
+      }
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/confirm',
+        payload: { session_id: 'cs_test_123' },
+      })
+
+      expect(res.statusCode).toBe(500)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Subscription missing current_period_start')
+      await app.close()
+    })
+
+    it('handles Stripe errors gracefully', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      mockStripeState.shouldThrow = 'checkout.retrieve'
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/confirm',
+        payload: { session_id: 'cs_test_123' },
+      })
+
+      expect(res.statusCode).toBe(500)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Stripe API error')
+      await app.close()
+    })
+  })
+
+  describe('POST /billing/cancel', () => {
+    it('returns 401 when requireAuth is true and user is missing', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/cancel',
+      })
+
+      expect(res.statusCode).toBe(401)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Unauthorized')
+      await app.close()
+    })
+
+    it('returns 400 when no subscription is found', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/cancel',
+      })
+
+      expect(res.statusCode).toBe(400)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('No active subscription found')
+      await app.close()
+    })
+
+    it('returns 400 when subscription has no stripe_subscription_id', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      mockSubscriptionsRepo.getByUserId = {
+        user_id: 'user-123',
+        stripe_subscription_id: null,
+      }
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/cancel',
+      })
+
+      expect(res.statusCode).toBe(400)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('No active subscription found')
+      await app.close()
+    })
+
+    it('cancels subscription successfully', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      mockSubscriptionsRepo.getByUserId = {
+        user_id: 'user-123',
+        stripe_subscription_id: 'sub_test_123',
+      }
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/cancel',
+      })
+
+      expect(res.statusCode).toBe(200)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(true)
+      expect(mockStripeState.subscriptionsCancel).toEqual({
+        subscriptionId: 'sub_test_123',
+      })
+      await app.close()
+    })
+
+    it('handles Stripe errors gracefully', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      mockSubscriptionsRepo.getByUserId = {
+        user_id: 'user-123',
+        stripe_subscription_id: 'sub_test_123',
+      }
+
+      mockStripeState.shouldThrow = 'subscriptions.cancel'
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/cancel',
+      })
+
+      expect(res.statusCode).toBe(500)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Stripe API error')
+      await app.close()
+    })
+  })
+
+  describe('GET /billing/status', () => {
+    it('returns 401 when requireAuth is true and user is missing', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/billing/status',
+      })
+
+      expect(res.statusCode).toBe(401)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Unauthorized')
+      await app.close()
+    })
+
+    it('returns active_pro when subscription exists', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      const startDate = new Date('2024-01-01')
+      mockSubscriptionsRepo.getByUserId = {
+        user_id: 'user-123',
+        stripe_subscription_id: 'sub_test_123',
+        subscription_start_at: startDate,
+      }
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/billing/status',
+      })
+
+      expect(res.statusCode).toBe(200)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(true)
+      expect(body.pro_status).toBe('active_pro')
+      expect(new Date(body.subscriptionStartAt).getTime()).toBe(
+        startDate.getTime(),
+      )
+      expect(body.trial).toBeDefined()
+      await app.close()
+    })
+
+    it('returns free_trial when trial is active', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      const trialStart = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+      mockTrialsRepo.getByUserId = {
+        user_id: 'user-123',
+        trial_start_at: trialStart,
+        has_completed_trial: false,
+      }
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/billing/status',
+      })
+
+      expect(res.statusCode).toBe(200)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(true)
+      expect(body.pro_status).toBe('free_trial')
+      expect(body.trial.isTrialActive).toBe(true)
+      expect(body.trial.daysLeft).toBeGreaterThan(0)
+      expect(body.trial.daysLeft).toBeLessThanOrEqual(14)
+      await app.close()
+    })
+
+    it('returns none when no subscription and trial expired', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      const trialStart = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000)
+      mockTrialsRepo.getByUserId = {
+        user_id: 'user-123',
+        trial_start_at: trialStart,
+        has_completed_trial: false,
+      }
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/billing/status',
+      })
+
+      expect(res.statusCode).toBe(200)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(true)
+      expect(body.pro_status).toBe('none')
+      expect(body.trial.isTrialActive).toBe(false)
+      expect(body.trial.daysLeft).toBe(0)
+      await app.close()
+    })
+
+    it('returns none when no subscription and trial completed', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      const trialStart = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+      mockTrialsRepo.getByUserId = {
+        user_id: 'user-123',
+        trial_start_at: trialStart,
+        has_completed_trial: true,
+      }
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/billing/status',
+      })
+
+      expect(res.statusCode).toBe(200)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(true)
+      expect(body.pro_status).toBe('none')
+      expect(body.trial.isTrialActive).toBe(false)
+      await app.close()
+    })
+
+    it('handles errors gracefully', async () => {
+      const app = fastify()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      mockSubscriptionsRepo.getByUserId = () => {
+        throw new Error('Database error')
+      }
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/billing/status',
+      })
+
+      expect(res.statusCode).toBe(500)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Database error')
+      await app.close()
+    })
+  })
+})
+
+describe('registerBillingPublicRoutes', () => {
+  beforeEach(() => {
+    process.env = {
+      ...originalEnv,
+      APP_PROTOCOL: 'ito-dev',
+    }
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  it('renders success page with session_id', async () => {
+    const app = fastify()
+    await registerBillingPublicRoutes(app)
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/billing/success?session_id=cs_test_123',
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.headers['content-type']).toContain('text/html')
+    expect(res.body).toContain(
+      'ito-dev://billing/success?session_id=cs_test_123',
+    )
+    expect(res.body).toContain('Returning to Ito')
+    await app.close()
+  })
+
+  it('renders success page without session_id', async () => {
+    const app = fastify()
+    await registerBillingPublicRoutes(app)
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/billing/success',
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.headers['content-type']).toContain('text/html')
+    expect(res.body).toContain('ito-dev://billing/success')
+    expect(res.body).not.toContain('session_id=')
+    await app.close()
+  })
+
+  it('renders cancel page', async () => {
+    const app = fastify()
+    await registerBillingPublicRoutes(app)
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/billing/cancel',
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.headers['content-type']).toContain('text/html')
+    expect(res.body).toContain('ito-dev://billing/cancel')
+    expect(res.body).toContain('Returning to Ito')
+    await app.close()
+  })
+
+  it('escapes quotes in deeplink URL', async () => {
+    const app = fastify()
+    await registerBillingPublicRoutes(app)
+
+    process.env.APP_PROTOCOL = 'ito-dev'
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/billing/success?session_id=test"quote',
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.body).toContain('test%22quote')
+    expect(res.body).not.toContain('test"quote')
+    await app.close()
+  })
+})

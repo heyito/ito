@@ -71,7 +71,7 @@ function renderHook<T>(hook: () => T): {
   unmount: () => void
   waitFor: (fn: () => boolean, timeout?: number) => Promise<void>
 } {
-  let result: { current: T } = { current: null as any }
+  const result: { current: T } = { current: null as any }
   let root: Root | null = null
   let container: any = null
 

@@ -11,7 +11,7 @@ if (!OPENSEARCH_ENDPOINT) {
 }
 
 function getTimingIndexName(): string {
-  const today = new Date().toISOString().split('T')[0]
+  const today = Intl.DateTimeFormat('en-CA').format(new Date())
   return `ito-timing-analytics-${today}`
 }
 

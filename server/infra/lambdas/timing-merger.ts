@@ -5,10 +5,14 @@ import { AwsSigv4Signer } from '@opensearch-project/opensearch/aws'
 import { defaultProvider } from '@aws-sdk/credential-provider-node'
 
 const OPENSEARCH_ENDPOINT = process.env.OPENSEARCH_ENDPOINT
-const OPENSEARCH_INDEX = process.env.OPENSEARCH_INDEX || 'ito-timing-analytics'
 
 if (!OPENSEARCH_ENDPOINT) {
   throw new Error('OPENSEARCH_ENDPOINT environment variable is required')
+}
+
+function getTimingIndexName(): string {
+  const today = Intl.DateTimeFormat('en-CA').format(new Date())
+  return `ito-timing-analytics-${today}`
 }
 
 // Initialize clients
@@ -81,10 +85,12 @@ async function mergeAndUpsertTimingReport(
   )
 
   try {
+    const indexName = getTimingIndexName()
+
     // Try to get existing document
     const existing = await osClient
       .get({
-        index: OPENSEARCH_INDEX,
+        index: indexName,
         id: interactionId,
       })
       .catch(() => null)
@@ -101,7 +107,10 @@ async function mergeAndUpsertTimingReport(
       // Start with existing document structure
       mergedDoc = {
         ...existingSource,
-        '@timestamp': existingSource['@timestamp'] || new Date().toISOString(),
+        '@timestamp':
+          existingSource['@timestamp'] ||
+          timingData.timestamp ||
+          new Date().toISOString(),
         'event.dataset': 'ito-timing-analytics',
         interaction_id: interactionId,
         user_id: timingData.userId || existingSource.user_id,
@@ -125,14 +134,8 @@ async function mergeAndUpsertTimingReport(
       )
       mergedDoc.events = [...filteredExisting, ...newEvents]
 
-      // Update @timestamp to earliest event across all sources
-      const allEvents = mergedDoc.events as MergedEvent[]
-      if (allEvents.length > 0) {
-        const earliestMs = Math.min(...allEvents.map(e => e.start_ms))
-        mergedDoc['@timestamp'] = new Date(earliestMs).toISOString()
-      }
-
       // Update data completeness
+      const allEvents = mergedDoc.events as MergedEvent[]
       const hasClient = allEvents.some(
         (e: MergedEvent) => e.source === 'client',
       )
@@ -184,14 +187,11 @@ async function mergeAndUpsertTimingReport(
         duration_ms: e.durationMs,
       }))
 
-      // Use earliest event as document timestamp
-      const earliestEventMs =
-        events.length > 0
-          ? Math.min(...events.map(e => e.start_ms))
-          : Date.now()
+      // Use the timestamp from the report, or current time as fallback
+      const timestamp = timingData.timestamp || new Date().toISOString()
 
       mergedDoc = {
-        '@timestamp': new Date(earliestEventMs).toISOString(),
+        '@timestamp': timestamp,
         'event.dataset': 'ito-timing-analytics',
         interaction_id: interactionId,
         user_id: timingData.userId,
@@ -231,7 +231,7 @@ async function mergeAndUpsertTimingReport(
 
     // Upsert the merged document
     await osClient.index({
-      index: OPENSEARCH_INDEX,
+      index: indexName,
       id: interactionId,
       body: mergedDoc,
       refresh: false, // Don't wait for refresh for better performance

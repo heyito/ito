@@ -84,6 +84,31 @@ export function useBillingState() {
     refresh()
   }, [refresh])
 
+  // Periodically refresh billing state to stay in sync with webhook updates
+  useEffect(() => {
+    const interval = setInterval(
+      () => {
+        refresh()
+      },
+      2 * 60 * 1000,
+    ) // Refresh every 2 minutes
+
+    return () => clearInterval(interval)
+  }, [refresh])
+
+  // Refresh billing state when window regains focus
+  useEffect(() => {
+    const handleFocus = () => {
+      refresh()
+    }
+
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [refresh])
+
   const completeTrial = useCallback(async () => {
     setIsLoading(true)
     setError(null)

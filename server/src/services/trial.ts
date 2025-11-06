@@ -204,6 +204,7 @@ export const registerTrialRoutes = async (
   const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY) : null
 
   fastify.post('/trial/start', async (request, reply) => {
+    console.log('trial/start', request.body)
     try {
       const userSub = (requireAuth && (request as any).user?.sub) || undefined
       if (!userSub) {
@@ -258,6 +259,44 @@ export const registerTrialRoutes = async (
         userEmail,
         userName,
       )
+
+      // Check if customer already has an active or trialing subscription for this product
+      const existingSubscriptions = await stripe.subscriptions.list({
+        customer: stripeCustomerId,
+        status: 'all',
+        limit: 100,
+      })
+
+      const hasActiveTrialSubscription = existingSubscriptions.data.some(
+        sub =>
+          (sub.status === 'trialing' || sub.status === 'active') &&
+          sub.items.data.some(item => item.price.id === STRIPE_PRICE_ID),
+      )
+
+      if (hasActiveTrialSubscription) {
+        // Find the active/trialing subscription and sync it to the database
+        const activeSubscription = existingSubscriptions.data.find(
+          sub =>
+            (sub.status === 'trialing' || sub.status === 'active') &&
+            sub.items.data.some(item => item.price.id === STRIPE_PRICE_ID),
+        )
+
+        if (activeSubscription) {
+          const status = computeStatusFromStripe(activeSubscription)
+          const trialEndAt = activeSubscription.trial_end
+            ? new Date(activeSubscription.trial_end * 1000)
+            : null
+          await TrialsRepository.upsertFromStripeSubscription(
+            userSub,
+            activeSubscription.id,
+            status.trialStartAt ? new Date(status.trialStartAt) : null,
+            status.hasCompletedTrial,
+            trialEndAt,
+          )
+          reply.send(status)
+          return
+        }
+      }
 
       // Create subscription with trial
       const subscription = await stripe.subscriptions.create({

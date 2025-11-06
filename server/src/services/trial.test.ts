@@ -33,6 +33,7 @@ const mockStripe: {
   subscriptions: {
     create: any
     retrieve: any
+    list: any
   }
 } = {
   customers: {
@@ -43,6 +44,7 @@ const mockStripe: {
   subscriptions: {
     create: null,
     retrieve: null,
+    list: null,
   },
 }
 
@@ -69,6 +71,7 @@ mock.module('../db/repo.js', () => {
         subscriptionId: string,
         trialStartAt: Date | null,
         hasCompletedTrial: boolean,
+        trialEndAt?: Date | null,
       ) => {
         if (mockTrialsRepo.shouldThrow === 'upsertFromStripeSubscription') {
           mockTrialsRepo.shouldThrow = null
@@ -79,6 +82,7 @@ mock.module('../db/repo.js', () => {
             user_id: userId,
             stripe_subscription_id: subscriptionId,
             trial_start_at: trialStartAt,
+            trial_end_at: trialEndAt ?? null,
             has_completed_trial: hasCompletedTrial,
           }
         }
@@ -88,6 +92,7 @@ mock.module('../db/repo.js', () => {
             subscriptionId,
             trialStartAt,
             hasCompletedTrial,
+            trialEndAt,
           )
         }
         return mockTrialsRepo.upsertFromStripeSubscription
@@ -163,6 +168,7 @@ mock.module('stripe', () => {
               items: { data: [{ price: { id: 'price_test123' } }] },
             }
           }),
+        list: mockStripe.subscriptions.list || (async () => ({ data: [] })),
       }
     },
   }
@@ -187,6 +193,7 @@ describe('registerTrialRoutes', () => {
     mockStripe.customers.update = null
     mockStripe.subscriptions.create = null
     mockStripe.subscriptions.retrieve = null
+    mockStripe.subscriptions.list = null
     mockFetch.mockClear()
 
     // Set up default environment variables
@@ -341,6 +348,7 @@ describe('registerTrialRoutes', () => {
         email: 'test@example.com',
         name: 'Test User',
       })
+      mockStripe.subscriptions.list = async () => ({ data: [] }) // No existing subscriptions
 
       const now = Math.floor(Date.now() / 1000)
       const trialEnd = now + 14 * 24 * 60 * 60
@@ -376,6 +384,7 @@ describe('registerTrialRoutes', () => {
       mockStripe.customers.search = async () => ({
         data: [{ id: 'cus_existing123' }],
       })
+      mockStripe.subscriptions.list = async () => ({ data: [] }) // No existing subscriptions
 
       const now = Math.floor(Date.now() / 1000)
       const trialEnd = now + 14 * 24 * 60 * 60
@@ -426,6 +435,7 @@ describe('registerTrialRoutes', () => {
       mockStripe.customers.create = async () => ({
         id: 'cus_new123',
       })
+      mockStripe.subscriptions.list = async () => ({ data: [] }) // No existing subscriptions
 
       const now = Math.floor(Date.now() / 1000)
       const trialEnd = now + 14 * 24 * 60 * 60

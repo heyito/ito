@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useRef } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import {
   ChartNoAxesColumn,
   InfoCircle,
@@ -90,24 +90,45 @@ export default function HomeContent({
   })
   const [showProDialog, setShowProDialog] = useState(false)
   const billingState = useBillingState()
-  const hasShownTrialDialogRef = useRef(false)
+
+  // Persist "has shown trial dialog" flag in electron-store to survive remounts
+  const [hasShownTrialDialog, setHasShownTrialDialogState] = useState(() => {
+    try {
+      const authStore = window.electron?.store?.get('auth') || {}
+      const value = authStore?.hasShownTrialDialog === true
+      return value
+    } catch {
+      return false
+    }
+  })
+
+  const setHasShownTrialDialog = useCallback((value: boolean) => {
+    try {
+      setHasShownTrialDialogState(value)
+      window.api.send('electron-store-set', 'auth.hasShownTrialDialog', value)
+    } catch {
+      console.warn('Failed to persist hasShownTrialDialog flag')
+    }
+  }, [])
 
   // Show trial dialog when trial starts
   useEffect(() => {
     if (
       billingState.isTrialActive &&
       billingState.proStatus === 'free_trial' &&
-      !hasShownTrialDialogRef.current &&
+      !hasShownTrialDialog &&
       !billingState.isLoading
     ) {
       setShowProDialog(true)
-      hasShownTrialDialogRef.current = true
+      setHasShownTrialDialog(true)
     }
   }, [
     billingState.isTrialActive,
     billingState.proStatus,
     billingState.isLoading,
     isStartingTrial,
+    hasShownTrialDialog,
+    setHasShownTrialDialog,
   ])
 
   // Listen for trial start event to refresh billing state
@@ -130,14 +151,27 @@ export default function HomeContent({
   }, [billingState])
 
   // Reset dialog flag when trial is no longer active or user becomes pro
+  // Only reset if we're certain the trial has ended (not just during loading/refreshing)
   useEffect(() => {
-    if (
-      billingState.proStatus !== 'free_trial' ||
-      !billingState.isTrialActive
-    ) {
-      hasShownTrialDialogRef.current = false
+    if (billingState.isLoading) {
+      // Don't reset during loading to avoid race conditions
+      return
     }
-  }, [billingState.proStatus, billingState.isTrialActive])
+
+    const shouldReset =
+      billingState.proStatus === 'active_pro' ||
+      (billingState.proStatus === 'none' && !billingState.isTrialActive)
+
+    if (shouldReset && hasShownTrialDialog) {
+      setHasShownTrialDialog(false)
+    }
+  }, [
+    billingState.proStatus,
+    billingState.isTrialActive,
+    billingState.isLoading,
+    hasShownTrialDialog,
+    setHasShownTrialDialog,
+  ])
 
   // Calculate statistics from interactions
   const calculateStats = useCallback(
@@ -276,7 +310,6 @@ export default function HomeContent({
 
     // Listen for new interactions
     const handleInteractionCreated = () => {
-      console.log('[HomeContent] New interaction created, refreshing list...')
       loadInteractions()
     }
 

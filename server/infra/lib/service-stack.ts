@@ -77,6 +77,18 @@ export class ServiceStack extends Stack {
       `${stageName}/ito/cerebras-api-key`,
     )
 
+    const stripeSecretKeySecret = Secret.fromSecretNameV2(
+      this,
+      'StripeSecretKey',
+      `${stageName}/ito/stripe-secret-key`,
+    )
+
+    const stripeWebhookSecretSecret = Secret.fromSecretNameV2(
+      this,
+      'StripeWebhookSecret',
+      `${stageName}/ito/stripe-webhook-secret`,
+    )
+
     // Setup domain and certificate
     const zone = HostedZone.fromLookup(this, 'HostedZone', {
       domainName: 'ito-api.com',
@@ -98,6 +110,8 @@ export class ServiceStack extends Stack {
       dbCredentialsSecret,
       groqApiKeySecret,
       cerebrasApiKeySecret,
+      stripeSecretKeySecret,
+      stripeWebhookSecretSecret,
       dbEndpoint: props.dbEndpoint,
       dbName: DB_NAME,
       dbPort: DB_PORT,

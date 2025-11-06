@@ -104,9 +104,15 @@ const mockSubscriptionsRepo: {
 }
 
 const mockTrialsRepo: {
+  getByStripeSubscriptionId: AnyObject | null
+  upsertFromStripeSubscription: AnyObject | null
   completeTrial: boolean
+  shouldThrow: string | null
 } = {
+  getByStripeSubscriptionId: null,
+  upsertFromStripeSubscription: null,
   completeTrial: false,
+  shouldThrow: null,
 }
 
 mock.module('../db/repo.js', () => {
@@ -142,7 +148,52 @@ mock.module('../db/repo.js', () => {
       },
     },
     TrialsRepository: {
+      getByStripeSubscriptionId: async (subscriptionId: string) => {
+        if (mockTrialsRepo.shouldThrow === 'getByStripeSubscriptionId') {
+          mockTrialsRepo.shouldThrow = null
+          throw new Error('Database error')
+        }
+        if (mockTrialsRepo.getByStripeSubscriptionId === null) {
+          return null
+        }
+        if (typeof mockTrialsRepo.getByStripeSubscriptionId === 'function') {
+          return mockTrialsRepo.getByStripeSubscriptionId(subscriptionId)
+        }
+        return mockTrialsRepo.getByStripeSubscriptionId
+      },
+      upsertFromStripeSubscription: async (
+        userId: string,
+        subscriptionId: string,
+        trialStartAt: Date | null,
+        hasCompletedTrial: boolean,
+      ) => {
+        if (mockTrialsRepo.shouldThrow === 'upsertFromStripeSubscription') {
+          mockTrialsRepo.shouldThrow = null
+          throw new Error('Database error')
+        }
+        if (mockTrialsRepo.upsertFromStripeSubscription === null) {
+          return {
+            user_id: userId,
+            stripe_subscription_id: subscriptionId,
+            trial_start_at: trialStartAt,
+            has_completed_trial: hasCompletedTrial,
+          }
+        }
+        if (typeof mockTrialsRepo.upsertFromStripeSubscription === 'function') {
+          return mockTrialsRepo.upsertFromStripeSubscription(
+            userId,
+            subscriptionId,
+            trialStartAt,
+            hasCompletedTrial,
+          )
+        }
+        return mockTrialsRepo.upsertFromStripeSubscription
+      },
       completeTrial: async (userId: string) => {
+        if (mockTrialsRepo.shouldThrow === 'completeTrial') {
+          mockTrialsRepo.shouldThrow = null
+          throw new Error('Database error')
+        }
         mockTrialsRepo.completeTrial = true
         return {
           user_id: userId,
@@ -170,7 +221,10 @@ describe('registerStripeWebhook', () => {
     mockStripeState.eventToReturn = null
     mockSubscriptionsRepo.upsertActive = null
     mockSubscriptionsRepo.deleteByStripeSubscriptionId = false
+    mockTrialsRepo.getByStripeSubscriptionId = null
+    mockTrialsRepo.upsertFromStripeSubscription = null
     mockTrialsRepo.completeTrial = false
+    mockTrialsRepo.shouldThrow = null
   })
 
   afterEach(() => {
@@ -394,6 +448,8 @@ describe('registerStripeWebhook', () => {
       }
 
       mockStripeState.eventToReturn = eventPayload
+      // Mock that this is not a trial subscription
+      mockTrialsRepo.getByStripeSubscriptionId = null
 
       const res = await app.inject({
         method: 'POST',
@@ -436,6 +492,8 @@ describe('registerStripeWebhook', () => {
       }
 
       mockStripeState.eventToReturn = eventPayload
+      // Mock that this is not a trial subscription
+      mockTrialsRepo.getByStripeSubscriptionId = null
 
       const res = await app.inject({
         method: 'POST',
@@ -471,6 +529,8 @@ describe('registerStripeWebhook', () => {
       }
 
       mockStripeState.eventToReturn = eventPayload
+      // Mock that this is not a trial subscription
+      mockTrialsRepo.getByStripeSubscriptionId = null
 
       const res = await app.inject({
         method: 'POST',
@@ -507,6 +567,8 @@ describe('registerStripeWebhook', () => {
       }
 
       mockStripeState.eventToReturn = eventPayload
+      // Mock that this is not a trial subscription
+      mockTrialsRepo.getByStripeSubscriptionId = null
 
       const res = await app.inject({
         method: 'POST',
@@ -694,6 +756,180 @@ describe('registerStripeWebhook', () => {
       expect(res.statusCode).toBe(500)
       const body = JSON.parse(res.body)
       expect(body.error).toBe('Internal error')
+      await app.close()
+    })
+
+    it('handles customer.subscription.created event for trial subscription', async () => {
+      const app = createTestApp()
+      await registerStripeWebhook(app)
+
+      const eventPayload = {
+        type: 'customer.subscription.created',
+        data: {
+          object: {
+            id: 'sub_test_123',
+            status: 'trialing',
+            customer: 'cus_test_123',
+            metadata: { user_sub: 'user-123' },
+            trial_start: Math.floor(Date.now() / 1000),
+            items: {
+              data: [
+                {
+                  current_period_start: Math.floor(Date.now() / 1000),
+                },
+              ],
+            },
+          },
+        },
+      }
+
+      mockStripeState.eventToReturn = eventPayload
+      // Mock that this IS a trial subscription
+      mockTrialsRepo.getByStripeSubscriptionId = {
+        user_id: 'user-123',
+        stripe_subscription_id: 'sub_test_123',
+      }
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/stripe/webhook',
+        headers: {
+          'content-type': 'application/json',
+          'stripe-signature': 'valid_signature',
+        },
+        payload: JSON.stringify(eventPayload),
+      })
+
+      expect(res.statusCode).toBe(200)
+      const body = JSON.parse(res.body)
+      expect(body.received).toBe(true)
+      // Should update trial but not complete it (status is trialing)
+      expect(mockTrialsRepo.completeTrial).toBe(false)
+      await app.close()
+    })
+
+    it('handles customer.subscription.trial_will_end event', async () => {
+      const app = createTestApp()
+      await registerStripeWebhook(app)
+
+      const eventPayload = {
+        type: 'customer.subscription.trial_will_end',
+        data: {
+          object: {
+            id: 'sub_test_123',
+            status: 'trialing',
+            customer: 'cus_test_123',
+            metadata: { user_sub: 'user-123' },
+            trial_start: Math.floor(Date.now() / 1000),
+          },
+        },
+      }
+
+      mockStripeState.eventToReturn = eventPayload
+      // Mock that this IS a trial subscription
+      mockTrialsRepo.getByStripeSubscriptionId = {
+        user_id: 'user-123',
+        stripe_subscription_id: 'sub_test_123',
+      }
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/stripe/webhook',
+        headers: {
+          'content-type': 'application/json',
+          'stripe-signature': 'valid_signature',
+        },
+        payload: JSON.stringify(eventPayload),
+      })
+
+      expect(res.statusCode).toBe(200)
+      const body = JSON.parse(res.body)
+      expect(body.received).toBe(true)
+      // Should update trial status but not complete it
+      expect(mockTrialsRepo.completeTrial).toBe(false)
+      await app.close()
+    })
+
+    it('handles customer.subscription.paused event', async () => {
+      const app = createTestApp()
+      await registerStripeWebhook(app)
+
+      const eventPayload = {
+        type: 'customer.subscription.paused',
+        data: {
+          object: {
+            id: 'sub_test_123',
+            status: 'paused',
+            customer: 'cus_test_123',
+            metadata: { user_sub: 'user-123' },
+          },
+        },
+      }
+
+      mockStripeState.eventToReturn = eventPayload
+      // Mock that this IS a trial subscription
+      mockTrialsRepo.getByStripeSubscriptionId = {
+        user_id: 'user-123',
+        stripe_subscription_id: 'sub_test_123',
+      }
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/stripe/webhook',
+        headers: {
+          'content-type': 'application/json',
+          'stripe-signature': 'valid_signature',
+        },
+        payload: JSON.stringify(eventPayload),
+      })
+
+      expect(res.statusCode).toBe(200)
+      const body = JSON.parse(res.body)
+      expect(body.received).toBe(true)
+      // Should mark trial as completed (paused due to no payment method)
+      expect(mockTrialsRepo.completeTrial).toBe(false)
+      await app.close()
+    })
+
+    it('handles customer.subscription.deleted event for trial subscription', async () => {
+      const app = createTestApp()
+      await registerStripeWebhook(app)
+
+      const eventPayload = {
+        type: 'customer.subscription.deleted',
+        data: {
+          object: {
+            id: 'sub_test_123',
+            status: 'canceled',
+            customer: 'cus_test_123',
+            metadata: { user_sub: 'user-123' },
+          },
+        },
+      }
+
+      mockStripeState.eventToReturn = eventPayload
+      // Mock that this IS a trial subscription
+      mockTrialsRepo.getByStripeSubscriptionId = {
+        user_id: 'user-123',
+        stripe_subscription_id: 'sub_test_123',
+      }
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/stripe/webhook',
+        headers: {
+          'content-type': 'application/json',
+          'stripe-signature': 'valid_signature',
+        },
+        payload: JSON.stringify(eventPayload),
+      })
+
+      expect(res.statusCode).toBe(200)
+      const body = JSON.parse(res.body)
+      expect(body.received).toBe(true)
+      expect(mockSubscriptionsRepo.deleteByStripeSubscriptionId).toBe(true)
+      // Should update trial status to completed
+      expect(mockTrialsRepo.completeTrial).toBe(false)
       await app.close()
     })
   })

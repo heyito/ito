@@ -1,11 +1,11 @@
-import { getCurrentUserId } from '../store'
+import { getCurrentUserId, store } from '../store'
 import { platform, hostname, arch } from 'os'
 import { performance } from 'perf_hooks'
-import { analytics } from '@/app/components/analytics'
 import { app } from 'electron'
 import { TimingReport, TimingEvent } from '@/app/generated/ito_pb'
 import { grpcClient } from '../../clients/grpcClient'
 import { interactionManager } from '../interactions/InteractionManager'
+import { STORE_KEYS } from '../../constants/store-keys'
 
 /**
  * Enum for all tracked timing events in the interaction lifecycle
@@ -54,7 +54,9 @@ export class TimingCollector {
   }
 
   private shouldCollect(): boolean {
-    return analytics.isEnabled()
+    const settings = store.get(STORE_KEYS.SETTINGS)
+    const shareAnalytics = settings?.shareAnalytics ?? false
+    return shareAnalytics
   }
 
   /**

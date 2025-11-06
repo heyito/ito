@@ -13,6 +13,7 @@ export const up = pgm => {
     user_id: { type: 'text', notNull: true, unique: true },
     trial_start_at: { type: 'timestamptz' },
     has_completed_trial: { type: 'boolean', notNull: true, default: false },
+    stripe_subscription_id: { type: 'text', unique: true },
     created_at: {
       type: 'timestamptz',
       notNull: true,
@@ -27,6 +28,8 @@ export const up = pgm => {
 
   // Index for lookups by user
   pgm.createIndex('user_trials', 'user_id')
+  // Index for lookups by Stripe subscription ID
+  pgm.createIndex('user_trials', 'stripe_subscription_id')
 }
 
 /**
@@ -36,5 +39,4 @@ export const up = pgm => {
  */
 export const down = pgm => {
   pgm.dropTable('user_trials')
-  pgm.dropIndex('user_trials', 'user_id')
 }

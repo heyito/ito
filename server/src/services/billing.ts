@@ -2,12 +2,71 @@ import { FastifyInstance } from 'fastify'
 import Stripe from 'stripe'
 import { SubscriptionsRepository, TrialsRepository } from '../db/repo.js'
 
+async function getAuth0ManagementToken(): Promise<string | null> {
+  const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN
+  const AUTH0_MGMT_CLIENT_ID = process.env.AUTH0_MGMT_CLIENT_ID
+  const AUTH0_MGMT_CLIENT_SECRET = process.env.AUTH0_MGMT_CLIENT_SECRET
+
+  if (!AUTH0_DOMAIN || !AUTH0_MGMT_CLIENT_ID || !AUTH0_MGMT_CLIENT_SECRET) {
+    return null
+  }
+
+  try {
+    const tokenUrl = `https://${AUTH0_DOMAIN}/oauth/token`
+    const res = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        grant_type: 'client_credentials',
+        client_id: AUTH0_MGMT_CLIENT_ID,
+        client_secret: AUTH0_MGMT_CLIENT_SECRET,
+        audience: `https://${AUTH0_DOMAIN}/api/v2/`,
+      }),
+    })
+    const data: any = await res.json()
+    if (!res.ok || !data?.access_token) {
+      return null
+    }
+    return data.access_token as string
+  } catch {
+    return null
+  }
+}
+
+async function getUserInfoFromAuth0(
+  userSub: string,
+): Promise<{ email?: string; name?: string } | null> {
+  const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN
+  if (!AUTH0_DOMAIN) return null
+
+  const token = await getAuth0ManagementToken()
+  if (!token) return null
+
+  try {
+    const encodedSub = encodeURIComponent(userSub)
+    const url = `https://${AUTH0_DOMAIN}/api/v2/users/${encodedSub}`
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    if (!res.ok) return null
+
+    const user = await res.json()
+    return {
+      email: user.email as string | undefined,
+      name: user.name as string | undefined,
+    }
+  } catch {
+    return null
+  }
+}
+
 type Options = {
   requireAuth: boolean
 }
 
-function getEnv(name: string, fallback?: string): string {
-  const v = process.env[name] ?? fallback
+function getEnv(name: string): string {
+  const v = process.env[name]
   if (!v) throw new Error(`Missing required env var: ${name}`)
   return v
 }
@@ -42,11 +101,16 @@ export const registerBillingRoutes = async (
         return
       }
 
+      // Get user info from Auth0 Management API (access token only has 'sub')
+      const auth0UserInfo = await getUserInfoFromAuth0(userSub)
+      const userEmail = auth0UserInfo?.email
+
       console.log('STRIPE_PRICE_ID', STRIPE_PRICE_ID)
 
       const session = await stripe.checkout.sessions.create({
         mode: 'subscription',
         client_reference_id: userSub,
+        customer_email: userEmail,
         metadata: { user_sub: userSub },
         subscription_data: {
           metadata: { user_sub: userSub },
@@ -112,6 +176,27 @@ export const registerBillingRoutes = async (
       const stripeCustomerId = session.customer
       const stripeSubscriptionId = session.subscription
 
+      // Update customer with name from Auth0 (access token only has 'sub')
+      const auth0UserInfo = await getUserInfoFromAuth0(userSub)
+      if (auth0UserInfo?.name && stripeCustomerId) {
+        await stripe.customers.update(stripeCustomerId, {
+          name: auth0UserInfo.name,
+          metadata: { user_sub: userSub },
+        })
+      }
+
+      // Check if subscription already exists (idempotency check)
+      const existingSub = await SubscriptionsRepository.getByUserId(userSub)
+      if (existingSub?.stripe_subscription_id === stripeSubscriptionId) {
+        // Already processed - return existing data
+        reply.send({
+          success: true,
+          pro_status: 'active_pro',
+          subscriptionStartAt: existingSub.subscription_start_at,
+        })
+        return
+      }
+
       const subscription =
         await stripe.subscriptions.retrieve(stripeSubscriptionId)
 
@@ -130,7 +215,7 @@ export const registerBillingRoutes = async (
         subscriptionStartAt,
       )
 
-      // End trial if applicable
+      // End trial if applicable (idempotent - safe to call multiple times)
       await TrialsRepository.completeTrial(userSub)
 
       reply.send({
@@ -185,12 +270,90 @@ export const registerBillingRoutes = async (
       }
 
       const sub = await SubscriptionsRepository.getByUserId(userSub)
-
       const trial = await TrialsRepository.getByUserId(userSub)
-      const now = Date.now()
-      const startMs = trial?.trial_start_at?.getTime()
+
       const TRIAL_DAYS = 14
       const dayMs = 24 * 60 * 60 * 1000
+
+      // If user has an active paid subscription, return that
+      if (sub) {
+        const trialBlock = {
+          trialDays: TRIAL_DAYS,
+          trialStartAt: trial?.trial_start_at
+            ? trial.trial_start_at.toISOString()
+            : null,
+          daysLeft: 0,
+          isTrialActive: false,
+          hasCompletedTrial: true,
+        }
+
+        reply.send({
+          success: true,
+          pro_status: 'active_pro',
+          subscriptionStartAt: sub.subscription_start_at,
+          trial: trialBlock,
+        })
+        return
+      }
+
+      // Check Stripe subscription status for trial
+      if (trial?.stripe_subscription_id) {
+        try {
+          const stripeSubscription = await stripe.subscriptions.retrieve(
+            trial.stripe_subscription_id,
+          )
+
+          const now = Date.now()
+          const trialEnd = stripeSubscription.trial_end
+            ? new Date(stripeSubscription.trial_end * 1000)
+            : null
+          const trialStart = trialEnd
+            ? new Date(trialEnd.getTime() - TRIAL_DAYS * dayMs)
+            : trial?.trial_start_at || null
+
+          let daysLeft = 0
+          let isTrialActive = false
+
+          if (
+            trialEnd &&
+            stripeSubscription.status === 'trialing' &&
+            !trial.has_completed_trial &&
+            trialStart
+          ) {
+            const elapsedMs = now - trialStart.getTime()
+            const elapsedDays = Math.floor(elapsedMs / dayMs)
+            daysLeft = Math.max(0, TRIAL_DAYS - elapsedDays)
+            isTrialActive = daysLeft > 0
+          }
+
+          const trialBlock = {
+            trialDays: TRIAL_DAYS,
+            trialStartAt: trialStart ? trialStart.toISOString() : null,
+            daysLeft,
+            isTrialActive,
+            hasCompletedTrial: trial.has_completed_trial,
+          }
+
+          if (isTrialActive) {
+            reply.send({
+              success: true,
+              pro_status: 'free_trial',
+              trial: trialBlock,
+            })
+            return
+          }
+        } catch (stripeError: any) {
+          // If Stripe subscription doesn't exist, fall back to database status
+          fastify.log.warn(
+            { err: stripeError },
+            'Failed to retrieve Stripe subscription, using database status',
+          )
+        }
+      }
+
+      // Fall back to database trial status
+      const now = Date.now()
+      const startMs = trial?.trial_start_at?.getTime()
       const isTrialActive =
         !!startMs &&
         now - startMs < TRIAL_DAYS * dayMs &&
@@ -206,16 +369,6 @@ export const registerBillingRoutes = async (
         daysLeft,
         isTrialActive,
         hasCompletedTrial: !!trial?.has_completed_trial,
-      }
-
-      if (sub) {
-        reply.send({
-          success: true,
-          pro_status: 'active_pro',
-          subscriptionStartAt: sub.subscription_start_at,
-          trial: trialBlock,
-        })
-        return
       }
 
       if (isTrialActive) {

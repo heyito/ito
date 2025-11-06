@@ -78,6 +78,34 @@ export const registerStripeWebhook = async (fastify: FastifyInstance) => {
           case 'customer.subscription.created':
           case 'customer.subscription.updated': {
             const sub = event.data.object as Stripe.Subscription
+            const userSub = (sub.metadata?.user_sub || sub.metadata?.user) as
+              | string
+              | undefined
+            if (!userSub) break
+
+            // Check if this is a trial subscription
+            const trialRow = await TrialsRepository.getByStripeSubscriptionId(
+              sub.id,
+            )
+            if (trialRow) {
+              // Sync trial status from Stripe
+              const trialStartAt = sub.trial_start
+                ? new Date(sub.trial_start * 1000)
+                : null
+              const hasCompletedTrial =
+                sub.status === 'active' ||
+                sub.status === 'past_due' ||
+                sub.status === 'canceled' ||
+                sub.status === 'incomplete_expired'
+
+              await TrialsRepository.upsertFromStripeSubscription(
+                userSub,
+                sub.id,
+                trialStartAt,
+                hasCompletedTrial,
+              )
+            }
+
             if (sub.status === 'canceled') {
               if (sub.id) {
                 await SubscriptionsRepository.deleteByStripeSubscriptionId(
@@ -87,10 +115,6 @@ export const registerStripeWebhook = async (fastify: FastifyInstance) => {
               break
             }
             if (sub.status !== 'active') break
-            const userSub = (sub.metadata?.user_sub || sub.metadata?.user) as
-              | string
-              | undefined
-            if (!userSub) break
 
             const stripeCustomerId = sub.customer as string
             const stripeSubscriptionId = sub.id
@@ -105,13 +129,83 @@ export const registerStripeWebhook = async (fastify: FastifyInstance) => {
               stripeSubscriptionId,
               subscriptionStartAt,
             )
-            await TrialsRepository.completeTrial(userSub)
+            // Mark trial as completed when subscription becomes active
+            if (sub.status === 'active') {
+              await TrialsRepository.completeTrial(userSub)
+            }
             break
           }
+
           case 'customer.subscription.deleted': {
             const sub = event.data.object as Stripe.Subscription
+            const userSub = (sub.metadata?.user_sub || sub.metadata?.user) as
+              | string
+              | undefined
+
+            // Update trial status if this was a trial subscription
+            if (userSub) {
+              const trialRow = await TrialsRepository.getByStripeSubscriptionId(
+                sub.id,
+              )
+              if (trialRow) {
+                await TrialsRepository.upsertFromStripeSubscription(
+                  userSub,
+                  sub.id,
+                  null,
+                  true, // Trial completed (canceled)
+                )
+              }
+            }
+
             if (sub.id) {
               await SubscriptionsRepository.deleteByStripeSubscriptionId(sub.id)
+            }
+            break
+          }
+
+          case 'customer.subscription.trial_will_end': {
+            const sub = event.data.object as Stripe.Subscription
+            const userSub = (sub.metadata?.user_sub || sub.metadata?.user) as
+              | string
+              | undefined
+            if (!userSub) break
+
+            // Sync trial status - trial is ending soon
+            const trialRow = await TrialsRepository.getByStripeSubscriptionId(
+              sub.id,
+            )
+            if (trialRow) {
+              const trialStartAt = sub.trial_start
+                ? new Date(sub.trial_start * 1000)
+                : null
+              await TrialsRepository.upsertFromStripeSubscription(
+                userSub,
+                sub.id,
+                trialStartAt,
+                false, // Still in trial
+              )
+            }
+            break
+          }
+
+          case 'customer.subscription.paused': {
+            const sub = event.data.object as Stripe.Subscription
+            const userSub = (sub.metadata?.user_sub || sub.metadata?.user) as
+              | string
+              | undefined
+            if (!userSub) break
+
+            // Trial ended without payment method and was paused
+            const trialRow = await TrialsRepository.getByStripeSubscriptionId(
+              sub.id,
+            )
+            if (trialRow) {
+              await TrialsRepository.upsertFromStripeSubscription(
+                userSub,
+                sub.id,
+                null,
+                true, // Trial completed (paused due to no payment method)
+              )
             }
             break
           }

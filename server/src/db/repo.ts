@@ -412,6 +412,38 @@ export class TrialsRepository {
     return res.rows[0]
   }
 
+  static async getByStripeSubscriptionId(
+    stripeSubscriptionId: string,
+  ): Promise<UserTrial | undefined> {
+    const res = await pool.query<UserTrial>(
+      'SELECT * FROM user_trials WHERE stripe_subscription_id = $1',
+      [stripeSubscriptionId],
+    )
+    return res.rows[0]
+  }
+
+  static async upsertFromStripeSubscription(
+    userId: string,
+    stripeSubscriptionId: string,
+    trialStartAt: Date | null,
+    hasCompletedTrial: boolean,
+  ): Promise<UserTrial> {
+    const res = await pool.query<UserTrial>(
+      `INSERT INTO user_trials (
+         user_id, stripe_subscription_id, trial_start_at, has_completed_trial, updated_at
+       ) VALUES ($1, $2, $3, $4, current_timestamp)
+       ON CONFLICT (user_id)
+       DO UPDATE SET
+         stripe_subscription_id = EXCLUDED.stripe_subscription_id,
+         trial_start_at = EXCLUDED.trial_start_at,
+         has_completed_trial = EXCLUDED.has_completed_trial,
+         updated_at = current_timestamp
+       RETURNING *`,
+      [userId, stripeSubscriptionId, trialStartAt, hasCompletedTrial],
+    )
+    return res.rows[0]
+  }
+
   static async startTrial(userId: string, startAt?: Date): Promise<UserTrial> {
     // Ensure a row exists; idempotently set start when not completed and not already set
     const existing = await this.getByUserId(userId)

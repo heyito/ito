@@ -11,16 +11,16 @@ export const shorthands = undefined
 export const up = pgm => {
   pgm.createTable('user_trials', {
     user_id: { type: 'text', notNull: true, unique: true },
-    trial_start_at: { type: 'timestamptz' },
+    trial_start_at: { type: 'timestamp' },
     has_completed_trial: { type: 'boolean', notNull: true, default: false },
     stripe_subscription_id: { type: 'text', unique: true },
     created_at: {
-      type: 'timestamptz',
+      type: 'timestamp',
       notNull: true,
       default: pgm.func('current_timestamp'),
     },
     updated_at: {
-      type: 'timestamptz',
+      type: 'timestamp',
       notNull: true,
       default: pgm.func('current_timestamp'),
     },

@@ -226,11 +226,15 @@ export const registerTrialRoutes = async (
         const status = computeStatusFromStripe(subscription)
 
         // Sync status to database
+        const trialEndAt = subscription.trial_end
+          ? new Date(subscription.trial_end * 1000)
+          : null
         await TrialsRepository.upsertFromStripeSubscription(
           userSub,
           subscription.id,
           status.trialStartAt ? new Date(status.trialStartAt) : null,
           status.hasCompletedTrial,
+          trialEndAt,
         )
 
         reply.send(status)
@@ -272,11 +276,15 @@ export const registerTrialRoutes = async (
       const trialStartAt = subscription.trial_start
         ? new Date(subscription.trial_start * 1000)
         : null
+      const trialEndAt = subscription.trial_end
+        ? new Date(subscription.trial_end * 1000)
+        : null
       const row = await TrialsRepository.upsertFromStripeSubscription(
         userSub,
         subscription.id,
         trialStartAt,
         false,
+        trialEndAt,
       )
 
       const status = computeStatusFromStripe(subscription)

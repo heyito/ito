@@ -92,6 +92,9 @@ export const registerStripeWebhook = async (fastify: FastifyInstance) => {
               const trialStartAt = sub.trial_start
                 ? new Date(sub.trial_start * 1000)
                 : null
+              const trialEndAt = sub.trial_end
+                ? new Date(sub.trial_end * 1000)
+                : null
               const hasCompletedTrial =
                 sub.status === 'active' ||
                 sub.status === 'past_due' ||
@@ -103,6 +106,7 @@ export const registerStripeWebhook = async (fastify: FastifyInstance) => {
                 sub.id,
                 trialStartAt,
                 hasCompletedTrial,
+                trialEndAt,
               )
             }
 
@@ -148,11 +152,15 @@ export const registerStripeWebhook = async (fastify: FastifyInstance) => {
                 sub.id,
               )
               if (trialRow) {
+                const trialEndAt = sub.trial_end
+                  ? new Date(sub.trial_end * 1000)
+                  : null
                 await TrialsRepository.upsertFromStripeSubscription(
                   userSub,
                   sub.id,
                   null,
                   true, // Trial completed (canceled)
+                  trialEndAt,
                 )
               }
             }
@@ -178,11 +186,15 @@ export const registerStripeWebhook = async (fastify: FastifyInstance) => {
               const trialStartAt = sub.trial_start
                 ? new Date(sub.trial_start * 1000)
                 : null
+              const trialEndAt = sub.trial_end
+                ? new Date(sub.trial_end * 1000)
+                : null
               await TrialsRepository.upsertFromStripeSubscription(
                 userSub,
                 sub.id,
                 trialStartAt,
                 false, // Still in trial
+                trialEndAt,
               )
             }
             break
@@ -200,11 +212,15 @@ export const registerStripeWebhook = async (fastify: FastifyInstance) => {
               sub.id,
             )
             if (trialRow) {
+              const trialEndAt = sub.trial_end
+                ? new Date(sub.trial_end * 1000)
+                : null
               await TrialsRepository.upsertFromStripeSubscription(
                 userSub,
                 sub.id,
                 null,
                 true, // Trial completed (paused due to no payment method)
+                trialEndAt,
               )
             }
             break

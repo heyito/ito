@@ -63,6 +63,7 @@ export interface AdvancedSettings {
 export interface UserTrial {
   user_id: string
   trial_start_at: Date | null
+  trial_end_at: Date | null
   has_completed_trial: boolean
   stripe_subscription_id: string | null
   created_at: Date

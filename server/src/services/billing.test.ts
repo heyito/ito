@@ -694,9 +694,11 @@ describe('registerBillingRoutes', () => {
       })
 
       const trialStart = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+      const trialEnd = new Date(Date.now() + 9 * 24 * 60 * 60 * 1000) // 9 days from now
       mockTrialsRepo.getByUserId = {
         user_id: 'user-123',
         trial_start_at: trialStart,
+        trial_end_at: trialEnd,
         has_completed_trial: false,
       }
 
@@ -724,9 +726,11 @@ describe('registerBillingRoutes', () => {
       })
 
       const trialStart = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000)
+      const trialEnd = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000) // 6 days ago (expired)
       mockTrialsRepo.getByUserId = {
         user_id: 'user-123',
         trial_start_at: trialStart,
+        trial_end_at: trialEnd,
         has_completed_trial: false,
       }
 

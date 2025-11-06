@@ -105,8 +105,6 @@ export const registerBillingRoutes = async (
       const auth0UserInfo = await getUserInfoFromAuth0(userSub)
       const userEmail = auth0UserInfo?.email
 
-      console.log('STRIPE_PRICE_ID', STRIPE_PRICE_ID)
-
       const session = await stripe.checkout.sessions.create({
         mode: 'subscription',
         client_reference_id: userSub,
@@ -124,8 +122,6 @@ export const registerBillingRoutes = async (
         success_url: `${STRIPE_PUBLIC_BASE_URL}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${STRIPE_PUBLIC_BASE_URL}/billing/cancel`,
       })
-
-      console.log('session', session)
 
       reply.send({ success: true, url: session.url })
     } catch (error: any) {
@@ -272,16 +268,22 @@ export const registerBillingRoutes = async (
       const sub = await SubscriptionsRepository.getByUserId(userSub)
       const trial = await TrialsRepository.getByUserId(userSub)
 
-      const TRIAL_DAYS = 14
-      const dayMs = 24 * 60 * 60 * 1000
+      // Calculate trial days from database (synced from Stripe via webhooks)
+      const trialStartAt = trial?.trial_start_at
+      const trialEndAt = trial?.trial_end_at
+      const trialDays =
+        trialStartAt && trialEndAt
+          ? Math.ceil(
+              (trialEndAt.getTime() - trialStartAt.getTime()) /
+                (24 * 60 * 60 * 1000),
+            )
+          : 14 // Fallback to 14 if dates not available
 
       // If user has an active paid subscription, return that
       if (sub) {
         const trialBlock = {
-          trialDays: TRIAL_DAYS,
-          trialStartAt: trial?.trial_start_at
-            ? trial.trial_start_at.toISOString()
-            : null,
+          trialDays,
+          trialStartAt: trialStartAt ? trialStartAt.toISOString() : null,
           daysLeft: 0,
           isTrialActive: false,
           hasCompletedTrial: true,
@@ -296,76 +298,22 @@ export const registerBillingRoutes = async (
         return
       }
 
-      // Check Stripe subscription status for trial
-      if (trial?.stripe_subscription_id) {
-        try {
-          const stripeSubscription = await stripe.subscriptions.retrieve(
-            trial.stripe_subscription_id,
-          )
+      // Calculate trial status from database (synced from Stripe via webhooks)
+      const now = Date.now()
+      const isTrialActive =
+        !!trialEndAt &&
+        now < trialEndAt.getTime() &&
+        !trial?.has_completed_trial
 
-          const now = Date.now()
-          const trialEnd = stripeSubscription.trial_end
-            ? new Date(stripeSubscription.trial_end * 1000)
-            : null
-          const trialStart = trialEnd
-            ? new Date(trialEnd.getTime() - TRIAL_DAYS * dayMs)
-            : trial?.trial_start_at || null
-
-          let daysLeft = 0
-          let isTrialActive = false
-
-          if (
-            trialEnd &&
-            stripeSubscription.status === 'trialing' &&
-            !trial.has_completed_trial &&
-            trialStart
-          ) {
-            const elapsedMs = now - trialStart.getTime()
-            const elapsedDays = Math.floor(elapsedMs / dayMs)
-            daysLeft = Math.max(0, TRIAL_DAYS - elapsedDays)
-            isTrialActive = daysLeft > 0
-          }
-
-          const trialBlock = {
-            trialDays: TRIAL_DAYS,
-            trialStartAt: trialStart ? trialStart.toISOString() : null,
-            daysLeft,
-            isTrialActive,
-            hasCompletedTrial: trial.has_completed_trial,
-          }
-
-          if (isTrialActive) {
-            reply.send({
-              success: true,
-              pro_status: 'free_trial',
-              trial: trialBlock,
-            })
-            return
-          }
-        } catch (stripeError: any) {
-          // If Stripe subscription doesn't exist, fall back to database status
-          fastify.log.warn(
-            { err: stripeError },
-            'Failed to retrieve Stripe subscription, using database status',
-          )
-        }
+      let daysLeft = 0
+      if (trialEndAt && isTrialActive) {
+        const remainingMs = trialEndAt.getTime() - now
+        daysLeft = Math.max(0, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)))
       }
 
-      // Fall back to database trial status
-      const now = Date.now()
-      const startMs = trial?.trial_start_at?.getTime()
-      const isTrialActive =
-        !!startMs &&
-        now - startMs < TRIAL_DAYS * dayMs &&
-        !trial?.has_completed_trial
-      const daysElapsed = startMs ? Math.floor((now - startMs) / dayMs) : 0
-      const daysLeft = Math.max(0, TRIAL_DAYS - daysElapsed)
-
       const trialBlock = {
-        trialDays: TRIAL_DAYS,
-        trialStartAt: trial?.trial_start_at
-          ? trial.trial_start_at.toISOString()
-          : null,
+        trialDays,
+        trialStartAt: trialStartAt ? trialStartAt.toISOString() : null,
         daysLeft,
         isTrialActive,
         hasCompletedTrial: !!trial?.has_completed_trial,

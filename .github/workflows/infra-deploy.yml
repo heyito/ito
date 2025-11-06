@@ -41,7 +41,7 @@ jobs:
         run: npx cdk --version
 
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::287641434880:role/ItoGitHubCiCdRole
           aws-region: us-west-2
@@ -53,6 +53,12 @@ jobs:
       - name: Show CDK diff
         working-directory: server/infra
         run: npx cdk diff
+
+      - name: Refresh AWS credentials before deploy
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::287641434880:role/ItoGitHubCiCdRole
+          aws-region: us-west-2
 
       - name: Deploy to AWS
         working-directory: server/infra

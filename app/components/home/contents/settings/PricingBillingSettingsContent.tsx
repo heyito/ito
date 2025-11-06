@@ -12,6 +12,7 @@ export default function PricingBillingSettingsContent() {
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [downgradeLoading, setDowngradeLoading] = useState(false)
+  const [reactivateLoading, setReactivateLoading] = useState(false)
 
   // Refresh billing state when checkout session completes
   useEffect(() => {
@@ -68,6 +69,27 @@ export default function PricingBillingSettingsContent() {
     }
   }
 
+  const handleReactivate = async () => {
+    setReactivateLoading(true)
+    setCheckoutError(null)
+    try {
+      const res = await window.api.billing.reactivateSubscription()
+      if (res?.success) {
+        await billingState.refresh()
+      } else {
+        setCheckoutError(
+          res?.error || 'Failed to reactivate subscription. Please try again.',
+        )
+      }
+    } catch (err: any) {
+      setCheckoutError(
+        err?.message || 'Failed to reactivate subscription. Please try again.',
+      )
+    } finally {
+      setReactivateLoading(false)
+    }
+  }
+
   const handleContactUs = () => {
     window.api.openMailto('support@ito.ai')
   }
@@ -76,6 +98,7 @@ export default function PricingBillingSettingsContent() {
   const getStarterButtonText = () => {
     if (billingState.isLoading) return 'Loading...'
     if (downgradeLoading) return 'Cancelling...'
+    if (billingState.isScheduledForCancellation) return 'Cancelling...'
     if (billingState.proStatus === 'active_pro') return 'Downgrade plan'
     if (billingState.proStatus === 'none' && !billingState.isTrialActive) {
       return 'Current plan'
@@ -87,22 +110,27 @@ export default function PricingBillingSettingsContent() {
     return (
       (billingState.proStatus === 'none' && !billingState.isTrialActive) ||
       billingState.isLoading ||
-      downgradeLoading
+      downgradeLoading ||
+      billingState.isScheduledForCancellation
     )
   }
 
   const getProButtonText = () => {
     if (checkoutLoading) return 'Loading...'
     if (billingState.isLoading) return 'Loading...'
+    if (reactivateLoading) return 'Reactivating...'
+    if (billingState.isScheduledForCancellation) return 'Reactivate'
     if (billingState.proStatus === 'active_pro') return 'Current plan'
     return 'Upgrade'
   }
 
   const getProButtonDisabled = () => {
     return (
-      billingState.proStatus === 'active_pro' ||
+      (billingState.proStatus === 'active_pro' &&
+        !billingState.isScheduledForCancellation) ||
       billingState.isLoading ||
-      checkoutLoading
+      checkoutLoading ||
+      reactivateLoading
     )
   }
 
@@ -136,6 +164,25 @@ export default function PricingBillingSettingsContent() {
           {checkoutError}
         </div>
       )}
+
+      {/* Cancellation Notice */}
+      {billingState.isScheduledForCancellation &&
+        billingState.subscriptionEndAt && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
+            <p className="font-medium mb-1">
+              Your subscription will end on{' '}
+              {billingState.subscriptionEndAt.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </p>
+            <p className="text-yellow-700">
+              You'll continue to have Pro access until then. You can reactivate
+              anytime before the end date.
+            </p>
+          </div>
+        )}
 
       {/* Pricing Cards */}
       <div className="grid grid-cols-3 gap-6">
@@ -181,7 +228,11 @@ export default function PricingBillingSettingsContent() {
               size="lg"
               className="w-full bg-gray-900 hover:bg-gray-800 text-white rounded-xl"
               disabled={getProButtonDisabled()}
-              onClick={handleCheckout}
+              onClick={
+                billingState.isScheduledForCancellation
+                  ? handleReactivate
+                  : handleCheckout
+              }
             >
               {getProButtonText()}
             </Button>

@@ -154,6 +154,7 @@ export const registerBillingRoutes = async (
         stripeCustomerId,
         stripeSubscriptionId,
         subscriptionStartAt,
+        null, // Clear subscription_end_at when reactivating
       )
 
       // End trial if applicable (idempotent - safe to call multiple times)
@@ -188,7 +189,20 @@ export const registerBillingRoutes = async (
         return
       }
 
-      await stripe.subscriptions.cancel(sub.stripe_subscription_id)
+      // Schedule cancellation at period end instead of immediate cancellation
+      const updatedSubscription = await stripe.subscriptions.update(
+        sub.stripe_subscription_id,
+        { cancel_at_period_end: true },
+      )
+
+      // Get the current_period_end and store it
+      const periodEnd =
+        'current_period_end' in updatedSubscription &&
+        typeof (updatedSubscription as any).current_period_end === 'number'
+          ? new Date((updatedSubscription as any).current_period_end * 1000)
+          : null
+
+      await SubscriptionsRepository.updateSubscriptionEndAt(userSub, periodEnd)
 
       reply.send({ success: true })
     } catch (error: any) {
@@ -234,10 +248,18 @@ export const registerBillingRoutes = async (
           hasCompletedTrial: true,
         }
 
+        const subscriptionEndAt = sub.subscription_end_at
+        const isScheduledForCancellation =
+          subscriptionEndAt !== null && subscriptionEndAt.getTime() > Date.now()
+
         reply.send({
           success: true,
           pro_status: 'active_pro',
           subscriptionStartAt: sub.subscription_start_at,
+          subscriptionEndAt: subscriptionEndAt
+            ? subscriptionEndAt.toISOString()
+            : null,
+          isScheduledForCancellation,
           trial: trialBlock,
         })
         return
@@ -275,6 +297,40 @@ export const registerBillingRoutes = async (
 
       reply.send({ success: true, pro_status: 'none', trial: trialBlock })
     } catch (error: any) {
+      reply
+        .code(500)
+        .send({ success: false, error: error?.message || 'Server error' })
+    }
+  })
+
+  fastify.post('/billing/reactivate', async (request, reply) => {
+    try {
+      const userSub = (requireAuth && (request as any).user?.sub) || undefined
+      if (!userSub) {
+        reply.code(401).send({ success: false, error: 'Unauthorized' })
+        return
+      }
+
+      const sub = await SubscriptionsRepository.getByUserId(userSub)
+      if (!sub || !sub.stripe_subscription_id) {
+        reply
+          .code(400)
+          .send({ success: false, error: 'No active subscription found' })
+        return
+      }
+
+      await stripe.subscriptions.update(sub.stripe_subscription_id, {
+        cancel_at_period_end: false,
+      })
+
+      await SubscriptionsRepository.updateSubscriptionEndAt(userSub, null)
+
+      reply.send({ success: true })
+    } catch (error: any) {
+      fastify.log.error(
+        { err: error },
+        'Stripe subscription reactivation failed',
+      )
       reply
         .code(500)
         .send({ success: false, error: error?.message || 'Server error' })

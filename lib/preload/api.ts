@@ -144,6 +144,8 @@ const api = {
       ipcRenderer.invoke('billing:confirm-session', { sessionId }),
     status: () => ipcRenderer.invoke('billing:status'),
     cancelSubscription: () => ipcRenderer.invoke('billing:cancel-subscription'),
+    reactivateSubscription: () =>
+      ipcRenderer.invoke('billing:reactivate-subscription'),
   },
   openMailto: (email: string) => ipcRenderer.invoke('open-mailto', email),
   loginItem: {

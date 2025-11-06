@@ -581,7 +581,7 @@ describe('useBillingState', () => {
     const originalSetInterval = global.setInterval
     const originalClearInterval = global.clearInterval
     let intervalCallback: (() => void) | null = null
-    const intervalId: any = {}
+    let intervalId: any = {}
     const mockSetInterval = mock((callback: () => void, delay: number) => {
       intervalCallback = callback
       return intervalId
@@ -609,7 +609,7 @@ describe('useBillingState', () => {
     mockBillingApi.status.mockClear()
 
     if (intervalCallback) {
-      await intervalCallback()
+      await (intervalCallback as () => void)()
       await waitFor(() => mockBillingApi.status.mock.calls.length > 0)
       expect(mockBillingApi.status).toHaveBeenCalledTimes(1)
     }

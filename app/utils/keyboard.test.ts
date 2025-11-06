@@ -132,8 +132,8 @@ describe('KeyState', () => {
       keyState.updateShortcut(['command', 'z'])
 
       keyState.update({ key: 'MetaLeft', type: 'keydown' } as KeyEvent)
-      expect(keyState.isKeyPressed('command')).toBe(true)
-      expect(keyState.getPressedKeys()).toContain('command')
+      expect(keyState.isKeyPressed('command-left')).toBe(true)
+      expect(keyState.getPressedKeys()).toContain('command-left')
     })
 
     test('should track keys when complete shortcut is pressed', () => {
@@ -141,7 +141,7 @@ describe('KeyState', () => {
 
       keyState.update({ key: 'MetaLeft', type: 'keydown' } as KeyEvent)
       keyState.update({ key: 'KeyZ', type: 'keydown' } as KeyEvent)
-      expect(keyState.isKeyPressed('command')).toBe(true)
+      expect(keyState.isKeyPressed('command-left')).toBe(true)
       expect(keyState.isKeyPressed('z')).toBe(true)
     })
 
@@ -150,7 +150,7 @@ describe('KeyState', () => {
       keyState.update({ key: 'MetaLeft', type: 'keydown' } as KeyEvent)
 
       keyState.update({ key: 'MetaLeft', type: 'keyup' } as KeyEvent)
-      expect(keyState.isKeyPressed('command')).toBe(false)
+      expect(keyState.isKeyPressed('command-left')).toBe(false)
     })
 
     test('should handle complex shortcuts with multiple modifier keys', () => {
@@ -159,8 +159,8 @@ describe('KeyState', () => {
       keyState.update({ key: 'MetaLeft', type: 'keydown' } as KeyEvent)
       keyState.update({ key: 'ShiftLeft', type: 'keydown' } as KeyEvent)
 
-      expect(keyState.isKeyPressed('command')).toBe(true)
-      expect(keyState.isKeyPressed('shift')).toBe(true)
+      expect(keyState.isKeyPressed('command-left')).toBe(true)
+      expect(keyState.isKeyPressed('shift-left')).toBe(true)
     })
 
     test('should handle fn key in shortcuts', () => {
@@ -177,9 +177,9 @@ describe('KeyState', () => {
 
       keyState.update({ key: 'MetaLeft', type: 'keydown' } as KeyEvent)
 
-      // Should track the command key
-      expect(keyState.isKeyPressed('command')).toBe(true)
-      expect(keyState.getPressedKeys()).toContain('command')
+      // Should track the command key (as command-left)
+      expect(keyState.isKeyPressed('command-left')).toBe(true)
+      expect(keyState.getPressedKeys()).toContain('command-left')
     })
   })
 
@@ -203,7 +203,7 @@ describe('KeyState', () => {
       keyState.updateShortcut(['command', 'x'])
 
       // KeyState should still track the pressed key correctly
-      expect(keyState.isKeyPressed('command')).toBe(true)
+      expect(keyState.isKeyPressed('command-left')).toBe(true)
     })
   })
 })

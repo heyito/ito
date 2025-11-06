@@ -5,6 +5,8 @@ import {
   DictionaryItem,
   LlmSettings,
   AdvancedSettings,
+  UserTrial,
+  UserSubscription,
 } from './models.js'
 import {
   CreateNoteRequest,
@@ -398,5 +400,152 @@ export class IpLinkRepository {
       [ipHash],
     )
     return res.rows[0]?.website_distinct_id ?? null
+  }
+}
+
+export class TrialsRepository {
+  static async getByUserId(userId: string): Promise<UserTrial | undefined> {
+    const res = await pool.query<UserTrial>(
+      'SELECT * FROM user_trials WHERE user_id = $1',
+      [userId],
+    )
+    return res.rows[0]
+  }
+
+  static async getByStripeSubscriptionId(
+    stripeSubscriptionId: string,
+  ): Promise<UserTrial | undefined> {
+    const res = await pool.query<UserTrial>(
+      'SELECT * FROM user_trials WHERE stripe_subscription_id = $1',
+      [stripeSubscriptionId],
+    )
+    return res.rows[0]
+  }
+
+  static async upsertFromStripeSubscription(
+    userId: string,
+    stripeSubscriptionId: string,
+    trialStartAt: Date | null,
+    hasCompletedTrial: boolean,
+    trialEndAt?: Date | null,
+  ): Promise<UserTrial> {
+    const res = await pool.query<UserTrial>(
+      `INSERT INTO user_trials (
+         user_id, stripe_subscription_id, trial_start_at, trial_end_at, has_completed_trial, updated_at
+       ) VALUES ($1, $2, $3, $4, $5, current_timestamp)
+       ON CONFLICT (user_id)
+       DO UPDATE SET
+         stripe_subscription_id = EXCLUDED.stripe_subscription_id,
+         trial_start_at = EXCLUDED.trial_start_at,
+         trial_end_at = EXCLUDED.trial_end_at,
+         has_completed_trial = EXCLUDED.has_completed_trial,
+         updated_at = current_timestamp
+       RETURNING *`,
+      [
+        userId,
+        stripeSubscriptionId,
+        trialStartAt,
+        trialEndAt ?? null,
+        hasCompletedTrial,
+      ],
+    )
+    return res.rows[0]
+  }
+
+  static async startTrial(userId: string, startAt?: Date): Promise<UserTrial> {
+    // Ensure a row exists; idempotently set start when not completed and not already set
+    const existing = await this.getByUserId(userId)
+    if (!existing) {
+      const res = await pool.query<UserTrial>(
+        `INSERT INTO user_trials (user_id, trial_start_at, has_completed_trial)
+         VALUES ($1, $2, false)
+         RETURNING *`,
+        [userId, startAt ?? new Date()],
+      )
+      return res.rows[0]
+    }
+
+    if (existing.has_completed_trial) {
+      return existing
+    }
+
+    if (existing.trial_start_at == null) {
+      const res = await pool.query<UserTrial>(
+        `UPDATE user_trials
+         SET trial_start_at = $2, updated_at = current_timestamp
+         WHERE user_id = $1
+         RETURNING *`,
+        [userId, startAt ?? new Date()],
+      )
+      return res.rows[0]
+    }
+
+    return existing
+  }
+
+  static async completeTrial(userId: string): Promise<UserTrial> {
+    const res = await pool.query<UserTrial>(
+      `UPDATE user_trials
+       SET has_completed_trial = true,
+           trial_start_at = NULL,
+           updated_at = current_timestamp
+       WHERE user_id = $1
+       RETURNING *`,
+      [userId],
+    )
+
+    if (res.rows[0]) return res.rows[0]
+
+    const insert = await pool.query<UserTrial>(
+      `INSERT INTO user_trials (user_id, has_completed_trial)
+       VALUES ($1, true)
+       RETURNING *`,
+      [userId],
+    )
+    return insert.rows[0]
+  }
+}
+
+export class SubscriptionsRepository {
+  static async getByUserId(
+    userId: string,
+  ): Promise<UserSubscription | undefined> {
+    const res = await pool.query<UserSubscription>(
+      'SELECT * FROM user_subscriptions WHERE user_id = $1',
+      [userId],
+    )
+    return res.rows[0]
+  }
+
+  static async upsertActive(
+    userId: string,
+    stripeCustomerId: string | null,
+    stripeSubscriptionId: string | null,
+    startAt: Date | null,
+  ): Promise<UserSubscription> {
+    const res = await pool.query<UserSubscription>(
+      `INSERT INTO user_subscriptions (
+         user_id, stripe_customer_id, stripe_subscription_id, subscription_start_at, updated_at
+       ) VALUES ($1, $2, $3, $4, current_timestamp)
+       ON CONFLICT (user_id)
+       DO UPDATE SET
+         stripe_customer_id = EXCLUDED.stripe_customer_id,
+         stripe_subscription_id = EXCLUDED.stripe_subscription_id,
+         subscription_start_at = EXCLUDED.subscription_start_at,
+         updated_at = current_timestamp
+       RETURNING *`,
+      [userId, stripeCustomerId, stripeSubscriptionId, startAt],
+    )
+    return res.rows[0]
+  }
+
+  static async deleteByStripeSubscriptionId(
+    stripeSubscriptionId: string,
+  ): Promise<boolean> {
+    const res = await pool.query(
+      'DELETE FROM user_subscriptions WHERE stripe_subscription_id = $1',
+      [stripeSubscriptionId],
+    )
+    return (res.rowCount ?? 0) > 0
   }
 }

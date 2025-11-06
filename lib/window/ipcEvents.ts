@@ -1,6 +1,7 @@
 import { BrowserWindow, ipcMain, shell, app } from 'electron'
 import log from 'electron-log'
 import os from 'os'
+import { exec } from 'child_process'
 import store, { getCurrentUserId } from '../main/store'
 import { STORE_KEYS } from '../constants/store-keys'
 import {
@@ -180,8 +181,60 @@ export function registerIPC() {
     exchangeAuthCode(_e, { authCode, state, config }),
   )
   handleIPC('logout', () => handleLogout())
-  handleIPC('notify-login-success', (_e, { profile, idToken, accessToken }) => {
-    handleLogin(profile, idToken, accessToken)
+  handleIPC(
+    'notify-login-success',
+    async (_e, { profile, idToken, accessToken }) => {
+      handleLogin(profile, idToken, accessToken)
+    },
+  )
+
+  // Start trial when onboarding completes
+  handleIPC('start-trial-after-onboarding', async () => {
+    try {
+      const baseUrl = import.meta.env.VITE_GRPC_BASE_URL
+      if (!baseUrl) {
+        console.warn('[IPC] trial start skipped: VITE_GRPC_BASE_URL not set')
+        return { success: false, error: 'VITE_GRPC_BASE_URL not set' }
+      }
+
+      const accessToken = store.get(STORE_KEYS.ACCESS_TOKEN) as string | null
+      if (!accessToken) {
+        console.warn('[IPC] trial start skipped: accessToken not available')
+        return { success: false, error: 'Access token not available' }
+      }
+
+      const url = new URL('/trial/start', baseUrl)
+      const res = await fetch(url.toString(), {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => 'Unknown error')
+        console.error(
+          `[IPC] trial start failed: ${res.status} ${res.statusText}`,
+          errorText,
+        )
+        return { success: false, error: errorText }
+      }
+
+      console.log('[IPC] trial start succeeded')
+      // Notify renderer that trial started so it can refresh billing state
+      if (
+        mainWindow &&
+        !mainWindow.isDestroyed() &&
+        !mainWindow.webContents.isDestroyed()
+      ) {
+        mainWindow.webContents.send('trial-started')
+      }
+
+      return { success: true }
+    } catch (err: any) {
+      console.error('[IPC] trial start failed:', err)
+      return { success: false, error: err?.message || 'Unknown error' }
+    }
   })
 
   // Token refresh handler
@@ -275,6 +328,23 @@ export function registerIPC() {
     window?.setFullScreen(!window.isFullScreen())
   })
   handleIPC('web-open-url', (_e, url) => shell.openExternal(url))
+
+  handleIPC('open-mailto', (_e, email: string) => {
+    const mailtoUrl = `mailto:${email}`
+    // On macOS, use the 'open' command which is more reliable for mailto links
+    if (process.platform === 'darwin') {
+      exec(`open "${mailtoUrl}"`, error => {
+        if (error) {
+          console.error('Failed to open mailto link:', error)
+          // Fallback to shell.openExternal
+          shell.openExternal(mailtoUrl)
+        }
+      })
+    } else {
+      // On other platforms, use shell.openExternal
+      shell.openExternal(mailtoUrl)
+    }
+  })
   // Auth0 DB signup proxy (avoids CORS issues from custom schemes)
   handleIPC('auth0-db-signup', async (_e, { email, password, name }) => {
     try {
@@ -415,6 +485,139 @@ export function registerIPC() {
         return {
           success: false,
           error: data?.error || `Lookup failed (${res.status})`,
+          status: res.status,
+        }
+      }
+      return data
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Network error' }
+    }
+  })
+
+  // Trial routes proxy
+  handleIPC('trial:complete', async () => {
+    try {
+      const baseUrl = import.meta.env.VITE_GRPC_BASE_URL
+      const token = (store.get(STORE_KEYS.ACCESS_TOKEN) as string | null) || ''
+      const url = new URL('/trial/complete', baseUrl)
+      const res = await fetch(url.toString(), {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      })
+      const data: any = await res.json().catch(() => undefined)
+      if (!res.ok) {
+        return {
+          success: false,
+          error: data?.error || `Trial complete failed (${res.status})`,
+          status: res.status,
+        }
+      }
+      return data
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Network error' }
+    }
+  })
+
+  // Billing routes proxy
+  handleIPC('billing:create-checkout-session', async () => {
+    try {
+      const baseUrl = import.meta.env.VITE_GRPC_BASE_URL
+      const token = (store.get(STORE_KEYS.ACCESS_TOKEN) as string | null) || ''
+      const url = new URL('/billing/checkout', baseUrl)
+      const res = await fetch(url.toString(), {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      })
+      const data: any = await res.json().catch(() => undefined)
+      if (!res.ok) {
+        return {
+          success: false,
+          error: data?.error || `Checkout create failed (${res.status})`,
+          status: res.status,
+        }
+      }
+      return data
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Network error' }
+    }
+  })
+
+  handleIPC(
+    'billing:confirm-session',
+    async (_e, { sessionId }: { sessionId: string }) => {
+      try {
+        const baseUrl = import.meta.env.VITE_GRPC_BASE_URL
+        const token =
+          (store.get(STORE_KEYS.ACCESS_TOKEN) as string | null) || ''
+        const url = new URL('/billing/confirm', baseUrl)
+        const res = await fetch(url.toString(), {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ session_id: sessionId }),
+        })
+        const data: any = await res.json().catch(() => undefined)
+        if (!res.ok) {
+          return {
+            success: false,
+            error: data?.error || `Confirm failed (${res.status})`,
+            status: res.status,
+          }
+        }
+        return data
+      } catch (error: any) {
+        return { success: false, error: error?.message || 'Network error' }
+      }
+    },
+  )
+
+  handleIPC('billing:status', async () => {
+    try {
+      const baseUrl = import.meta.env.VITE_GRPC_BASE_URL
+      const token = (store.get(STORE_KEYS.ACCESS_TOKEN) as string | null) || ''
+      const url = new URL('/billing/status', baseUrl)
+      const res = await fetch(url.toString(), {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      })
+      const data: any = await res.json().catch(() => undefined)
+      if (!res.ok) {
+        return {
+          success: false,
+          error: data?.error || `Status failed (${res.status})`,
+          status: res.status,
+        }
+      }
+      return data
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Network error' }
+    }
+  })
+
+  handleIPC('billing:cancel-subscription', async () => {
+    try {
+      const baseUrl = import.meta.env.VITE_GRPC_BASE_URL
+      const token = (store.get(STORE_KEYS.ACCESS_TOKEN) as string | null) || ''
+      const url = new URL('/billing/cancel', baseUrl)
+      const res = await fetch(url.toString(), {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      })
+      const data: any = await res.json().catch(() => undefined)
+      if (!res.ok) {
+        return {
+          success: false,
+          error: data?.error || `Cancel failed (${res.status})`,
           status: res.status,
         }
       }

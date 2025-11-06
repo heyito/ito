@@ -26,6 +26,8 @@ export interface FargateTaskConfig {
   dbCredentialsSecret: ISecret
   groqApiKeySecret: ISecret
   cerebrasApiKeySecret: ISecret
+  stripeSecretKeySecret: ISecret
+  stripeWebhookSecretSecret: ISecret
   dbEndpoint: string
   dbName: string
   dbPort: number
@@ -57,6 +59,8 @@ export function createFargateTask(
   config.dbCredentialsSecret.grantRead(fargateTaskRole)
   config.groqApiKeySecret.grantRead(fargateTaskRole)
   config.cerebrasApiKeySecret.grantRead(fargateTaskRole)
+  config.stripeSecretKeySecret.grantRead(fargateTaskRole)
+  config.stripeWebhookSecretSecret.grantRead(fargateTaskRole)
 
   const taskExecutionRole = new IamRole(scope, 'ItoTaskExecRole', {
     assumedBy: new ServicePrincipal('ecs-tasks.amazonaws.com'),
@@ -96,6 +100,12 @@ export function createFargateTask(
       CEREBRAS_API_KEY: EcsSecret.fromSecretsManager(
         config.cerebrasApiKeySecret,
       ),
+      STRIPE_SECRET_KEY: EcsSecret.fromSecretsManager(
+        config.stripeSecretKeySecret,
+      ),
+      STRIPE_WEBHOOK_SECRET: EcsSecret.fromSecretsManager(
+        config.stripeWebhookSecretSecret,
+      ),
     },
     environment: {
       DB_HOST: config.dbEndpoint,
@@ -108,6 +118,9 @@ export function createFargateTask(
       AUTH0_MGMT_CLIENT_ID: process.env.AUTH0_MGMT_CLIENT_ID || '',
       AUTH0_MGMT_CLIENT_SECRET: process.env.AUTH0_MGMT_CLIENT_SECRET || '',
       AUTH0_CALLBACK_URL: `https://${config.domainName}/callback`,
+      STRIPE_PRICE_ID: process.env.STRIPE_PRICE_ID || '',
+      APP_PROTOCOL: process.env.APP_PROTOCOL || '',
+      STRIPE_PUBLIC_BASE_URL: process.env.STRIPE_PUBLIC_BASE_URL || '',
       GROQ_TRANSCRIPTION_MODEL: 'whisper-large-v3',
       CLIENT_LOG_GROUP_NAME: config.clientLogGroup.logGroupName,
       ...(config.blobStorageBucketName && {

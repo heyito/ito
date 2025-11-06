@@ -6,6 +6,8 @@ import { Window } from 'happy-dom'
 
 let window: Window
 let document: any
+let mockAddEventListener: ReturnType<typeof mock>
+let mockRemoveEventListener: ReturnType<typeof mock>
 
 const mockBillingApi = {
   status: mock(),
@@ -50,9 +52,15 @@ beforeEach(() => {
   mockApi.send.mockClear()
   mockElectronStore.get.mockClear()
 
-  // Setup window mocks
+  // Create fresh mocks for event listeners
+  mockAddEventListener = mock((event: string, handler: () => void) => {})
+  mockRemoveEventListener = mock((event: string, handler: () => void) => {})
+
+  // Setup window mocks with addEventListener/removeEventListener
   globalThis.window = {
     ...window,
+    addEventListener: mockAddEventListener as any,
+    removeEventListener: mockRemoveEventListener as any,
     api: mockApi as any,
     electron: {
       store: mockElectronStore as any,
@@ -474,5 +482,143 @@ describe('useBillingState', () => {
 
     expect(result.current.proStatus).toBe('active_pro')
     expect(result.current.error).toBe(null)
+  })
+
+  it('sets up window focus listener on mount', async () => {
+    mockBillingApi.status.mockResolvedValue({
+      success: true,
+      pro_status: 'none' as const,
+      trial: {
+        trialDays: 14,
+        trialStartAt: null,
+        daysLeft: 0,
+        isTrialActive: false,
+        hasCompletedTrial: false,
+      },
+    })
+
+    const { result, waitFor, unmount } = renderHook(() => useBillingState())
+
+    await waitFor(() => !result.current.isLoading)
+
+    expect(mockAddEventListener).toHaveBeenCalledWith(
+      'focus',
+      expect.any(Function),
+    )
+
+    unmount()
+
+    expect(mockRemoveEventListener).toHaveBeenCalledWith(
+      'focus',
+      expect.any(Function),
+    )
+  })
+
+  it('refreshes billing state when window gains focus', async () => {
+    mockBillingApi.status.mockResolvedValue({
+      success: true,
+      pro_status: 'none' as const,
+      trial: {
+        trialDays: 14,
+        trialStartAt: null,
+        daysLeft: 0,
+        isTrialActive: false,
+        hasCompletedTrial: false,
+      },
+    })
+
+    const { result, waitFor } = renderHook(() => useBillingState())
+
+    await waitFor(() => !result.current.isLoading)
+
+    mockBillingApi.status.mockClear()
+
+    const focusHandler = mockAddEventListener.mock.calls.find(
+      call => call[0] === 'focus',
+    )?.[1] as () => void
+
+    expect(focusHandler).toBeDefined()
+
+    if (focusHandler) {
+      await focusHandler()
+      await waitFor(() => mockBillingApi.status.mock.calls.length > 0)
+      expect(mockBillingApi.status).toHaveBeenCalledTimes(1)
+    }
+  })
+
+  it('sets up periodic refresh interval', async () => {
+    const originalSetInterval = global.setInterval
+    const mockSetInterval = mock(() => ({}) as any)
+    global.setInterval = mockSetInterval as any
+
+    mockBillingApi.status.mockResolvedValue({
+      success: true,
+      pro_status: 'none' as const,
+      trial: {
+        trialDays: 14,
+        trialStartAt: null,
+        daysLeft: 0,
+        isTrialActive: false,
+        hasCompletedTrial: false,
+      },
+    })
+
+    const { result, waitFor, unmount } = renderHook(() => useBillingState())
+
+    await waitFor(() => !result.current.isLoading)
+
+    expect(mockSetInterval).toHaveBeenCalledWith(
+      expect.any(Function),
+      2 * 60 * 1000,
+    )
+
+    unmount()
+
+    global.setInterval = originalSetInterval
+  })
+
+  it('periodic refresh calls refresh function', async () => {
+    const originalSetInterval = global.setInterval
+    const originalClearInterval = global.clearInterval
+    let intervalCallback: (() => void) | null = null
+    let intervalId: any = {}
+    const mockSetInterval = mock((callback: () => void, delay: number) => {
+      intervalCallback = callback
+      return intervalId
+    })
+    const mockClearInterval = mock(() => {})
+    global.setInterval = mockSetInterval as any
+    global.clearInterval = mockClearInterval as any
+
+    mockBillingApi.status.mockResolvedValue({
+      success: true,
+      pro_status: 'none' as const,
+      trial: {
+        trialDays: 14,
+        trialStartAt: null,
+        daysLeft: 0,
+        isTrialActive: false,
+        hasCompletedTrial: false,
+      },
+    })
+
+    const { result, waitFor, unmount } = renderHook(() => useBillingState())
+
+    await waitFor(() => !result.current.isLoading)
+
+    mockBillingApi.status.mockClear()
+
+    if (intervalCallback) {
+      await intervalCallback()
+      await waitFor(() => mockBillingApi.status.mock.calls.length > 0)
+      expect(mockBillingApi.status).toHaveBeenCalledTimes(1)
+    }
+
+    unmount()
+
+    expect(mockClearInterval).toHaveBeenCalledWith(intervalId)
+
+    global.setInterval = originalSetInterval
+    global.clearInterval = originalClearInterval
   })
 })

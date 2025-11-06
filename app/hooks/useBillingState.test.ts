@@ -581,7 +581,7 @@ describe('useBillingState', () => {
     const originalSetInterval = global.setInterval
     const originalClearInterval = global.clearInterval
     let intervalCallback: (() => void) | null = null
-    let intervalId: any = {}
+    const intervalId: any = {}
     const mockSetInterval = mock((callback: () => void, delay: number) => {
       intervalCallback = callback
       return intervalId

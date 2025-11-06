@@ -33,7 +33,9 @@ export default function HomeKit() {
 
   const isPro =
     metadata?.paid_status === PaidStatus.PRO ||
-    metadata?.paid_status === PaidStatus.PRO_TRIAL
+    metadata?.paid_status === PaidStatus.PRO_TRIAL ||
+    billingState.proStatus === 'active_pro' ||
+    billingState.proStatus === 'free_trial'
 
   // Reset flags when user changes
   useEffect(() => {

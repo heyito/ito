@@ -124,8 +124,8 @@ function checkForStuckKeys() {
     let shouldRemove = true
 
     if (activeShortcutId !== null) {
-      const { keyboardShortcuts } = store.get(STORE_KEYS.SETTINGS) || {}
-      const activeShortcut = (keyboardShortcuts || [])
+      const { keyboardShortcuts } = store.get(STORE_KEYS.SETTINGS)
+      const activeShortcut = keyboardShortcuts
         .filter(ks => ks.keys.length > 0)
         .find(shortcut => {
           const normalizedShortcutKeys = shortcut.keys.map(normalizeLegacyKey)
@@ -175,8 +175,9 @@ function stopStuckKeyChecker() {
 }
 
 async function handleKeyEventInMain(event: KeyEvent) {
-  const settings = store.get(STORE_KEYS.SETTINGS) || {}
-  const { isShortcutGloballyEnabled, keyboardShortcuts } = settings
+  const { isShortcutGloballyEnabled, keyboardShortcuts } = store.get(
+    STORE_KEYS.SETTINGS,
+  )
 
   if (!isShortcutGloballyEnabled) {
     // check to see if we should stop an in-progress recording
@@ -207,7 +208,7 @@ async function handleKeyEventInMain(event: KeyEvent) {
 
   // Check if any of the configured shortcuts are currently held
   // Match shortcuts that have exactly the same keys as currently pressed
-  const currentlyHeldShortcut = (keyboardShortcuts || [])
+  const currentlyHeldShortcut = keyboardShortcuts
     .filter(ks => ks.keys.length > 0)
     .find(shortcut => {
       // Normalize legacy keys in stored shortcuts
@@ -372,10 +373,10 @@ export const registerAllHotkeys = () => {
     return
   }
 
-  const { keyboardShortcuts } = store.get(STORE_KEYS.SETTINGS) || {}
+  const { keyboardShortcuts } = store.get(STORE_KEYS.SETTINGS)
 
   // Convert shortcuts to hotkey format for the listener
-  const hotkeys = (keyboardShortcuts || [])
+  const hotkeys = keyboardShortcuts
     .filter(ks => ks.keys.length > 0)
     .map(shortcut => ({
       keys: getKeysToRegister(shortcut),

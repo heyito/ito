@@ -1,5 +1,4 @@
 import { describe, test, expect, beforeEach, mock, afterEach } from 'bun:test'
-import { TimingCollector, TimingEventName } from './TimingCollector'
 
 // Mock electron-log
 mock.module('electron-log', () => ({
@@ -10,20 +9,18 @@ mock.module('electron-log', () => ({
   },
 }))
 
-// Mock analytics
-const mockAnalytics = {
-  isEnabled: mock(() => true),
-}
-mock.module('@/app/components/analytics', () => ({
-  analytics: mockAnalytics,
-}))
-
 // Mock store
 const mockStore = {
-  get: mock(() => 'mock-token-123'),
+  get: mock((key: string) => {
+    if (key === 'settings') {
+      return { shareAnalytics: true }
+    }
+    return undefined
+  }),
 }
 mock.module('../store', () => ({
   default: mockStore,
+  store: mockStore,
   getCurrentUserId: mock(() => 'test-user-id'),
 }))
 
@@ -34,6 +31,9 @@ mock.module('../../clients/grpcClient', () => ({
     submitTimingReports: mockSubmitTimingReports,
   },
 }))
+
+// Import after all mocks are set up
+import { TimingCollector, TimingEventName } from './TimingCollector'
 
 describe('TimingCollector', () => {
   let timingCollector: TimingCollector
@@ -47,13 +47,16 @@ describe('TimingCollector', () => {
     timingCollector = new TimingCollector()
 
     // Clear all mocks
-    mockAnalytics.isEnabled.mockClear()
     mockStore.get.mockClear()
     mockSubmitTimingReports.mockClear()
 
     // Reset default behaviors
-    mockAnalytics.isEnabled.mockReturnValue(true)
-    mockStore.get.mockReturnValue('mock-token-123')
+    mockStore.get.mockImplementation((key: string) => {
+      if (key === 'settings') {
+        return { shareAnalytics: true }
+      }
+      return undefined
+    })
     mockSubmitTimingReports.mockResolvedValue({})
   })
 
@@ -75,7 +78,12 @@ describe('TimingCollector', () => {
     })
 
     test('should not track if analytics disabled', async () => {
-      mockAnalytics.isEnabled.mockReturnValue(false)
+      mockStore.get.mockImplementation((key: string) => {
+        if (key === 'settings') {
+          return { shareAnalytics: false }
+        }
+        return undefined
+      })
 
       const interactionId = 'test-interaction-1'
       timingCollector.startInteraction(interactionId)
@@ -281,7 +289,12 @@ describe('TimingCollector', () => {
     })
 
     test('should not finalize if analytics disabled', async () => {
-      mockAnalytics.isEnabled.mockReturnValue(false)
+      mockStore.get.mockImplementation((key: string) => {
+        if (key === 'settings') {
+          return { shareAnalytics: false }
+        }
+        return undefined
+      })
 
       const interactionId = 'test-interaction-1'
       timingCollector.startInteraction(interactionId)

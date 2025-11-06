@@ -13,14 +13,14 @@ export const up = pgm => {
     user_id: { type: 'text', notNull: true, unique: true },
     stripe_customer_id: { type: 'text' },
     stripe_subscription_id: { type: 'text' },
-    subscription_start_at: { type: 'timestamp' },
+    subscription_start_at: { type: 'timestamptz' },
     created_at: {
-      type: 'timestamp',
+      type: 'timestamptz',
       notNull: true,
       default: pgm.func('current_timestamp'),
     },
     updated_at: {
-      type: 'timestamp',
+      type: 'timestamptz',
       notNull: true,
       default: pgm.func('current_timestamp'),
     },

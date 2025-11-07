@@ -78,6 +78,24 @@ export function createFargateTask(
   config.stripeSecretKeySecret.grantRead(taskExecutionRole)
   config.stripeWebhookSecretSecret.grantRead(taskExecutionRole)
 
+  // Explicitly add policy statement for secrets to ensure permissions are applied correctly
+  // This is a workaround for cases where grantRead() might not work correctly with fromSecretNameV2()
+  taskExecutionRole.addToPolicy(
+    new PolicyStatement({
+      actions: [
+        'secretsmanager:GetSecretValue',
+        'secretsmanager:DescribeSecret',
+      ],
+      resources: [
+        config.dbCredentialsSecret.secretArn,
+        config.groqApiKeySecret.secretArn,
+        config.cerebrasApiKeySecret.secretArn,
+        config.stripeSecretKeySecret.secretArn,
+        config.stripeWebhookSecretSecret.secretArn,
+      ],
+    }),
+  )
+
   const taskDefinition = new FargateTaskDefinition(scope, 'ItoTaskDefinition', {
     taskRole: fargateTaskRole,
     cpu: isDev(config.stageName) ? 1024 : 4096,

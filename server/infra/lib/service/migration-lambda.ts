@@ -35,28 +35,36 @@ export function createMigrationLambda(
   const logGroupName = `/aws/lambda/${config.stageName}-${config.dbName}-migration`
 
   // Ensure log group exists (handles case where it already exists)
-  const ensureLogGroup = new cr.AwsCustomResource(scope, 'EnsureMigrationLogGroup', {
-    onCreate: {
-      service: 'CloudWatchLogs',
-      action: 'createLogGroup',
-      parameters: { logGroupName },
-      physicalResourceId: cr.PhysicalResourceId.of(`loggroup-${config.stageName}-migration`),
-      ignoreErrorCodesMatching: 'ResourceAlreadyExistsException',
+  const ensureLogGroup = new cr.AwsCustomResource(
+    scope,
+    'EnsureMigrationLogGroup',
+    {
+      onCreate: {
+        service: 'CloudWatchLogs',
+        action: 'createLogGroup',
+        parameters: { logGroupName },
+        physicalResourceId: cr.PhysicalResourceId.of(
+          `loggroup-${config.stageName}-migration`,
+        ),
+        ignoreErrorCodesMatching: 'ResourceAlreadyExistsException',
+      },
+      onUpdate: {
+        service: 'CloudWatchLogs',
+        action: 'createLogGroup',
+        parameters: { logGroupName },
+        physicalResourceId: cr.PhysicalResourceId.of(
+          `loggroup-${config.stageName}-migration`,
+        ),
+        ignoreErrorCodesMatching: 'ResourceAlreadyExistsException',
+      },
+      policy: cr.AwsCustomResourcePolicy.fromStatements([
+        new PolicyStatement({
+          actions: ['logs:CreateLogGroup'],
+          resources: ['*'],
+        }),
+      ]),
     },
-    onUpdate: {
-      service: 'CloudWatchLogs',
-      action: 'createLogGroup',
-      parameters: { logGroupName },
-      physicalResourceId: cr.PhysicalResourceId.of(`loggroup-${config.stageName}-migration`),
-      ignoreErrorCodesMatching: 'ResourceAlreadyExistsException',
-    },
-    policy: cr.AwsCustomResourcePolicy.fromStatements([
-      new PolicyStatement({
-        actions: ['logs:CreateLogGroup'],
-        resources: ['*'],
-      }),
-    ]),
-  })
+  )
 
   const logGroup = LogGroup.fromLogGroupName(
     scope,

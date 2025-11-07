@@ -42,16 +42,17 @@ export class AppStage extends Stage {
       timingBucketName: platform.timingBucketName,
     })
 
-    new SecurityStack(this, `${ITO_PREFIX}Security`, {
-      env: props.env,
-      fargateService: service.fargateService,
-      dbSecurityGroupId: platform.dbSecurityGroupId,
-    })
+    // TEMPORARILY COMMENTED OUT TO FIX DRIFT - depends on fargateService and albFargate
+    // new SecurityStack(this, `${ITO_PREFIX}Security`, {
+    //   env: props.env,
+    //   fargateService: service.fargateService,
+    //   dbSecurityGroupId: platform.dbSecurityGroupId,
+    // })
 
-    new ObservabilityStack(this, `${ITO_PREFIX}Observability`, {
-      env: props.env,
-      albFargate: service.albFargate,
-    })
+    // new ObservabilityStack(this, `${ITO_PREFIX}Observability`, {
+    //   env: props.env,
+    //   albFargate: service.albFargate,
+    // })
   }
 }
 

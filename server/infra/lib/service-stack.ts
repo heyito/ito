@@ -49,9 +49,9 @@ export interface ServiceStackProps extends StackProps {
 }
 
 export class ServiceStack extends Stack {
-  public readonly fargateService: FargateService
-  public readonly migrationLambda: NodejsFunction
-  public readonly albFargate: ApplicationLoadBalancedFargateService
+  public readonly fargateService: FargateService | undefined
+  public readonly migrationLambda: NodejsFunction | undefined
+  public readonly albFargate: ApplicationLoadBalancedFargateService | undefined
 
   constructor(scope: Construct, id: string, props: ServiceStackProps) {
     super(scope, id, props)
@@ -138,10 +138,11 @@ export class ServiceStack extends Stack {
     timingBucket.grantPut(fargateTaskResources.taskRole)
 
     // Create ECS cluster
-    const cluster = new Cluster(this, 'ItoEcsCluster', {
-      vpc: props.vpc,
-      clusterName: `${stageName}-${CLUSTER_NAME}`,
-    })
+    // TEMPORARILY COMMENTED OUT TO FIX DRIFT - will uncomment after first deploy
+    // const cluster = new Cluster(this, 'ItoEcsCluster', {
+    //   vpc: props.vpc,
+    //   clusterName: `${stageName}-${CLUSTER_NAME}`,
+    // })
 
     // Create S3 buckets
     const logBucket = new Bucket(this, 'ItoAlbLogsBucket', {
@@ -165,69 +166,73 @@ export class ServiceStack extends Stack {
     })
 
     // Create Fargate service
-    const fargateService = new ApplicationLoadBalancedFargateService(
-      this,
-      'ItoFargateService',
-      {
-        cluster,
-        serviceName: `${stageName}-${SERVICE_NAME}`,
-        desiredCount: isDev(stageName) ? 1 : 2,
-        publicLoadBalancer: true,
-        taskDefinition: fargateTaskResources.taskDefinition,
-        protocol: ApplicationProtocol.HTTPS,
-        domainZone: zone,
-        domainName,
-        certificate: cert,
-        redirectHTTP: true,
-        sslPolicy: SslPolicy.RECOMMENDED,
-      },
-    )
+    // TEMPORARILY COMMENTED OUT TO FIX DRIFT - will uncomment after first deploy
+    // const fargateService = new ApplicationLoadBalancedFargateService(
+    //   this,
+    //   'ItoFargateService',
+    //   {
+    //     cluster,
+    //     serviceName: `${stageName}-${SERVICE_NAME}`,
+    //     desiredCount: isDev(stageName) ? 1 : 2,
+    //     publicLoadBalancer: true,
+    //     taskDefinition: fargateTaskResources.taskDefinition,
+    //     protocol: ApplicationProtocol.HTTPS,
+    //     domainZone: zone,
+    //     domainName,
+    //     certificate: cert,
+    //     redirectHTTP: true,
+    //     sslPolicy: SslPolicy.RECOMMENDED,
+    //   },
+    // )
 
-    fargateService.targetGroup.configureHealthCheck({
-      protocol: Protocol.HTTP,
-      path: '/',
-      interval: Duration.seconds(30),
-      timeout: Duration.seconds(5),
-      healthyThresholdCount: 2,
-      unhealthyThresholdCount: 5,
-    })
+    // fargateService.targetGroup.configureHealthCheck({
+    //   protocol: Protocol.HTTP,
+    //   path: '/',
+    //   interval: Duration.seconds(30),
+    //   timeout: Duration.seconds(5),
+    //   healthyThresholdCount: 2,
+    //   unhealthyThresholdCount: 5,
+    // })
 
-    const scalableTarget = fargateService.service.autoScaleTaskCount({
-      minCapacity: 1,
-      maxCapacity: 5,
-    })
+    // const scalableTarget = fargateService.service.autoScaleTaskCount({
+    //   minCapacity: 1,
+    //   maxCapacity: 5,
+    // })
 
-    scalableTarget.scaleOnCpuUtilization('ItoServerCpuScalingPolicy', {
-      targetUtilizationPercent: 65,
-    })
+    // scalableTarget.scaleOnCpuUtilization('ItoServerCpuScalingPolicy', {
+    //   targetUtilizationPercent: 65,
+    // })
 
     // Create migration Lambda
-    const migrationLambdaResources = createMigrationLambda(this, {
-      stageName,
-      dbName: DB_NAME,
-      cluster,
-      taskDefinition: fargateTaskResources.taskDefinition,
-      vpc: props.vpc,
-      fargateService: fargateService.service,
-      containerName: fargateTaskResources.containerName,
-      taskExecutionRole: fargateTaskResources.taskExecutionRole,
-      taskRole: fargateTaskResources.taskRole,
-    })
+    // TEMPORARILY COMMENTED OUT - depends on cluster and fargateService
+    // const migrationLambdaResources = createMigrationLambda(this, {
+    //   stageName,
+    //   dbName: DB_NAME,
+    //   cluster,
+    //   taskDefinition: fargateTaskResources.taskDefinition,
+    //   vpc: props.vpc,
+    //   fargateService: fargateService.service,
+    //   containerName: fargateTaskResources.containerName,
+    //   taskExecutionRole: fargateTaskResources.taskExecutionRole,
+    //   taskRole: fargateTaskResources.taskRole,
+    // })
 
     // Configure ALB logging
-    const alb = fargateService.loadBalancer
-    alb.logAccessLogs(logBucket, 'ito-alb-access-logs')
+    // TEMPORARILY COMMENTED OUT - depends on fargateService
+    // const alb = fargateService.loadBalancer
+    // alb.logAccessLogs(logBucket, 'ito-alb-access-logs')
 
     // Ensure ECS Service waits for inline policy attachment and log groups creation
-    fargateService.service.node.addDependency(
-      fargateTaskResources.taskLogsPolicy,
-    )
-    fargateService.service.node.addDependency(
-      logGroupResources.ensureClientLogGroup,
-    )
-    fargateService.service.node.addDependency(
-      logGroupResources.ensureServerLogGroup,
-    )
+    // TEMPORARILY COMMENTED OUT - depends on fargateService
+    // fargateService.service.node.addDependency(
+    //   fargateTaskResources.taskLogsPolicy,
+    // )
+    // fargateService.service.node.addDependency(
+    //   logGroupResources.ensureClientLogGroup,
+    // )
+    // fargateService.service.node.addDependency(
+    //   logGroupResources.ensureServerLogGroup,
+    // )
 
     // Import Firehose role created in platform stack
     const firehoseRole = IamRole.fromRoleArn(
@@ -298,14 +303,16 @@ export class ServiceStack extends Stack {
     })
 
     // Set stack properties
-    this.fargateService = fargateService.service
-    this.albFargate = fargateService
-    this.migrationLambda = migrationLambdaResources.migrationLambda
+    // TEMPORARILY COMMENTED OUT TO FIX DRIFT - will uncomment after first deploy
+    // this.fargateService = fargateService.service
+    // this.albFargate = fargateService
+    // this.migrationLambda = migrationLambdaResources.migrationLambda
 
     // Outputs
-    new CfnOutput(this, 'ServiceURL', {
-      value: fargateService.loadBalancer.loadBalancerDnsName,
-    })
+    // TEMPORARILY COMMENTED OUT TO FIX DRIFT - will uncomment after first deploy
+    // new CfnOutput(this, 'ServiceURL', {
+    //   value: fargateService.loadBalancer.loadBalancerDnsName,
+    // })
 
     // Tags
     Tags.of(this).add('Project', 'Ito')

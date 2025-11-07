@@ -84,10 +84,10 @@ export class ServiceStack extends Stack {
       `${stageName}/ito/stripe-secret-key`,
     )
 
-    const stripeWebhookSecretSecret = Secret.fromSecretNameV2(
+    const stripeWebhookSecretSecret = Secret.fromSecretCompleteArn(
       this,
       'StripeWebhookSecret',
-      `${stageName}/ito/stripe-webhook-secret`,
+      `arn:aws:secretsmanager:${this.region}:${this.account}:secret:${stageName}/ito/stripe-webhook-secret-pALRS1`,
     )
 
     // Setup domain and certificate

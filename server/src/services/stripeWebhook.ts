@@ -37,7 +37,11 @@ export const registerStripeWebhook = async (fastify: FastifyInstance) => {
       let event: Stripe.Event
       try {
         const raw = (request as any).rawBody || (request as any).body
-        event = stripe.webhooks.constructEvent(raw, sig, STRIPE_WEBHOOK_SECRET)
+        event = await stripe.webhooks.constructEventAsync(
+          raw,
+          sig,
+          STRIPE_WEBHOOK_SECRET,
+        )
       } catch (err: any) {
         reply
           .code(400)

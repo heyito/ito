@@ -66,6 +66,46 @@ mock.module('stripe', () => {
             },
           }
         },
+        constructEventAsync: async (
+          rawBody: Buffer | string,
+          signature: string,
+          secret: string,
+        ) => {
+          if (mockStripeState.constructEventShouldThrow) {
+            mockStripeState.constructEventShouldThrow = false
+            throw new Error('Invalid signature')
+          }
+          mockStripeState.webhooksConstructEvent = {
+            rawBody,
+            signature,
+            secret,
+          }
+          // If eventToReturn is set, use it; otherwise try to parse from rawBody
+          if (mockStripeState.eventToReturn) {
+            return mockStripeState.eventToReturn
+          }
+          // Try to parse from rawBody
+          if (typeof rawBody === 'string') {
+            try {
+              return JSON.parse(rawBody)
+            } catch {
+              // Fallback
+            }
+          }
+          // Default fallback
+          return {
+            type: 'checkout.session.completed',
+            data: {
+              object: {
+                id: 'cs_test_123',
+                mode: 'subscription',
+                customer: 'cus_test_123',
+                subscription: 'sub_test_123',
+                metadata: { user_sub: 'user-123' },
+              },
+            },
+          }
+        },
       }
 
       this.subscriptions = {

@@ -2,6 +2,8 @@ import { Construct } from 'constructs'
 import { Duration } from 'aws-cdk-lib'
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam'
+import { LogGroup } from 'aws-cdk-lib/aws-logs'
+import * as cr from 'aws-cdk-lib/custom-resources'
 import {
   FargateTaskDefinition,
   FargateService,
@@ -30,10 +32,43 @@ export function createMigrationLambda(
   scope: Construct,
   config: MigrationLambdaConfig,
 ): MigrationLambdaResources {
+  const logGroupName = `/aws/lambda/${config.stageName}-${config.dbName}-migration`
+
+  // Ensure log group exists (handles case where it already exists)
+  const ensureLogGroup = new cr.AwsCustomResource(scope, 'EnsureMigrationLogGroup', {
+    onCreate: {
+      service: 'CloudWatchLogs',
+      action: 'createLogGroup',
+      parameters: { logGroupName },
+      physicalResourceId: cr.PhysicalResourceId.of(`loggroup-${config.stageName}-migration`),
+      ignoreErrorCodesMatching: 'ResourceAlreadyExistsException',
+    },
+    onUpdate: {
+      service: 'CloudWatchLogs',
+      action: 'createLogGroup',
+      parameters: { logGroupName },
+      physicalResourceId: cr.PhysicalResourceId.of(`loggroup-${config.stageName}-migration`),
+      ignoreErrorCodesMatching: 'ResourceAlreadyExistsException',
+    },
+    policy: cr.AwsCustomResourcePolicy.fromStatements([
+      new PolicyStatement({
+        actions: ['logs:CreateLogGroup'],
+        resources: ['*'],
+      }),
+    ]),
+  })
+
+  const logGroup = LogGroup.fromLogGroupName(
+    scope,
+    'MigrationLambdaLogGroup',
+    logGroupName,
+  )
+
   const migrationLambda = new NodejsFunction(scope, 'ItoMigrationLambda', {
     functionName: `${config.stageName}-${config.dbName}-migration`,
     entry: 'lambdas/run-migration.ts',
     handler: 'handler',
+    logGroup,
     environment: {
       CLUSTER: config.cluster.clusterName,
       TASK_DEF: config.taskDefinition.taskDefinitionArn,
@@ -45,6 +80,9 @@ export function createMigrationLambda(
     },
     timeout: Duration.minutes(10),
   })
+
+  // Ensure log group is created before Lambda
+  migrationLambda.node.addDependency(ensureLogGroup)
 
   migrationLambda.addToRolePolicy(
     new PolicyStatement({

@@ -71,6 +71,13 @@ export function createFargateTask(
     ],
   })
 
+  // Grant execution role permissions to read secrets (required for ECS to pull secrets during container startup)
+  config.dbCredentialsSecret.grantRead(taskExecutionRole)
+  config.groqApiKeySecret.grantRead(taskExecutionRole)
+  config.cerebrasApiKeySecret.grantRead(taskExecutionRole)
+  config.stripeSecretKeySecret.grantRead(taskExecutionRole)
+  config.stripeWebhookSecretSecret.grantRead(taskExecutionRole)
+
   const taskDefinition = new FargateTaskDefinition(scope, 'ItoTaskDefinition', {
     taskRole: fargateTaskRole,
     cpu: isDev(config.stageName) ? 1024 : 4096,

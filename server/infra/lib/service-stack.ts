@@ -138,7 +138,7 @@ export class ServiceStack extends Stack {
     timingBucket.grantPut(fargateTaskResources.taskRole)
 
     // Create ECS cluster
-    const cluster = new Cluster(this, 'ItoEcsClusterNew', {
+    const cluster = new Cluster(this, 'ItoEcsCluster', {
       vpc: props.vpc,
       clusterName: `${stageName}-${CLUSTER_NAME}`,
     })
@@ -167,7 +167,7 @@ export class ServiceStack extends Stack {
     // Create Fargate service
     const fargateService = new ApplicationLoadBalancedFargateService(
       this,
-      'ItoFargateServiceNew',
+      'ItoFargateService',
       {
         cluster,
         serviceName: `${stageName}-${SERVICE_NAME}`,

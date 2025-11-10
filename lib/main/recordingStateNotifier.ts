@@ -1,7 +1,10 @@
 import { ItoMode } from '@/app/generated/ito_pb'
 import { getPillWindow, mainWindow } from './app'
-import { IPC_EVENTS, RecordingStatePayload } from '../types/ipc'
-import log from 'electron-log'
+import {
+  IPC_EVENTS,
+  RecordingStatePayload,
+  ProcessingStatePayload,
+} from '../types/ipc'
 
 /**
  * Helper class to notify UI windows about recording state changes.
@@ -11,31 +14,39 @@ export class RecordingStateNotifier {
     console.log('[RecordingStateNotifier] Notifying recording started:', {
       mode,
     })
-
-    const payload: RecordingStatePayload = {
+    this.sendToWindows(IPC_EVENTS.RECORDING_STATE_UPDATE, {
       isRecording: true,
       mode,
-    }
-
-    this.sendToWindows(payload)
+    })
   }
 
   public notifyRecordingStopped() {
     console.log('[RecordingStateNotifier] Notifying recording stopped')
-
-    const payload: RecordingStatePayload = {
+    this.sendToWindows(IPC_EVENTS.RECORDING_STATE_UPDATE, {
       isRecording: false,
-    }
-
-    this.sendToWindows(payload)
+    })
   }
 
-  private sendToWindows(payload: RecordingStatePayload) {
+  public notifyProcessingStarted() {
+    console.log('[RecordingStateNotifier] Notifying processing started')
+    this.sendToWindows(IPC_EVENTS.PROCESSING_STATE_UPDATE, {
+      isProcessing: true,
+    })
+  }
+
+  public notifyProcessingStopped() {
+    console.log('[RecordingStateNotifier] Notifying processing stopped')
+    this.sendToWindows(IPC_EVENTS.PROCESSING_STATE_UPDATE, {
+      isProcessing: false,
+    })
+  }
+
+  private sendToWindows(
+    event: string,
+    payload: RecordingStatePayload | ProcessingStatePayload,
+  ) {
     // Send to pill window
-    getPillWindow()?.webContents.send(
-      IPC_EVENTS.RECORDING_STATE_UPDATE,
-      payload,
-    )
+    getPillWindow()?.webContents.send(event, payload)
 
     // Send to main window if it exists and is not destroyed
     if (
@@ -43,7 +54,7 @@ export class RecordingStateNotifier {
       !mainWindow.isDestroyed() &&
       !mainWindow.webContents.isDestroyed()
     ) {
-      mainWindow.webContents.send(IPC_EVENTS.RECORDING_STATE_UPDATE, payload)
+      mainWindow.webContents.send(event, payload)
     }
   }
 }

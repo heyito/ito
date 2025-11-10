@@ -1,5 +1,5 @@
 import { performance } from 'perf_hooks'
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import { S3StorageClient } from '../../clients/s3storageClient.js'
 
 /**
  * Enum for server-side timing events in the transcription pipeline
@@ -14,7 +14,19 @@ export enum ServerTimingEventName {
 
 // Configuration for S3
 const TIMING_BUCKET = process.env.TIMING_BUCKET
-const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' })
+
+// Initialize storage client for timing bucket
+let timingStorageClient: S3StorageClient | null = null
+if (TIMING_BUCKET) {
+  try {
+    timingStorageClient = new S3StorageClient(TIMING_BUCKET)
+  } catch (error) {
+    console.error(
+      '[ServerTimingCollector] Failed to initialize timing storage client:',
+      error,
+    )
+  }
+}
 
 interface TimingEvent {
   name: string
@@ -208,9 +220,9 @@ export class ServerTimingCollector {
       return
     }
 
-    if (!TIMING_BUCKET) {
+    if (!timingStorageClient) {
       console.warn(
-        '[ServerTimingCollector] No timing bucket configured, skipping flush',
+        '[ServerTimingCollector] No timing storage client configured, skipping flush',
       )
       this.completedReports = [] // Clear reports to avoid memory leak
       return
@@ -244,13 +256,10 @@ export class ServerTimingCollector {
       const key = `server/${report.interactionId}/${Date.now()}.json`
 
       try {
-        await s3Client.send(
-          new PutObjectCommand({
-            Bucket: TIMING_BUCKET,
-            Key: key,
-            Body: JSON.stringify(timingData),
-            ContentType: 'application/json',
-          }),
+        await timingStorageClient.uploadObject(
+          key,
+          JSON.stringify(timingData),
+          'application/json',
         )
         console.log(
           `[ServerTimingCollector] Uploaded server timing to S3: ${key}`,

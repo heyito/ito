@@ -8,13 +8,20 @@ import {
 import { create } from '@bufbuild/protobuf'
 import type { HandlerContext } from '@connectrpc/connect'
 import { kUser } from '../../auth/userContext.js'
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import { S3StorageClient } from '../../clients/s3storageClient.js'
 
 // Configuration for S3
 const TIMING_BUCKET = process.env.TIMING_BUCKET
-const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-west-2' })
 
-if (!TIMING_BUCKET) {
+// Initialize storage client for timing bucket
+let timingStorageClient: S3StorageClient | null = null
+if (TIMING_BUCKET) {
+  try {
+    timingStorageClient = new S3StorageClient(TIMING_BUCKET)
+  } catch (error) {
+    console.error('[TimingService] Failed to initialize timing storage client:', error)
+  }
+} else {
   console.warn('[TimingService] TIMING_BUCKET environment variable not set')
 }
 
@@ -25,9 +32,9 @@ export default (router: ConnectRouter) => {
       request: SubmitTimingReportsRequest,
       context: HandlerContext,
     ): Promise<SubmitTimingReportsResponse> {
-      if (!TIMING_BUCKET) {
+      if (!timingStorageClient) {
         console.warn(
-          '[TimingService] Skipping timing report - no bucket configured',
+          '[TimingService] Skipping timing report - no storage client configured',
         )
         return create(SubmitTimingReportsResponseSchema, {})
       }
@@ -58,13 +65,10 @@ export default (router: ConnectRouter) => {
         const key = `client/${report.interactionId}/${Date.now()}.json`
 
         try {
-          await s3Client.send(
-            new PutObjectCommand({
-              Bucket: TIMING_BUCKET,
-              Key: key,
-              Body: JSON.stringify(timingData),
-              ContentType: 'application/json',
-            }),
+          await timingStorageClient!.uploadObject(
+            key,
+            JSON.stringify(timingData),
+            'application/json',
           )
           console.log(`[TimingService] Uploaded client timing to S3: ${key}`)
         } catch (error) {

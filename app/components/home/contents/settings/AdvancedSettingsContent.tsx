@@ -3,6 +3,7 @@ import {
   useAdvancedSettingsStore,
 } from '@/app/store/useAdvancedSettingsStore'
 import { ChangeEvent, useEffect, useRef, useState } from 'react'
+import { useWindowContext } from '@/app/components/window/WindowContext'
 
 type LlmSettingConfig = {
   name: keyof LlmSettings
@@ -193,6 +194,7 @@ export default function AdvancedSettingsContent() {
     setGrammarServiceEnabled,
     setMacosAccessibilityContextEnabled,
   } = useAdvancedSettingsStore()
+  const windowContext = useWindowContext()
   const debounceRef = useRef<NodeJS.Timeout>(null)
 
   useEffect(() => {
@@ -297,28 +299,30 @@ export default function AdvancedSettingsContent() {
           </label>
         </div>
 
-        <div>
-          <h3 className="text-md font-medium text-slate-900 mb-3 ml-1">
-            Context
-          </h3>
-          <label className="flex items-start gap-3 ml-1">
-            <input
-              type="checkbox"
-              checked={macosAccessibilityContextEnabled}
-              onChange={handleMacosAccessibilityContextToggle}
-              className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span>
-              <span className="block text-sm font-medium text-slate-700">
-                Use Accessibility Context
+        {windowContext?.window?.platform === 'darwin' && (
+          <div>
+            <h3 className="text-md font-medium text-slate-900 mb-3 ml-1">
+              Context
+            </h3>
+            <label className="flex items-start gap-3 ml-1">
+              <input
+                type="checkbox"
+                checked={macosAccessibilityContextEnabled}
+                onChange={handleMacosAccessibilityContextToggle}
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span>
+                <span className="block text-sm font-medium text-slate-700">
+                  Use Accessibility Context
+                </span>
+                <span className="block text-xs text-slate-500 mt-1">
+                  Use Accessibility APIs to capture text context around the
+                  cursor for improved accuracy.
+                </span>
               </span>
-              <span className="block text-xs text-slate-500 mt-1">
-                Use Accessibility APIs to capture text context around the cursor
-                for improved accuracy. (macOS only)
-              </span>
-            </span>
-          </label>
-        </div>
+            </label>
+          </div>
+        )}
       </div>
     </div>
   )

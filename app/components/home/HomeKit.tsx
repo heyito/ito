@@ -184,13 +184,16 @@ export default function HomeKit() {
         <div>
           {/* Logo and Plan */}
           <div className="flex items-center mb-10 px-3">
-            <ItoIcon className="w-6 text-gray-900" style={{ height: '32px' }} />
+            <ItoIcon
+              className="w-6 text-gray-900 flex-shrink-0"
+              style={{ height: '32px' }}
+            />
             <span
               className={`text-2xl font-bold transition-opacity duration-100 ${showText ? 'opacity-100' : 'opacity-0'} ${showText ? 'ml-2' : 'w-0 overflow-hidden'}`}
             >
               ito
             </span>
-            {isPro && (
+            {isPro && showText && (
               <span
                 className={`text-xs font-semibold px-2 py-0.5 rounded-md bg-gradient-to-r from-purple-500 to-pink-500 text-white transition-opacity duration-100 ${showText ? 'opacity-100' : 'opacity-0'} ${showText ? 'ml-2' : 'w-0 overflow-hidden'}`}
               >

@@ -68,25 +68,21 @@ export interface CursorContextResult {
 export interface CursorContextOptions {
   /**
    * Maximum characters to retrieve before cursor
-   * @default 1000
    */
   maxCharsBefore: number
 
   /**
    * Maximum characters to retrieve after cursor
-   * @default 1000
    */
   maxCharsAfter: number
 
   /**
    * Timeout in milliseconds
-   * @default 5000
    */
   timeout: number
 
   /**
    * Enable debug logging to stderr
-   * @default false
    */
   debug: boolean
 }

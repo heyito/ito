@@ -103,7 +103,7 @@ export class ContextGrabber {
     ) {
       try {
         const result = await timingCollector.timeAsync(
-          TimingEventName.SELCTED_TEXT_GATHER,
+          TimingEventName.CURSOR_CONTEXT_GATHER,
           async () =>
             await macOSAccessibilityContextProvider.getCursorContext({
               maxCharsBefore: 1000,

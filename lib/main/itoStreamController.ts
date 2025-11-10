@@ -102,7 +102,7 @@ export class ItoStreamController {
     this.sendModeUpdate(mode)
   }
 
-  public async sendConfigUpdate(context: ContextData) {
+  public scheduleConfigUpdate(context: ContextData) {
     if (!this.audioStreamManager.isCurrentlyStreaming()) {
       log.warn('[ItoStreamController] Cannot send config - no active stream')
       return

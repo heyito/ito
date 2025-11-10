@@ -36,7 +36,7 @@ const mockItoStreamController = {
   ),
   setMode: mock(),
   getCurrentMode: mock(() => ItoMode.TRANSCRIBE),
-  sendConfigUpdate: mock(() => Promise.resolve()),
+  scheduleConfigUpdate: mock(() => Promise.resolve()),
   getAudioDurationMs: mock(() => 1000),
   endInteraction: mock(),
   cancelTranscription: mock(),
@@ -186,7 +186,7 @@ describe('itoSessionManager', () => {
     // Wait for background context fetch
     await new Promise(resolve => setTimeout(resolve, 50))
 
-    expect(mockItoStreamController.sendConfigUpdate).toHaveBeenCalled()
+    expect(mockItoStreamController.scheduleConfigUpdate).toHaveBeenCalled()
   })
 
   test('should fetch cursor context when grammar is enabled', async () => {
@@ -427,7 +427,7 @@ describe('itoSessionManager', () => {
   })
 
   test('should handle context fetch error gracefully', async () => {
-    mockItoStreamController.sendConfigUpdate.mockRejectedValueOnce(
+    mockItoStreamController.scheduleConfigUpdate.mockRejectedValueOnce(
       new Error('Context fetch failed'),
     )
 

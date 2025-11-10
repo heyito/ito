@@ -192,7 +192,7 @@ describe('ItoStreamController', () => {
     mockAudioStreamManager.isCurrentlyStreaming.mockReturnValue(true)
 
     const mockContext = await mockContextGrabber.gatherContext()
-    await controller.sendConfigUpdate(mockContext)
+    await controller.scheduleConfigUpdate(mockContext)
 
     expect(mockContextGrabber.gatherContext).toHaveBeenCalled()
   })
@@ -204,7 +204,7 @@ describe('ItoStreamController', () => {
     mockAudioStreamManager.isCurrentlyStreaming.mockReturnValue(false)
 
     const mockContext = await mockContextGrabber.gatherContext()
-    await controller.sendConfigUpdate(mockContext)
+    await controller.scheduleConfigUpdate(mockContext)
 
     // Should not be called again since we already called it to get mockContext
     expect(mockContextGrabber.gatherContext).toHaveBeenCalledTimes(1)

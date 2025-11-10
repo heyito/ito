@@ -3,6 +3,12 @@ import type {
   CursorContextResult,
 } from '../types/cursorContext'
 
-export interface ICursorContextService {
+export interface IAccessibilityContextProvider {
+  initialize(): void
+
+  shutdown(): void
+
+  isRunning(): boolean
+
   getCursorContext(options?: CursorContextOptions): Promise<CursorContextResult>
 }

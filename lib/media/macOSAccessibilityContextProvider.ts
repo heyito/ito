@@ -9,7 +9,7 @@ import { execFile } from 'child_process'
 import { platform, arch } from 'os'
 import { getNativeBinaryPath } from './native-interface'
 import log from 'electron-log'
-import type { IAccessibilityContextProvider } from './accessibilityContextProvider'
+import type { IAccessibilityContextProvider } from './IAccessibilityContextProvider'
 import type {
   CursorContextOptions,
   CursorContextResult,

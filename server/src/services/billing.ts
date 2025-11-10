@@ -195,12 +195,10 @@ export const registerBillingRoutes = async (
         { cancel_at_period_end: true },
       )
 
-      // Get the current_period_end and store it
-      const periodEnd =
-        'current_period_end' in updatedSubscription &&
-        typeof (updatedSubscription as any).current_period_end === 'number'
-          ? new Date((updatedSubscription as any).current_period_end * 1000)
-          : null
+      // When cancel_at_period_end is true, cancel_at contains the period end date
+      const periodEnd = updatedSubscription.cancel_at
+        ? new Date(updatedSubscription.cancel_at * 1000)
+        : null
 
       await SubscriptionsRepository.updateSubscriptionEndAt(userSub, periodEnd)
 

@@ -70,11 +70,10 @@ export const registerStripeWebhook = async (fastify: FastifyInstance) => {
               : null
 
             // Sync cancel_at_period_end status
+            // When cancel_at_period_end is true, cancel_at contains the period end date
             const subscriptionEndAt =
-              sub.cancel_at_period_end &&
-              'current_period_end' in sub &&
-              typeof (sub as any).current_period_end === 'number'
-                ? new Date((sub as any).current_period_end * 1000)
+              sub.cancel_at_period_end && sub.cancel_at
+                ? new Date(sub.cancel_at * 1000)
                 : null
 
             await SubscriptionsRepository.upsertActive(
@@ -141,11 +140,10 @@ export const registerStripeWebhook = async (fastify: FastifyInstance) => {
               : null
 
             // Sync cancel_at_period_end status
+            // When cancel_at_period_end is true, cancel_at contains the period end date
             const subscriptionEndAt =
-              sub.cancel_at_period_end &&
-              'current_period_end' in sub &&
-              typeof (sub as any).current_period_end === 'number'
-                ? new Date((sub as any).current_period_end * 1000)
+              sub.cancel_at_period_end && sub.cancel_at
+                ? new Date(sub.cancel_at * 1000)
                 : null
 
             await SubscriptionsRepository.upsertActive(

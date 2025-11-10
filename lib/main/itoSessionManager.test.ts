@@ -20,6 +20,8 @@ mock.module('./voiceInputService', () => ({
 const mockRecordingStateNotifier = {
   notifyRecordingStarted: mock(),
   notifyRecordingStopped: mock(),
+  notifyProcessingStarted: mock(),
+  notifyProcessingStopped: mock(),
 }
 mock.module('./recordingStateNotifier', () => ({
   recordingStateNotifier: mockRecordingStateNotifier,

@@ -114,11 +114,16 @@ export class ContextGrabber {
         )
 
         if (result.success && result.context?.selectedText) {
-          console.log('[ContextGrabber] Got selected text via accessibility API')
+          console.log(
+            '[ContextGrabber] Got selected text via accessibility API',
+          )
           return result.context.selectedText.trim()
         }
       } catch (error) {
-        console.log('[ContextGrabber] Accessibility API failed, falling back to keyboard:', error)
+        console.log(
+          '[ContextGrabber] Accessibility API failed, falling back to keyboard:',
+          error,
+        )
       }
     }
 
@@ -166,11 +171,16 @@ export class ContextGrabber {
         )
 
         if (result.success && result.context?.textBefore) {
-          console.log('[ContextGrabber] Got cursor context via accessibility API')
+          console.log(
+            '[ContextGrabber] Got cursor context via accessibility API',
+          )
           return result.context.textBefore
         }
       } catch (error) {
-        console.log('[ContextGrabber] Accessibility API failed, falling back to keyboard:', error)
+        console.log(
+          '[ContextGrabber] Accessibility API failed, falling back to keyboard:',
+          error,
+        )
       }
     }
 

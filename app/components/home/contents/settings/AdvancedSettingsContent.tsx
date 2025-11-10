@@ -240,7 +240,11 @@ export default function AdvancedSettingsContent() {
   function handleGrammarServiceToggle(e: ChangeEvent<HTMLInputElement>) {
     const enabled = e.target.checked
     setGrammarServiceEnabled(enabled)
-    scheduleAdvancedSettingsUpdate(llm, enabled, macosAccessibilityContextEnabled)
+    scheduleAdvancedSettingsUpdate(
+      llm,
+      enabled,
+      macosAccessibilityContextEnabled,
+    )
   }
 
   function handleMacosAccessibilityContextToggle(
@@ -309,8 +313,8 @@ export default function AdvancedSettingsContent() {
                 Use Accessibility Context
               </span>
               <span className="block text-xs text-slate-500 mt-1">
-                Use Accessibility APIs to capture text context around the
-                cursor for improved accuracy. (macOS only)
+                Use Accessibility APIs to capture text context around the cursor
+                for improved accuracy. (macOS only)
               </span>
             </span>
           </label>

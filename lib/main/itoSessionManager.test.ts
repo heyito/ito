@@ -35,6 +35,7 @@ const mockItoStreamController = {
     }),
   ),
   setMode: mock(),
+  getCurrentMode: mock(() => ItoMode.TRANSCRIBE),
   sendConfigUpdate: mock(() => Promise.resolve()),
   getAudioDurationMs: mock(() => 1000),
   endInteraction: mock(),
@@ -65,6 +66,29 @@ mock.module('./interactions/InteractionManager', () => ({
 }))
 
 const mockContextGrabber = {
+  gatherContext: mock(() =>
+    Promise.resolve({
+      windowTitle: 'Test Window',
+      appName: 'Test App',
+      contextText: 'Test context',
+      vocabularyWords: ['test', 'word'],
+      advancedSettings: {
+        llm: {
+          asrModel: 'whisper-1',
+          asrProvider: 'openai',
+          asrPrompt: '',
+          noSpeechThreshold: 0.5,
+          llmProvider: 'openai',
+          llmModel: 'gpt-4',
+          llmTemperature: 0.7,
+          transcriptionPrompt: '',
+          editingPrompt: '',
+        },
+        grammarServiceEnabled: false,
+        macosAccessibilityContextEnabled: true,
+      },
+    }),
+  ),
   getCursorContextForGrammar: mock(() => Promise.resolve('test context')),
 }
 mock.module('./context/ContextGrabber', () => ({

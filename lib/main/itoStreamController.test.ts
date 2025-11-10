@@ -62,6 +62,8 @@ const mockContextGrabber = {
           transcriptionPrompt: '',
           editingPrompt: '',
         },
+        grammarServiceEnabled: false,
+        macosAccessibilityContextEnabled: true,
       },
     }),
   ),
@@ -189,11 +191,10 @@ describe('ItoStreamController', () => {
     await controller.initialize(ItoMode.TRANSCRIBE)
     mockAudioStreamManager.isCurrentlyStreaming.mockReturnValue(true)
 
-    await controller.sendConfigUpdate()
+    const mockContext = await mockContextGrabber.gatherContext()
+    await controller.sendConfigUpdate(mockContext)
 
-    expect(mockContextGrabber.gatherContext).toHaveBeenCalledWith(
-      ItoMode.TRANSCRIBE,
-    )
+    expect(mockContextGrabber.gatherContext).toHaveBeenCalled()
   })
 
   test('should warn when sending config without active stream', async () => {
@@ -202,9 +203,11 @@ describe('ItoStreamController', () => {
 
     mockAudioStreamManager.isCurrentlyStreaming.mockReturnValue(false)
 
-    await controller.sendConfigUpdate()
+    const mockContext = await mockContextGrabber.gatherContext()
+    await controller.sendConfigUpdate(mockContext)
 
-    expect(mockContextGrabber.gatherContext).not.toHaveBeenCalled()
+    // Should not be called again since we already called it to get mockContext
+    expect(mockContextGrabber.gatherContext).toHaveBeenCalledTimes(1)
   })
 
   test('should end interaction successfully', async () => {

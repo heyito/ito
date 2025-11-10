@@ -9,7 +9,7 @@ import {
 import { create } from '@bufbuild/protobuf'
 import { grpcClient } from '../clients/grpcClient'
 import { AudioStreamManager } from './audio/AudioStreamManager'
-import { contextGrabber } from './context/ContextGrabber'
+import { ContextData } from './context/ContextGrabber'
 import log from 'electron-log'
 import { timingCollector, TimingEventName } from './timing/TimingCollector'
 import { interactionManager } from './interactions/InteractionManager'
@@ -85,6 +85,10 @@ export class ItoStreamController {
     }
   }
 
+  public getCurrentMode(): ItoMode {
+    return this.currentMode
+  }
+
   public setMode(mode: ItoMode) {
     if (!this.audioStreamManager.isCurrentlyStreaming()) {
       log.warn('[ItoStreamController] Cannot change mode - no active stream')
@@ -98,14 +102,14 @@ export class ItoStreamController {
     this.sendModeUpdate(mode)
   }
 
-  public async sendConfigUpdate() {
+  public async sendConfigUpdate(context: ContextData) {
     if (!this.audioStreamManager.isCurrentlyStreaming()) {
       log.warn('[ItoStreamController] Cannot send config - no active stream')
       return
     }
 
     console.log('[ItoStreamController] Queueing config update')
-    const config = await this.buildStreamConfig()
+    const config = this.buildStreamConfig(context)
     this.configQueue.push(config)
   }
 
@@ -205,11 +209,9 @@ export class ItoStreamController {
     }
   }
 
-  private async buildStreamConfig(): Promise<TranscribeStreamRequest> {
-    // Gather all config data using ContextGrabber
-    const context = await contextGrabber.gatherContext(this.currentMode)
+  private buildStreamConfig(context: ContextData): TranscribeStreamRequest {
     const interactionId = interactionManager.getCurrentInteractionId()
-
+    // Build gRPC config message from the provided context data
     return create(TranscribeStreamRequestSchema, {
       payload: {
         case: 'config',

@@ -69,11 +69,19 @@ export const registerStripeWebhook = async (fastify: FastifyInstance) => {
               ? new Date(startSec * 1000)
               : null
 
+            // Sync cancel_at_period_end status
+            // When cancel_at_period_end is true, cancel_at contains the period end date
+            const subscriptionEndAt =
+              sub.cancel_at_period_end && sub.cancel_at
+                ? new Date(sub.cancel_at * 1000)
+                : null
+
             await SubscriptionsRepository.upsertActive(
               userSub,
               stripeCustomerId,
               stripeSubscriptionId,
               subscriptionStartAt,
+              subscriptionEndAt,
             )
             await TrialsRepository.completeTrial(userSub)
             break
@@ -131,11 +139,19 @@ export const registerStripeWebhook = async (fastify: FastifyInstance) => {
               ? new Date(startSec * 1000)
               : null
 
+            // Sync cancel_at_period_end status
+            // When cancel_at_period_end is true, cancel_at contains the period end date
+            const subscriptionEndAt =
+              sub.cancel_at_period_end && sub.cancel_at
+                ? new Date(sub.cancel_at * 1000)
+                : null
+
             await SubscriptionsRepository.upsertActive(
               userSub,
               stripeCustomerId,
               stripeSubscriptionId,
               subscriptionStartAt,
+              subscriptionEndAt,
             )
             // Mark trial as completed when subscription becomes active
             if (sub.status === 'active') {

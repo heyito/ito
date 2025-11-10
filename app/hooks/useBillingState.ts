@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 export type BillingState = {
   proStatus: 'active_pro' | 'free_trial' | 'none'
   subscriptionStartAt: Date | null
+  subscriptionEndAt: Date | null
+  isScheduledForCancellation: boolean
   trialDays: number
   trialStartAt: Date | null
   daysLeft: number
@@ -25,6 +27,9 @@ export function useBillingState() {
           ...cached,
           subscriptionStartAt: cached.subscriptionStartAt
             ? new Date(cached.subscriptionStartAt)
+            : null,
+          subscriptionEndAt: cached.subscriptionEndAt
+            ? new Date(cached.subscriptionEndAt)
             : null,
           trialStartAt: cached.trialStartAt
             ? new Date(cached.trialStartAt)
@@ -58,10 +63,15 @@ export function useBillingState() {
         const subStart = res?.subscriptionStartAt
           ? new Date(res.subscriptionStartAt)
           : null
+        const subEnd = res?.subscriptionEndAt
+          ? new Date(res.subscriptionEndAt)
+          : null
         const trial = res?.trial || {}
         const next: BillingState = {
           proStatus: res.pro_status,
           subscriptionStartAt: subStart,
+          subscriptionEndAt: subEnd,
+          isScheduledForCancellation: !!res?.isScheduledForCancellation,
           trialDays: trial.trialDays ?? 14,
           trialStartAt: trial.trialStartAt
             ? new Date(trial.trialStartAt)
@@ -134,6 +144,8 @@ export function useBillingState() {
       isPro: (state?.proStatus ?? 'none') === 'active_pro',
       hasSubscription: (state?.proStatus ?? 'none') === 'active_pro',
       subscriptionStartAt: state?.subscriptionStartAt ?? null,
+      subscriptionEndAt: state?.subscriptionEndAt ?? null,
+      isScheduledForCancellation: state?.isScheduledForCancellation ?? false,
 
       isTrialActive: !!state?.isTrialActive,
       daysLeft: state?.daysLeft ?? 0,

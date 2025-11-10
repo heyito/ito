@@ -609,7 +609,7 @@ describe('useBillingState', () => {
     mockBillingApi.status.mockClear()
 
     if (intervalCallback) {
-      await intervalCallback()
+      await (intervalCallback as () => void)()
       await waitFor(() => mockBillingApi.status.mock.calls.length > 0)
       expect(mockBillingApi.status).toHaveBeenCalledTimes(1)
     }

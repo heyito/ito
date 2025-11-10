@@ -10,12 +10,14 @@ const mockStripeState: {
   checkoutSessionsCreate: AnyObject | null
   checkoutSessionsRetrieve: AnyObject | null
   subscriptionsRetrieve: AnyObject | null
+  subscriptionsUpdate: AnyObject | null
   subscriptionsCancel: AnyObject | null
   shouldThrow: string | null
 } = {
   checkoutSessionsCreate: null,
   checkoutSessionsRetrieve: null,
   subscriptionsRetrieve: null,
+  subscriptionsUpdate: null,
   subscriptionsCancel: null,
   shouldThrow: null,
 }
@@ -78,6 +80,29 @@ mock.module('stripe', () => {
             ...mockStripeState.subscriptionsRetrieve,
           }
         },
+        update: async (subscriptionId: string, params: AnyObject) => {
+          if (mockStripeState.shouldThrow === 'subscriptions.update') {
+            mockStripeState.shouldThrow = null
+            throw new Error('Stripe API error')
+          }
+          mockStripeState.subscriptionsUpdate = { subscriptionId, params }
+          const currentPeriodEnd =
+            Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60 // 30 days from now
+          return {
+            id: subscriptionId,
+            cancel_at_period_end: params.cancel_at_period_end || false,
+            current_period_end: currentPeriodEnd,
+            status: params.cancel_at_period_end ? 'active' : 'active',
+            items: {
+              data: [
+                {
+                  current_period_start: Math.floor(Date.now() / 1000),
+                },
+              ],
+            },
+            ...mockStripeState.subscriptionsRetrieve,
+          }
+        },
         cancel: async (subscriptionId: string) => {
           if (mockStripeState.shouldThrow === 'subscriptions.cancel') {
             mockStripeState.shouldThrow = null
@@ -98,9 +123,11 @@ mock.module('stripe', () => {
 const mockSubscriptionsRepo: {
   getByUserId: AnyObject | null
   upsertActive: AnyObject | null
+  updateSubscriptionEndAt: AnyObject | null
 } = {
   getByUserId: null,
   upsertActive: null,
+  updateSubscriptionEndAt: null,
 }
 
 const mockTrialsRepo: {
@@ -128,6 +155,7 @@ mock.module('../db/repo.js', () => {
         stripeCustomerId: string | null,
         stripeSubscriptionId: string | null,
         startAt: Date | null,
+        endAt?: Date | null,
       ) => {
         if (mockSubscriptionsRepo.upsertActive === null) {
           return {
@@ -135,6 +163,7 @@ mock.module('../db/repo.js', () => {
             stripe_customer_id: stripeCustomerId,
             stripe_subscription_id: stripeSubscriptionId,
             subscription_start_at: startAt,
+            subscription_end_at: endAt ?? null,
           }
         }
         if (typeof mockSubscriptionsRepo.upsertActive === 'function') {
@@ -143,9 +172,24 @@ mock.module('../db/repo.js', () => {
             stripeCustomerId,
             stripeSubscriptionId,
             startAt,
+            endAt,
           )
         }
         return mockSubscriptionsRepo.upsertActive
+      },
+      updateSubscriptionEndAt: async (userId: string, endAt: Date | null) => {
+        if (mockSubscriptionsRepo.updateSubscriptionEndAt === null) {
+          return {
+            user_id: userId,
+            subscription_end_at: endAt,
+          }
+        }
+        if (
+          typeof mockSubscriptionsRepo.updateSubscriptionEndAt === 'function'
+        ) {
+          return mockSubscriptionsRepo.updateSubscriptionEndAt(userId, endAt)
+        }
+        return mockSubscriptionsRepo.updateSubscriptionEndAt
       },
     },
     TrialsRepository: {
@@ -187,10 +231,12 @@ describe('registerBillingRoutes', () => {
     mockStripeState.checkoutSessionsCreate = null
     mockStripeState.checkoutSessionsRetrieve = null
     mockStripeState.subscriptionsRetrieve = null
+    mockStripeState.subscriptionsUpdate = null
     mockStripeState.subscriptionsCancel = null
     mockStripeState.shouldThrow = null
     mockSubscriptionsRepo.getByUserId = null
     mockSubscriptionsRepo.upsertActive = null
+    mockSubscriptionsRepo.updateSubscriptionEndAt = null
     mockTrialsRepo.getByUserId = null
     mockTrialsRepo.completeTrial = false
   })
@@ -603,8 +649,9 @@ describe('registerBillingRoutes', () => {
       expect(res.statusCode).toBe(200)
       const body = JSON.parse(res.body)
       expect(body.success).toBe(true)
-      expect(mockStripeState.subscriptionsCancel).toEqual({
+      expect(mockStripeState.subscriptionsUpdate).toEqual({
         subscriptionId: 'sub_test_123',
+        params: { cancel_at_period_end: true },
       })
       await app.close()
     })
@@ -622,7 +669,7 @@ describe('registerBillingRoutes', () => {
         stripe_subscription_id: 'sub_test_123',
       }
 
-      mockStripeState.shouldThrow = 'subscriptions.cancel'
+      mockStripeState.shouldThrow = 'subscriptions.update'
 
       const res = await app.inject({
         method: 'POST',
@@ -633,6 +680,52 @@ describe('registerBillingRoutes', () => {
       const body = JSON.parse(res.body)
       expect(body.success).toBe(false)
       expect(body.error).toBe('Stripe API error')
+      await app.close()
+    })
+  })
+
+  describe('POST /billing/reactivate', () => {
+    it('returns 401 when requireAuth is true and user is missing', async () => {
+      const app = createTestApp()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/reactivate',
+      })
+
+      expect(res.statusCode).toBe(401)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Unauthorized')
+      await app.close()
+    })
+
+    it('reactivates subscription successfully', async () => {
+      const app = createTestApp()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      mockSubscriptionsRepo.getByUserId = {
+        user_id: 'user-123',
+        stripe_subscription_id: 'sub_test_123',
+      }
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/billing/reactivate',
+      })
+
+      expect(res.statusCode).toBe(200)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(true)
+      expect(mockStripeState.subscriptionsUpdate).toEqual({
+        subscriptionId: 'sub_test_123',
+        params: { cancel_at_period_end: false },
+      })
       await app.close()
     })
   })
@@ -667,6 +760,7 @@ describe('registerBillingRoutes', () => {
         user_id: 'user-123',
         stripe_subscription_id: 'sub_test_123',
         subscription_start_at: startDate,
+        subscription_end_at: null,
       }
 
       const res = await app.inject({
@@ -681,7 +775,43 @@ describe('registerBillingRoutes', () => {
       expect(new Date(body.subscriptionStartAt).getTime()).toBe(
         startDate.getTime(),
       )
+      expect(body.subscriptionEndAt).toBe(null)
+      expect(body.isScheduledForCancellation).toBe(false)
       expect(body.trial).toBeDefined()
+      await app.close()
+    })
+
+    it('returns subscription_end_at and isScheduledForCancellation when scheduled for cancellation', async () => {
+      const app = createTestApp()
+      await registerBillingRoutes(app, { requireAuth: true })
+
+      app.addHook('preHandler', async req => {
+        ;(req as any).user = { sub: 'user-123' }
+      })
+
+      const startDate = new Date('2024-01-01')
+      const endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+      mockSubscriptionsRepo.getByUserId = {
+        user_id: 'user-123',
+        stripe_subscription_id: 'sub_test_123',
+        subscription_start_at: startDate,
+        subscription_end_at: endDate,
+      }
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/billing/status',
+      })
+
+      expect(res.statusCode).toBe(200)
+      const body = JSON.parse(res.body)
+      expect(body.success).toBe(true)
+      expect(body.pro_status).toBe('active_pro')
+      expect(new Date(body.subscriptionStartAt).getTime()).toBe(
+        startDate.getTime(),
+      )
+      expect(new Date(body.subscriptionEndAt).getTime()).toBe(endDate.getTime())
+      expect(body.isScheduledForCancellation).toBe(true)
       await app.close()
     })
 

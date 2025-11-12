@@ -188,8 +188,9 @@ export class S3StorageClient {
 let storageClient: S3StorageClient | null = null
 
 export function getStorageClient(): S3StorageClient {
+  const bucketName = process.env.BLOB_STORAGE_BUCKET
   if (!storageClient) {
-    storageClient = new S3StorageClient()
+    storageClient = new S3StorageClient(bucketName)
   }
   return storageClient
 }

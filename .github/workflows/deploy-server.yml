@@ -15,11 +15,13 @@ jobs:
       infra_changed: ${{ steps.filter.outputs.infra }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetch full history to allow comparing against previous commits
       - name: Detect changed areas
         id: filter
         uses: dorny/paths-filter@v2
         with:
-          base: ${{ github.ref_name }}
+          base: ${{ github.event.before }}
           filters: |
             server:
               - server/src/**

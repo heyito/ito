@@ -5,8 +5,6 @@ import {
   DeleteObjectCommand,
   ListObjectsV2Command,
   HeadObjectCommand,
-  CreateBucketCommand,
-  HeadBucketCommand,
   PutObjectCommandInput,
   GetObjectCommandInput,
   DeleteObjectCommandInput,
@@ -21,13 +19,15 @@ export class S3StorageClient {
   private bucketName: string
   private bucketChecked: boolean = false
 
-  constructor() {
-    const bucketName = process.env.BLOB_STORAGE_BUCKET
-    if (!bucketName) {
-      throw new Error('BLOB_STORAGE_BUCKET environment variable is not set')
+  constructor(bucketName?: string) {
+    const bucket = bucketName
+    if (!bucket) {
+      throw new Error(
+        'Bucket name not provided and BLOB_STORAGE_BUCKET environment variable is not set',
+      )
     }
 
-    this.bucketName = bucketName
+    this.bucketName = bucket
 
     // Configure S3 client with support for MinIO/local development
     const s3Config: any = {

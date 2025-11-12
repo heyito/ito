@@ -1,6 +1,7 @@
 import { Switch } from '@/app/components/ui/switch'
 import { useSettingsStore } from '@/app/store/useSettingsStore'
 import { useWindowContext } from '@/app/components/window/WindowContext'
+import { LanguageSelector } from '@/app/components/ui/language-selector'
 
 export default function GeneralSettingsContent() {
   const {
@@ -8,10 +9,12 @@ export default function GeneralSettingsContent() {
     launchAtLogin,
     showItoBarAlways,
     showAppInDock,
+    language,
     setShareAnalytics,
     setLaunchAtLogin,
     setShowItoBarAlways,
     setShowAppInDock,
+    setLanguage,
   } = useSettingsStore()
 
   const windowContext = useWindowContext()
@@ -75,6 +78,19 @@ export default function GeneralSettingsContent() {
               />
             </div>
           )}
+
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium">Language</div>
+              <div className="text-xs text-gray-600 mt-1">
+                Select the language for speech transcription.
+              </div>
+            </div>
+            <LanguageSelector
+              selectedLanguageCode={language}
+              onSelectionChange={setLanguage}
+            />
+          </div>
         </div>
       </div>
     </div>

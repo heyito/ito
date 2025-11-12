@@ -26,6 +26,7 @@ interface SettingsState {
   muteAudioWhenDictating: boolean
   microphoneDeviceId: string
   microphoneName: string
+  language: string
   keyboardShortcuts: KeyboardShortcutConfig[]
   setShareAnalytics: (share: boolean) => void
   setLaunchAtLogin: (launch: boolean) => void
@@ -34,6 +35,7 @@ interface SettingsState {
   setInteractionSounds: (enabled: boolean) => void
   setMuteAudioWhenDictating: (enabled: boolean) => void
   setMicrophoneDeviceId: (deviceId: string, name: string) => void
+  setLanguage: (language: string) => void
   createKeyboardShortcut: (mode: ItoMode) => ShortcutResult
   removeKeyboardShortcut: (shortcutId: string) => void
   getItoModeShortcuts: (mode: ItoMode) => KeyboardShortcutConfig[]
@@ -58,6 +60,7 @@ const getInitialState = () => {
     muteAudioWhenDictating: storedSettings?.muteAudioWhenDictating ?? false,
     microphoneDeviceId: storedSettings?.microphoneDeviceId ?? 'default',
     microphoneName: storedSettings?.microphoneName ?? 'Default Microphone',
+    language: storedSettings?.language ?? 'auto',
     keyboardShortcuts: storedSettings?.keyboardShortcuts ?? [
       {
         keys: ITO_MODE_SHORTCUT_DEFAULTS[ItoMode.EDIT],
@@ -187,6 +190,7 @@ export const useSettingsStore = create<SettingsState>(set => {
       set(partialState)
       syncToStore(partialState)
     },
+    setLanguage: createSetter('language', 'general'),
     createKeyboardShortcut: (mode: ItoMode): ShortcutResult => {
       const currentShortcuts = useSettingsStore.getState().keyboardShortcuts
 

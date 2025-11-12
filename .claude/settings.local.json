@@ -17,6 +17,7 @@
       "Bash(cargo clippy:*)",
       "Bash(cargo clean:*)",
       "Bash(awk:*)",
+      "WebFetch(domain:connectrpc.com)",
       "Bash(git log:*)"
     ],
     "deny": [],

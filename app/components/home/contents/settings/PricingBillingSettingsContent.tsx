@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { Switch } from '@/app/components/ui/switch'
 import { Button } from '@/app/components/ui/button'
 import { Check } from '@mynaui/icons-react'
 import useBillingState from '@/app/hooks/useBillingState'
@@ -100,6 +99,7 @@ export default function PricingBillingSettingsContent() {
     if (downgradeLoading) return 'Cancelling...'
     if (billingState.isScheduledForCancellation) return 'Cancelling...'
     if (billingState.proStatus === 'active_pro') return 'Downgrade plan'
+    if (billingState.proStatus === 'free_trial') return 'Downgrade plan'
     if (billingState.proStatus === 'none' && !billingState.isTrialActive) {
       return 'Current plan'
     }
@@ -121,6 +121,7 @@ export default function PricingBillingSettingsContent() {
     if (reactivateLoading) return 'Reactivating...'
     if (billingState.isScheduledForCancellation) return 'Reactivate'
     if (billingState.proStatus === 'active_pro') return 'Current plan'
+    if (billingState.proStatus === 'free_trial') return 'Upgrade Plan'
     return 'Upgrade'
   }
 
@@ -132,6 +133,14 @@ export default function PricingBillingSettingsContent() {
       checkoutLoading ||
       reactivateLoading
     )
+  }
+
+  const getProCardTitle = () => {
+    if (billingState.isTrialActive && billingState.daysLeft > 0) {
+      const dayText = billingState.daysLeft === 1 ? 'day' : 'days'
+      return `Pro Trial (${billingState.daysLeft} ${dayText} remaining)`
+    }
+    return 'Pro'
   }
 
   return (
@@ -211,7 +220,7 @@ export default function PricingBillingSettingsContent() {
 
         {/* Pro Card */}
         <PricingCard
-          title="Pro"
+          title={getProCardTitle()}
           price="$8.99"
           priceSubtext="/ month"
           isHighlighted

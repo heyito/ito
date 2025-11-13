@@ -3,6 +3,7 @@ import {
   useAdvancedSettingsStore,
 } from '@/app/store/useAdvancedSettingsStore'
 import { ChangeEvent, useEffect, useRef, useState } from 'react'
+import { DEFAULT_KEY } from '@/lib/constants/generated-defaults'
 
 type LlmSettingConfig = {
   name: keyof LlmSettings
@@ -187,11 +188,22 @@ function SettingInput({ config, value, onChange }: SettingInputProps) {
 export default function AdvancedSettingsContent() {
   const {
     llm,
+    defaults,
     grammarServiceEnabled,
     setLlmSettings,
     setGrammarServiceEnabled,
   } = useAdvancedSettingsStore()
   const debounceRef = useRef<NodeJS.Timeout>(null)
+  console.log({ defaults })
+
+  // Helper to resolve DEFAULT_KEY to actual default value for display
+  const getDisplayValue = (key: keyof LlmSettings): string => {
+    const value = llm[key]
+    if (value === DEFAULT_KEY && defaults) {
+      return defaults[key] || ''
+    }
+    return value
+  }
 
   useEffect(() => {
     return () => {
@@ -233,20 +245,42 @@ export default function AdvancedSettingsContent() {
     scheduleAdvancedSettingsUpdate(llm, enabled)
   }
 
+  function handleRestoreDefaults() {
+    const defaultLlmSettings: LlmSettings = {
+      asrProvider: DEFAULT_KEY,
+      asrModel: DEFAULT_KEY,
+      asrPrompt: DEFAULT_KEY,
+      llmProvider: DEFAULT_KEY,
+      llmModel: DEFAULT_KEY,
+      llmTemperature: DEFAULT_KEY,
+      transcriptionPrompt: DEFAULT_KEY,
+      editingPrompt: DEFAULT_KEY,
+      noSpeechThreshold: DEFAULT_KEY,
+    }
+    setLlmSettings(defaultLlmSettings)
+    scheduleAdvancedSettingsUpdate(defaultLlmSettings, grammarServiceEnabled)
+  }
+
   return (
     <div className="max-h-[70vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-500 scrollbar-track-transparent">
       {/* LLM Settings Section */}
       <div className="space-y-6">
         <div>
-          <h3 className="text-md font-medium text-slate-900 mb-3 ml-1">
-            LLM Settings
-          </h3>
+          <div className="flex items-center justify-between mb-3 ml-1 mr-1">
+            <h3 className="text-md font-medium text-slate-900">LLM Settings</h3>
+            <button
+              onClick={handleRestoreDefaults}
+              className="px-3 py-1 text-sm text-slate-600 hover:text-slate-900 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+            >
+              Restore Defaults
+            </button>
+          </div>
           <div className="space-y-3">
             {llmSettingsConfig.map(config => (
               <SettingInput
                 key={config.name}
                 config={config}
-                value={llm[config.name as string]}
+                value={getDisplayValue(config.name)}
                 onChange={handleInputChange}
               />
             ))}

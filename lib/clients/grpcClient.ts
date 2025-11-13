@@ -40,11 +40,14 @@ import {
   AdvancedSettings,
   getAdvancedSettings,
   getCurrentUserId,
+  store,
 } from '../main/store'
 import { getSelectedTextString } from '../media/selected-text-reader'
 import { ensureValidTokens } from '../auth/events'
 import { Auth0Config } from '../auth/config'
 import { getActiveWindow } from '../media/active-application'
+import { resolveDefaultKeys } from '../utils/settings.js'
+import { STORE_KEYS } from '../constants/store-keys.js'
 
 class GrpcClient {
   private client: ReturnType<typeof createClient<typeof ItoService>>
@@ -505,18 +508,29 @@ class GrpcClient {
       return null
     }
 
+    // Get current stored settings to access defaults
+    const currentStoredSettings = store.get(
+      STORE_KEYS.ADVANCED_SETTINGS,
+    ) as AdvancedSettings
+
+    // Resolve any DEFAULT_KEY values to actual defaults before sending to server
+    const resolvedLlmSettings = resolveDefaultKeys(
+      settings.llm,
+      currentStoredSettings?.defaults,
+    )
+
     return this.withRetry(async () => {
       const request = create(UpdateAdvancedSettingsRequestSchema, {
         llm: {
-          asrModel: settings.llm.asrModel,
-          asrProvider: settings.llm.asrProvider,
-          asrPrompt: settings.llm.asrPrompt,
-          llmProvider: settings.llm.llmProvider,
-          llmModel: settings.llm.llmModel,
-          llmTemperature: settings.llm.llmTemperature,
-          transcriptionPrompt: settings.llm.transcriptionPrompt,
-          editingPrompt: settings.llm.editingPrompt,
-          noSpeechThreshold: settings.llm.noSpeechThreshold,
+          asrModel: resolvedLlmSettings.asrModel,
+          asrProvider: resolvedLlmSettings.asrProvider,
+          asrPrompt: resolvedLlmSettings.asrPrompt,
+          llmProvider: resolvedLlmSettings.llmProvider,
+          llmModel: resolvedLlmSettings.llmModel,
+          transcriptionPrompt: resolvedLlmSettings.transcriptionPrompt,
+          editingPrompt: resolvedLlmSettings.editingPrompt,
+          llmTemperature: parseFloat(resolvedLlmSettings.llmTemperature),
+          noSpeechThreshold: parseFloat(resolvedLlmSettings.noSpeechThreshold),
         },
       })
       return await this.client.updateAdvancedSettings(request, {

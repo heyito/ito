@@ -9,7 +9,11 @@ import { Note, Interaction, DictionaryItem } from './sqlite/models'
 import mainStore from './store'
 import { STORE_KEYS } from '../constants/store-keys'
 import type { AdvancedSettings } from './store'
-import { DEFAULT_ADVANCED_SETTINGS } from '../constants/generated-defaults.js'
+import {
+  DEFAULT_ADVANCED_SETTINGS,
+  DEFAULT_KEY,
+} from '../constants/generated-defaults.js'
+import { main } from 'bun'
 
 const LAST_SYNCED_AT_KEY = 'lastSyncedAt'
 
@@ -64,6 +68,7 @@ export class SyncService {
   }
 
   private async runSync() {
+    console.log('[SyncService] Starting sync cycle...')
     if (this.isSyncing) {
       return
     }
@@ -272,11 +277,25 @@ export class SyncService {
 
   private async syncAdvancedSettings(lastSyncedAt?: string) {
     try {
+      console.log('Syncing advanced settings...')
       // Get remote advanced settings
       const remoteSettings = await grpcClient.getAdvancedSettings()
       if (!remoteSettings) {
         console.warn('No remote advanced settings found, skipping sync.')
         return
+      }
+
+      // Always update local defaults
+      const defaultSetttings = remoteSettings.default
+      console.log({ defaultSetttings })
+      if (defaultSetttings) {
+        const currentLocalSettings = mainStore.get(
+          STORE_KEYS.ADVANCED_SETTINGS,
+        ) as AdvancedSettings
+        mainStore.set(STORE_KEYS.ADVANCED_SETTINGS, {
+          ...currentLocalSettings,
+          defaults: defaultSetttings,
+        })
       }
 
       // Compare timestamps to determine sync direction
@@ -292,33 +311,17 @@ export class SyncService {
 
         const updatedLocalSettings: AdvancedSettings = {
           llm: {
-            asrProvider:
-              remoteSettings.llm?.asrProvider ||
-              DEFAULT_ADVANCED_SETTINGS.asrProvider,
-            asrModel:
-              remoteSettings.llm?.asrModel ||
-              DEFAULT_ADVANCED_SETTINGS.asrModel,
-            asrPrompt:
-              remoteSettings.llm?.asrPrompt ||
-              DEFAULT_ADVANCED_SETTINGS.asrPrompt,
-            llmProvider:
-              remoteSettings.llm?.llmProvider ||
-              DEFAULT_ADVANCED_SETTINGS.llmProvider,
-            llmModel:
-              remoteSettings.llm?.llmModel ||
-              DEFAULT_ADVANCED_SETTINGS.llmModel,
-            llmTemperature:
-              remoteSettings.llm?.llmTemperature ||
-              DEFAULT_ADVANCED_SETTINGS.llmTemperature,
+            asrProvider: remoteSettings.llm?.asrProvider || DEFAULT_KEY,
+            asrModel: remoteSettings.llm?.asrModel || DEFAULT_KEY,
+            asrPrompt: remoteSettings.llm?.asrPrompt || DEFAULT_KEY,
+            llmProvider: remoteSettings.llm?.llmProvider || DEFAULT_KEY,
+            llmModel: remoteSettings.llm?.llmModel || DEFAULT_KEY,
+            llmTemperature: remoteSettings.llm?.llmTemperature || DEFAULT_KEY,
             transcriptionPrompt:
-              remoteSettings.llm?.transcriptionPrompt ||
-              DEFAULT_ADVANCED_SETTINGS.transcriptionPrompt,
-            editingPrompt:
-              remoteSettings.llm?.editingPrompt ||
-              DEFAULT_ADVANCED_SETTINGS.editingPrompt,
+              remoteSettings.llm?.transcriptionPrompt || DEFAULT_KEY,
+            editingPrompt: remoteSettings.llm?.editingPrompt || DEFAULT_KEY,
             noSpeechThreshold:
-              remoteSettings.llm?.noSpeechThreshold ||
-              DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold,
+              remoteSettings.llm?.noSpeechThreshold || DEFAULT_KEY,
           },
           // Preserve local-only settings that aren't synced to the server
           grammarServiceEnabled:

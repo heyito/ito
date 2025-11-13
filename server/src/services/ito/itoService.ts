@@ -34,6 +34,7 @@ import { ConnectError, Code } from '@connectrpc/connect'
 import { kUser } from '../../auth/userContext.js'
 import { transcribeStreamV2Handler } from './transcribeStreamV2Handler.js'
 import { transcribeStreamHandler } from './transcribeStreamHandler.js'
+import { DEFAULT_ADVANCED_SETTINGS } from '../../constants/generated-defaults.js'
 
 function dbToNotePb(dbNote: DbNote): Note {
   return create(NoteSchema, {
@@ -113,6 +114,17 @@ function dbToAdvancedSettingsPb(
       noSpeechThreshold: dbAdvancedSettings.llm.no_speech_threshold,
       lowQualityThreshold: dbAdvancedSettings.llm.low_quality_threshold,
     }),
+    default: {
+      asrModel: DEFAULT_ADVANCED_SETTINGS.asrModel,
+      asrPrompt: DEFAULT_ADVANCED_SETTINGS.asrPrompt,
+      asrProvider: DEFAULT_ADVANCED_SETTINGS.asrProvider,
+      llmProvider: DEFAULT_ADVANCED_SETTINGS.llmProvider,
+      llmTemperature: DEFAULT_ADVANCED_SETTINGS.llmTemperature,
+      llmModel: DEFAULT_ADVANCED_SETTINGS.llmModel,
+      transcriptionPrompt: DEFAULT_ADVANCED_SETTINGS.transcriptionPrompt,
+      editingPrompt: DEFAULT_ADVANCED_SETTINGS.editingPrompt,
+      noSpeechThreshold: DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold,
+    },
   })
 }
 

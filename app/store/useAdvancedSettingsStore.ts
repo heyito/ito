@@ -7,15 +7,16 @@ export interface LlmSettings {
   asrPrompt: string
   llmProvider: string
   llmModel: string
-  llmTemperature: number
+  llmTemperature: string
   transcriptionPrompt: string
   editingPrompt: string
-  noSpeechThreshold: number
+  noSpeechThreshold: string
 }
 
 interface AdvancedSettingsState {
   llm: LlmSettings
   grammarServiceEnabled: boolean
+  defaults?: LlmSettings
   setLlmSettings: (settings: Partial<LlmSettings>) => void
   setGrammarServiceEnabled: (enabled: boolean) => void
 }
@@ -26,20 +27,13 @@ const getInitialState = () => {
     STORE_KEYS.ADVANCED_SETTINGS,
   )
 
+  console.log('Initial advanced settings from store:', storedAdvancedSettings)
+
   return {
-    llm: {
-      asrProvider: storedAdvancedSettings.llm.asrProvider,
-      asrModel: storedAdvancedSettings.llm.asrModel,
-      asrPrompt: storedAdvancedSettings.llm.asrPrompt,
-      llmProvider: storedAdvancedSettings.llm.llmProvider,
-      llmModel: storedAdvancedSettings.llm.llmModel,
-      llmTemperature: storedAdvancedSettings.llm.llmTemperature,
-      transcriptionPrompt: storedAdvancedSettings.llm.transcriptionPrompt,
-      editingPrompt: storedAdvancedSettings.llm.editingPrompt,
-      noSpeechThreshold: storedAdvancedSettings.llm.noSpeechThreshold,
-    },
+    llm: storedAdvancedSettings.llm,
     grammarServiceEnabled:
       storedAdvancedSettings.grammarServiceEnabled ?? false,
+    defaults: storedAdvancedSettings.defaults,
   }
 }
 

@@ -97,7 +97,7 @@ export default function PricingBillingSettingsContent() {
   const getStarterButtonText = () => {
     if (billingState.isLoading) return 'Loading...'
     if (downgradeLoading) return 'Cancelling...'
-    if (billingState.isScheduledForCancellation) return 'Cancelling...'
+    if (billingState.isScheduledForCancellation) return 'Current Plan'
     if (billingState.proStatus === 'active_pro') return 'Downgrade plan'
     if (billingState.proStatus === 'free_trial') return 'Downgrade plan'
     if (billingState.proStatus === 'none' && !billingState.isTrialActive) {

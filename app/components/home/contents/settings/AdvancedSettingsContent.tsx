@@ -2,7 +2,7 @@ import {
   LlmSettings,
   useAdvancedSettingsStore,
 } from '@/app/store/useAdvancedSettingsStore'
-import { ChangeEvent, useEffect, useRef, useState } from 'react'
+import { ChangeEvent, useEffect, useRef, useState, useCallback, memo } from 'react'
 import { DEFAULT_KEY } from '@/lib/constants/generated-defaults'
 
 type LlmSettingConfig = {
@@ -117,29 +117,29 @@ interface SettingInputProps {
   ) => void
 }
 
-function SettingInput({ config, value, onChange }: SettingInputProps) {
+const SettingInput = memo(function SettingInput({ config, value, onChange }: SettingInputProps) {
   const [isFocused, setIsFocused] = useState(false)
   const [editingValue, setEditingValue] = useState('')
 
-  const handleChange = (
+  const handleChange = useCallback((
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const newValue = e.target.value
     setEditingValue(newValue)
     onChange(e, config)
-  }
+  }, [onChange, config])
 
-  const handleFocus = () => {
+  const handleFocus = useCallback(() => {
     setIsFocused(true)
     // Start with the formatted display value to avoid jarring transition
     const startValue = formatDisplayValue(value)
     setEditingValue(startValue)
-  }
+  }, [value])
 
-  const handleBlur = () => {
+  const handleBlur = useCallback(() => {
     setIsFocused(false)
     setEditingValue('')
-  }
+  }, [])
 
   const displayValue = isFocused ? editingValue : formatDisplayValue(value)
 
@@ -183,7 +183,7 @@ function SettingInput({ config, value, onChange }: SettingInputProps) {
       </p>
     </div>
   )
-}
+})
 
 export default function AdvancedSettingsContent() {
   const {
@@ -197,13 +197,13 @@ export default function AdvancedSettingsContent() {
   console.log({ defaults })
 
   // Helper to resolve DEFAULT_KEY to actual default value for display
-  const getDisplayValue = (key: keyof LlmSettings): string => {
+  const getDisplayValue = useCallback((key: keyof LlmSettings): string => {
     const value = llm[key]
     if (value === DEFAULT_KEY && defaults) {
       return defaults[key] || ''
     }
     return value
-  }
+  }, [llm, defaults])
 
   useEffect(() => {
     return () => {
@@ -213,10 +213,10 @@ export default function AdvancedSettingsContent() {
     }
   }, [])
 
-  function scheduleAdvancedSettingsUpdate(
+  const scheduleAdvancedSettingsUpdate = useCallback((
     nextLlm: LlmSettings,
     nextGrammarEnabled: boolean,
-  ) {
+  ) => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current)
     }
@@ -227,25 +227,25 @@ export default function AdvancedSettingsContent() {
         grammarServiceEnabled: nextGrammarEnabled,
       })
     }, 1000)
-  }
+  }, [])
 
-  function handleInputChange(
+  const handleInputChange = useCallback((
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
     config: LlmSettingConfig,
-  ) {
+  ) => {
     const newValue = e.target.value
     const updatedLlm = { ...llm, [config.name]: newValue }
     setLlmSettings({ [config.name]: newValue })
     scheduleAdvancedSettingsUpdate(updatedLlm, grammarServiceEnabled)
-  }
+  }, [llm, grammarServiceEnabled, setLlmSettings, scheduleAdvancedSettingsUpdate])
 
-  function handleGrammarServiceToggle(e: ChangeEvent<HTMLInputElement>) {
+  const handleGrammarServiceToggle = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const enabled = e.target.checked
     setGrammarServiceEnabled(enabled)
     scheduleAdvancedSettingsUpdate(llm, enabled)
-  }
+  }, [llm, setGrammarServiceEnabled, scheduleAdvancedSettingsUpdate])
 
-  function handleRestoreDefaults() {
+  const handleRestoreDefaults = useCallback(() => {
     const defaultLlmSettings: LlmSettings = {
       asrProvider: DEFAULT_KEY,
       asrModel: DEFAULT_KEY,
@@ -259,7 +259,7 @@ export default function AdvancedSettingsContent() {
     }
     setLlmSettings(defaultLlmSettings)
     scheduleAdvancedSettingsUpdate(defaultLlmSettings, grammarServiceEnabled)
-  }
+  }, [grammarServiceEnabled, setLlmSettings, scheduleAdvancedSettingsUpdate])
 
   return (
     <div className="max-h-[70vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-500 scrollbar-track-transparent">

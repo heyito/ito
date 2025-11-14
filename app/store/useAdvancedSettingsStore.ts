@@ -19,6 +19,7 @@ interface AdvancedSettingsState {
   defaults?: LlmSettings
   setLlmSettings: (settings: Partial<LlmSettings>) => void
   setGrammarServiceEnabled: (enabled: boolean) => void
+  refreshFromStore: () => void
 }
 
 // Initialize from electron store
@@ -56,6 +57,15 @@ const syncToStore = (state: Partial<AdvancedSettingsState>) => {
 export const useAdvancedSettingsStore = create<AdvancedSettingsState>(set => {
   const initialState = getInitialState()
 
+  // Subscribe to updates from sync service
+  const handleStoreUpdate = () => {
+    const latestState = getInitialState()
+    console.log('Advanced settings updated from sync:', latestState)
+    set(latestState)
+  }
+
+  window.electron.ipcRenderer.on('advanced-settings-updated', handleStoreUpdate)
+
   return {
     ...initialState,
     setLlmSettings: (settings: Partial<LlmSettings>) => {
@@ -72,6 +82,9 @@ export const useAdvancedSettingsStore = create<AdvancedSettingsState>(set => {
         syncToStore(partialState)
         return partialState
       })
+    },
+    refreshFromStore: () => {
+      set(getInitialState())
     },
   }
 })

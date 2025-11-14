@@ -14,6 +14,7 @@ import {
   DEFAULT_KEY,
 } from '../constants/generated-defaults.js'
 import { main } from 'bun'
+import { mainWindow } from './app'
 
 const LAST_SYNCED_AT_KEY = 'lastSyncedAt'
 
@@ -93,16 +94,16 @@ export class SyncService {
       // PUSH LOCAL CHANGES
       // =================================================================
       let processedChanges = 0
-      processedChanges += await this.pushNotes(lastSyncedAt)
-      processedChanges += await this.pushInteractions(lastSyncedAt)
-      processedChanges += await this.pushDictionaryItems(lastSyncedAt)
+      // processedChanges += await this.pushNotes(lastSyncedAt)
+      // processedChanges += await this.pushInteractions(lastSyncedAt)
+      // processedChanges += await this.pushDictionaryItems(lastSyncedAt)
 
       // =================================================================
       // PULL REMOTE CHANGES
       // =================================================================
-      processedChanges += await this.pullNotes(lastSyncedAt)
-      processedChanges += await this.pullInteractions(lastSyncedAt)
-      processedChanges += await this.pullDictionaryItems(lastSyncedAt)
+      // processedChanges += await this.pullNotes(lastSyncedAt)
+      // processedChanges += await this.pullInteractions(lastSyncedAt)
+      // processedChanges += await this.pullDictionaryItems(lastSyncedAt)
 
       // =================================================================
       // SYNC ADVANCED SETTINGS
@@ -296,6 +297,14 @@ export class SyncService {
           ...currentLocalSettings,
           defaults: defaultSetttings,
         })
+        // Notify UI of the update
+        if (
+          mainWindow &&
+          !mainWindow.isDestroyed() &&
+          !mainWindow.webContents.isDestroyed()
+        ) {
+          mainWindow.webContents.send('advanced-settings-updated')
+        }
       }
 
       // Compare timestamps to determine sync direction
@@ -316,12 +325,13 @@ export class SyncService {
             asrPrompt: remoteSettings.llm?.asrPrompt || DEFAULT_KEY,
             llmProvider: remoteSettings.llm?.llmProvider || DEFAULT_KEY,
             llmModel: remoteSettings.llm?.llmModel || DEFAULT_KEY,
-            llmTemperature: remoteSettings.llm?.llmTemperature || DEFAULT_KEY,
+            llmTemperature:
+              remoteSettings.llm?.llmTemperature.toString() || DEFAULT_KEY,
             transcriptionPrompt:
               remoteSettings.llm?.transcriptionPrompt || DEFAULT_KEY,
             editingPrompt: remoteSettings.llm?.editingPrompt || DEFAULT_KEY,
             noSpeechThreshold:
-              remoteSettings.llm?.noSpeechThreshold || DEFAULT_KEY,
+              remoteSettings.llm?.noSpeechThreshold.toString() || DEFAULT_KEY,
           },
           // Preserve local-only settings that aren't synced to the server
           grammarServiceEnabled:
@@ -330,6 +340,14 @@ export class SyncService {
 
         // Update local store
         mainStore.set(STORE_KEYS.ADVANCED_SETTINGS, updatedLocalSettings)
+        // Notify UI of the update
+        if (
+          mainWindow &&
+          !mainWindow.isDestroyed() &&
+          !mainWindow.webContents.isDestroyed()
+        ) {
+          mainWindow.webContents.send('advanced-settings-updated')
+        }
       }
       // Note: We don't push local changes to server in this implementation
       // since advanced settings are typically managed through the UI which

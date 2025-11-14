@@ -479,11 +479,11 @@ class GrpcClient {
     const userId = getCurrentUserId()
     const isSelfHosted = userId === 'self-hosted'
 
-    if (isSelfHosted) {
-      console.log('Self-hosted user detected, using local advanced settings')
-      // Return null for self-hosted users since they don't sync with server
-      return null
-    }
+    // if (isSelfHosted) {
+    //   console.log('Self-hosted user detected, using local advanced settings')
+    //   // Return null for self-hosted users since they don't sync with server
+    //   return null
+    // }
 
     return this.withRetry(async () => {
       const request = create(GetAdvancedSettingsRequestSchema, {})

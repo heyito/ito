@@ -223,6 +223,15 @@ export class ServiceStack extends Stack {
       fargateTaskResources.taskLogsPolicy,
     )
     fargateService.service.node.addDependency(
+      fargateTaskResources.taskExecSecretsPolicy,
+    )
+    fargateService.service.node.addDependency(
+      logGroupResources.ensureClientLogGroup,
+    )
+    fargateService.service.node.addDependency(
+      logGroupResources.ensureServerLogGroup,
+    )
+    fargateService.service.node.addDependency(
       logGroupResources.ensureClientLogGroup,
     )
     fargateService.service.node.addDependency(

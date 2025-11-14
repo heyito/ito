@@ -44,6 +44,7 @@ export interface FargateTaskResources {
   taskExecutionRole: IamRole
   containerName: string
   taskLogsPolicy: Policy
+  taskExecSecretsPolicy: Policy
 }
 
 export function createFargateTask(
@@ -71,30 +72,25 @@ export function createFargateTask(
     ],
   })
 
-  // Grant execution role permissions to read secrets (required for ECS to pull secrets during container startup)
-  config.dbCredentialsSecret.grantRead(taskExecutionRole)
-  config.groqApiKeySecret.grantRead(taskExecutionRole)
-  config.cerebrasApiKeySecret.grantRead(taskExecutionRole)
-  config.stripeSecretKeySecret.grantRead(taskExecutionRole)
-  config.stripeWebhookSecretSecret.grantRead(taskExecutionRole)
+  const secretsAccessPolicy = new Policy(scope, 'ItoTaskExecSecretsPolicy', {
+    statements: [
+      new PolicyStatement({
+        actions: [
+          'secretsmanager:GetSecretValue',
+          'secretsmanager:DescribeSecret',
+        ],
+        resources: [
+          config.dbCredentialsSecret.secretArn,
+          config.groqApiKeySecret.secretArn,
+          config.cerebrasApiKeySecret.secretArn,
+          config.stripeSecretKeySecret.secretArn,
+          config.stripeWebhookSecretSecret.secretArn,
+        ],
+      }),
+    ],
+  })
 
-  // Explicitly add policy statement for secrets to ensure permissions are applied correctly
-  // This is a workaround for cases where grantRead() might not work correctly with fromSecretNameV2()
-  taskExecutionRole.addToPolicy(
-    new PolicyStatement({
-      actions: [
-        'secretsmanager:GetSecretValue',
-        'secretsmanager:DescribeSecret',
-      ],
-      resources: [
-        config.dbCredentialsSecret.secretArn,
-        config.groqApiKeySecret.secretArn,
-        config.cerebrasApiKeySecret.secretArn,
-        config.stripeSecretKeySecret.secretArn,
-        config.stripeWebhookSecretSecret.secretArn,
-      ],
-    }),
-  )
+  taskExecutionRole.attachInlinePolicy(secretsAccessPolicy)
 
   const taskDefinition = new FargateTaskDefinition(scope, 'ItoTaskDefinition', {
     taskRole: fargateTaskRole,
@@ -190,5 +186,6 @@ export function createFargateTask(
     taskExecutionRole,
     containerName,
     taskLogsPolicy,
+    taskExecSecretsPolicy: secretsAccessPolicy,
   }
 }

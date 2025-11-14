@@ -84,10 +84,10 @@ export class ServiceStack extends Stack {
       `${stageName}/ito/stripe-secret-key`,
     )
 
-    const stripeWebhookSecretSecret = Secret.fromSecretNameV2(
+    const stripeWebhookSecret = Secret.fromSecretNameV2(
       this,
       'StripeWebhookSecret',
-      `${stageName}/ito/stripe-webhook-secret`,
+      `${stageName}/ito/stripe-webhook`,
     )
 
     // Setup domain and certificate
@@ -119,7 +119,7 @@ export class ServiceStack extends Stack {
       groqApiKeySecret,
       cerebrasApiKeySecret,
       stripeSecretKeySecret,
-      stripeWebhookSecretSecret,
+      stripeWebhookSecret: stripeWebhookSecret,
       dbEndpoint: props.dbEndpoint,
       dbName: DB_NAME,
       dbPort: DB_PORT,

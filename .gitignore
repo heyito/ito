@@ -11,6 +11,7 @@ dist/*
 .DS_Store
 native/**/target
 native/target-rust-analyzer
+native/**/.build
 out.json
 tsconfig.node.tsbuildinfo
 server/deploy-dev.sh

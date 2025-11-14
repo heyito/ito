@@ -61,6 +61,20 @@ build_native_workspace() {
             print_info "Creating symlink: x64-apple-darwin -> x86_64-apple-darwin"
             ln -sfn x86_64-apple-darwin target/x64-apple-darwin
         fi
+
+        # Build Swift packages
+        print_info "Building Swift packages..."
+        cd cursor-context
+        if [ "$mac_target" = "aarch64-apple-darwin" ]; then
+            swift build -c release --arch arm64
+        else
+            swift build -c release --arch x86_64
+        fi
+        # Copy built binary to Rust target directory and re-sign for code signing compatibility
+        cp .build/release/cursor-context "../target/$mac_target/release/"
+        xattr -cr "../target/$mac_target/release/cursor-context"
+        codesign --force --sign - "../target/$mac_target/release/cursor-context" 2>/dev/null || true
+        cd ..
     fi
 
     # --- Windows Build ---

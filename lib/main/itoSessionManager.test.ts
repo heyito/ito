@@ -37,7 +37,8 @@ const mockItoStreamController = {
     }),
   ),
   setMode: mock(),
-  sendConfigUpdate: mock(() => Promise.resolve()),
+  getCurrentMode: mock(() => ItoMode.TRANSCRIBE),
+  scheduleConfigUpdate: mock(() => Promise.resolve()),
   getAudioDurationMs: mock(() => 1000),
   endInteraction: mock(),
   cancelTranscription: mock(),
@@ -67,6 +68,29 @@ mock.module('./interactions/InteractionManager', () => ({
 }))
 
 const mockContextGrabber = {
+  gatherContext: mock(() =>
+    Promise.resolve({
+      windowTitle: 'Test Window',
+      appName: 'Test App',
+      contextText: 'Test context',
+      vocabularyWords: ['test', 'word'],
+      advancedSettings: {
+        llm: {
+          asrModel: 'whisper-1',
+          asrProvider: 'openai',
+          asrPrompt: '',
+          noSpeechThreshold: 0.5,
+          llmProvider: 'openai',
+          llmModel: 'gpt-4',
+          llmTemperature: 0.7,
+          transcriptionPrompt: '',
+          editingPrompt: '',
+        },
+        grammarServiceEnabled: false,
+        macosAccessibilityContextEnabled: true,
+      },
+    }),
+  ),
   getCursorContextForGrammar: mock(() => Promise.resolve('test context')),
 }
 mock.module('./context/ContextGrabber', () => ({
@@ -164,7 +188,7 @@ describe('itoSessionManager', () => {
     // Wait for background context fetch
     await new Promise(resolve => setTimeout(resolve, 50))
 
-    expect(mockItoStreamController.sendConfigUpdate).toHaveBeenCalled()
+    expect(mockItoStreamController.scheduleConfigUpdate).toHaveBeenCalled()
   })
 
   test('should fetch cursor context when grammar is enabled', async () => {
@@ -405,7 +429,7 @@ describe('itoSessionManager', () => {
   })
 
   test('should handle context fetch error gracefully', async () => {
-    mockItoStreamController.sendConfigUpdate.mockRejectedValueOnce(
+    mockItoStreamController.scheduleConfigUpdate.mockRejectedValueOnce(
       new Error('Context fetch failed'),
     )
 

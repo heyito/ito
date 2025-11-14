@@ -9,6 +9,7 @@ import {
 import { canGetContextFromCurrentApp } from '../../utils/applicationDetection'
 import log from 'electron-log'
 import { timingCollector, TimingEventName } from '../timing/TimingCollector'
+import { macOSAccessibilityContextProvider } from '../../media/macOSAccessibilityContextProvider'
 
 export interface ContextData {
   vocabularyWords: string[]
@@ -92,12 +93,48 @@ export class ContextGrabber {
       return ''
     }
 
+    const { macosAccessibilityContextEnabled } = getAdvancedSettings()
+
+    // Try accessibility API first if enabled
+    if (
+      process.platform === 'darwin' &&
+      macosAccessibilityContextEnabled &&
+      macOSAccessibilityContextProvider.isRunning()
+    ) {
+      try {
+        const result = await timingCollector.timeAsync(
+          TimingEventName.CURSOR_CONTEXT_GATHER,
+          async () =>
+            await macOSAccessibilityContextProvider.getCursorContext({
+              maxCharsBefore: 1000,
+              maxCharsAfter: 1000,
+              timeout: 500,
+              debug: false,
+            }),
+        )
+
+        if (result.success && result.context?.selectedText) {
+          console.log(
+            '[ContextGrabber] Got selected text via accessibility API',
+          )
+          return result.context.selectedText.trim()
+        }
+      } catch (error) {
+        console.log(
+          '[ContextGrabber] Accessibility API failed, falling back to keyboard:',
+          error,
+        )
+      }
+    }
+
+    // Fallback to keyboard-based method
+    console.log('[ContextGrabber] Using keyboard method for selected text')
     try {
       const text = await timingCollector.timeAsync(
         TimingEventName.SELCTED_TEXT_GATHER,
         async () => await getSelectedTextString(),
       )
-      console.log('[ContextGrabber] Selected text:', text)
+      console.log('[ContextGrabber] Selected text from keyboard:', text)
       return text && text.trim().length > 0 ? text : ''
     } catch (error) {
       log.error('[ContextGrabber] Error getting context text:', error)
@@ -115,6 +152,40 @@ export class ContextGrabber {
   public async getCursorContextForGrammar(
     contextLength: number = 4,
   ): Promise<string> {
+    const { macosAccessibilityContextEnabled } = getAdvancedSettings()
+
+    // Try accessibility API first if enabled
+    if (
+      process.platform === 'darwin' &&
+      macosAccessibilityContextEnabled &&
+      macOSAccessibilityContextProvider.isRunning()
+    ) {
+      try {
+        const result = await macOSAccessibilityContextProvider.getCursorContext(
+          {
+            maxCharsBefore: contextLength,
+            maxCharsAfter: 0,
+            timeout: 500,
+            debug: false,
+          },
+        )
+
+        if (result.success && result.context?.textBefore) {
+          console.log(
+            '[ContextGrabber] Got cursor context via accessibility API',
+          )
+          return result.context.textBefore
+        }
+      } catch (error) {
+        console.log(
+          '[ContextGrabber] Accessibility API failed, falling back to keyboard:',
+          error,
+        )
+      }
+    }
+
+    // Fallback to keyboard-based method
+    console.log('[ContextGrabber] Using keyboard method for cursor context')
     try {
       const canGetContext = await canGetContextFromCurrentApp()
 

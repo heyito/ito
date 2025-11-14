@@ -70,6 +70,7 @@ export interface AuthStore {
 export interface AdvancedSettings {
   llm: LlmSettings
   grammarServiceEnabled: boolean
+  macosAccessibilityContextEnabled: boolean
 }
 
 interface AppStore {
@@ -142,6 +143,7 @@ export const defaultValues: AppStore = {
   auth: { user: null, tokens: null, state: createNewAuthState() },
   advancedSettings: {
     grammarServiceEnabled: false,
+    macosAccessibilityContextEnabled: false,
     llm: {
       asrProvider: DEFAULT_ADVANCED_SETTINGS.asrProvider,
       asrModel: DEFAULT_ADVANCED_SETTINGS.asrModel,

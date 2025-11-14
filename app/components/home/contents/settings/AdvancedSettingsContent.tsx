@@ -3,6 +3,7 @@ import {
   useAdvancedSettingsStore,
 } from '@/app/store/useAdvancedSettingsStore'
 import { ChangeEvent, useEffect, useRef, useState } from 'react'
+import { useWindowContext } from '@/app/components/window/WindowContext'
 
 type LlmSettingConfig = {
   name: keyof LlmSettings
@@ -188,9 +189,12 @@ export default function AdvancedSettingsContent() {
   const {
     llm,
     grammarServiceEnabled,
+    macosAccessibilityContextEnabled,
     setLlmSettings,
     setGrammarServiceEnabled,
+    setMacosAccessibilityContextEnabled,
   } = useAdvancedSettingsStore()
+  const windowContext = useWindowContext()
   const debounceRef = useRef<NodeJS.Timeout>(null)
 
   useEffect(() => {
@@ -204,16 +208,20 @@ export default function AdvancedSettingsContent() {
   function scheduleAdvancedSettingsUpdate(
     nextLlm: LlmSettings,
     nextGrammarEnabled: boolean,
+    nextMacosAccessibilityEnabled: boolean,
   ) {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current)
     }
 
     debounceRef.current = setTimeout(async () => {
-      await window.api.updateAdvancedSettings({
+      const settingsToSave = {
         llm: nextLlm,
         grammarServiceEnabled: nextGrammarEnabled,
-      })
+        macosAccessibilityContextEnabled: nextMacosAccessibilityEnabled,
+      }
+      console.log('[AdvancedSettings] Saving settings...')
+      await window.api.updateAdvancedSettings(settingsToSave)
     }, 1000)
   }
 
@@ -224,13 +232,29 @@ export default function AdvancedSettingsContent() {
     const newValue = e.target.value
     const updatedLlm = { ...llm, [config.name]: newValue }
     setLlmSettings({ [config.name]: newValue })
-    scheduleAdvancedSettingsUpdate(updatedLlm, grammarServiceEnabled)
+    scheduleAdvancedSettingsUpdate(
+      updatedLlm,
+      grammarServiceEnabled,
+      macosAccessibilityContextEnabled,
+    )
   }
 
   function handleGrammarServiceToggle(e: ChangeEvent<HTMLInputElement>) {
     const enabled = e.target.checked
     setGrammarServiceEnabled(enabled)
-    scheduleAdvancedSettingsUpdate(llm, enabled)
+    scheduleAdvancedSettingsUpdate(
+      llm,
+      enabled,
+      macosAccessibilityContextEnabled,
+    )
+  }
+
+  function handleMacosAccessibilityContextToggle(
+    e: ChangeEvent<HTMLInputElement>,
+  ) {
+    const enabled = e.target.checked
+    setMacosAccessibilityContextEnabled(enabled)
+    scheduleAdvancedSettingsUpdate(llm, grammarServiceEnabled, enabled)
   }
 
   return (
@@ -274,6 +298,31 @@ export default function AdvancedSettingsContent() {
             </span>
           </label>
         </div>
+
+        {windowContext?.window?.platform === 'darwin' && (
+          <div>
+            <h3 className="text-md font-medium text-slate-900 mb-3 ml-1">
+              Context
+            </h3>
+            <label className="flex items-start gap-3 ml-1">
+              <input
+                type="checkbox"
+                checked={macosAccessibilityContextEnabled}
+                onChange={handleMacosAccessibilityContextToggle}
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span>
+                <span className="block text-sm font-medium text-slate-700">
+                  Use Accessibility Context
+                </span>
+                <span className="block text-xs text-slate-500 mt-1">
+                  Use Accessibility APIs to capture text context around the
+                  cursor for improved accuracy.
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
       </div>
     </div>
   )

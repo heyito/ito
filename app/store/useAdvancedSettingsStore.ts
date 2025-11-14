@@ -16,8 +16,10 @@ export interface LlmSettings {
 interface AdvancedSettingsState {
   llm: LlmSettings
   grammarServiceEnabled: boolean
+  macosAccessibilityContextEnabled: boolean
   setLlmSettings: (settings: Partial<LlmSettings>) => void
   setGrammarServiceEnabled: (enabled: boolean) => void
+  setMacosAccessibilityContextEnabled: (enabled: boolean) => void
 }
 
 // Initialize from electron store
@@ -40,6 +42,8 @@ const getInitialState = () => {
     },
     grammarServiceEnabled:
       storedAdvancedSettings.grammarServiceEnabled ?? false,
+    macosAccessibilityContextEnabled:
+      storedAdvancedSettings.macosAccessibilityContextEnabled ?? false,
   }
 }
 
@@ -75,6 +79,13 @@ export const useAdvancedSettingsStore = create<AdvancedSettingsState>(set => {
     setGrammarServiceEnabled: (enabled: boolean) => {
       set(() => {
         const partialState = { grammarServiceEnabled: enabled }
+        syncToStore(partialState)
+        return partialState
+      })
+    },
+    setMacosAccessibilityContextEnabled: (enabled: boolean) => {
+      set(() => {
+        const partialState = { macosAccessibilityContextEnabled: enabled }
         syncToStore(partialState)
         return partialState
       })

@@ -67,8 +67,15 @@ export class ItoSessionManager {
   }
 
   private async fetchAndSendContext() {
-    // This builds the full config (window context, selected text, vocabulary, settings)
-    await itoStreamController.sendConfigUpdate()
+    console.log('[itoSessionManager] Gathering context...')
+
+    // Gather all context data (window, app, selected text, vocabulary, settings)
+    const context = await contextGrabber.gatherContext(
+      itoStreamController.getCurrentMode(),
+    )
+
+    // Send the gathered context to the stream controller
+    await itoStreamController.scheduleConfigUpdate(context)
 
     // Fetch cursor context for grammar rules only if grammar service is enabled
     const { grammarServiceEnabled } = getAdvancedSettings()

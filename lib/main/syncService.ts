@@ -69,7 +69,6 @@ export class SyncService {
   }
 
   private async runSync() {
-    console.log('[SyncService] Starting sync cycle...')
     if (this.isSyncing) {
       return
     }
@@ -94,16 +93,16 @@ export class SyncService {
       // PUSH LOCAL CHANGES
       // =================================================================
       let processedChanges = 0
-      // processedChanges += await this.pushNotes(lastSyncedAt)
-      // processedChanges += await this.pushInteractions(lastSyncedAt)
-      // processedChanges += await this.pushDictionaryItems(lastSyncedAt)
+      processedChanges += await this.pushNotes(lastSyncedAt)
+      processedChanges += await this.pushInteractions(lastSyncedAt)
+      processedChanges += await this.pushDictionaryItems(lastSyncedAt)
 
       // =================================================================
       // PULL REMOTE CHANGES
       // =================================================================
-      // processedChanges += await this.pullNotes(lastSyncedAt)
-      // processedChanges += await this.pullInteractions(lastSyncedAt)
-      // processedChanges += await this.pullDictionaryItems(lastSyncedAt)
+      processedChanges += await this.pullNotes(lastSyncedAt)
+      processedChanges += await this.pullInteractions(lastSyncedAt)
+      processedChanges += await this.pullDictionaryItems(lastSyncedAt)
 
       // =================================================================
       // SYNC ADVANCED SETTINGS
@@ -278,7 +277,6 @@ export class SyncService {
 
   private async syncAdvancedSettings(lastSyncedAt?: string) {
     try {
-      console.log('Syncing advanced settings...')
       // Get remote advanced settings
       const remoteSettings = await grpcClient.getAdvancedSettings()
       if (!remoteSettings) {

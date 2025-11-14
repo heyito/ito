@@ -34,7 +34,6 @@ import { ConnectError, Code } from '@connectrpc/connect'
 import { kUser } from '../../auth/userContext.js'
 import { transcribeStreamV2Handler } from './transcribeStreamV2Handler.js'
 import { transcribeStreamHandler } from './transcribeStreamHandler.js'
-import { DEFAULT_ADVANCED_SETTINGS } from '../../constants/generated-defaults.js'
 import { DEFAULT_ADVANCED_SETTINGS_STRUCT } from './constants.js'
 
 function dbToNotePb(dbNote: DbNote): Note {
@@ -410,19 +409,18 @@ export default (router: ConnectRouter) => {
     },
 
     async getAdvancedSettings(_request, context: HandlerContext) {
-      // const user = context.values.get(kUser)
-      // const userId = user?.sub
-      // if (!userId) {
-      //   throw new ConnectError('User not authenticated', Code.Unauthenticated)
-      // }
+      const user = context.values.get(kUser)
+      const userId = user?.sub
+      if (!userId) {
+        throw new ConnectError('User not authenticated', Code.Unauthenticated)
+      }
 
-      // const settings = await AdvancedSettingsRepository.findByUserId(userId)
-      const settings = null
+      const settings = await AdvancedSettingsRepository.findByUserId(userId)
       if (!settings) {
         // Return default settings if none exist
         return create(AdvancedSettingsSchema, {
           id: '',
-          userId: 'foo',
+          userId: userId,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           llm: create(LlmSettingsSchema, {

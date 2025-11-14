@@ -233,8 +233,6 @@ export default function AdvancedSettingsContent() {
         clearTimeout(debounceRef.current)
       }
 
-      console.log('Scheduling advanced settings update')
-
       debounceRef.current = setTimeout(async () => {
         await window.api.updateAdvancedSettings({
           llm: nextLlm,

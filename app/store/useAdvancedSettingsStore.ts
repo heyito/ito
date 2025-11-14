@@ -19,7 +19,6 @@ interface AdvancedSettingsState {
   defaults?: LlmSettings
   setLlmSettings: (settings: Partial<LlmSettings>) => void
   setGrammarServiceEnabled: (enabled: boolean) => void
-  refreshFromStore: () => void
 }
 
 // Initialize from electron store
@@ -79,9 +78,6 @@ export const useAdvancedSettingsStore = create<AdvancedSettingsState>(set => {
         syncToStore(partialState)
         return partialState
       })
-    },
-    refreshFromStore: () => {
-      set(getInitialState())
     },
   }
 })

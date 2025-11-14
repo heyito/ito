@@ -271,6 +271,7 @@ message AdvancedSettings {
   string created_at = 3;
   string updated_at = 4;
   LlmSettings llm = 5;
+  LlmSettings default = 6;
 }
 
 message GetAdvancedSettingsRequest {

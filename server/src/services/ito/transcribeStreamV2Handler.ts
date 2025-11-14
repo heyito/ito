@@ -10,7 +10,10 @@ import {
   TranscriptionResponseSchema,
 } from '../../generated/ito_pb.js'
 import { getAsrProvider, getLlmProvider } from '../../clients/providerUtils.js'
-import { DEFAULT_ADVANCED_SETTINGS } from '../../constants/generated-defaults.js'
+import {
+  DEFAULT_ADVANCED_SETTINGS,
+  DEFAULT_KEY,
+} from '../../constants/generated-defaults.js'
 import { errorToProtobuf } from '../../clients/errors.js'
 import {
   createUserPromptWithContext,
@@ -272,17 +275,39 @@ export class TranscribeStreamV2Handler {
 
   private extractAsrConfig(mergedConfig: StreamConfig) {
     return {
-      asrModel:
-        mergedConfig.llmSettings?.asrModel ||
+      asrModel: this.resolveOrDefault(
+        mergedConfig.llmSettings?.asrModel,
         DEFAULT_ADVANCED_SETTINGS.asrModel,
-      asrProvider:
-        mergedConfig.llmSettings?.asrProvider ||
+      ),
+      asrProvider: this.resolveOrDefault(
+        mergedConfig.llmSettings?.asrProvider,
         DEFAULT_ADVANCED_SETTINGS.asrProvider,
-      noSpeechThreshold:
-        mergedConfig.llmSettings?.noSpeechThreshold ??
+      ),
+      noSpeechThreshold: this.resolveOrDefault(
+        mergedConfig.llmSettings?.noSpeechThreshold,
         DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold,
+      ),
       vocabulary: mergedConfig.vocabulary,
     }
+  }
+
+  /**
+   * Resolves a value to its default if it's a DEFAULT_KEY sentinel, undefined, or empty.
+   * This provides a defensive fallback for cases where DEFAULT_KEY values make it to the server.
+   */
+  private resolveOrDefault<T extends string | number>(
+    value: T | undefined,
+    defaultValue: T,
+  ): T {
+    if (
+      value === DEFAULT_KEY ||
+      value === undefined ||
+      value === '' ||
+      value === null
+    ) {
+      return defaultValue
+    }
+    return value
   }
 
   private prepareAdvancedSettings(
@@ -292,27 +317,39 @@ export class TranscribeStreamV2Handler {
     noSpeechThreshold: number,
   ) {
     return {
-      asrModel,
-      asrProvider,
-      asrPrompt:
-        mergedConfig.llmSettings?.asrPrompt ||
+      asrModel: this.resolveOrDefault(asrModel, DEFAULT_ADVANCED_SETTINGS.asrModel),
+      asrProvider: this.resolveOrDefault(
+        asrProvider,
+        DEFAULT_ADVANCED_SETTINGS.asrProvider,
+      ),
+      asrPrompt: this.resolveOrDefault(
+        mergedConfig.llmSettings?.asrPrompt,
         DEFAULT_ADVANCED_SETTINGS.asrPrompt,
-      llmProvider:
-        mergedConfig.llmSettings?.llmProvider ||
+      ),
+      llmProvider: this.resolveOrDefault(
+        mergedConfig.llmSettings?.llmProvider,
         DEFAULT_ADVANCED_SETTINGS.llmProvider,
-      llmModel:
-        mergedConfig.llmSettings?.llmModel ||
+      ),
+      llmModel: this.resolveOrDefault(
+        mergedConfig.llmSettings?.llmModel,
         DEFAULT_ADVANCED_SETTINGS.llmModel,
-      llmTemperature:
-        mergedConfig.llmSettings?.llmTemperature ??
+      ),
+      llmTemperature: this.resolveOrDefault(
+        mergedConfig.llmSettings?.llmTemperature,
         DEFAULT_ADVANCED_SETTINGS.llmTemperature,
-      transcriptionPrompt:
-        mergedConfig.llmSettings?.transcriptionPrompt ||
+      ),
+      transcriptionPrompt: this.resolveOrDefault(
+        mergedConfig.llmSettings?.transcriptionPrompt,
         DEFAULT_ADVANCED_SETTINGS.transcriptionPrompt,
-      editingPrompt:
-        mergedConfig.llmSettings?.editingPrompt ||
+      ),
+      editingPrompt: this.resolveOrDefault(
+        mergedConfig.llmSettings?.editingPrompt,
         DEFAULT_ADVANCED_SETTINGS.editingPrompt,
-      noSpeechThreshold,
+      ),
+      noSpeechThreshold: this.resolveOrDefault(
+        noSpeechThreshold,
+        DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold,
+      ),
     }
   }
 

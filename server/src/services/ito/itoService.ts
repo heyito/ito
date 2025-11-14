@@ -34,6 +34,7 @@ import { ConnectError, Code } from '@connectrpc/connect'
 import { kUser } from '../../auth/userContext.js'
 import { transcribeStreamV2Handler } from './transcribeStreamV2Handler.js'
 import { transcribeStreamHandler } from './transcribeStreamHandler.js'
+import { DEFAULT_ADVANCED_SETTINGS_STRUCT } from './constants.js'
 
 function dbToNotePb(dbNote: DbNote): Note {
   return create(NoteSchema, {
@@ -113,6 +114,7 @@ function dbToAdvancedSettingsPb(
       noSpeechThreshold: dbAdvancedSettings.llm.no_speech_threshold,
       lowQualityThreshold: dbAdvancedSettings.llm.low_quality_threshold,
     }),
+    default: DEFAULT_ADVANCED_SETTINGS_STRUCT,
   })
 }
 
@@ -424,6 +426,7 @@ export default (router: ConnectRouter) => {
           llm: create(LlmSettingsSchema, {
             asrModel: 'whisper-large-v3',
           }),
+          default: DEFAULT_ADVANCED_SETTINGS_STRUCT,
         })
       }
 

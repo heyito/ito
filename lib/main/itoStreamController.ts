@@ -224,10 +224,14 @@ export class ItoStreamController {
             asrModel: context.advancedSettings.llm.asrModel,
             asrProvider: context.advancedSettings.llm.asrProvider,
             asrPrompt: context.advancedSettings.llm.asrPrompt,
-            noSpeechThreshold: context.advancedSettings.llm.noSpeechThreshold,
+            noSpeechThreshold: parseFloat(
+              context.advancedSettings.llm.noSpeechThreshold,
+            ),
             llmProvider: context.advancedSettings.llm.llmProvider,
             llmModel: context.advancedSettings.llm.llmModel,
-            llmTemperature: context.advancedSettings.llm.llmTemperature,
+            llmTemperature: parseFloat(
+              context.advancedSettings.llm.llmTemperature,
+            ),
             transcriptionPrompt:
               context.advancedSettings.llm.transcriptionPrompt,
             editingPrompt: context.advancedSettings.llm.editingPrompt,

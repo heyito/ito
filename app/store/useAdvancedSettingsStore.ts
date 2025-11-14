@@ -7,15 +7,16 @@ export interface LlmSettings {
   asrPrompt: string
   llmProvider: string
   llmModel: string
-  llmTemperature: number
+  llmTemperature: string
   transcriptionPrompt: string
   editingPrompt: string
-  noSpeechThreshold: number
+  noSpeechThreshold: string
 }
 
 interface AdvancedSettingsState {
   llm: LlmSettings
   grammarServiceEnabled: boolean
+  defaults?: LlmSettings
   setLlmSettings: (settings: Partial<LlmSettings>) => void
   setGrammarServiceEnabled: (enabled: boolean) => void
 }
@@ -27,19 +28,10 @@ const getInitialState = () => {
   )
 
   return {
-    llm: {
-      asrProvider: storedAdvancedSettings.llm.asrProvider,
-      asrModel: storedAdvancedSettings.llm.asrModel,
-      asrPrompt: storedAdvancedSettings.llm.asrPrompt,
-      llmProvider: storedAdvancedSettings.llm.llmProvider,
-      llmModel: storedAdvancedSettings.llm.llmModel,
-      llmTemperature: storedAdvancedSettings.llm.llmTemperature,
-      transcriptionPrompt: storedAdvancedSettings.llm.transcriptionPrompt,
-      editingPrompt: storedAdvancedSettings.llm.editingPrompt,
-      noSpeechThreshold: storedAdvancedSettings.llm.noSpeechThreshold,
-    },
+    llm: storedAdvancedSettings.llm,
     grammarServiceEnabled:
       storedAdvancedSettings.grammarServiceEnabled ?? false,
+    defaults: storedAdvancedSettings.defaults,
   }
 }
 
@@ -61,6 +53,14 @@ const syncToStore = (state: Partial<AdvancedSettingsState>) => {
 
 export const useAdvancedSettingsStore = create<AdvancedSettingsState>(set => {
   const initialState = getInitialState()
+
+  // Subscribe to updates from sync service
+  const handleStoreUpdate = () => {
+    const latestState = getInitialState()
+    set(latestState)
+  }
+
+  window.api.on('advanced-settings-updated', handleStoreUpdate)
 
   return {
     ...initialState,

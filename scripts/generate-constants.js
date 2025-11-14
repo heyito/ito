@@ -9,7 +9,10 @@ const fs = require('fs')
 const path = require('path')
 
 // Import the shared constants
-const { DEFAULT_ADVANCED_SETTINGS } = require('../shared-constants.js')
+const {
+  DEFAULT_ADVANCED_SETTINGS,
+  DEFAULT_KEY,
+} = require('../shared-constants.js')
 
 // Template for generated TypeScript files
 const generateTSFile = targetPath => `/* 
@@ -36,6 +39,8 @@ export const DEFAULT_ADVANCED_SETTINGS = {
   // Audio quality thresholds
   noSpeechThreshold: ${DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold},
 } as const;
+
+export const DEFAULT_KEY = '${DEFAULT_KEY}';
 `
 
 // Paths to generate files

@@ -180,6 +180,7 @@ export class ServiceStack extends Stack {
         certificate: cert,
         redirectHTTP: true,
         sslPolicy: SslPolicy.RECOMMENDED,
+        circuitBreaker: { enable: true, rollback: true },
       },
     )
 

@@ -288,7 +288,6 @@ export class SyncService {
 
       // Always update local defaults
       const defaultSetttings = remoteSettings.default
-      console.log({ defaultSetttings })
       if (defaultSetttings) {
         const currentLocalSettings = mainStore.get(
           STORE_KEYS.ADVANCED_SETTINGS,
@@ -297,6 +296,7 @@ export class SyncService {
           ...currentLocalSettings,
           defaults: defaultSetttings,
         })
+
         // Notify UI of the update
         if (
           mainWindow &&
@@ -336,6 +336,8 @@ export class SyncService {
           // Preserve local-only settings that aren't synced to the server
           grammarServiceEnabled:
             currentLocalSettings?.grammarServiceEnabled ?? false,
+          // Preserve defaults that were set earlier in this function
+          defaults: currentLocalSettings?.defaults,
         }
 
         // Update local store

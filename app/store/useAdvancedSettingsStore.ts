@@ -28,8 +28,6 @@ const getInitialState = () => {
     STORE_KEYS.ADVANCED_SETTINGS,
   )
 
-  console.log('Initial advanced settings from store:', storedAdvancedSettings)
-
   return {
     llm: storedAdvancedSettings.llm,
     grammarServiceEnabled:
@@ -60,11 +58,10 @@ export const useAdvancedSettingsStore = create<AdvancedSettingsState>(set => {
   // Subscribe to updates from sync service
   const handleStoreUpdate = () => {
     const latestState = getInitialState()
-    console.log('Advanced settings updated from sync:', latestState)
     set(latestState)
   }
 
-  window.electron.ipcRenderer.on('advanced-settings-updated', handleStoreUpdate)
+  window.api.on('advanced-settings-updated', handleStoreUpdate)
 
   return {
     ...initialState,

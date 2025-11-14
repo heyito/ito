@@ -519,6 +519,11 @@ class GrpcClient {
       currentStoredSettings?.defaults,
     )
 
+    console.log(
+      'Updating advanced settings with resolved values:',
+      resolvedLlmSettings,
+    )
+
     return this.withRetry(async () => {
       const request = create(UpdateAdvancedSettingsRequestSchema, {
         llm: {

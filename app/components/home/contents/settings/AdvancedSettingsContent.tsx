@@ -2,7 +2,14 @@ import {
   LlmSettings,
   useAdvancedSettingsStore,
 } from '@/app/store/useAdvancedSettingsStore'
-import { ChangeEvent, useEffect, useRef, useState, useCallback, memo } from 'react'
+import {
+  ChangeEvent,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  memo,
+} from 'react'
 import { DEFAULT_KEY } from '@/lib/constants/generated-defaults'
 
 type LlmSettingConfig = {
@@ -117,17 +124,22 @@ interface SettingInputProps {
   ) => void
 }
 
-const SettingInput = memo(function SettingInput({ config, value, onChange }: SettingInputProps) {
+const SettingInput = memo(function SettingInput({
+  config,
+  value,
+  onChange,
+}: SettingInputProps) {
   const [isFocused, setIsFocused] = useState(false)
   const [editingValue, setEditingValue] = useState('')
 
-  const handleChange = useCallback((
-    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => {
-    const newValue = e.target.value
-    setEditingValue(newValue)
-    onChange(e, config)
-  }, [onChange, config])
+  const handleChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      const newValue = e.target.value
+      setEditingValue(newValue)
+      onChange(e, config)
+    },
+    [onChange, config],
+  )
 
   const handleFocus = useCallback(() => {
     setIsFocused(true)
@@ -194,16 +206,18 @@ export default function AdvancedSettingsContent() {
     setGrammarServiceEnabled,
   } = useAdvancedSettingsStore()
   const debounceRef = useRef<NodeJS.Timeout>(null)
-  console.log({ defaults })
 
   // Helper to resolve DEFAULT_KEY to actual default value for display
-  const getDisplayValue = useCallback((key: keyof LlmSettings): string => {
-    const value = llm[key]
-    if (value === DEFAULT_KEY && defaults) {
-      return defaults[key] || ''
-    }
-    return value
-  }, [llm, defaults])
+  const getDisplayValue = useCallback(
+    (key: keyof LlmSettings): string => {
+      const value = llm[key]
+      if (value === DEFAULT_KEY && defaults) {
+        return defaults[key] || ''
+      }
+      return value
+    },
+    [llm, defaults],
+  )
 
   useEffect(() => {
     return () => {
@@ -213,37 +227,50 @@ export default function AdvancedSettingsContent() {
     }
   }, [])
 
-  const scheduleAdvancedSettingsUpdate = useCallback((
-    nextLlm: LlmSettings,
-    nextGrammarEnabled: boolean,
-  ) => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current)
-    }
+  const scheduleAdvancedSettingsUpdate = useCallback(
+    (nextLlm: LlmSettings, nextGrammarEnabled: boolean) => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
+      }
 
-    debounceRef.current = setTimeout(async () => {
-      await window.api.updateAdvancedSettings({
-        llm: nextLlm,
-        grammarServiceEnabled: nextGrammarEnabled,
-      })
-    }, 1000)
-  }, [])
+      console.log('Scheduling advanced settings update')
 
-  const handleInputChange = useCallback((
-    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-    config: LlmSettingConfig,
-  ) => {
-    const newValue = e.target.value
-    const updatedLlm = { ...llm, [config.name]: newValue }
-    setLlmSettings({ [config.name]: newValue })
-    scheduleAdvancedSettingsUpdate(updatedLlm, grammarServiceEnabled)
-  }, [llm, grammarServiceEnabled, setLlmSettings, scheduleAdvancedSettingsUpdate])
+      debounceRef.current = setTimeout(async () => {
+        await window.api.updateAdvancedSettings({
+          llm: nextLlm,
+          grammarServiceEnabled: nextGrammarEnabled,
+        })
+      }, 1000)
+    },
+    [],
+  )
 
-  const handleGrammarServiceToggle = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    const enabled = e.target.checked
-    setGrammarServiceEnabled(enabled)
-    scheduleAdvancedSettingsUpdate(llm, enabled)
-  }, [llm, setGrammarServiceEnabled, scheduleAdvancedSettingsUpdate])
+  const handleInputChange = useCallback(
+    (
+      e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+      config: LlmSettingConfig,
+    ) => {
+      const newValue = e.target.value
+      const updatedLlm = { ...llm, [config.name]: newValue }
+      setLlmSettings({ [config.name]: newValue })
+      scheduleAdvancedSettingsUpdate(updatedLlm, grammarServiceEnabled)
+    },
+    [
+      llm,
+      grammarServiceEnabled,
+      setLlmSettings,
+      scheduleAdvancedSettingsUpdate,
+    ],
+  )
+
+  const handleGrammarServiceToggle = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const enabled = e.target.checked
+      setGrammarServiceEnabled(enabled)
+      scheduleAdvancedSettingsUpdate(llm, enabled)
+    },
+    [llm, setGrammarServiceEnabled, scheduleAdvancedSettingsUpdate],
+  )
 
   const handleRestoreDefaults = useCallback(() => {
     const defaultLlmSettings: LlmSettings = {

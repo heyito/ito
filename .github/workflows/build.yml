@@ -81,64 +81,64 @@ jobs:
             dist/*.dmg
             dist/*.dmg.blockmap
 
-  # build-windows:
-  #   runs-on: ubuntu-latest
-  #   environment: ${{ github.event.release.target_commitish == 'main' && 'production' || 'develop' }}
+  build-windows:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.release.target_commitish == 'main' && 'production' || 'develop' }}
 
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  #     - name: Set up Bun
-  #       uses: oven-sh/setup-bun@v1
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v1
 
-  #     - name: Install dependencies and MinGW-w64
-  #       run: |
-  #         sudo apt-get update && sudo apt-get install -y mingw-w64
-  #         bun install
+      - name: Install dependencies and MinGW-w64
+        run: |
+          sudo apt-get update && sudo apt-get install -y mingw-w64
+          bun install
 
-  #     - name: Set up Rust
-  #       uses: dtolnay/rust-toolchain@stable
-  #       with:
-  #         toolchain: stable
-  #         targets: 'x86_64-pc-windows-gnu'
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: 'x86_64-pc-windows-gnu'
 
-  #     - name: Set up environment
-  #       run: |
-  #         echo "VITE_AUTH0_DOMAIN=\"${{ secrets.VITE_AUTH0_DOMAIN }}\"" >> .env
-  #         echo "VITE_AUTH0_CLIENT_ID=\"${{ secrets.VITE_AUTH0_CLIENT_ID }}\"" >> .env
-  #         echo "VITE_AUTH0_AUDIENCE=\"${{ secrets.VITE_AUTH0_AUDIENCE }}\"" >> .env
-  #         echo "VITE_POSTHOG_API_KEY=\"${{ secrets.VITE_POSTHOG_API_KEY }}\"" >> .env
-  #         echo "VITE_POSTHOG_HOST=\"${{ secrets.VITE_POSTHOG_HOST }}\"" >> .env
-  #         echo "VITE_GRPC_BASE_URL=\"${{ vars.VITE_GRPC_BASE_URL }}\"" >> .env
-  #         echo "VITE_UPDATER_BUCKET=\"${{ vars.VITE_UPDATER_BUCKET }}\"" >> .env
-  #         echo "VITE_SENTRY_DSN=\"${{ vars.VITE_SENTRY_DSN }}\"" >> .env
-  #         echo "VITE_SENTRY_ENV=\"${{ vars.VITE_SENTRY_ENV }}\"" >> .env
-  #         echo "VITE_SENTRY_TRACES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE }}\"" >> .env
-  #         echo "VITE_SENTRY_PROFILES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_PROFILES_SAMPLE_RATE }}\"" >> .env
-  #         echo "VITE_ITO_VERSION=\"${GITHUB_REF#refs/tags/v}\"" >> .env
-  #         echo "ITO_ENV=\"${{ github.event.release.target_commitish == 'main' && 'prod' || 'dev' }}\"" >> .env
-  #         echo "VITE_ITO_ENV=\"${{ github.event.release.target_commitish == 'main' && 'prod' || 'dev' }}\"" >> .env
-  #         echo "GH_TOKEN=\"${{ secrets.GITHUB_TOKEN }}\"" >> .env
-  #         echo "GRPC_BASE_URL=\"${{ vars.GRPC_BASE_URL }}\"" >> .env
-  #         echo "Created .env file:"
-  #         cat .env
+      - name: Set up environment
+        run: |
+          echo "VITE_AUTH0_DOMAIN=\"${{ secrets.VITE_AUTH0_DOMAIN }}\"" >> .env
+          echo "VITE_AUTH0_CLIENT_ID=\"${{ secrets.VITE_AUTH0_CLIENT_ID }}\"" >> .env
+          echo "VITE_AUTH0_AUDIENCE=\"${{ secrets.VITE_AUTH0_AUDIENCE }}\"" >> .env
+          echo "VITE_POSTHOG_API_KEY=\"${{ secrets.VITE_POSTHOG_API_KEY }}\"" >> .env
+          echo "VITE_POSTHOG_HOST=\"${{ secrets.VITE_POSTHOG_HOST }}\"" >> .env
+          echo "VITE_GRPC_BASE_URL=\"${{ vars.VITE_GRPC_BASE_URL }}\"" >> .env
+          echo "VITE_UPDATER_BUCKET=\"${{ vars.VITE_UPDATER_BUCKET }}\"" >> .env
+          echo "VITE_SENTRY_DSN=\"${{ vars.VITE_SENTRY_DSN }}\"" >> .env
+          echo "VITE_SENTRY_ENV=\"${{ vars.VITE_SENTRY_ENV }}\"" >> .env
+          echo "VITE_SENTRY_TRACES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE }}\"" >> .env
+          echo "VITE_SENTRY_PROFILES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_PROFILES_SAMPLE_RATE }}\"" >> .env
+          echo "VITE_ITO_VERSION=\"${GITHUB_REF#refs/tags/v}\"" >> .env
+          echo "ITO_ENV=\"${{ github.event.release.target_commitish == 'main' && 'prod' || 'dev' }}\"" >> .env
+          echo "VITE_ITO_ENV=\"${{ github.event.release.target_commitish == 'main' && 'prod' || 'dev' }}\"" >> .env
+          echo "GH_TOKEN=\"${{ secrets.GITHUB_TOKEN }}\"" >> .env
+          echo "GRPC_BASE_URL=\"${{ vars.GRPC_BASE_URL }}\"" >> .env
+          echo "Created .env file:"
+          cat .env
 
-  #     - name: Build and package Windows application (unsigned)
-  #       env:
-  #         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-  #       run: ./build-app.sh windows
+      - name: Build and package Windows application (unsigned)
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: ./build-app.sh windows
 
-  #     - name: Upload unsigned Windows artifacts for signing
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: Windows-Unsigned-Artifacts
-  #         path: |
-  #           dist/*.exe
-  #           dist/*.yml
-  #           dist/*.nsis.7z
-  #           dist/*.zip
-  #           dist/*.blockmap
+      - name: Upload unsigned Windows artifacts for signing
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-Unsigned-Artifacts
+          path: |
+            dist/*.exe
+            dist/*.yml
+            dist/*.nsis.7z
+            dist/*.zip
+            dist/*.blockmap
 
   # sign-windows:
   #   runs-on: windows-latest
@@ -232,7 +232,7 @@ jobs:
 
   upload-to-s3:
     runs-on: ubuntu-latest
-    needs: [build-mac]
+    needs: [build-mac, build-windows]
     environment: ${{ github.event.release.target_commitish == 'main' && 'production' || 'develop' }}
 
     steps:
@@ -242,11 +242,11 @@ jobs:
           name: Mac-Build-Artifacts
           path: mac-dist
 
-      # - name: Download Windows Build Artifacts
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: Windows-Build-Artifacts
-      #     path: windows-dist
+      - name: Download Windows Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Windows-Unsigned-Artifacts
+          path: windows-dist
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v2
@@ -263,7 +263,7 @@ jobs:
           echo "Listing existing files in root of releases/"
           aws s3 ls "$BUCKET/" | grep -vE '/$' | awk '{print $4}' > existing_files.txt
 
-          echo "Copying Mac artifacts"
+          echo "Combining Mac and Windows artifacts"
           mkdir -p combined-dist
 
           # Copy Mac artifacts
@@ -271,10 +271,10 @@ jobs:
             cp -r mac-dist/* combined-dist/
           fi
 
-          # # Copy Windows artifacts
-          # if [ -d "windows-dist" ]; then
-          #   cp -r windows-dist/* combined-dist/
-          # fi
+          # Copy Windows artifacts
+          if [ -d "windows-dist" ]; then
+            cp -r windows-dist/* combined-dist/
+          fi
 
           echo "Files to upload:"
           ls -la combined-dist/
@@ -285,7 +285,11 @@ jobs:
             -name '*universal-mac.zip' -o \
             -name '*universal-mac.zip.blockmap' -o \
             -name '*.dmg' -o \
-            -name '*.dmg.blockmap' \
+            -name '*.dmg.blockmap' -o \
+            -name '*.exe' -o \
+            -name '*.nsis.7z' -o \
+            -name '*.zip' -o \
+            -name '*.blockmap' \
           \) | xargs -I{} basename {} > uploaded_root_files.txt
 
           echo "Uploading full combined dist to versioned folder: $BUCKET/${{ github.ref_name }}/"
@@ -297,7 +301,11 @@ jobs:
             $(find combined-dist -maxdepth 1 -name '*universal-mac.zip') \
             $(find combined-dist -maxdepth 1 -name '*universal-mac.zip.blockmap') \
             $(find combined-dist -maxdepth 1 -name '*.dmg') \
-            $(find combined-dist -maxdepth 1 -name '*.dmg.blockmap')
+            $(find combined-dist -maxdepth 1 -name '*.dmg.blockmap') \
+            $(find combined-dist -maxdepth 1 -name '*.exe') \
+            $(find combined-dist -maxdepth 1 -name '*.nsis.7z') \
+            $(find combined-dist -maxdepth 1 -name '*.zip') \
+            $(find combined-dist -maxdepth 1 -name '*.blockmap')
           do
             if [ -f "$FILE" ]; then
               aws s3 cp "$FILE" $BUCKET/
@@ -335,7 +343,7 @@ jobs:
 
           aws cloudfront create-invalidation \
             --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
-            --paths "/*.yml" "/*.dmg" "/*.zip" "/*.blockmap"
+            --paths "/*.yml" "/*.dmg" "/*.exe" "/*.zip" "/*.blockmap"
 
       - name: Upload installers to GitHub Release
         uses: softprops/action-gh-release@v1
@@ -343,3 +351,4 @@ jobs:
           tag_name: ${{ github.ref_name }}
           files: |
             mac-dist/*.dmg
+            windows-dist/*.exe

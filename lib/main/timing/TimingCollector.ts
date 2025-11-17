@@ -22,6 +22,7 @@ export enum TimingEventName {
   SELCTED_TEXT_GATHER = 'selected_text_gather',
   WINDOW_CONTEXT_GATHER = 'window_context_gather',
   GRAMMAR_SERVICE = 'grammar_service',
+  CURSOR_CONTEXT_GATHER = 'cursor_context_gather',
 
   // Output
   TEXT_WRITER = 'text_writer',

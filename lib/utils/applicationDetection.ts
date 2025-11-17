@@ -65,6 +65,30 @@ const TERMINAL_APPS = new Set([
   'yakuake',
 ])
 
+const AXApiNotSupportedApps = new Set([
+  'visual studio code',
+  'visual studio code - insiders',
+  'code',
+  'code - insiders',
+  'visual studio',
+  'visual studio 2022',
+  'visual studio 2019',
+])
+
+export async function canGetContextWithAccessibilityApis(): Promise<boolean> {
+  try {
+    const window = await getActiveWindow()
+    if (!window?.appName) {
+      return false // Default to disallowing context if we can't determine
+    }
+    const lowerAppName = window.appName.toLowerCase()
+    return !AXApiNotSupportedApps.has(lowerAppName)
+  } catch (error) {
+    console.error('Failed to get active window:', error)
+    return false // Default to not allowing context on error
+  }
+}
+
 export function isTerminalApplication(appName: string): boolean {
   const lowerAppName = appName.toLowerCase()
   return TERMINAL_APPS.has(lowerAppName)

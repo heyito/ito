@@ -10,7 +10,8 @@
       "Bash(git show:*)",
       "WebFetch(domain:stackoverflow.com)",
       "WebFetch(domain:www.electronjs.org)",
-      "WebFetch(domain:www.electron.build)"
+      "WebFetch(domain:www.electron.build)",
+      "Bash(where:*)"
     ],
     "deny": [],
     "ask": []

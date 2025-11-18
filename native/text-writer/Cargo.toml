@@ -19,7 +19,7 @@ core-foundation = "0.9"
 cocoa = "0.25"
 
 [build-dependencies]
-winres = "0.1"
+tauri-winres = "0.1"
 
 [package.metadata.winres]
 FileDescription = "Accessibility Text Input Utility - Assists with text entry for productivity applications"

@@ -14,7 +14,7 @@ num-traits = "0.2.19"
 dasp_sample = "0.11.0"
 
 [build-dependencies]
-winres = "0.1"
+tauri-winres = "0.1"
 
 [package.metadata.winres]
 FileDescription = "Audio Recording Utility - Captures audio input for accessibility and productivity applications"

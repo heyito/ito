@@ -23,7 +23,7 @@ core-foundation = "0.9"
 libc = "0.2"
 
 [build-dependencies]
-winres = "0.1"
+tauri-winres = "0.1"
 
 [package.metadata.winres]
 FileDescription = "Selected Text Reader - Captures selected text for accessibility and productivity applications"

@@ -21,3 +21,17 @@ accessibility-sys-ng = "0.1"
 active-win-pos-rs = "0.8"
 core-foundation = "0.9"
 libc = "0.2"
+
+[build-dependencies]
+winres = "0.1"
+
+[package.metadata.winres]
+FileDescription = "Selected Text Reader - Captures selected text for accessibility and productivity applications"
+ProductName = "Selected Text Reader - Accessibility Tool"
+CompanyName = "Demox Labs"
+LegalCopyright = "Copyright © 2025 Demox Labs. All rights reserved."
+OriginalFilename = "selected-text-reader.exe"
+ProductVersion = "1.0.0.0"
+FileVersion = "1.0.0.0"
+InternalName = "selected-text-reader"
+Comments = "Accessibility utility for selected text capture via command-line interface"

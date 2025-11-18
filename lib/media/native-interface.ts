@@ -31,7 +31,7 @@ const getTargetDir = (nativeModuleName: string): string | null => {
     if (platform === 'darwin') {
       return join(targetBase, 'universal')
     } else if (platform === 'win32') {
-      return join(targetBase, 'x86_64-pc-windows-gnu/release')
+      return join(targetBase, 'x86_64-pc-windows-msvc/release')
     }
     // Fallback for unsupported dev platforms
     return null

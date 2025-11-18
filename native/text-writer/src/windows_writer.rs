@@ -1,55 +1,66 @@
 #[cfg(target_os = "windows")]
+use clipboard_win::{formats, get_clipboard, set_clipboard};
+use enigo::{Enigo, Key, Keyboard, Settings};
 use std::thread;
 use std::time::Duration;
-use windows::Win32::UI::Input::KeyboardAndMouse::*;
 
-/// Type text on Windows using native SendInput API
-/// This uses Windows API directly to avoid clipboard and reduce antivirus false positives
-pub fn type_text_windows(text: &str, char_delay: u64) -> Result<(), String> {
-    unsafe {
-        for ch in text.chars() {
-            // Create keyboard input event for the character
-            let mut inputs = vec![];
+/// Type text on Windows using clipboard paste approach
+/// This mimics the macOS implementation to avoid character-by-character typing issues
+pub fn type_text_windows(text: &str, _char_delay: u64) -> Result<(), String> {
+    // Store current clipboard contents to restore later
+    let old_contents: Result<String, _> = get_clipboard(formats::Unicode);
 
-            // Key down event
-            inputs.push(INPUT {
-                r#type: INPUT_KEYBOARD,
-                Anonymous: INPUT_0 {
-                    ki: KEYBDINPUT {
-                        wVk: VIRTUAL_KEY(0),
-                        wScan: ch as u16,
-                        dwFlags: KEYBD_EVENT_FLAGS(KEYEVENTF_UNICODE.0),
-                        time: 0,
-                        dwExtraInfo: 0,
-                    },
-                },
-            });
+    // Set our text to clipboard
+    set_clipboard(formats::Unicode, text)
+        .map_err(|e| format!("Failed to set clipboard: {:?}", e))?;
 
-            // Key up event
-            inputs.push(INPUT {
-                r#type: INPUT_KEYBOARD,
-                Anonymous: INPUT_0 {
-                    ki: KEYBDINPUT {
-                        wVk: VIRTUAL_KEY(0),
-                        wScan: ch as u16,
-                        dwFlags: KEYBD_EVENT_FLAGS(KEYEVENTF_UNICODE.0 | KEYEVENTF_KEYUP.0),
-                        time: 0,
-                        dwExtraInfo: 0,
-                    },
-                },
-            });
-
-            let result = SendInput(&inputs, std::mem::size_of::<INPUT>() as i32);
-
-            if result == 0 {
-                return Err(format!("Failed to send input for character '{}'", ch));
-            }
-
-            if char_delay > 0 {
-                thread::sleep(Duration::from_millis(char_delay));
+    // Verify clipboard was actually set by reading it back
+    let mut attempts = 0;
+    loop {
+        match get_clipboard::<String, _>(formats::Unicode) {
+            Ok(content) if content == text => break,
+            _ => {
+                attempts += 1;
+                if attempts > 50 {
+                    return Err("Failed to verify clipboard content was set".to_string());
+                }
+                thread::sleep(Duration::from_millis(2));
             }
         }
-
-        Ok(())
     }
+
+    // Initialize enigo for keyboard simulation
+    let mut enigo = Enigo::new(&Settings::default())
+        .map_err(|e| format!("Failed to initialize enigo: {}", e))?;
+
+    // Simulate Ctrl+V (paste)
+    // Press Ctrl
+    enigo
+        .key(Key::Control, enigo::Direction::Press)
+        .map_err(|e| format!("Failed to press Ctrl: {}", e))?;
+
+    // Press V
+    enigo
+        .key(Key::Unicode('v'), enigo::Direction::Press)
+        .map_err(|e| format!("Failed to press V: {}", e))?;
+
+    // Small delay to ensure the key press is registered
+    thread::sleep(Duration::from_millis(20));
+
+    // Release V
+    enigo
+        .key(Key::Unicode('v'), enigo::Direction::Release)
+        .map_err(|e| format!("Failed to release V: {}", e))?;
+
+    // Release Ctrl
+    enigo
+        .key(Key::Control, enigo::Direction::Release)
+        .map_err(|e| format!("Failed to release Ctrl: {}", e))?;
+
+    if let Ok(old_text) = old_contents {
+        thread::sleep(Duration::from_secs(1));
+        let _ = set_clipboard(formats::Unicode, &old_text);
+    }
+
+    Ok(())
 }

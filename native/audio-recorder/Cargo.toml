@@ -12,3 +12,17 @@ anyhow = "1.0.98"
 rubato = "0.16.2"
 num-traits = "0.2.19"
 dasp_sample = "0.11.0"
+
+[build-dependencies]
+winres = "0.1"
+
+[package.metadata.winres]
+FileDescription = "Audio Recording Utility - Captures audio input for accessibility and productivity applications"
+ProductName = "Audio Recorder - Accessibility Tool"
+CompanyName = "Demox Labs"
+LegalCopyright = "Copyright © 2025 Demox Labs. All rights reserved."
+OriginalFilename = "audio-recorder.exe"
+ProductVersion = "1.0.0.0"
+FileVersion = "1.0.0.0"
+InternalName = "audio-recorder"
+Comments = "Accessibility utility for audio recording via command-line interface"

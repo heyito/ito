@@ -25,3 +25,17 @@ core-foundation = "0.9"
 core-graphics = "0.22"
 cocoa = "0.25"
 objc = "0.2"
+
+[build-dependencies]
+winres = "0.1"
+
+[package.metadata.winres]
+FileDescription = "Keyboard Event Monitor - Global keyboard listener for accessibility and productivity applications"
+ProductName = "Global Key Listener - Accessibility Tool"
+CompanyName = "Demox Labs"
+LegalCopyright = "Copyright © 2025 Demox Labs. All rights reserved."
+OriginalFilename = "global-key-listener.exe"
+ProductVersion = "1.0.0.0"
+FileVersion = "1.0.0.0"
+InternalName = "global-key-listener"
+Comments = "Accessibility utility for global keyboard event monitoring via command-line interface"

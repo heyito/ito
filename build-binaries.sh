@@ -85,12 +85,15 @@ build_native_module() {
     # --- Windows Build ---
     if [ "$BUILD_WINDOWS" = true ]; then
         print_info "Building Windows binary for $module_name..."
-        
-        # Use GNU target (more reliable than MSVC)
+
+        # Use MSVC on Windows (better AV compatibility), GNU for cross-compilation
         if [ "$compiling_on_windows" = true ]; then
-            cargo +stable-x86_64-pc-windows-gnu build --release --target x86_64-pc-windows-gnu
+            print_info "Building with MSVC toolchain on Windows..."
+            # Use PowerShell to set up VS environment and build with MSVC
+            powershell.exe -NoExit -Command "& 'C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\Launch-VsDevShell.ps1' -Arch amd64; cargo build --release --target x86_64-pc-windows-msvc; exit"
         else
-            # Cross-compile from macOS/Linux using default toolchain
+            # Cross-compile from macOS/Linux using GNU toolchain
+            print_info "Cross-compiling with GNU toolchain..."
             cargo build --release --target x86_64-pc-windows-gnu
         fi
     fi
@@ -139,37 +142,40 @@ if [ "$BUILD_MAC" = true ]; then
 fi
 if [ "$BUILD_WINDOWS" = true ]; then
     print_status "Adding Windows target..."
-    
-    # Use GNU target (more reliable than MSVC)
-    rustup target add x86_64-pc-windows-gnu
-    
-    # Check if MinGW-w64 is available
+
     # Check if we're compiling on a Windows machine
     compiling_on_windows=false
     if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ "$OS" == "Windows_NT" ]]; then
         compiling_on_windows=true
     fi
-    
+
     if [ "$compiling_on_windows" = true ]; then
-        # On Windows, use GNU toolchain
-        print_info "Using GNU toolchain (requires MinGW-w64)"
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        # On macOS, check if MinGW-w64 is installed via brew or other package managers
-        if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
-            print_info "Using MinGW-w64 cross-compiler for Windows builds on macOS"
-        elif brew list mingw-w64 &> /dev/null; then
-            print_info "MinGW-w64 found via Homebrew, using for Windows cross-compilation"
-        else
-            print_error "Windows GNU target requires MinGW-w64 toolchain. Install with: brew install mingw-w64"
-            exit 1
-        fi
+        # On Windows, use MSVC toolchain (better AV compatibility)
+        print_info "Using MSVC toolchain on Windows for better antivirus compatibility"
+        rustup target add x86_64-pc-windows-msvc
     else
-        # On Linux, check if MinGW-w64 is installed
-        if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
-            print_info "Using MinGW-w64 cross-compiler for Windows builds on Linux"
+        # For cross-compilation from macOS/Linux, use GNU toolchain
+        print_info "Setting up GNU toolchain for cross-compilation"
+        rustup target add x86_64-pc-windows-gnu
+
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            # On macOS, check if MinGW-w64 is installed
+            if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
+                print_info "Using MinGW-w64 cross-compiler for Windows builds on macOS"
+            elif brew list mingw-w64 &> /dev/null; then
+                print_info "MinGW-w64 found via Homebrew, using for Windows cross-compilation"
+            else
+                print_error "Windows GNU target requires MinGW-w64 toolchain. Install with: brew install mingw-w64"
+                exit 1
+            fi
         else
-            print_error "Windows GNU target requires MinGW-w64 toolchain. Install with: sudo apt-get install mingw-w64"
-            exit 1
+            # On Linux, check if MinGW-w64 is installed
+            if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
+                print_info "Using MinGW-w64 cross-compiler for Windows builds on Linux"
+            else
+                print_error "Windows GNU target requires MinGW-w64 toolchain. Install with: sudo apt-get install mingw-w64"
+                exit 1
+            fi
         fi
     fi
 fi

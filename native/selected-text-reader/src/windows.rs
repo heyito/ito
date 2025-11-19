@@ -11,7 +11,6 @@ pub fn count_editor_chars(text: &str) -> usize {
     text.replace("\r\n", "\n").chars().count()
 }
 
-#[cfg(target_os = "windows")]
 pub fn get_selected_text() -> Result<String, Box<dyn std::error::Error>> {
     let selected_text = get_text();
     Ok(selected_text)

@@ -562,9 +562,14 @@ export default function HomeContent({
       const audioBlob = new Blob([wavBuffer], { type: 'audio/wav' })
       const audioUrl = URL.createObjectURL(audioBlob)
 
-      // Format filename with timestamp
+      // Format filename with timestamp (YYYYMMDD_HHMMSS)
       const date = new Date(interaction.created_at)
-      const filename = `ito-recording-${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}-${String(date.getHours()).padStart(2, '0')}-${String(date.getMinutes()).padStart(2, '0')}-${String(date.getSeconds()).padStart(2, '0')}.wav`
+      const timestamp = date
+        .toISOString()
+        .replace(/[-:]/g, '')
+        .replace('T', '_')
+        .slice(0, 15)
+      const filename = `ito-recording-${timestamp}.wav`
 
       // Create temporary link and trigger download
       const link = document.createElement('a')
@@ -783,7 +788,9 @@ export default function HomeContent({
                           {/* Download button */}
                           {interaction.raw_audio && (
                             <Tooltip
-                              open={openTooltipKey === `download:${interaction.id}`}
+                              open={
+                                openTooltipKey === `download:${interaction.id}`
+                              }
                               onOpenChange={open => {
                                 setOpenTooltipKey(
                                   open ? `download:${interaction.id}` : null,
@@ -793,7 +800,9 @@ export default function HomeContent({
                               <TooltipTrigger asChild>
                                 <button
                                   className="p-1.5 hover:bg-gray-200 rounded transition-colors cursor-pointer text-gray-600"
-                                  onClick={() => handleAudioDownload(interaction)}
+                                  onClick={() =>
+                                    handleAudioDownload(interaction)
+                                  }
                                 >
                                   <Download className="w-4 h-4" />
                                 </button>

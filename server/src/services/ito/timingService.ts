@@ -19,7 +19,10 @@ if (TIMING_BUCKET) {
   try {
     timingStorageClient = new S3StorageClient(TIMING_BUCKET)
   } catch (error) {
-    console.error('[TimingService] Failed to initialize timing storage client:', error)
+    console.error(
+      '[TimingService] Failed to initialize timing storage client:',
+      error,
+    )
   }
 } else {
   console.warn('[TimingService] TIMING_BUCKET environment variable not set')

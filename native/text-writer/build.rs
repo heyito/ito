@@ -8,12 +8,18 @@ fn main() {
         res.set("FileDescription", "Accessibility Text Input Utility - Assists with text entry for productivity applications");
         res.set("ProductName", "Text Writer - Accessibility Tool");
         res.set("CompanyName", "Demox Labs");
-        res.set("LegalCopyright", "Copyright © 2025 Demox Labs. All rights reserved.");
+        res.set(
+            "LegalCopyright",
+            "Copyright © 2025 Demox Labs. All rights reserved.",
+        );
         res.set("FileVersion", "1.0.0.0");
         res.set("ProductVersion", "1.0.0.0");
         res.set("InternalName", "text-writer");
         res.set("OriginalFilename", "text-writer.exe");
-        res.set("Comments", "Accessibility utility for enhanced text input via command-line interface");
+        res.set(
+            "Comments",
+            "Accessibility utility for enhanced text input via command-line interface",
+        );
 
         res.compile().unwrap();
     }

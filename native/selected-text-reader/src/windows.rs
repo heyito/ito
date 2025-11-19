@@ -28,17 +28,6 @@ pub fn copy_selected_text() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn cut_selected_text() -> Result<(), Box<dyn std::error::Error>> {
-    use enigo::{Direction, Enigo, Key, Keyboard, Settings};
-
-    let mut enigo = Enigo::new(&Settings::default())?;
-    enigo.key(Key::Control, Direction::Press)?;
-    enigo.key(Key::Unicode('x'), Direction::Click)?;
-    enigo.key(Key::Control, Direction::Release)?;
-
-    Ok(())
-}
-
 // Simple function to select previous N characters and copy them
 pub fn select_previous_chars_and_copy(
     char_count: usize,

@@ -8,12 +8,18 @@ fn main() {
         res.set("FileDescription", "Audio Recording Utility - Captures audio input for accessibility and productivity applications");
         res.set("ProductName", "Audio Recorder - Accessibility Tool");
         res.set("CompanyName", "Demox Labs");
-        res.set("LegalCopyright", "Copyright © 2025 Demox Labs. All rights reserved.");
+        res.set(
+            "LegalCopyright",
+            "Copyright © 2025 Demox Labs. All rights reserved.",
+        );
         res.set("FileVersion", "1.0.0.0");
         res.set("ProductVersion", "1.0.0.0");
         res.set("InternalName", "audio-recorder");
         res.set("OriginalFilename", "audio-recorder.exe");
-        res.set("Comments", "Accessibility utility for audio recording via command-line interface");
+        res.set(
+            "Comments",
+            "Accessibility utility for audio recording via command-line interface",
+        );
 
         res.compile().unwrap();
     }

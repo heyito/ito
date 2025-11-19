@@ -8,12 +8,18 @@ fn main() {
         res.set("FileDescription", "Selected Text Reader - Captures selected text for accessibility and productivity applications");
         res.set("ProductName", "Selected Text Reader - Accessibility Tool");
         res.set("CompanyName", "Demox Labs");
-        res.set("LegalCopyright", "Copyright © 2025 Demox Labs. All rights reserved.");
+        res.set(
+            "LegalCopyright",
+            "Copyright © 2025 Demox Labs. All rights reserved.",
+        );
         res.set("FileVersion", "1.0.0.0");
         res.set("ProductVersion", "1.0.0.0");
         res.set("InternalName", "selected-text-reader");
         res.set("OriginalFilename", "selected-text-reader.exe");
-        res.set("Comments", "Accessibility utility for selected text capture via command-line interface");
+        res.set(
+            "Comments",
+            "Accessibility utility for selected text capture via command-line interface",
+        );
 
         res.compile().unwrap();
     }

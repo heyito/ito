@@ -15,7 +15,7 @@ const getMacResources = () =>
 
 const getWindowsResources = () =>
   nativeBinaries.map(binary => ({
-    from: `native/${binary}/target/x86_64-pc-windows-msvc/release/${binary}.exe`,
+    from: `native/target/x86_64-pc-windows-msvc/release/${binary}.exe`,
     to: `binaries/${binary}.exe`,
   }))
 

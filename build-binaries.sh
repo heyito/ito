@@ -79,7 +79,7 @@ build_native_workspace() {
 
     # --- Windows Build ---
     if [ "$BUILD_WINDOWS" = true ]; then
-        print_info "Building Windows binary for $module_name..."
+        print_info "Building Windows binary for entire workspace..."
 
         # Use MSVC on Windows (better AV compatibility), GNU for cross-compilation
         if [ "$compiling_on_windows" = true ]; then

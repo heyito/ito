@@ -27,7 +27,7 @@ cocoa = "0.25"
 objc = "0.2"
 
 [build-dependencies]
-winres = "0.1"
+tauri-winres = "0.1"
 
 [package.metadata.winres]
 FileDescription = "Keyboard Event Monitor - Global keyboard listener for accessibility and productivity applications"

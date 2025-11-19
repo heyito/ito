@@ -84,8 +84,7 @@ build_native_workspace() {
         # Use MSVC on Windows (better AV compatibility), GNU for cross-compilation
         if [ "$compiling_on_windows" = true ]; then
             print_info "Building with MSVC toolchain on Windows..."
-            # Use PowerShell to set up VS environment and build with MSVC
-            powershell.exe -NoExit -Command "& 'C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\Launch-VsDevShell.ps1' -Arch amd64; cargo build --release --target x86_64-pc-windows-msvc; exit"
+            cargo build --release --target x86_64-pc-windows-msvc
         else
             # Cross-compile from macOS/Linux using GNU toolchain
             print_info "Cross-compiling with GNU toolchain..."

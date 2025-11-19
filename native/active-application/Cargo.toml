@@ -11,16 +11,5 @@ serde_json = "1.0.141"
 [build-dependencies]
 tauri-winres = "0.1"
 
-[package.metadata.winres]
-FileDescription = "Active Window Monitor - Detects active application for accessibility and productivity applications"
-ProductName = "Active Application - Accessibility Tool"
-CompanyName = "Demox Labs"
-LegalCopyright = "Copyright © 2025 Demox Labs. All rights reserved."
-OriginalFilename = "active-application.exe"
-ProductVersion = "1.0.0.0"
-FileVersion = "1.0.0.0"
-InternalName = "active-application"
-Comments = "Accessibility utility for active window detection via command-line interface"
-
 [lints]
 workspace = true

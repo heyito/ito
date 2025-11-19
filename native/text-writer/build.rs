@@ -12,8 +12,8 @@ fn main() {
             "LegalCopyright",
             "Copyright © 2025 Demox Labs. All rights reserved.",
         );
-        res.set("FileVersion", "1.0.0.0");
-        res.set("ProductVersion", "1.0.0.0");
+        res.set("FileVersion", "0.1.0.0");
+        res.set("ProductVersion", "0.1.0.0");
         res.set("InternalName", "text-writer");
         res.set("OriginalFilename", "text-writer.exe");
         res.set(

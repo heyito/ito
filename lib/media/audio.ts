@@ -1,9 +1,7 @@
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process'
-import { join } from 'path'
-import { app } from 'electron'
-import os from 'os'
 import log from 'electron-log'
 import { EventEmitter } from 'events'
+import { getNativeBinaryPath } from './native-interface'
 
 // Message types from the native binary
 const MSG_TYPE_JSON = 1
@@ -39,7 +37,7 @@ class AudioRecorderService extends EventEmitter {
       return
     }
 
-    const binaryPath = this.#getBinaryPath()
+    const binaryPath = getNativeBinaryPath('audio-recorder')
     if (!binaryPath) {
       log.error(
         '[AudioService] Could not determine audio recorder binary path.',
@@ -49,7 +47,7 @@ class AudioRecorderService extends EventEmitter {
       return
     }
 
-    log.info(`[AudioService] Spawning audio recorder at: ${binaryPath}`)
+    console.log(`[AudioService] Spawning audio recorder at: ${binaryPath}`)
     try {
       this.#audioRecorderProcess = spawn(binaryPath, [], {
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -76,7 +74,7 @@ class AudioRecorderService extends EventEmitter {
    */
   public terminate(): void {
     if (this.#audioRecorderProcess) {
-      log.info('[AudioService] Stopping audio recorder process.')
+      console.log('[AudioService] Stopping audio recorder process.')
       this.#audioRecorderProcess.kill()
       this.#audioRecorderProcess = null
       this.emit('stopped')
@@ -88,7 +86,7 @@ class AudioRecorderService extends EventEmitter {
    */
   public startRecording(deviceName: string): void {
     this.#sendCommand({ command: 'start', device_name: deviceName })
-    log.info(`[AudioService] Recording started on device: ${deviceName}`)
+    console.log(`[AudioService] Recording started on device: ${deviceName}`)
   }
 
   /**
@@ -96,7 +94,7 @@ class AudioRecorderService extends EventEmitter {
    */
   public stopRecording(): void {
     this.#sendCommand({ command: 'stop' })
-    log.info('[AudioService] Recording stopped')
+    console.log('[AudioService] Recording stopped')
   }
 
   /**
@@ -290,33 +288,6 @@ class AudioRecorderService extends EventEmitter {
     }
     const rms = Math.sqrt(sumOfSquares / (buffer.length / 2))
     return Math.min(rms / 32767, 1.0)
-  }
-
-  #getBinaryPath(): string | null {
-    const isDev = !app.isPackaged
-    const platform = os.platform()
-    const binaryName =
-      platform === 'win32' ? 'audio-recorder.exe' : 'audio-recorder'
-    const baseDir = isDev
-      ? join(__dirname, '../../native/audio-recorder/target')
-      : join(process.resourcesPath, 'binaries')
-
-    if (isDev) {
-      let archPath
-      if (platform === 'darwin') {
-        archPath = 'universal'
-      } else if (platform === 'win32') {
-        archPath = 'x86_64-pc-windows-gnu/release'
-      } else {
-        log.error(
-          `Unsupported development platform for audio-recorder: ${platform}`,
-        )
-        return null
-      }
-      return join(baseDir, archPath, binaryName)
-    } else {
-      return join(process.resourcesPath, 'binaries', binaryName)
-    }
   }
 }
 

@@ -7,7 +7,6 @@ import {
   ClientUnavailableError,
   ClientModelError,
   ClientNoSpeechError,
-  ClientTranscriptionQualityError,
   ClientAudioTooShortError,
   ClientApiError,
   ClientError,
@@ -99,14 +98,12 @@ class GroqClient implements LlmProvider {
     audioBuffer: Buffer,
     options?: TranscriptionOptions,
   ): Promise<string> {
+    console.log('Transcribing audio with options:', options)
     const fileType = options?.fileType || 'webm'
     const asrModel = options?.asrModel
     const vocabulary = options?.vocabulary
     const noSpeechThreshold =
       options?.noSpeechThreshold ?? DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold
-    const lowQualityThreshold =
-      options?.lowQualityThreshold ??
-      DEFAULT_ADVANCED_SETTINGS.lowQualityThreshold
 
     const file = await toFile(audioBuffer, `audio.${fileType}`)
     if (!this.isAvailable) {
@@ -137,16 +134,12 @@ class GroqClient implements LlmProvider {
 
       const segments = (transcription as any).segments
       if (segments && segments.length > 0) {
-        const segment = segments[0]
-        if (segment.no_speech_prob > noSpeechThreshold) {
+        const first = segments[0]
+        if (first?.no_speech_prob > noSpeechThreshold) {
+          console.log('No speech probability:', first.no_speech_prob)
           throw new ClientNoSpeechError(
             ClientProvider.GROQ,
-            segment.no_speech_prob,
-          )
-        } else if (segment.avg_logprob < lowQualityThreshold) {
-          throw new ClientTranscriptionQualityError(
-            ClientProvider.GROQ,
-            segment.avg_logprob,
+            first.no_speech_prob,
           )
         }
       }

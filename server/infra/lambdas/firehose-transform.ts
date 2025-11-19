@@ -124,6 +124,7 @@ export const handler = async (
       const structured = tryJsonParse<any>(messageStr)
 
       let doc: Record<string, unknown>
+
       if (
         structured &&
         typeof structured === 'object' &&

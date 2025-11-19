@@ -57,16 +57,14 @@ fn main() {
 
     thread::spawn(move || {
         let stdin = io::stdin();
-        for line in stdin.lock().lines() {
-            if let Ok(l) = line {
-                if l.trim().is_empty() {
-                    continue;
-                }
-                if let Ok(command) = serde_json::from_str::<Command>(&l) {
-                    cmd_tx
-                        .send(command)
-                        .expect("Failed to send command to processor");
-                }
+        for l in stdin.lock().lines().map_while(Result::ok) {
+            if l.trim().is_empty() {
+                continue;
+            }
+            if let Ok(command) = serde_json::from_str::<Command>(&l) {
+                cmd_tx
+                    .send(command)
+                    .expect("Failed to send command to processor");
             }
         }
     });
@@ -104,7 +102,8 @@ impl CommandProcessor {
         let host = {
             #[cfg(target_os = "windows")]
             {
-                // On Windows, prefer WASAPI directly for best performance (10-30ms latency vs DirectSound's 50-80ms)
+                // On Windows, prefer WASAPI directly for best performance (10-30ms latency vs
+                // DirectSound's 50-80ms)
                 match cpal::host_from_id(cpal::platform::HostId::Wasapi) {
                     Ok(wasapi_host) => {
                         eprintln!("[audio-recorder] Using WASAPI host (optimal for Windows)");
@@ -224,57 +223,6 @@ impl CommandProcessor {
     }
 }
 
-// --- MODIFIED: Function now accepts chunk_size as a parameter ---
-fn process_and_write_data<T>(
-    data: &[T],
-    resampler: &mut Option<FftFixedIn<f32>>,
-    buffer: &mut Vec<f32>,
-    stdout: &Arc<Mutex<io::Stdout>>,
-    chunk_size: usize,
-    num_channels: usize,
-) where
-    T: Sample,
-    f32: FromSample<T>,
-{
-    // Downmix to mono by averaging channels per frame to keep timebase correct
-    let mono_samples: Vec<f32> = if num_channels <= 1 {
-        data.iter().map(|s| s.to_sample::<f32>()).collect()
-    } else {
-        let mut out: Vec<f32> = Vec::with_capacity(data.len() / num_channels);
-        let mut i = 0;
-        while i + num_channels <= data.len() {
-            let mut sum = 0.0f32;
-            for c in 0..num_channels {
-                sum += data[i + c].to_sample::<f32>();
-            }
-            out.push(sum / (num_channels as f32));
-            i += num_channels;
-        }
-        out
-    };
-
-    if let Some(resampler_instance) = resampler {
-        buffer.extend_from_slice(&mono_samples);
-
-        while buffer.len() >= chunk_size {
-            let chunk_to_process = buffer.drain(..chunk_size).collect::<Vec<_>>();
-
-            match resampler_instance.process(&[chunk_to_process], None) {
-                Ok(mut resampled) => {
-                    if !resampled.is_empty() {
-                        write_audio_chunk(&resampled.remove(0), stdout);
-                    }
-                }
-                Err(e) => {
-                    eprintln!("[audio-recorder] CRITICAL: Resampling failed: {}", e);
-                }
-            }
-        }
-    } else {
-        write_audio_chunk(&mono_samples, stdout);
-    }
-}
-
 fn write_audio_chunk(data: &[f32], stdout: &Arc<Mutex<io::Stdout>>) {
     let mut writer = stdout.lock().unwrap();
     let mut buffer = Vec::with_capacity(data.len() * 2);
@@ -304,7 +252,8 @@ where
     if num_channels <= 1 {
         return data.iter().map(|s| s.to_sample::<f32>()).collect();
     }
-    // Select the dominant channel to avoid amplitude loss when one channel is near-silent
+    // Select the dominant channel to avoid amplitude loss when one channel is
+    // near-silent
     let frames = data.len() / num_channels;
     if frames == 0 {
         return Vec::new();
@@ -320,6 +269,7 @@ where
     }
     let mut best_channel = 0usize;
     let mut best_energy = energy_per_channel[0];
+    #[allow(clippy::needless_range_loop)]
     for c in 1..num_channels {
         if energy_per_channel[c] > best_energy {
             best_energy = energy_per_channel[c];
@@ -432,15 +382,13 @@ fn writer_loop(
                     ),
                 }
             }
-        } else {
-            if input_sample_rate != TARGET_SAMPLE_RATE {
-                let resampled = linear_resample_mono(&frame, input_sample_rate, TARGET_SAMPLE_RATE);
-                if !resampled.is_empty() {
-                    write_audio_chunk(&resampled, &stdout);
-                }
-            } else {
-                write_audio_chunk(&frame, &stdout);
+        } else if input_sample_rate != TARGET_SAMPLE_RATE {
+            let resampled = linear_resample_mono(&frame, input_sample_rate, TARGET_SAMPLE_RATE);
+            if !resampled.is_empty() {
+                write_audio_chunk(&resampled, &stdout);
             }
+        } else {
+            write_audio_chunk(&frame, &stdout);
         }
     }
 
@@ -528,7 +476,7 @@ fn start_capture(
     {
         let cfg = AudioConfig {
             response_type: "audio-config".to_string(),
-            input_sample_rate: input_sample_rate,
+            input_sample_rate,
             output_sample_rate: TARGET_SAMPLE_RATE,
             channels: 1,
         };
@@ -636,4 +584,81 @@ fn start_capture(
         audio_tx,
         writer_handle,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_downmix_to_mono_single_channel() {
+        let mono_samples: Vec<f32> = vec![0.5, -0.5, 1.0, -1.0];
+        let result = downmix_to_mono_vec(&mono_samples, 1);
+
+        assert_eq!(result.len(), 4);
+        assert_eq!(result, vec![0.5, -0.5, 1.0, -1.0]);
+    }
+
+    #[test]
+    fn test_downmix_to_mono_stereo() {
+        // Stereo: L,R,L,R pattern
+        let stereo_samples: Vec<f32> = vec![0.8, 0.2, -0.6, -0.4];
+        let result = downmix_to_mono_vec(&stereo_samples, 2);
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], 0.8); // Left channel sample 1
+        assert_eq!(result[1], -0.6); // Left channel sample 2
+    }
+
+    #[test]
+    fn test_downmix_to_mono_quad() {
+        // 4 channels: one frame with values [1.0, 0.5, 0.25, 0.25]
+        let quad_samples: Vec<f32> = vec![1.0, 0.5, 0.25, 0.25]; // One frame
+        let result = downmix_to_mono_vec(&quad_samples, 4);
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], 1.0); // Channel 0 sample
+    }
+
+    #[test]
+    fn test_downmix_partial_frame() {
+        // 5 samples with 2 channels - last sample incomplete, should be ignored
+        let samples: Vec<f32> = vec![0.8, 0.2, -0.6, -0.4, 1.0];
+        let result = downmix_to_mono_vec(&samples, 2);
+
+        assert_eq!(result.len(), 2); // Only 2 complete frames
+        assert_eq!(result[0], 0.8); // Left channel sample 1
+        assert_eq!(result[1], -0.6); // Left channel sample 2
+    }
+
+    #[test]
+    fn test_write_framed_message_structure() {
+        let mut buffer = Vec::new();
+        let test_data = b"test";
+
+        write_framed_message(&mut buffer, MSG_TYPE_JSON, test_data).unwrap();
+
+        // Check structure: [msg_type(1)] + [length(4)] + [data(4)]
+        assert_eq!(buffer.len(), 9);
+        assert_eq!(buffer[0], MSG_TYPE_JSON);
+
+        // Length bytes (little-endian u32 = 4)
+        let length = u32::from_le_bytes([buffer[1], buffer[2], buffer[3], buffer[4]]);
+        assert_eq!(length, 4);
+
+        // Data
+        assert_eq!(&buffer[5..9], test_data);
+    }
+
+    #[test]
+    fn test_write_framed_message_audio_type() {
+        let mut buffer = Vec::new();
+        let audio_data = vec![0u8; 100];
+
+        write_framed_message(&mut buffer, MSG_TYPE_AUDIO, &audio_data).unwrap();
+
+        assert_eq!(buffer[0], MSG_TYPE_AUDIO);
+        let length = u32::from_le_bytes([buffer[1], buffer[2], buffer[3], buffer[4]]);
+        assert_eq!(length, 100);
+    }
 }

@@ -7,7 +7,6 @@ import {
   LlmPromptSchema,
   LlmProviderSchema,
   LLMTemperatureSchema,
-  LowQualityThreshold,
   NoSpeechThresholdSchema,
   VocabularySchema,
 } from './schemas.js'
@@ -84,7 +83,10 @@ export class HeaderValidator {
 
   static validateTranscriptionPrompt(headerValue: string): string {
     try {
-      console.log('Validating transcription prompt:', headerValue)
+      console.log(
+        'Validating transcription prompt:',
+        headerValue.slice(0, 50) + '...',
+      )
       return LlmPromptSchema.parse(headerValue)
     } catch (error) {
       throw new ConnectError(
@@ -111,17 +113,6 @@ export class HeaderValidator {
     } catch (error) {
       throw new ConnectError(
         `Invalid no speech threshold: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        Code.InvalidArgument,
-      )
-    }
-  }
-
-  static validateLowQualityThreshold(headerValue: number): number {
-    try {
-      return LowQualityThreshold.parse(headerValue)
-    } catch (error) {
-      throw new ConnectError(
-        `Invalid low quality threshold: ${error instanceof Error ? error.message : 'Unknown error'}`,
         Code.InvalidArgument,
       )
     }

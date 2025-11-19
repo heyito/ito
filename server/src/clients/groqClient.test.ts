@@ -50,7 +50,6 @@ const { createTranscriptionPrompt } = await import(
 
 describe('GroqClient', () => {
   const NO_SPEECH_THRESHOLD = 0.6
-  const LOW_QUALITY_THRESHOLD = -0.5
   beforeEach(() => {
     // Clear all mocks before each test
     mockGroqClient.audio.transcriptions.create.mockClear()
@@ -81,7 +80,6 @@ describe('GroqClient', () => {
         fileType: 'wav',
         asrModel,
         noSpeechThreshold: NO_SPEECH_THRESHOLD,
-        lowQualityThreshold: LOW_QUALITY_THRESHOLD,
         vocabulary,
       })
 
@@ -109,7 +107,6 @@ describe('GroqClient', () => {
       await groqClient.transcribeAudio(audioBuffer, {
         asrModel,
         noSpeechThreshold: NO_SPEECH_THRESHOLD,
-        lowQualityThreshold: LOW_QUALITY_THRESHOLD,
       })
 
       expect(mockGroqClient.audio.transcriptions.create).toHaveBeenCalledWith({
@@ -140,7 +137,6 @@ describe('GroqClient', () => {
         fileType: 'wav',
         asrModel,
         noSpeechThreshold: NO_SPEECH_THRESHOLD,
-        lowQualityThreshold: LOW_QUALITY_THRESHOLD,
         vocabulary,
       })
 
@@ -168,7 +164,6 @@ describe('GroqClient', () => {
         fileType: 'wav',
         asrModel,
         noSpeechThreshold: NO_SPEECH_THRESHOLD,
-        lowQualityThreshold: LOW_QUALITY_THRESHOLD,
         vocabulary: [],
       })
 
@@ -190,7 +185,6 @@ describe('GroqClient', () => {
           fileType: 'wav',
           asrModel: '',
           noSpeechThreshold: NO_SPEECH_THRESHOLD,
-          lowQualityThreshold: LOW_QUALITY_THRESHOLD,
         }),
       ).rejects.toThrow('ASR model is required for transcription.')
     })
@@ -208,32 +202,9 @@ describe('GroqClient', () => {
         fileType: 'wav',
         asrModel,
         noSpeechThreshold: NO_SPEECH_THRESHOLD,
-        lowQualityThreshold: LOW_QUALITY_THRESHOLD,
       })
 
       expect(result).toBe('Hello world')
-    })
-
-    it('should throw when low quality transcription', async () => {
-      const mockTranscription = {
-        text: 'Low quality transcription',
-        segments: [{ avg_logprob: LOW_QUALITY_THRESHOLD - 0.01 }],
-      }
-      mockGroqClient.audio.transcriptions.create.mockResolvedValue(
-        mockTranscription,
-      )
-
-      const audioBuffer = Buffer.from('mock audio data')
-      const asrModel = 'whisper-large-v3'
-
-      await expect(
-        groqClient.transcribeAudio(audioBuffer, {
-          fileType: 'wav',
-          asrModel,
-          noSpeechThreshold: NO_SPEECH_THRESHOLD,
-          lowQualityThreshold: LOW_QUALITY_THRESHOLD,
-        }),
-      ).rejects.toThrow('Unable to transcribe audio.')
     })
 
     it('should throw when the transcript contains no speech', async () => {
@@ -252,7 +223,6 @@ describe('GroqClient', () => {
           fileType: 'wav',
           asrModel,
           noSpeechThreshold: NO_SPEECH_THRESHOLD,
-          lowQualityThreshold: LOW_QUALITY_THRESHOLD,
         }),
       ).rejects.toThrow('No speech detected')
     })
@@ -269,7 +239,6 @@ describe('GroqClient', () => {
           fileType: 'wav',
           asrModel,
           noSpeechThreshold: NO_SPEECH_THRESHOLD,
-          lowQualityThreshold: LOW_QUALITY_THRESHOLD,
         }),
       ).rejects.toThrow('Groq API error')
     })

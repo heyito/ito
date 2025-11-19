@@ -3,6 +3,7 @@ import log from 'electron-log'
 import { autoUpdater } from 'electron-updater'
 import { mainWindow } from './app'
 import { hardKillAll, teardown } from './teardown'
+import { ITO_ENV } from './env'
 
 export interface UpdateStatus {
   updateAvailable: boolean
@@ -115,18 +116,18 @@ let installing = false
 export async function installUpdateNow() {
   if (installing) return
   installing = true
-  log.info('[Updater] Preparing to install…')
+  console.log('[Updater] Preparing to install…')
 
   try {
     // Try to gracefully shut down processes
     teardown()
     await new Promise(resolve => setTimeout(resolve, 1_500))
 
-    log.info('[Updater] Forcibly kill all straggler processes')
+    console.log('[Updater] Forcibly kill all straggler processes')
     // Force-kill stragglers + crashpad/helpers
     await hardKillAll()
 
-    log.info('[Updater] calling autoUpdater quit and install')
+    console.log('[Updater] calling autoUpdater quit and install')
     // Fire the installer (UI visible for debugging recommended)
     autoUpdater.quitAndInstall(false /* isSilent */, true /* forceRunAfter */)
   } catch (e) {

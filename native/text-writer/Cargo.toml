@@ -31,3 +31,6 @@ ProductVersion = "1.0.0.0"
 FileVersion = "1.0.0.0"
 InternalName = "text-writer"
 Comments = "Accessibility utility for enhanced text input via command-line interface"
+
+[lints]
+workspace = true

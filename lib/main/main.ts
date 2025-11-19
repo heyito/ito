@@ -1,3 +1,4 @@
+import './env'
 import './sentry'
 import { app, protocol } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
@@ -19,17 +20,19 @@ import { grpcClient } from '../clients/grpcClient'
 import { preventAppNap } from './appNap'
 import { syncService } from './syncService'
 import { checkAccessibilityPermission } from '../utils/crossPlatform'
-import mainStore from './store'
+import mainStore, { initializeStore } from './store'
 import { STORE_KEYS } from '../constants/store-keys'
 import { selectedTextReaderService } from '../media/selected-text-reader'
+import { macOSAccessibilityContextProvider } from '../media/macOSAccessibilityContextProvider'
 import { voiceInputService } from './voiceInputService'
 import { initializeMicrophoneSelection } from '../media/microphoneSetUp'
 import { validateStoredTokens, ensureValidTokens } from '../auth/events'
 import { Auth0Config, validateAuth0Config } from '../auth/config'
 import { createAppTray } from './tray'
-import { transcriptionService } from './transcriptionService'
+import { itoSessionManager } from './itoSessionManager'
 import { initializeAutoUpdater } from './autoUpdaterWrapper'
 import { teardown } from './teardown'
+import { ITO_ENV } from './env'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -42,16 +45,24 @@ protocol.registerSchemesAsPrivileged([
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
-  // Initialize logging as the first step
-  initializeLogging()
-
-  // Initialize the database
+  // Initialize the database BEFORE logging so KV writes have a schema
   try {
     await initializeDatabase()
   } catch (error) {
     console.error('Failed to initialize database, quitting app.', error)
     return
   }
+
+  // Initialize KV-backed store and run migrations before anything reads/writes
+  try {
+    await initializeStore()
+  } catch (err) {
+    console.error('Failed to initialize main store, quitting app.', err)
+    return
+  }
+
+  // Initialize logging after DB + store so batched log persistence can write
+  initializeLogging()
 
   // Validate Auth0 configuration
   try {
@@ -84,8 +95,9 @@ app.whenReady().then(async () => {
   preventAppNap()
 
   // Register the handler for the 'res' protocol now that the app is ready.
+  const appId = ITO_ENV === 'prod' ? 'ai.ito.ito' : `ai.ito.ito-${ITO_ENV}`
   registerResourcesProtocol()
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId(appId)
 
   // IMPORTANT: Register IPC handlers BEFORE creating windows
   // This prevents the renderer from making IPC calls before handlers are ready
@@ -117,11 +129,14 @@ app.whenReady().then(async () => {
   console.log('Microphone access granted, starting audio recorder.')
   voiceInputService.setUpAudioRecorderListeners()
 
-  // Set main window for transcription service so it can send messages
-  transcriptionService.setMainWindow(mainWindow)
-
   console.log('Starting selected text reader service.')
   selectedTextReaderService.initialize()
+
+  // Initialize cursor context provider (macOS only for now)
+  if (process.platform === 'darwin') {
+    console.log('Starting cursor context provider.')
+    macOSAccessibilityContextProvider.initialize()
+  }
 
   // Initialize microphone selection to prefer built-in microphone
   await initializeMicrophoneSelection()

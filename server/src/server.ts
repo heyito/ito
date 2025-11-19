@@ -3,6 +3,7 @@ import { fastifyConnectPlugin } from '@connectrpc/connect-fastify'
 import { createContextValues } from '@connectrpc/connect'
 import Auth0 from '@auth0/auth0-fastify-api'
 import itoServiceRoutes from './services/ito/itoService.js'
+import timingServiceRoutes from './services/ito/timingService.js'
 import { kUser } from './auth/userContext.js'
 import { errorInterceptor } from './services/errorInterceptor.js'
 import { loggingInterceptor } from './services/loggingInterceptor.js'
@@ -11,14 +12,25 @@ import { renderCallbackPage } from './utils/renderCallback.js'
 import dotenv from 'dotenv'
 import { registerLoggingRoutes } from './services/logging.js'
 import { registerAuth0Routes } from './services/auth0.js'
+import { IpLinkRepository } from './db/repo.js'
+import { registerTrialRoutes } from './services/trial.js'
+import {
+  registerBillingRoutes,
+  registerBillingPublicRoutes,
+} from './services/billing.js'
+import { registerStripeWebhook } from './services/stripeWebhook.js'
+import cors from '@fastify/cors'
 
 dotenv.config()
 
 // Create the main server function
 export const startServer = async () => {
   const connectRpcServer = fastify({
-    logger: true,
+    logger: process.env.SHOW_ALL_REQUEST_LOGS === 'true',
+    trustProxy: true,
   })
+
+  await connectRpcServer.register(cors, { origin: '*' })
 
   // Register the Auth0 plugin
   const REQUIRE_AUTH = process.env.REQUIRE_AUTH === 'true'
@@ -70,6 +82,55 @@ export const startServer = async () => {
   // Register Auth0 management proxy routes at the root level (no auth required)
   await registerAuth0Routes(connectRpcServer)
 
+  // Public billing routes (no auth)
+  await registerBillingPublicRoutes(connectRpcServer)
+
+  // Stripe webhook (public)
+  await registerStripeWebhook(connectRpcServer)
+
+  // Register IP correlation candidate (from website click)
+  connectRpcServer.post('/link/register-ip', async (request, reply) => {
+    try {
+      const { websiteDistinctId } = (request.body ?? {}) as {
+        websiteDistinctId?: string
+      }
+      if (!websiteDistinctId || typeof websiteDistinctId !== 'string') {
+        reply.code(400).send({ error: 'Missing websiteDistinctId' })
+        return
+      }
+
+      // Hash IP with a server-side salt to avoid storing raw IP
+      const ip = (request.ip || '').trim()
+      const salt = process.env.IP_SALT || 'ito-default-salt'
+      const hash = await import('crypto').then(({ createHash }) =>
+        createHash('sha256').update(`${salt}:${ip}`).digest('hex'),
+      )
+
+      await IpLinkRepository.registerCandidate(hash, websiteDistinctId)
+      reply.send({ success: true })
+    } catch (error: any) {
+      connectRpcServer.log.error({ error }, 'Failed to register IP candidate')
+      reply.code(500).send({ error: 'Internal error' })
+    }
+  })
+
+  connectRpcServer.get('/link/resolve', async (request, reply) => {
+    try {
+      const ip = (request.ip || '').trim()
+      const salt = process.env.IP_SALT || 'ito-default-salt'
+      const hash = await import('crypto').then(({ createHash }) =>
+        createHash('sha256').update(`${salt}:${ip}`).digest('hex'),
+      )
+      const websiteDistinctId = await IpLinkRepository.consumeLatestForIp(hash)
+      reply.send({ websiteDistinctId: websiteDistinctId ?? null })
+      return
+    } catch (e) {
+      connectRpcServer.log.debug({ error: e }, 'IP correlation failed')
+      reply.send({ websiteDistinctId: null })
+      return
+    }
+  })
+
   // Register Connect RPC plugin in a context that conditionally applies Auth0 authentication
   await connectRpcServer.register(async function (fastify) {
     // Apply Auth0 authentication to all routes in this context only if REQUIRE_AUTH is true
@@ -80,9 +141,24 @@ export const startServer = async () => {
       console.log('Authentication is DISABLED.')
     }
 
+    if (process.env.SHOW_CLIENT_LOGS === 'true') {
+      console.log('SHOW_CLIENT_LOGS is ENABLED.')
+    } else {
+      console.log('SHOW_CLIENT_LOGS is DISABLED.')
+    }
+
+    if (process.env.SHOW_ALL_REQUEST_LOGS === 'true') {
+      console.log('SHOW_ALL_REQUEST_LOGS is ENABLED.')
+    } else {
+      console.log('SHOW_ALL_REQUEST_LOGS is DISABLED.')
+    }
+
     // Register the Connect RPC plugin with our service routes and interceptors
     await fastify.register(fastifyConnectPlugin, {
-      routes: itoServiceRoutes,
+      routes: router => {
+        itoServiceRoutes(router)
+        timingServiceRoutes(router)
+      },
       // Order matters: logging -> validation -> error handling
       interceptors: [
         loggingInterceptor,
@@ -101,7 +177,11 @@ export const startServer = async () => {
     await registerLoggingRoutes(fastify, {
       requireAuth: REQUIRE_AUTH,
       clientLogGroupName: CLIENT_LOG_GROUP_NAME,
+      showClientLogs: process.env.SHOW_CLIENT_LOGS === 'true',
     })
+
+    await registerTrialRoutes(fastify, { requireAuth: REQUIRE_AUTH })
+    await registerBillingRoutes(fastify, { requireAuth: REQUIRE_AUTH })
   })
 
   // Error handling - this handles Fastify-level errors, not RPC errors

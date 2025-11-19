@@ -6,6 +6,7 @@ import {
   Stop,
   Copy,
   Check,
+  Download,
 } from '@mynaui/icons-react'
 import { EXTERNAL_LINKS } from '@/lib/constants/external-links'
 import { useSettingsStore } from '../../../store/useSettingsStore'
@@ -28,6 +29,8 @@ import { getKeyDisplay } from '@/app/utils/keyboard'
 import { createStereo48kWavFromMonoPCM } from '@/app/utils/audioUtils'
 import { KeyName } from '@/lib/types/keyboard'
 import { usePlatform } from '@/app/hooks/usePlatform'
+import { ProUpgradeDialog } from '../ProUpgradeDialog'
+import useBillingState from '@/app/hooks/useBillingState'
 
 // Interface for interaction statistics
 interface InteractionStats {
@@ -61,7 +64,13 @@ const StatCard = ({
   )
 }
 
-export default function HomeContent() {
+interface HomeContentProps {
+  isStartingTrial?: boolean
+}
+
+export default function HomeContent({
+  isStartingTrial = false,
+}: HomeContentProps) {
   const { getItoModeShortcuts } = useSettingsStore()
   const keyboardShortcut = getItoModeShortcuts(ItoMode.TRANSCRIBE)[0].keys
   const { user } = useAuthStore()
@@ -80,6 +89,90 @@ export default function HomeContent() {
     totalWords: 0,
     averageWPM: 0,
   })
+  const [showProDialog, setShowProDialog] = useState(false)
+  const billingState = useBillingState()
+
+  // Persist "has shown trial dialog" flag in electron-store to survive remounts
+  const [hasShownTrialDialog, setHasShownTrialDialogState] = useState(() => {
+    try {
+      const authStore = window.electron?.store?.get('auth') || {}
+      const value = authStore?.hasShownTrialDialog === true
+      return value
+    } catch {
+      return false
+    }
+  })
+
+  const setHasShownTrialDialog = useCallback((value: boolean) => {
+    try {
+      setHasShownTrialDialogState(value)
+      window.api.send('electron-store-set', 'auth.hasShownTrialDialog', value)
+    } catch {
+      console.warn('Failed to persist hasShownTrialDialog flag')
+    }
+  }, [])
+
+  // Show trial dialog when trial starts
+  useEffect(() => {
+    if (
+      billingState.isTrialActive &&
+      billingState.proStatus === 'free_trial' &&
+      !hasShownTrialDialog &&
+      !billingState.isLoading
+    ) {
+      setShowProDialog(true)
+      setHasShownTrialDialog(true)
+    }
+  }, [
+    billingState.isTrialActive,
+    billingState.proStatus,
+    billingState.isLoading,
+    isStartingTrial,
+    hasShownTrialDialog,
+    setHasShownTrialDialog,
+  ])
+
+  // Listen for trial start event to refresh billing state
+  useEffect(() => {
+    const offTrialStarted = window.api.on('trial-started', async () => {
+      await billingState.refresh()
+    })
+
+    const offBillingSuccess = window.api.on(
+      'billing-session-completed',
+      async () => {
+        await billingState.refresh()
+      },
+    )
+
+    return () => {
+      offTrialStarted?.()
+      offBillingSuccess?.()
+    }
+  }, [billingState])
+
+  // Reset dialog flag when trial is no longer active or user becomes pro
+  // Only reset if we're certain the trial has ended (not just during loading/refreshing)
+  useEffect(() => {
+    if (billingState.isLoading) {
+      // Don't reset during loading to avoid race conditions
+      return
+    }
+
+    const shouldReset =
+      billingState.proStatus === 'active_pro' ||
+      (billingState.proStatus === 'none' && !billingState.isTrialActive)
+
+    if (shouldReset && hasShownTrialDialog) {
+      setHasShownTrialDialog(false)
+    }
+  }, [
+    billingState.proStatus,
+    billingState.isTrialActive,
+    billingState.isLoading,
+    hasShownTrialDialog,
+    setHasShownTrialDialog,
+  ])
 
   // Calculate statistics from interactions
   const calculateStats = useCallback(
@@ -218,7 +311,6 @@ export default function HomeContent() {
 
     // Listen for new interactions
     const handleInteractionCreated = () => {
-      console.log('[HomeContent] New interaction created, refreshing list...')
       loadInteractions()
     }
 
@@ -296,6 +388,16 @@ export default function HomeContent() {
   const getDisplayText = (interaction: Interaction) => {
     // Check for errors first
     if (interaction.asr_output?.error) {
+      // Prefer precise error code mapping when available
+      const code = interaction.asr_output?.errorCode
+      if (code === 'CLIENT_TRANSCRIPTION_QUALITY_ERROR') {
+        return {
+          text: 'Audio quality too low',
+          isError: true,
+          tooltip:
+            'Audio quality was too low to generate a reliable transcript',
+        }
+      }
       if (
         interaction.asr_output.error.includes('No speech detected in audio.') ||
         interaction.asr_output.error.includes('Unable to transcribe audio.')
@@ -440,6 +542,47 @@ export default function HomeContent() {
       }, 2000)
     } catch (error) {
       console.error('Failed to copy text:', error)
+    }
+  }
+
+  const handleAudioDownload = async (interaction: Interaction) => {
+    try {
+      if (!interaction.raw_audio) {
+        console.warn('No audio data available for download')
+        return
+      }
+
+      const pcmData = new Uint8Array(interaction.raw_audio)
+      // Convert raw PCM to WAV format
+      const wavBuffer = createStereo48kWavFromMonoPCM(
+        pcmData,
+        interaction.sample_rate || 16000,
+        48000,
+      )
+      const audioBlob = new Blob([wavBuffer], { type: 'audio/wav' })
+      const audioUrl = URL.createObjectURL(audioBlob)
+
+      // Format filename with timestamp (YYYYMMDD_HHMMSS)
+      const date = new Date(interaction.created_at)
+      const timestamp = date
+        .toISOString()
+        .replace(/[-:]/g, '')
+        .replace('T', '_')
+        .slice(0, 15)
+      const filename = `ito-recording-${timestamp}.wav`
+
+      // Create temporary link and trigger download
+      const link = document.createElement('a')
+      link.href = audioUrl
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      // Clean up the blob URL
+      URL.revokeObjectURL(audioUrl)
+    } catch (error) {
+      console.error('Failed to download audio:', error)
     }
   }
 
@@ -588,7 +731,7 @@ export default function HomeContent() {
                           </div>
                         </div>
 
-                        {/* Copy and Play buttons - only show on hover or when playing */}
+                        {/* Copy, Download, and Play buttons - only show on hover or when playing */}
                         <div
                           className={`flex items-center gap-2 ${playingAudio === interaction.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200`}
                         >
@@ -642,6 +785,34 @@ export default function HomeContent() {
                             </Tooltip>
                           )}
 
+                          {/* Download button */}
+                          {interaction.raw_audio && (
+                            <Tooltip
+                              open={
+                                openTooltipKey === `download:${interaction.id}`
+                              }
+                              onOpenChange={open => {
+                                setOpenTooltipKey(
+                                  open ? `download:${interaction.id}` : null,
+                                )
+                              }}
+                            >
+                              <TooltipTrigger asChild>
+                                <button
+                                  className="p-1.5 hover:bg-gray-200 rounded transition-colors cursor-pointer text-gray-600"
+                                  onClick={() =>
+                                    handleAudioDownload(interaction)
+                                  }
+                                >
+                                  <Download className="w-4 h-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" sideOffset={5}>
+                                Download audio
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+
                           {/* Play/Stop button with tooltip */}
                           <Tooltip
                             open={openTooltipKey === `play:${interaction.id}`}
@@ -686,6 +857,9 @@ export default function HomeContent() {
           )
         )}
       </div>
+
+      {/* Pro Upgrade Dialog */}
+      <ProUpgradeDialog open={showProDialog} onOpenChange={setShowProDialog} />
     </div>
   )
 }

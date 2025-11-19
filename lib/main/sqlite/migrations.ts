@@ -43,4 +43,22 @@ export const MIGRATIONS: Migration[] = [
     `,
     down: 'DROP INDEX idx_dictionary_items_word_unique;',
   },
+  {
+    id: '20251029000000_add_user_metadata_table',
+    up: `
+      CREATE TABLE user_metadata (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL UNIQUE,
+        paid_status TEXT NOT NULL DEFAULT 'FREE',
+        free_words_remaining INTEGER,
+        pro_trial_start_date TEXT,
+        pro_trial_end_date TEXT,
+        pro_subscription_start_date TEXT,
+        pro_subscription_end_date TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `,
+    down: 'DROP TABLE user_metadata;',
+  },
 ]

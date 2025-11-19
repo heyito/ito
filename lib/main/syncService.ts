@@ -81,17 +81,16 @@ export class SyncService {
       }
 
       const lastSyncedAtKey = getLastSyncedAtKey(user.id)
-      const lastSyncedAt = await KeyValueStore.get(lastSyncedAtKey)
+      const lastSyncedAt =
+        (await KeyValueStore.get(lastSyncedAtKey)) || new Date(0).toISOString()
 
       // =================================================================
       // PUSH LOCAL CHANGES
       // =================================================================
       let processedChanges = 0
-      if (lastSyncedAt) {
-        processedChanges += await this.pushNotes(lastSyncedAt)
-        processedChanges += await this.pushInteractions(lastSyncedAt)
-        processedChanges += await this.pushDictionaryItems(lastSyncedAt)
-      }
+      processedChanges += await this.pushNotes(lastSyncedAt)
+      processedChanges += await this.pushInteractions(lastSyncedAt)
+      processedChanges += await this.pushDictionaryItems(lastSyncedAt)
 
       // =================================================================
       // PULL REMOTE CHANGES
@@ -286,6 +285,11 @@ export class SyncService {
 
       // If remote settings were updated after last sync, pull them to local
       if (remoteUpdatedAt > lastSyncTime) {
+        // Get current local settings to preserve local-only fields
+        const currentLocalSettings = mainStore.get(
+          STORE_KEYS.ADVANCED_SETTINGS,
+        ) as AdvancedSettings
+
         const updatedLocalSettings: AdvancedSettings = {
           llm: {
             asrProvider:
@@ -315,10 +319,10 @@ export class SyncService {
             noSpeechThreshold:
               remoteSettings.llm?.noSpeechThreshold ||
               DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold,
-            lowQualityThreshold:
-              remoteSettings.llm?.lowQualityThreshold ||
-              DEFAULT_ADVANCED_SETTINGS.lowQualityThreshold,
           },
+          // Preserve local-only settings that aren't synced to the server
+          grammarServiceEnabled:
+            currentLocalSettings?.grammarServiceEnabled ?? false,
         }
 
         // Update local store

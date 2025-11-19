@@ -11,7 +11,15 @@
       "WebFetch(domain:stackoverflow.com)",
       "WebFetch(domain:www.electronjs.org)",
       "WebFetch(domain:www.electron.build)",
-      "Bash(where:*)"
+      "Bash(where:*)",
+      "Bash(cargo test)",
+      "Bash(cargo test:*)",
+      "Bash(bun:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(cargo clean:*)",
+      "Bash(awk:*)",
+      "WebFetch(domain:connectrpc.com)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []

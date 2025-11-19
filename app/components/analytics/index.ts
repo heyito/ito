@@ -10,7 +10,7 @@ const getSharedDeviceId = async (): Promise<string> => {
     // Just request the device ID - main process handles generation/caching
     const deviceId = await window.api?.invoke('analytics:get-device-id')
     if (deviceId) {
-      log.info('[Analytics] Using machine-based device ID:', deviceId)
+      console.log('[Analytics] Using machine-based device ID:', deviceId)
       return deviceId
     }
     throw new Error('No device ID returned from main process')
@@ -40,12 +40,21 @@ const getAnalyticsEnabled = (): boolean => {
 }
 
 const initPostHog = () => {
+  const isPill =
+    typeof window !== 'undefined' &&
+    typeof window.location !== 'undefined' &&
+    typeof window.location.hash === 'string' &&
+    window.location.hash.startsWith('#/pill')
+
   posthog.init(import.meta.env.VITE_POSTHOG_API_KEY, {
     api_host: import.meta.env.VITE_POSTHOG_HOST,
     disable_session_recording: true,
     disable_surveys: true,
     advanced_disable_decide: true,
     persistence: 'cookie',
+    // Disable default web auto-capture and pageviews for the pill window only
+    autocapture: !isPill,
+    capture_pageview: !isPill,
     sanitize_properties: (props: Record<string, unknown>) => {
       const p = { ...props }
       delete (p as any).$current_url
@@ -67,7 +76,7 @@ console.log('[Analytics] Analytics enabled:', analyticsEnabled)
 // Initialize PostHog asynchronously
 const initializeAnalytics = async () => {
   if (!analyticsEnabled) {
-    log.info('[Analytics] PostHog disabled by user settings')
+    console.log('[Analytics] PostHog disabled by user settings')
     return
   }
 
@@ -80,12 +89,28 @@ const initializeAnalytics = async () => {
     if (sharedDeviceId) {
       posthog.register({ device_id: sharedDeviceId })
     }
+    // Attempt to resolve and alias install token to website distinct id
+    try {
+      const result = await window.api?.invoke('analytics:resolve-install-token')
+      if (result && result.success && result.websiteDistinctId) {
+        try {
+          posthog.alias(result.websiteDistinctId)
+          console.log(
+            '[Analytics] Aliased to website distinct_id from install token',
+          )
+        } catch (aliasErr) {
+          log.warn('[Analytics] alias() failed:', aliasErr)
+        }
+      }
+    } catch (err) {
+      log.warn('[Analytics] resolve-install-token failed:', err)
+    }
     isAnalyticsInitialized = true
 
     // Update the service instance after successful initialization
     analytics.updateInitializationStatus(true, sharedDeviceId)
 
-    log.info(
+    console.log(
       '[Analytics] PostHog initialized with shared device ID:',
       sharedDeviceId,
     )
@@ -195,7 +220,7 @@ class AnalyticsService {
   constructor() {
     // Device ID will be set after async initialization
     this.deviceId = sharedDeviceId
-    log.info(
+    console.log(
       `[Analytics] Service initialized (enabled: ${this.isInitialized}, deviceId: ${this.deviceId || 'pending'})`,
     )
   }
@@ -213,7 +238,7 @@ class AnalyticsService {
           posthog.register({ device_id: deviceId })
         }
         this.isInitialized = true
-        log.info(
+        console.log(
           '[Analytics] Analytics enabled and initialized with shared device ID:',
           deviceId,
         )
@@ -235,7 +260,7 @@ class AnalyticsService {
     } catch (error) {
       log.warn('[Analytics] Failed to opt-out capturing:', error)
     }
-    log.info('[Analytics] Analytics disabled')
+    console.log('[Analytics] Analytics disabled')
   }
 
   /**
@@ -261,7 +286,7 @@ class AnalyticsService {
     }
 
     if (!this.shouldTrack()) {
-      log.info(
+      console.log(
         '[Analytics] User identification skipped - analytics disabled or self-hosted user',
       )
       return
@@ -276,7 +301,7 @@ class AnalyticsService {
           ...properties,
         }
         posthog.identify(userId, props)
-        log.info(
+        console.log(
           `[Analytics] User identified: ${userId} (deviceId: ${this.deviceId || 'pending'})`,
         )
       } else if (Object.keys(properties).length > 0) {
@@ -295,7 +320,7 @@ class AnalyticsService {
    */
   updateUserProperties(properties: Partial<UserProperties>) {
     if (!this.shouldTrack() || !this.currentUserId) {
-      log.info(
+      console.log(
         '[Analytics] User properties update skipped - analytics disabled, self-hosted user, or user not identified',
       )
       return
@@ -303,7 +328,7 @@ class AnalyticsService {
 
     try {
       posthog.identify(undefined, properties)
-      log.info('[Analytics] User properties updated')
+      console.log('[Analytics] User properties updated')
     } catch (error) {
       log.error('[Analytics] Failed to update user properties:', error)
     }
@@ -328,7 +353,7 @@ class AnalyticsService {
         ...eventProperties,
         ...(this.currentUserId ? { user_id: this.currentUserId } : {}),
       })
-      log.info(
+      console.log(
         `[Analytics] Event tracked: ${eventName} (deviceId: ${this.deviceId || 'pending'}, userId: ${this.currentUserId || 'anonymous'})`,
       )
     } catch (error) {
@@ -410,7 +435,7 @@ class AnalyticsService {
    */
   resetUser() {
     if (!this.isInitialized) {
-      log.info('[Analytics] User reset skipped - analytics disabled')
+      console.log('[Analytics] User reset skipped - analytics disabled')
       return
     }
 
@@ -418,7 +443,7 @@ class AnalyticsService {
       posthog.reset()
       this.currentUserId = null
       this.currentProvider = null
-      log.info('[Analytics] User session reset')
+      console.log('[Analytics] User session reset')
     } catch (error) {
       log.error('[Analytics] Failed to reset user session:', error)
     }
@@ -451,7 +476,7 @@ class AnalyticsService {
   updateInitializationStatus(isInitialized: boolean, deviceId: string | null) {
     this.isInitialized = isInitialized
     this.deviceId = deviceId
-    log.info(
+    console.log(
       `[Analytics] Service status updated (enabled: ${this.isInitialized}, deviceId: ${this.deviceId})`,
     )
   }
@@ -466,7 +491,7 @@ class AnalyticsService {
 
     // Skip tracking for self-hosted users
     if (this.currentProvider === 'self-hosted') {
-      log.info('[Analytics] Tracking skipped - self-hosted user')
+      console.log('[Analytics] Tracking skipped - self-hosted user')
       return false
     }
 
@@ -481,10 +506,10 @@ export const analytics = new AnalyticsService()
 export const updateAnalyticsFromSettings = (shareAnalytics: boolean) => {
   if (shareAnalytics && !analytics.isEnabled()) {
     analytics.enableAnalytics()
-    log.info('[Analytics] Analytics enabled by settings change')
+    console.log('[Analytics] Analytics enabled by settings change')
   } else if (!shareAnalytics && analytics.isEnabled()) {
     analytics.disableAnalytics()
-    log.info('[Analytics] Analytics disabled by settings change')
+    console.log('[Analytics] Analytics disabled by settings change')
   }
 }
 

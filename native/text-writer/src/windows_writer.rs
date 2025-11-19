@@ -5,7 +5,8 @@ use std::thread;
 use std::time::Duration;
 
 /// Type text on Windows using clipboard paste approach
-/// This mimics the macOS implementation to avoid character-by-character typing issues
+/// This mimics the macOS implementation to avoid character-by-character typing
+/// issues
 pub fn type_text_windows(text: &str, _char_delay: u64) -> Result<(), String> {
     // Store current clipboard contents to restore later
     let old_contents: Result<String, _> = get_clipboard(formats::Unicode);

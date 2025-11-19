@@ -41,7 +41,7 @@ jobs:
         run: npx cdk --version
 
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::287641434880:role/ItoGitHubCiCdRole
           aws-region: us-west-2
@@ -54,6 +54,12 @@ jobs:
         working-directory: server/infra
         run: npx cdk diff
 
+      - name: Refresh AWS credentials before deploy
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::287641434880:role/ItoGitHubCiCdRole
+          aws-region: us-west-2
+
       - name: Deploy to AWS
         working-directory: server/infra
         env:
@@ -62,4 +68,9 @@ jobs:
           AUTH0_CLIENT_ID: '${{ secrets.VITE_AUTH0_CLIENT_ID }}'
           AUTH0_MGMT_CLIENT_ID: '${{ secrets.AUTH0_MGMT_CLIENT_ID }}'
           AUTH0_MGMT_CLIENT_SECRET: '${{ secrets.AUTH0_MGMT_CLIENT_SECRET }}'
+          STRIPE_SECRET_KEY: '${{ secrets.STRIPE_SECRET_KEY }}'
+          STRIPE_WEBHOOK_SECRET: '${{ secrets.STRIPE_WEBHOOK_SECRET }}'
+          STRIPE_PRICE_ID: '${{ secrets.STRIPE_PRICE_ID }}'
+          APP_PROTOCOL: '${{ vars.APP_PROTOCOL }}'
+          STRIPE_PUBLIC_BASE_URL: '${{ vars.STRIPE_PUBLIC_BASE_URL }}'
         run: npx cdk deploy "Ito-${{ vars.AWS_STAGE }}/*" --require-approval never

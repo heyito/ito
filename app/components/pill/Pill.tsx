@@ -8,10 +8,14 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
 import { X, StopSquare } from '@mynaui/icons-react'
 import { AudioBars } from './contents/AudioBars'
 import { PreviewAudioBars } from './contents/PreviewAudioBars'
+import { LoadingAnimation } from './contents/LoadingAnimation'
 import { useAudioStore } from '@/app/store/useAudioStore'
 import { TooltipButton } from './contents/TooltipButton'
 import { analytics, ANALYTICS_EVENTS } from '../analytics'
-import type { RecordingStatePayload } from '@/lib/types/ipc'
+import type {
+  RecordingStatePayload,
+  ProcessingStatePayload,
+} from '@/lib/types/ipc'
 import { ItoMode } from '@/app/generated/ito_pb'
 
 const globalStyles = `
@@ -70,6 +74,7 @@ const Pill = () => {
 
   const [isRecording, setIsRecording] = useState(false)
   const [isManualRecording, setIsManualRecording] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const [recordingMode, setRecordingMode] = useState<ItoMode | undefined>()
   const isManualRecordingRef = useRef(false)
@@ -93,7 +98,7 @@ const Pill = () => {
       (state: RecordingStatePayload) => {
         // Update recording state - this is for global hotkey triggered recording
         setIsRecording(state.isRecording)
-        setRecordingMode(state.mode)
+        setRecordingMode(state.mode ?? recordingMode)
 
         // Only track general recording analytics if it's not a manual recording
         if (!isManualRecordingRef.current) {
@@ -110,9 +115,17 @@ const Pill = () => {
         if (!state.isRecording) {
           setIsManualRecording(false)
           isManualRecordingRef.current = false
-          setRecordingMode(undefined)
+          // Only clear volume history when recording stops
+          setVolumeHistory([])
         }
-        setVolumeHistory([])
+      },
+    )
+
+    // Listen for processing state changes from the main process
+    const unsubProcessing = window.api.on(
+      'processing-state-update',
+      (state: ProcessingStatePayload) => {
+        setIsProcessing(state.isProcessing)
       },
     )
 
@@ -168,12 +181,13 @@ const Pill = () => {
     // Cleanup listeners when the component unmounts
     return () => {
       unsubRecording()
+      unsubProcessing()
       unsubVolume()
       unsubSettings()
       unsubOnboarding()
       unsubUserAuth()
     }
-  }, [volumeHistory, lastVolumeUpdate])
+  }, [volumeHistory, lastVolumeUpdate, recordingMode])
 
   // Define dimensions for different states
   const idleWidth = 36
@@ -184,13 +198,15 @@ const Pill = () => {
   const recordingHeight = 32
   const manualRecordingWidth = 112
   const manualRecordingHeight = 32
+  const processingWidth = 84
+  const processingHeight = 32
 
   // Determine current state
   const anyRecording = isRecording || isManualRecording
   const shouldShow =
     (onboardingCategory === ONBOARDING_CATEGORIES.TRY_IT ||
       onboardingCompleted) &&
-    (anyRecording || showItoBarAlways || isHovered)
+    (anyRecording || isProcessing || showItoBarAlways || isHovered)
 
   // Calculate dimensions based on state
   let currentWidth = idleWidth
@@ -204,6 +220,10 @@ const Pill = () => {
   } else if (anyRecording) {
     currentWidth = recordingWidth
     currentHeight = recordingHeight
+    backgroundColor = '#000000'
+  } else if (isProcessing) {
+    currentWidth = processingWidth
+    currentHeight = processingHeight
     backgroundColor = '#000000'
   } else if (isHovered) {
     currentWidth = hoveredWidth
@@ -337,6 +357,10 @@ const Pill = () => {
           barColor={getAudioBarColor(recordingMode)}
         />
       )
+    }
+
+    if (isProcessing) {
+      return <LoadingAnimation color={getAudioBarColor(recordingMode)} />
     }
 
     if (isHovered) {

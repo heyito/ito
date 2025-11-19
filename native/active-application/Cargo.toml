@@ -21,3 +21,6 @@ ProductVersion = "1.0.0.0"
 FileVersion = "1.0.0.0"
 InternalName = "active-application"
 Comments = "Accessibility utility for active window detection via command-line interface"
+
+[lints]
+workspace = true

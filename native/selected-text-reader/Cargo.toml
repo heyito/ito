@@ -35,3 +35,6 @@ ProductVersion = "1.0.0.0"
 FileVersion = "1.0.0.0"
 InternalName = "selected-text-reader"
 Comments = "Accessibility utility for selected text capture via command-line interface"
+
+[lints]
+workspace = true

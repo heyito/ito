@@ -45,6 +45,7 @@ export interface ServiceStackProps extends StackProps {
   vpc: Vpc
   opensearchDomain: Domain
   blobStorageBucket: IBucket
+  timingBucketName: string
 }
 
 export class ServiceStack extends Stack {
@@ -77,6 +78,18 @@ export class ServiceStack extends Stack {
       `${stageName}/ito/cerebras-api-key`,
     )
 
+    const stripeSecretKeySecret = Secret.fromSecretNameV2(
+      this,
+      'StripeSecretKey',
+      `${stageName}/ito/stripe-secret-key`,
+    )
+
+    const stripeWebhookSecret = Secret.fromSecretNameV2(
+      this,
+      'StripeWebhookSecret',
+      `${stageName}/ito/stripe-webhook`,
+    )
+
     // Setup domain and certificate
     const zone = HostedZone.fromLookup(this, 'HostedZone', {
       domainName: 'ito-api.com',
@@ -91,6 +104,13 @@ export class ServiceStack extends Stack {
     // Create log groups
     const logGroupResources = createLogGroups(this, { stageName })
 
+    // Import timing bucket from platform stack
+    const timingBucket = Bucket.fromBucketName(
+      this,
+      'TimingBucket',
+      props.timingBucketName,
+    )
+
     // Create Fargate task
     const fargateTaskResources = createFargateTask(this, {
       stageName,
@@ -98,6 +118,8 @@ export class ServiceStack extends Stack {
       dbCredentialsSecret,
       groqApiKeySecret,
       cerebrasApiKeySecret,
+      stripeSecretKeySecret,
+      stripeWebhookSecret: stripeWebhookSecret,
       dbEndpoint: props.dbEndpoint,
       dbName: DB_NAME,
       dbPort: DB_PORT,
@@ -105,11 +127,15 @@ export class ServiceStack extends Stack {
       clientLogGroup: logGroupResources.clientLogGroup,
       serverLogGroup: logGroupResources.serverLogGroup,
       blobStorageBucketName: props.blobStorageBucket.bucketName,
+      timingBucketName: props.timingBucketName,
     })
 
     // Grant Fargate task permissions to access blob storage
     props.blobStorageBucket.grantReadWrite(fargateTaskResources.taskRole)
     props.blobStorageBucket.grantDelete(fargateTaskResources.taskRole)
+
+    // Grant Fargate task permissions to write timing data to S3
+    timingBucket.grantPut(fargateTaskResources.taskRole)
 
     // Create ECS cluster
     const cluster = new Cluster(this, 'ItoEcsCluster', {

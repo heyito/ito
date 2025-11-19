@@ -1,5 +1,6 @@
 import { AudioChunkSchema } from '@/app/generated/ito_pb'
 import { create } from '@bufbuild/protobuf'
+import { audioRecorderService } from '../../media/audio'
 
 export class AudioStreamManager {
   private isStreaming = false
@@ -8,25 +9,9 @@ export class AudioStreamManager {
     null
   private audioChunksForInteraction: Buffer[] = []
   private currentSampleRate: number = 16000
-  private readonly MINIMUM_AUDIO_DURATION_MS = 100
-  private hasStartedStreaming = false
-  private bufferedAudioBytes = 0
-  // 16-bit PCM mono -> 2 bytes per sample
-  private bytesPerSample = 2
 
   async *streamAudioChunks() {
-    // Wait until we have enough buffered audio before starting to stream
-    while (this.isStreaming && !this.hasStartedStreaming) {
-      if (this.getBufferedDurationMs() >= this.MINIMUM_AUDIO_DURATION_MS) {
-        this.hasStartedStreaming = true
-        break
-      }
-      await new Promise<void>(resolve => {
-        this.resolveNewChunk = resolve
-      })
-    }
-
-    // Now stream the audio chunks
+    // Stream audio chunks as they arrive
     while (this.isStreaming || this.audioChunkQueue.length > 0) {
       if (this.audioChunkQueue.length === 0) {
         if (this.isStreaming) {
@@ -47,12 +32,11 @@ export class AudioStreamManager {
     }
   }
 
-  startStreaming() {
+  initialize() {
     this.isStreaming = true
     this.audioChunkQueue = []
     this.audioChunksForInteraction = []
-    this.hasStartedStreaming = false
-    this.bufferedAudioBytes = 0
+    this.setupListeners()
   }
 
   stopStreaming() {
@@ -61,6 +45,33 @@ export class AudioStreamManager {
       this.resolveNewChunk()
       this.resolveNewChunk = null
     }
+    this.removeListeners()
+  }
+
+  private setupListeners() {
+    console.log('[AudioStreamManager] Setting up audio listeners')
+    audioRecorderService.on('audio-chunk', this.handleAudioChunk)
+    audioRecorderService.on('audio-config', this.handleAudioConfig)
+  }
+
+  private removeListeners() {
+    console.log('[AudioStreamManager] Removing audio listeners')
+    audioRecorderService.off('audio-chunk', this.handleAudioChunk)
+    audioRecorderService.off('audio-config', this.handleAudioConfig)
+  }
+
+  private handleAudioChunk = (chunk: Buffer) => {
+    this.addAudioChunk(chunk)
+  }
+
+  private handleAudioConfig = ({ outputSampleRate, sampleRate }: any) => {
+    const effectiveRate = outputSampleRate || sampleRate || 16000
+    console.log('[AudioStreamManager] Received audio config:', {
+      outputSampleRate,
+      sampleRate,
+      effectiveRate,
+    })
+    this.setAudioConfig({ sampleRate: effectiveRate })
   }
 
   addAudioChunk(chunk: Buffer) {
@@ -70,7 +81,6 @@ export class AudioStreamManager {
 
     this.audioChunkQueue.push(chunk)
     this.audioChunksForInteraction.push(chunk)
-    this.bufferedAudioBytes += chunk.length
 
     if (this.resolveNewChunk) {
       this.resolveNewChunk()
@@ -100,14 +110,14 @@ export class AudioStreamManager {
     this.audioChunksForInteraction = []
   }
 
-  getBufferedDurationMs(): number {
+  getAudioDurationMs(): number {
+    const totalBytes = this.audioChunksForInteraction.reduce(
+      (sum, chunk) => sum + chunk.length,
+      0,
+    )
     // 16-bit PCM mono -> 2 bytes per sample
-    const totalSamples = this.bufferedAudioBytes / this.bytesPerSample
+    const totalSamples = totalBytes / 2
     const durationSeconds = totalSamples / this.currentSampleRate
     return Math.floor(durationSeconds * 1000)
-  }
-
-  hasMinimumDuration(): boolean {
-    return this.getBufferedDurationMs() >= this.MINIMUM_AUDIO_DURATION_MS
   }
 }

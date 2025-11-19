@@ -5,13 +5,12 @@ import {
   DeleteObjectCommand,
   ListObjectsV2Command,
   HeadObjectCommand,
-  CreateBucketCommand,
-  HeadBucketCommand,
   PutObjectCommandInput,
   GetObjectCommandInput,
   DeleteObjectCommandInput,
   ListObjectsV2CommandInput,
   HeadObjectCommandInput,
+  DeleteObjectsCommand,
 } from '@aws-sdk/client-s3'
 import { Readable } from 'stream'
 
@@ -20,13 +19,15 @@ export class S3StorageClient {
   private bucketName: string
   private bucketChecked: boolean = false
 
-  constructor() {
-    const bucketName = process.env.BLOB_STORAGE_BUCKET
-    if (!bucketName) {
-      throw new Error('BLOB_STORAGE_BUCKET environment variable is not set')
+  constructor(bucketName?: string) {
+    const bucket = bucketName
+    if (!bucket) {
+      throw new Error(
+        'Bucket name not provided and BLOB_STORAGE_BUCKET environment variable is not set',
+      )
     }
 
-    this.bucketName = bucketName
+    this.bucketName = bucket
 
     // Configure S3 client with support for MinIO/local development
     const s3Config: any = {
@@ -116,6 +117,42 @@ export class S3StorageClient {
     }
   }
 
+  async hardDeletePrefix(prefix: string): Promise<number> {
+    let deletedCount = 0
+    let continuationToken: string | undefined
+
+    do {
+      const listParams: ListObjectsV2CommandInput = {
+        Bucket: this.bucketName,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+        MaxKeys: 1000,
+      }
+      const response = await this.s3Client.send(
+        new ListObjectsV2Command(listParams),
+      )
+
+      const keys = (response.Contents ?? [])
+        .map(obj => obj.Key!)
+        .filter(Boolean)
+
+      await this.s3Client.send(
+        new DeleteObjectsCommand({
+          Bucket: this.bucketName,
+          Delete: { Objects: keys.map(k => ({ Key: k })) },
+        }),
+      )
+
+      deletedCount += keys.length
+
+      continuationToken = response.IsTruncated
+        ? response.NextContinuationToken
+        : undefined
+    } while (continuationToken)
+
+    return deletedCount
+  }
+
   async objectExists(key: string): Promise<boolean> {
     const params: HeadObjectCommandInput = {
       Bucket: this.bucketName,
@@ -151,8 +188,9 @@ export class S3StorageClient {
 let storageClient: S3StorageClient | null = null
 
 export function getStorageClient(): S3StorageClient {
+  const bucketName = process.env.BLOB_STORAGE_BUCKET
   if (!storageClient) {
-    storageClient = new S3StorageClient()
+    storageClient = new S3StorageClient(bucketName)
   }
   return storageClient
 }

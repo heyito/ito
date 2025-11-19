@@ -189,12 +189,6 @@ function getReservedCombinations(
         'tab',
         'System app switching (Alt+Tab)',
       ),
-      // Block the Windows key entirely (no specific key combination needed)
-      ...createReservedCombos(
-        'command',
-        null,
-        'Windows key triggers system menu and should not be used for shortcuts',
-      ),
     ]
   }
 }
@@ -212,20 +206,6 @@ export function isReservedCombination(
 
   // Get platform-specific reserved combinations
   const reservedCombinations = getReservedCombinations(platform)
-
-  // Special check for Windows: block ANY use of command keys
-  if (platform !== 'darwin') {
-    const hasCommandKey = normalizedKeys.some(
-      key => key === 'command-left' || key === 'command-right',
-    )
-    if (hasCommandKey) {
-      return {
-        isReserved: true,
-        reason:
-          'Windows key triggers system menu and should not be used for shortcuts',
-      }
-    }
-  }
 
   for (const reserved of reservedCombinations) {
     const normalizedReserved = sortKeysCanonical(reserved.keys)

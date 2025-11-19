@@ -26,6 +26,7 @@ core-graphics = "0.22"
 cocoa = "0.25"
 objc = "0.2"
 
+<<<<<<< HEAD
 [build-dependencies]
 winres = "0.1"
 
@@ -39,3 +40,7 @@ ProductVersion = "1.0.0.0"
 FileVersion = "1.0.0.0"
 InternalName = "global-key-listener"
 Comments = "Accessibility utility for global keyboard event monitoring via command-line interface"
+=======
+[lints]
+workspace = true
+>>>>>>> dev

@@ -22,64 +22,59 @@ print_error() {
     echo -e "${RED}Error:${NC} $1" >&2
 }
 
-# --- This function builds a single Rust native module ---
-build_native_module() {
-    local module_name=$1
-    if [ ! -d "native/$module_name" ]; then
-        print_error "Directory native/$module_name not found. Skipping."
-        return
-    fi
+# --- Build the entire native workspace ---
+build_native_workspace() {
+    print_status "Building native workspace..."
 
-    print_status "Building module: ${module_name}"
-    
-    # Change into the module's directory
-    cd "native/$module_name"
+    # Change into the native workspace directory
+    cd "native"
 
-    # Install dependencies
-    print_info "Installing dependencies for $module_name..."
-    
     # Check if we're compiling on a Windows machine
     compiling_on_windows=false
     if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ "$OS" == "Windows_NT" ]]; then
         compiling_on_windows=true
     fi
-    
+
+    # Install dependencies
+    print_info "Installing dependencies for workspace..."
     cargo fetch
 
     # --- macOS Build ---
     if [ "$BUILD_MAC" = true ]; then
-        print_info "Building macOS binaries for $module_name..."
-        
-        # Build for Intel
-        print_info "Building for x86_64-apple-darwin (Intel)..."
-        cargo build --release --target x86_64-apple-darwin
+        # Determine target architecture (default to arm64)
+        local mac_target="aarch64-apple-darwin"
+        local arch_name="Apple Silicon (arm64)"
 
-        # Build for Apple Silicon
-        print_info "Building for aarch64-apple-darwin (Apple Silicon)..."
-        cargo build --release --target aarch64-apple-darwin
-
-        # If --universal flag is passed, create a single binary for both architectures
-        if [[ " ${ARGS[*]} " == *" --universal "* ]]; then
-            print_info "Creating Universal macOS binary for $module_name..."
-            
-            local universal_dir="target/universal"
-            mkdir -p "$universal_dir"
-
-            lipo -create \
-                "target/x86_64-apple-darwin/release/$module_name" \
-                "target/aarch64-apple-darwin/release/$module_name" \
-                -output "$universal_dir/$module_name"
-            
-            print_info "Universal binary created at $universal_dir/$module_name"
+        if [[ " ${ARGS[*]} " == *" --x64 "* ]]; then
+            mac_target="x86_64-apple-darwin"
+            arch_name="Intel (x64)"
         fi
 
-        print_status "Renaming Rust target directories for electron-builder..."
-        # This aligns the directory names with electron-builder's {arch} variable.
+        print_info "Building macOS binaries for entire workspace ($arch_name)..."
+        cargo build --release --workspace --target "$mac_target"
 
-        rm -rf "target/arm64-apple-darwin"
-        rm -rf "target/x64-apple-darwin"
-        mv "target/aarch64-apple-darwin" "target/arm64-apple-darwin"
-        mv "target/x86_64-apple-darwin" "target/x64-apple-darwin"
+        # Create symlinks for electron-builder compatibility
+        if [ "$mac_target" = "aarch64-apple-darwin" ]; then
+            print_info "Creating symlink: arm64-apple-darwin -> aarch64-apple-darwin"
+            ln -sfn aarch64-apple-darwin target/arm64-apple-darwin
+        else
+            print_info "Creating symlink: x64-apple-darwin -> x86_64-apple-darwin"
+            ln -sfn x86_64-apple-darwin target/x64-apple-darwin
+        fi
+
+        # Build Swift packages
+        print_info "Building Swift packages..."
+        cd cursor-context
+        if [ "$mac_target" = "aarch64-apple-darwin" ]; then
+            swift build -c release --arch arm64
+        else
+            swift build -c release --arch x86_64
+        fi
+        # Copy built binary to Rust target directory and re-sign for code signing compatibility
+        cp .build/release/cursor-context "../target/$mac_target/release/"
+        xattr -cr "../target/$mac_target/release/cursor-context"
+        codesign --force --sign - "../target/$mac_target/release/cursor-context" 2>/dev/null || true
+        cd ..
     fi
 
     # --- Windows Build ---
@@ -98,8 +93,8 @@ build_native_module() {
         fi
     fi
 
-    # Return to the project root for the next module
-    cd ../..
+    # Return to the project root
+    cd ..
 }
 
 
@@ -130,15 +125,26 @@ fi
 # If no platform flags are provided, print usage and exit.
 if [ "$BUILD_MAC" = false ] && [ "$BUILD_WINDOWS" = false ]; then
     print_error "No platform specified. Use --mac, --windows, or --all."
-    echo "Usage: $0 [--mac] [--windows] [--all] [--universal]"
+    echo "Usage: $0 [--mac] [--windows] [--all] [--x64]"
+    echo ""
+    echo "Options:"
+    echo "  --mac       Build for macOS (defaults to arm64, use --x64 for Intel)"
+    echo "  --windows   Build for Windows"
+    echo "  --all       Build for all platforms"
+    echo "  --x64       Build for x64/Intel instead of arm64 (macOS only)"
     exit 1
 fi
 
 # Add required Rust targets
 if [ "$BUILD_MAC" = true ]; then
-    print_status "Adding macOS targets..."
-    rustup target add x86_64-apple-darwin
-    rustup target add aarch64-apple-darwin
+    # Determine which macOS target to add
+    if [[ " ${ARGS[*]} " == *" --x64 "* ]]; then
+        print_status "Adding macOS x64 target..."
+        rustup target add x86_64-apple-darwin
+    else
+        print_status "Adding macOS arm64 target..."
+        rustup target add aarch64-apple-darwin
+    fi
 fi
 if [ "$BUILD_WINDOWS" = true ]; then
     print_status "Adding Windows target..."
@@ -181,12 +187,7 @@ if [ "$BUILD_WINDOWS" = true ]; then
 fi
 
 
-# --- Build all native modules ---
-build_native_module "global-key-listener"
-build_native_module "audio-recorder"
-build_native_module "text-writer"
-build_native_module "active-application"
-build_native_module "selected-text-reader"
+# --- Build the native workspace ---
+build_native_workspace
 
-
-print_status "All native module builds completed successfully!"
+print_status "Native workspace build completed successfully!"

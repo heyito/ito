@@ -1,0 +1,14 @@
+# Clippy configuration
+# https://rust-lang.github.io/rust-clippy/master/index.html
+
+# Warn on all clippy lints by default
+# Can be overridden with #[allow(clippy::lint_name)] on specific items
+
+# Cognitive complexity threshold
+cognitive-complexity-threshold = 30
+
+# Disallowed methods (methods that shouldn't be used)
+# disallowed-methods = []
+
+# Disallowed types
+# disallowed-types = []

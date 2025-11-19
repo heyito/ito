@@ -43,6 +43,8 @@ jobs:
           echo "VITE_SENTRY_TRACES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE }}\"" >> .env
           echo "VITE_SENTRY_PROFILES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_PROFILES_SAMPLE_RATE }}\"" >> .env
           echo "VITE_ITO_VERSION=\"${GITHUB_REF#refs/tags/v}\"" >> .env
+          echo "ITO_ENV=\"${{ github.event.release.target_commitish == 'main' && 'prod' || 'dev' }}\"" >> .env
+          echo "VITE_ITO_ENV=\"${{ github.event.release.target_commitish == 'main' && 'prod' || 'dev' }}\"" >> .env
           echo "APPLE_ID=\"${{ secrets.APPLE_ID }}\"" >> .env
           echo "APPLE_TEAM_ID=\"${{ secrets.APPLE_TEAM_ID }}\"" >> .env
           echo "APPLE_APP_SPECIFIC_PASSWORD=\"${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}\"" >> .env
@@ -66,7 +68,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Ito-Mac-Installer
-          path: dist/Ito-Installer.dmg
+          path: dist/Ito-${{ github.event.release.target_commitish == 'main' && 'Installer' || 'dev-Installer' }}.dmg
 
       - name: Upload Mac Build Artifacts
         uses: actions/upload-artifact@v4
@@ -190,6 +192,8 @@ jobs:
           echo "VITE_SENTRY_TRACES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE }}\"" >> .env
           echo "VITE_SENTRY_PROFILES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_PROFILES_SAMPLE_RATE }}\"" >> .env
           echo "VITE_ITO_VERSION=\"${GITHUB_REF#refs/tags/v}\"" >> .env
+          echo "ITO_ENV=\"${{ github.event.release.target_commitish == 'main' && 'prod' || 'dev' }}\"" >> .env
+          echo "VITE_ITO_ENV=\"${{ github.event.release.target_commitish == 'main' && 'prod' || 'dev' }}\"" >> .env
           echo "GH_TOKEN=\"${{ secrets.GITHUB_TOKEN }}\"" >> .env
           echo "GRPC_BASE_URL=\"${{ vars.GRPC_BASE_URL }}\"" >> .env
           echo "Created .env file:"
@@ -211,99 +215,99 @@ jobs:
             dist/*.zip
             dist/*.blockmap
 
-  sign-windows:
-    runs-on: windows-latest
-    needs: build-windows
-    environment: ${{ github.event.release.target_commitish == 'main' && 'production' || 'develop' }}
+  # sign-windows:
+  #   runs-on: windows-latest
+  #   needs: build-windows
+  #   environment: ${{ github.event.release.target_commitish == 'main' && 'production' || 'develop' }}
 
-    steps:
-      - name: Download unsigned Windows artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: Windows-Unsigned-Artifacts
-          path: dist
+  #   steps:
+  #     - name: Download unsigned Windows artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: Windows-Unsigned-Artifacts
+  #         path: dist
 
-      - name: Sign Windows executable with Azure Trusted Signing
-        uses: Azure/trusted-signing-action@v0
-        with:
-          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          endpoint: https://eus.codesigning.azure.net/
-          trusted-signing-account-name: ${{ secrets.AZURE_CODE_SIGNING_ACCOUNT_NAME }}
-          certificate-profile-name: ${{ secrets.AZURE_CODE_SIGNING_CERTIFICATE_PROFILE_NAME }}
-          files-folder: dist
-          files-folder-filter: exe
-          file-digest: SHA256
-          timestamp-rfc3161: http://timestamp.acs.microsoft.com
-          timestamp-digest: SHA256
+  #     - name: Sign Windows executable with Azure Trusted Signing
+  #       uses: Azure/trusted-signing-action@v0
+  #       with:
+  #         azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+  #         azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+  #         azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+  #         endpoint: https://eus.codesigning.azure.net/
+  #         trusted-signing-account-name: ${{ secrets.AZURE_CODE_SIGNING_ACCOUNT_NAME }}
+  #         certificate-profile-name: ${{ secrets.AZURE_CODE_SIGNING_CERTIFICATE_PROFILE_NAME }}
+  #         files-folder: dist
+  #         files-folder-filter: exe
+  #         file-digest: SHA256
+  #         timestamp-rfc3161: http://timestamp.acs.microsoft.com
+  #         timestamp-digest: SHA256
 
-      - name: Regenerate metadata after signing
-        shell: bash
-        run: |
-          # Find the signed executable file in the dist directory
-          # This searches for any file matching the pattern "Ito-*.exe"
-          SIGNED_EXE=$(find dist -name "Ito-*.exe" | head -1)
-          if [ -z "$SIGNED_EXE" ]; then
-            echo "Error: No signed executable found"
-            exit 1
-          fi
+  #     - name: Regenerate metadata after signing
+  #       shell: bash
+  #       run: |
+  #         # Find the signed executable file in the dist directory
+  #         # This searches for any file matching the pattern "Ito-*.exe"
+  #         SIGNED_EXE=$(find dist -name "Ito-*.exe" | head -1)
+  #         if [ -z "$SIGNED_EXE" ]; then
+  #           echo "Error: No signed executable found"
+  #           exit 1
+  #         fi
 
-          echo "Found signed executable: $SIGNED_EXE"
+  #         echo "Found signed executable: $SIGNED_EXE"
 
-          # Calculate the SHA512 checksum of the signed file
-          # cut -d' ' -f1 extracts just the hash part (before the filename)
-          NEW_CHECKSUM=$(sha512sum "$SIGNED_EXE" | cut -d' ' -f1)
+  #         # Calculate the SHA512 checksum of the signed file
+  #         # cut -d' ' -f1 extracts just the hash part (before the filename)
+  #         NEW_CHECKSUM=$(sha512sum "$SIGNED_EXE" | cut -d' ' -f1)
 
-          # Convert hex checksum to base64 format (required by electron-updater)
-          # xxd -r -p converts hex string to raw bytes
-          # base64 -w 0 encodes to base64 without line wrapping
-          NEW_CHECKSUM_B64=$(echo -n "$NEW_CHECKSUM" | xxd -r -p | base64 -w 0)
+  #         # Convert hex checksum to base64 format (required by electron-updater)
+  #         # xxd -r -p converts hex string to raw bytes
+  #         # base64 -w 0 encodes to base64 without line wrapping
+  #         NEW_CHECKSUM_B64=$(echo -n "$NEW_CHECKSUM" | xxd -r -p | base64 -w 0)
 
-          # Get the file size in bytes using stat
-          FILE_SIZE=$(stat -c%s "$SIGNED_EXE")
+  #         # Get the file size in bytes using stat
+  #         FILE_SIZE=$(stat -c%s "$SIGNED_EXE")
 
-          # Extract just the filename from the full path
-          FILENAME=$(basename "$SIGNED_EXE")
+  #         # Extract just the filename from the full path
+  #         FILENAME=$(basename "$SIGNED_EXE")
 
-          echo "New checksum (hex): $NEW_CHECKSUM"
-          echo "New checksum (base64): $NEW_CHECKSUM_B64"
-          echo "File size: $FILE_SIZE"
-          echo "Filename: $FILENAME"
+  #         echo "New checksum (hex): $NEW_CHECKSUM"
+  #         echo "New checksum (base64): $NEW_CHECKSUM_B64"
+  #         echo "File size: $FILE_SIZE"
+  #         echo "Filename: $FILENAME"
 
-          # Update the auto-updater metadata file with the signed file's information
-          # This is critical because signing changes the file's checksum
-          if [ -f "dist/latest.yml" ]; then
-            echo "Updating latest.yml with new checksum after signing"
+  #         # Update the auto-updater metadata file with the signed file's information
+  #         # This is critical because signing changes the file's checksum
+  #         if [ -f "dist/latest.yml" ]; then
+  #           echo "Updating latest.yml with new checksum after signing"
 
-            # Update each field in latest.yml using sed (stream editor)
-            # The | delimiter is used instead of / to avoid conflicts with filenames
-            sed -i "s|url: .*|url: $FILENAME|" dist/latest.yml          # Update download URL
-            sed -i "s|sha512: .*|sha512: $NEW_CHECKSUM_B64|" dist/latest.yml  # Update checksum
-            sed -i "s|size: .*|size: $FILE_SIZE|" dist/latest.yml        # Update file size
-            sed -i "s|path: .*|path: $FILENAME|" dist/latest.yml         # Update path
+  #           # Update each field in latest.yml using sed (stream editor)
+  #           # The | delimiter is used instead of / to avoid conflicts with filenames
+  #           sed -i "s|url: .*|url: $FILENAME|" dist/latest.yml          # Update download URL
+  #           sed -i "s|sha512: .*|sha512: $NEW_CHECKSUM_B64|" dist/latest.yml  # Update checksum
+  #           sed -i "s|size: .*|size: $FILE_SIZE|" dist/latest.yml        # Update file size
+  #           sed -i "s|path: .*|path: $FILENAME|" dist/latest.yml         # Update path
 
-            echo "Updated latest.yml contents:"
-            cat dist/latest.yml
-          else
-            echo "Warning: latest.yml not found in dist directory"
-            ls -la dist/
-          fi
+  #           echo "Updated latest.yml contents:"
+  #           cat dist/latest.yml
+  #         else
+  #           echo "Warning: latest.yml not found in dist directory"
+  #           ls -la dist/
+  #         fi
 
-      - name: Upload signed Windows artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: Windows-Build-Artifacts
-          path: |
-            dist/*.yml
-            dist/*.exe
-            dist/*.nsis.7z
-            dist/*.zip
-            dist/*.blockmap
+  #     - name: Upload signed Windows artifacts
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: Windows-Build-Artifacts
+  #         path: |
+  #           dist/*.yml
+  #           dist/*.exe
+  #           dist/*.nsis.7z
+  #           dist/*.zip
+  #           dist/*.blockmap
 
   upload-to-s3:
     runs-on: ubuntu-latest
-    needs: [build-mac, sign-windows]
+    needs: [build-mac, build-windows]
     environment: ${{ github.event.release.target_commitish == 'main' && 'production' || 'develop' }}
 
     steps:
@@ -316,7 +320,7 @@ jobs:
       - name: Download Windows Build Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: Windows-Build-Artifacts
+          name: Windows-Unsigned-Artifacts
           path: windows-dist
 
       - name: Configure AWS credentials (OIDC)
@@ -385,10 +389,22 @@ jobs:
 
           # Compare and find stale files (exist in bucket but not in upload list)
           # Exclude .blockmap files from deletion to preserve differential update capability
-          comm -23 <(sort existing_files.txt) <(sort uploaded_root_files.txt) | grep -v '\.blockmap$' > stale_files.txt
+          echo "Existing files in bucket root:"
+          cat existing_files.txt
+          echo ""
+          echo "Files uploaded to bucket root:"
+          cat uploaded_root_files.txt
+          echo ""
+          echo "Computing stale files (existing - uploaded)..."
+          comm -23 <(sort existing_files.txt) <(sort uploaded_root_files.txt) > all_stale_files.txt
+          echo "All stale files before filtering:"
+          cat all_stale_files.txt || echo "(none)"
+          echo ""
+          echo "Filtering out .blockmap files..."
+          grep -v '\.blockmap$' all_stale_files.txt > stale_files.txt || echo "(no non-blockmap stale files found)"
 
           echo "Stale files identified for deletion (excluding .blockmap files for differential updates):"
-          cat stale_files.txt
+          cat stale_files.txt || echo "(none)"
 
           # Delete each stale file (but preserve blockmaps)
           while IFS= read -r file; do

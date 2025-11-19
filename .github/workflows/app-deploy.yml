@@ -1,5 +1,5 @@
 # .github/workflows/app-deploy.yml
-name: App CI/CD
+name: Run Migrations and Deploy App
 
 on:
   workflow_call:
@@ -17,23 +17,16 @@ on:
 
 permissions:
   contents: read
-  id-token: write # needed for OIDC
+  id-token: write
 
 jobs:
-  build-and-deploy:
+  migrate-and-deploy:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-
-      - name: Install dependencies
-        working-directory: server
-        run: bun install
 
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -65,22 +58,6 @@ jobs:
             echo "Message: $(jq -r '.errorMessage' out.json)"
             exit 1
           fi
-
-      - name: Login to ECR
-        run: |
-          aws ecr get-login-password \
-            | docker login \
-                --username AWS \
-                --password-stdin 287641434880.dkr.ecr.us-west-2.amazonaws.com
-
-      - name: Build & push multi-arch image
-        working-directory: server
-        run: |
-          docker buildx create --use
-          docker buildx build \
-            --platform linux/arm64,linux/amd64 \
-            --tag 287641434880.dkr.ecr.us-west-2.amazonaws.com/${{ vars.AWS_STAGE }}-ito-server:latest \
-            --push .
 
       - name: Force new ECS deployment
         run: |

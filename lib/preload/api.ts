@@ -1,7 +1,7 @@
 import { IpcRendererEvent, ipcRenderer } from 'electron'
 import { AdvancedSettings } from '../main/store'
 import { DbResult } from '../main/sqlite/repo'
-import { DictionaryItem } from '../main/sqlite/models'
+import { DictionaryItem, UserMetadata } from '../main/sqlite/models'
 
 const api = {
   /**
@@ -117,12 +117,37 @@ const api = {
       ipcRenderer.invoke('dictionary:update', { id, word, pronunciation }),
     delete: (id: string) => ipcRenderer.invoke('dictionary:delete', id),
   },
+  userMetadata: {
+    get: (): Promise<UserMetadata | null> =>
+      ipcRenderer.invoke('user-metadata:get'),
+    upsert: (metadata: UserMetadata): Promise<void> =>
+      ipcRenderer.invoke('user-metadata:upsert', metadata),
+    update: (
+      updates: Partial<Omit<UserMetadata, 'id' | 'user_id' | 'created_at'>>,
+    ): Promise<void> => ipcRenderer.invoke('user-metadata:update', updates),
+  },
   interactions: {
     getAll: () => ipcRenderer.invoke('interactions:get-all'),
     getById: (id: string) => ipcRenderer.invoke('interactions:get-by-id', id),
 
     delete: (id: string) => ipcRenderer.invoke('interactions:delete', id),
   },
+  trial: {
+    complete: () => ipcRenderer.invoke('trial:complete'),
+    startAfterOnboarding: () =>
+      ipcRenderer.invoke('start-trial-after-onboarding'),
+  },
+  billing: {
+    createCheckoutSession: () =>
+      ipcRenderer.invoke('billing:create-checkout-session'),
+    confirmSession: (sessionId: string) =>
+      ipcRenderer.invoke('billing:confirm-session', { sessionId }),
+    status: () => ipcRenderer.invoke('billing:status'),
+    cancelSubscription: () => ipcRenderer.invoke('billing:cancel-subscription'),
+    reactivateSubscription: () =>
+      ipcRenderer.invoke('billing:reactivate-subscription'),
+  },
+  openMailto: (email: string) => ipcRenderer.invoke('open-mailto', email),
   loginItem: {
     setSettings: (enabled: boolean) =>
       ipcRenderer.invoke('set-login-item-settings', enabled),
@@ -148,6 +173,8 @@ const api = {
   // Analytics device ID methods
   'analytics:get-device-id': () =>
     ipcRenderer.invoke('analytics:get-device-id'),
+  'analytics:resolve-install-token': () =>
+    ipcRenderer.invoke('analytics:resolve-install-token'),
 
   // Onboarding state for current user
   getOnboardingState: () => ipcRenderer.invoke('get-onboarding-state'),

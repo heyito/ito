@@ -193,6 +193,58 @@ const serverTemplate = {
   },
 }
 
+const timingAnalyticsTemplate = {
+  index_patterns: ['ito-timing-analytics-*'],
+  template: {
+    settings: { index: templateSettings },
+    mappings: {
+      dynamic: false,
+      properties: {
+        '@timestamp': { type: 'date' },
+        'event.dataset': { type: 'keyword' },
+        interaction_id: { type: 'keyword' },
+        user_id: { type: 'keyword' },
+        stage: { type: 'keyword' },
+        data_completeness: { type: 'keyword' }, // 'both', 'client_only', 'server_only'
+        client_received_at: { type: 'date' },
+        server_received_at: { type: 'date' },
+
+        // Client-specific metadata
+        client_metadata: {
+          type: 'object',
+          properties: {
+            platform: { type: 'keyword' },
+            app_version: { type: 'keyword' },
+            hostname: { type: 'keyword' },
+          },
+        },
+        client_total_duration_ms: { type: 'integer' },
+
+        // Server-specific metadata
+        server_metadata: {
+          type: 'object',
+          properties: {
+            // Extensible for future server-specific fields
+          },
+        },
+        server_total_duration_ms: { type: 'integer' },
+
+        // Unified events array (nested for proper querying)
+        events: {
+          type: 'nested',
+          properties: {
+            source: { type: 'keyword' }, // 'client' or 'server'
+            name: { type: 'keyword' },
+            start_ms: { type: 'long' },
+            end_ms: { type: 'long' },
+            duration_ms: { type: 'integer' },
+          },
+        },
+      },
+    },
+  },
+}
+
 // ISM policy to retain forever (no delete); rollover daily (or when large)
 const ismPolicy = {
   policy: {
@@ -212,6 +264,11 @@ export const handler = async (_event: Event) => {
   // Templates
   await request('/_index_template/ito-client-logs', 'PUT', clientTemplate)
   await request('/_index_template/ito-server-logs', 'PUT', serverTemplate)
+  await request(
+    '/_index_template/ito-timing-analytics',
+    'PUT',
+    timingAnalyticsTemplate,
+  )
 
   // Apply ISM policy for both patterns
   try {
@@ -247,6 +304,11 @@ export const handler = async (_event: Event) => {
     '/_index_template/ito-server-logs',
     'PUT',
     addPolicy(serverTemplate),
+  )
+  await request(
+    '/_index_template/ito-timing-analytics',
+    'PUT',
+    addPolicy(timingAnalyticsTemplate),
   )
 
   return { status: 'ok' }

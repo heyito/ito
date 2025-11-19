@@ -1,9 +1,10 @@
 import { app, BrowserWindow } from 'electron'
 import path from 'path'
 import { mainWindow } from '../main/app'
+import { ITO_ENV } from '../main/env'
 
 // Protocol handling for deep links
-const PROTOCOL = 'ito'
+const PROTOCOL = ITO_ENV === 'prod' ? 'ito' : `ito-dev`
 
 // Handle protocol URL
 function handleProtocolUrl(url: string) {
@@ -60,6 +61,50 @@ function handleProtocolUrl(url: string) {
         }
       } else {
         console.warn('No auth code found in protocol URL')
+      }
+    } else if (
+      urlObj.protocol === `${PROTOCOL}:` &&
+      urlObj.hostname === 'billing'
+    ) {
+      const sendToRenderer = (channel: string, ...args: any[]) => {
+        if (
+          mainWindow &&
+          !mainWindow.isDestroyed() &&
+          !mainWindow.webContents.isDestroyed()
+        ) {
+          const doSend = () => {
+            if (
+              mainWindow &&
+              !mainWindow.isDestroyed() &&
+              !mainWindow.webContents.isDestroyed()
+            ) {
+              mainWindow.webContents.send(channel, ...args)
+            }
+          }
+          if (mainWindow.webContents.isLoadingMainFrame()) {
+            mainWindow.webContents.once('did-finish-load', () => doSend())
+          } else {
+            doSend()
+          }
+
+          // Bring the app to front
+          mainWindow.show()
+          mainWindow.focus()
+          mainWindow.setAlwaysOnTop(true)
+          mainWindow.setAlwaysOnTop(false)
+          if (process.platform === 'darwin') {
+            mainWindow.moveTop()
+            app.focus({ steal: true })
+            app.dock?.show()
+          }
+        }
+      }
+
+      if (urlObj.pathname === '/success') {
+        const sessionId = urlObj.searchParams.get('session_id') || ''
+        sendToRenderer('billing-session-completed', sessionId)
+      } else if (urlObj.pathname === '/cancel') {
+        sendToRenderer('billing-session-cancelled')
       }
     } else {
       console.warn('Protocol URL does not match expected format')

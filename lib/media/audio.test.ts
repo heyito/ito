@@ -39,22 +39,16 @@ mock.module('path', () => ({
 mock.module('electron', () => ({
   app: {
     isPackaged: false,
+    getPath: (type: string) =>
+      type === 'userData' ? '/tmp/test-ito-app' : '/tmp',
   },
 }))
 
 mock.module('os', () => ({
   default: {
     platform: mock(() => 'darwin'),
+    arch: mock(() => 'arm64'),
   },
-}))
-
-const mockElectronLog = {
-  info: mock(),
-  warn: mock(),
-  error: mock(),
-}
-mock.module('electron-log', () => ({
-  default: mockElectronLog,
 }))
 
 // Helper function to wait for async operations
@@ -71,9 +65,6 @@ describe('AudioRecorderService', () => {
     mockChildProcess.stdin.write.mockClear()
     mockChildProcess.on.mockClear()
     mockChildProcess.kill.mockClear()
-    mockElectronLog.info.mockClear()
-    mockElectronLog.warn.mockClear()
-    mockElectronLog.error.mockClear()
 
     // Reset child process to clean state
     mockChildProcess.stdout.removeAllListeners()
@@ -81,7 +72,6 @@ describe('AudioRecorderService', () => {
     mockChildProcess._closeHandler = null
     mockChildProcess._errorHandler = null
 
-    // Clear service event listeners
     const events = [
       'started',
       'stopped',
@@ -103,15 +93,11 @@ describe('AudioRecorderService', () => {
       // First initialization
       audioRecorderService.initialize()
       mockSpawn.mockClear()
-      mockElectronLog.warn.mockClear()
 
       // Second initialization should be ignored
       audioRecorderService.initialize()
 
       expect(mockSpawn).not.toHaveBeenCalled()
-      expect(mockElectronLog.warn).toHaveBeenCalledWith(
-        '[AudioService] Audio recorder already running.',
-      )
     })
 
     test('should handle spawn errors gracefully', async () => {
@@ -132,113 +118,10 @@ describe('AudioRecorderService', () => {
       // Wait for error handling to complete
       await waitForProcessing()
 
-      expect(mockElectronLog.error).toHaveBeenCalledWith(
-        '[AudioService] Caught an error while spawning audio recorder:',
-        spawnError,
-      )
       expect(errorEmitted).toBe(true)
 
       // Reset the mock back to normal behavior for other tests
       mockSpawn.mockImplementation(() => mockChildProcess)
-    })
-  })
-
-  describe('Binary Path Resolution Business Logic', () => {
-    test('should resolve Darwin development binary path correctly', () => {
-      audioRecorderService.initialize()
-
-      expect(mockSpawn).toHaveBeenCalledWith(
-        expect.stringContaining(
-          'native/audio-recorder/target/universal/audio-recorder',
-        ),
-        [],
-        { stdio: ['pipe', 'pipe', 'pipe'] },
-      )
-    })
-
-    test('should resolve Windows development binary path correctly', async () => {
-      // Mock Windows platform
-      const osModule = await import('os')
-      const originalPlatform = osModule.default.platform
-      osModule.default.platform = mock(() => 'win32' as any)
-
-      try {
-        audioRecorderService.terminate()
-        audioRecorderService.initialize()
-
-        expect(mockSpawn).toHaveBeenCalledWith(
-          expect.stringContaining(
-            'native/audio-recorder/target/x86_64-pc-windows-gnu/release/audio-recorder.exe',
-          ),
-          [],
-          { stdio: ['pipe', 'pipe', 'pipe'] },
-        )
-      } finally {
-        // Restore original platform function
-        osModule.default.platform = originalPlatform
-      }
-    })
-
-    test('should resolve production binary path correctly', async () => {
-      // Mock production mode by mocking the electron module
-      const originalElectronModule = await import('electron')
-      const mockElectronModule = {
-        ...originalElectronModule,
-        app: {
-          ...originalElectronModule.app,
-          isPackaged: true,
-        },
-      }
-
-      // Mock the module
-      mock.module('electron', () => mockElectronModule)
-
-      try {
-        audioRecorderService.terminate()
-        audioRecorderService.initialize()
-
-        expect(mockSpawn).toHaveBeenCalledWith(
-          expect.stringContaining('binaries/audio-recorder'),
-          [],
-          { stdio: ['pipe', 'pipe', 'pipe'] },
-        )
-      } finally {
-        // Restore original electron module
-        mock.module('electron', () => ({
-          app: {
-            isPackaged: false,
-          },
-        }))
-      }
-    })
-
-    test('should handle unsupported development platform gracefully', async () => {
-      // Mock unsupported platform
-      const osModule = await import('os')
-      const originalPlatform = osModule.default.platform
-      osModule.default.platform = mock(() => 'freebsd' as any)
-
-      let errorEmitted = false
-      audioRecorderService.on('error', () => {
-        errorEmitted = true
-      })
-
-      try {
-        audioRecorderService.initialize()
-
-        // Wait for error handling to complete
-        await waitForProcessing()
-
-        expect(mockElectronLog.error).toHaveBeenCalledWith(
-          expect.stringContaining(
-            'Unsupported development platform for audio-recorder: freebsd',
-          ),
-        )
-        expect(errorEmitted).toBe(true)
-      } finally {
-        // Restore original platform function
-        osModule.default.platform = originalPlatform
-      }
     })
   })
 
@@ -257,9 +140,6 @@ describe('AudioRecorderService', () => {
       expect(mockChildProcess._closeHandler).toBeDefined()
       mockChildProcess._closeHandler!(0)
 
-      expect(mockElectronLog.warn).toHaveBeenCalledWith(
-        '[AudioService] Process exited with code: 0',
-      )
       expect(stoppedEmitted).toBe(true)
     })
 
@@ -274,10 +154,6 @@ describe('AudioRecorderService', () => {
       expect(mockChildProcess._errorHandler).toBeDefined()
       mockChildProcess._errorHandler!(processError)
 
-      expect(mockElectronLog.error).toHaveBeenCalledWith(
-        '[AudioService] Failed to start audio recorder:',
-        processError,
-      )
       expect(errorEmitted).toBe(true)
     })
   })
@@ -295,9 +171,6 @@ describe('AudioRecorderService', () => {
       expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
         JSON.stringify({ command: 'start', device_name: deviceName }) + '\n',
       )
-      expect(mockElectronLog.info).toHaveBeenCalledWith(
-        `[AudioService] Recording started on device: ${deviceName}`,
-      )
     })
 
     test('should send stop recording command', () => {
@@ -305,20 +178,6 @@ describe('AudioRecorderService', () => {
 
       expect(mockChildProcess.stdin.write).toHaveBeenCalledWith(
         JSON.stringify({ command: 'stop' }) + '\n',
-      )
-      expect(mockElectronLog.info).toHaveBeenCalledWith(
-        '[AudioService] Recording stopped',
-      )
-    })
-
-    test('should handle recording commands when process not running', () => {
-      audioRecorderService.terminate()
-      mockElectronLog.warn.mockClear()
-
-      audioRecorderService.startRecording('test')
-
-      expect(mockElectronLog.warn).toHaveBeenCalledWith(
-        '[AudioService] Cannot send command, process not running.',
       )
     })
   })
@@ -406,12 +265,6 @@ describe('AudioRecorderService', () => {
 
       // Wait for processing
       await waitForProcessing()
-
-      // Should also log the error
-      expect(mockElectronLog.error).toHaveBeenCalledWith(
-        '[AudioService] Failed to parse JSON response:',
-        expect.any(Error),
-      )
     })
   })
 
@@ -530,10 +383,6 @@ describe('AudioRecorderService', () => {
 
       // Wait for processing
       await waitForProcessing()
-
-      expect(mockElectronLog.warn).toHaveBeenCalledWith(
-        '[AudioService] Unknown message type: 99',
-      )
     })
   })
 

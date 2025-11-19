@@ -1,8 +1,11 @@
 import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test'
-import { fastify } from 'fastify'
+import {
+  type AnyObject,
+  createTestApp,
+  addAuthHook,
+} from './__tests__/helpers.js'
 
 // Mock the AWS SDK module used by logging.ts before importing the module under test
-type AnyObject = Record<string, any>
 const awsMockState: {
   putShouldThrowInvalidTokenOnce: boolean
   sends: AnyObject[]
@@ -80,9 +83,10 @@ describe('registerLoggingRoutes', () => {
   })
 
   it('returns 400 for invalid body', async () => {
-    const app = fastify()
+    const app = createTestApp()
     await registerLoggingRoutes(app, {
       requireAuth: false,
+      showClientLogs: true,
       clientLogGroupName: null,
     })
 
@@ -103,10 +107,11 @@ describe('registerLoggingRoutes', () => {
       return true
     }) as any
 
-    const app = fastify()
+    const app = createTestApp()
     // Add a hook to simulate authenticated user when requireAuth is true; here false so ignored
     await registerLoggingRoutes(app, {
       requireAuth: false,
+      showClientLogs: true,
       clientLogGroupName: null,
     })
 
@@ -140,9 +145,10 @@ describe('registerLoggingRoutes', () => {
   })
 
   it('initializes CloudWatch stream and sends events (happy path)', async () => {
-    const app = fastify()
+    const app = createTestApp()
     await registerLoggingRoutes(app, {
       requireAuth: true,
+      showClientLogs: true,
       clientLogGroupName: 'my-log-group',
     })
 
@@ -157,9 +163,7 @@ describe('registerLoggingRoutes', () => {
     ])
 
     // Add a hook to simulate user info when auth is required
-    app.addHook('preHandler', async req => {
-      ;(req as any).user = { sub: 'user-123' }
-    })
+    addAuthHook(app)
 
     const res = await app.inject({
       method: 'POST',
@@ -189,9 +193,10 @@ describe('registerLoggingRoutes', () => {
   })
 
   it('retries once on InvalidSequenceTokenException', async () => {
-    const app = fastify()
+    const app = createTestApp()
     await registerLoggingRoutes(app, {
       requireAuth: false,
+      showClientLogs: true,
       clientLogGroupName: 'retry-group',
     })
 
@@ -233,9 +238,10 @@ describe('registerLoggingRoutes', () => {
       return true
     }) as any
 
-    const app = fastify()
+    const app = createTestApp()
     await registerLoggingRoutes(app, {
       requireAuth: false,
+      showClientLogs: true,
       clientLogGroupName: null,
     })
 

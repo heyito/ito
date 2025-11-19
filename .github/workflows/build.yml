@@ -130,7 +130,7 @@ jobs:
           $modules = @("global-key-listener", "audio-recorder", "text-writer", "active-application", "selected-text-reader")
 
           foreach ($module in $modules) {
-            $sourcePath = "native\$module\target\x86_64-pc-windows-msvc\release\$module.exe"
+            $sourcePath = "native\target\x86_64-pc-windows-msvc\release\$module.exe"
             $destPath = "rust-binaries\$module.exe"
 
             if (Test-Path $sourcePath) {
@@ -167,8 +167,8 @@ jobs:
         run: |
           # Place binaries where electron-builder expects them
           for module in global-key-listener audio-recorder text-writer active-application selected-text-reader; do
-            mkdir -p "native/$module/target/x86_64-pc-windows-msvc/release"
-            cp "rust-binaries-msvc/$module.exe" "native/$module/target/x86_64-pc-windows-msvc/release/"
+            mkdir -p "native/target/x86_64-pc-windows-msvc/release"
+            cp "rust-binaries-msvc/$module.exe" "native/target/x86_64-pc-windows-msvc/release/"
             echo "Placed $module.exe"
           done
 

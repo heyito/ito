@@ -79,9 +79,7 @@ describe('Native Interface Module', () => {
       const result = getNativeBinaryPath('audio-recorder')
 
       expect(mockJoin).toHaveBeenLastCalledWith(
-        expect.stringContaining(
-          'native/audio-recorder/target/x86_64-pc-windows-msvc/release',
-        ),
+        expect.stringContaining('native/target/x86_64-pc-windows-msvc/release'),
         'audio-recorder.exe',
       )
       expect(result).toContain(

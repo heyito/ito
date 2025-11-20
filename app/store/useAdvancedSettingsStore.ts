@@ -2,20 +2,21 @@ import { create } from 'zustand'
 import { STORE_KEYS } from '../../lib/constants/store-keys'
 
 export interface LlmSettings {
-  asrProvider: string
-  asrModel: string
-  asrPrompt: string
-  llmProvider: string
-  llmModel: string
-  llmTemperature: number
-  transcriptionPrompt: string
-  editingPrompt: string
-  noSpeechThreshold: number
+  asrProvider: string | null
+  asrModel: string | null
+  asrPrompt: string | null
+  llmProvider: string | null
+  llmModel: string | null
+  llmTemperature: number | null
+  transcriptionPrompt: string | null
+  editingPrompt: string | null
+  noSpeechThreshold: number | null
 }
 
 interface AdvancedSettingsState {
   llm: LlmSettings
   grammarServiceEnabled: boolean
+  defaults?: LlmSettings
   macosAccessibilityContextEnabled: boolean
   setLlmSettings: (settings: Partial<LlmSettings>) => void
   setGrammarServiceEnabled: (enabled: boolean) => void
@@ -29,19 +30,10 @@ const getInitialState = () => {
   )
 
   return {
-    llm: {
-      asrProvider: storedAdvancedSettings.llm.asrProvider,
-      asrModel: storedAdvancedSettings.llm.asrModel,
-      asrPrompt: storedAdvancedSettings.llm.asrPrompt,
-      llmProvider: storedAdvancedSettings.llm.llmProvider,
-      llmModel: storedAdvancedSettings.llm.llmModel,
-      llmTemperature: storedAdvancedSettings.llm.llmTemperature,
-      transcriptionPrompt: storedAdvancedSettings.llm.transcriptionPrompt,
-      editingPrompt: storedAdvancedSettings.llm.editingPrompt,
-      noSpeechThreshold: storedAdvancedSettings.llm.noSpeechThreshold,
-    },
+    llm: storedAdvancedSettings.llm,
     grammarServiceEnabled:
       storedAdvancedSettings.grammarServiceEnabled ?? false,
+    defaults: storedAdvancedSettings.defaults,
     macosAccessibilityContextEnabled:
       storedAdvancedSettings.macosAccessibilityContextEnabled ?? false,
   }
@@ -65,6 +57,14 @@ const syncToStore = (state: Partial<AdvancedSettingsState>) => {
 
 export const useAdvancedSettingsStore = create<AdvancedSettingsState>(set => {
   const initialState = getInitialState()
+
+  // Subscribe to updates from sync service
+  const handleStoreUpdate = () => {
+    const latestState = getInitialState()
+    set(latestState)
+  }
+
+  window.api.on('advanced-settings-updated', handleStoreUpdate)
 
   return {
     ...initialState,

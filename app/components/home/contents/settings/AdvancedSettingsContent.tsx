@@ -2,7 +2,14 @@ import {
   LlmSettings,
   useAdvancedSettingsStore,
 } from '@/app/store/useAdvancedSettingsStore'
-import { ChangeEvent, useEffect, useRef, useState } from 'react'
+import {
+  ChangeEvent,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  memo,
+} from 'react'
 import { useWindowContext } from '@/app/components/window/WindowContext'
 
 type LlmSettingConfig = {
@@ -100,46 +107,54 @@ const llmSettingsConfig: LlmSettingConfig[] = [
   },
 ]
 
-function formatDisplayValue(value: string): string {
+function formatDisplayValue(value: string | number | null): string {
+  if (value === null) {
+    return ''
+  }
   // If its a number then format it to 2 decimal places
-  if (!isNaN(Number(value)) && value !== '') {
-    return Number(value).toFixed(2)
+  if (typeof value === 'number') {
+    return value.toFixed(2)
   }
   return value
 }
 
 interface SettingInputProps {
   config: LlmSettingConfig
-  value: string
+  value: string | number | null
   onChange: (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
     config: LlmSettingConfig,
   ) => void
 }
 
-function SettingInput({ config, value, onChange }: SettingInputProps) {
+const SettingInput = memo(function SettingInput({
+  config,
+  value,
+  onChange,
+}: SettingInputProps) {
   const [isFocused, setIsFocused] = useState(false)
   const [editingValue, setEditingValue] = useState('')
 
-  const handleChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => {
-    const newValue = e.target.value
-    setEditingValue(newValue)
-    onChange(e, config)
-  }
+  const handleChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      const newValue = e.target.value
+      setEditingValue(newValue)
+      onChange(e, config)
+    },
+    [onChange, config],
+  )
 
-  const handleFocus = () => {
+  const handleFocus = useCallback(() => {
     setIsFocused(true)
     // Start with the formatted display value to avoid jarring transition
     const startValue = formatDisplayValue(value)
     setEditingValue(startValue)
-  }
+  }, [value])
 
-  const handleBlur = () => {
+  const handleBlur = useCallback(() => {
     setIsFocused(false)
     setEditingValue('')
-  }
+  }, [])
 
   const displayValue = isFocused ? editingValue : formatDisplayValue(value)
 
@@ -154,7 +169,7 @@ function SettingInput({ config, value, onChange }: SettingInputProps) {
       {config.isSelect ? (
         <select
           id={config.name}
-          value={value}
+          value={value ?? ''}
           onChange={handleChange}
           className="w-3/4 ml-1 px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           disabled={config.readOnly}
@@ -183,11 +198,12 @@ function SettingInput({ config, value, onChange }: SettingInputProps) {
       </p>
     </div>
   )
-}
+})
 
 export default function AdvancedSettingsContent() {
   const {
     llm,
+    defaults,
     grammarServiceEnabled,
     macosAccessibilityContextEnabled,
     setLlmSettings,
@@ -197,6 +213,18 @@ export default function AdvancedSettingsContent() {
   const windowContext = useWindowContext()
   const debounceRef = useRef<NodeJS.Timeout>(null)
 
+  // Helper to resolve null to actual default value for display
+  const getDisplayValue = useCallback(
+    (key: keyof LlmSettings): string | number | null => {
+      const value = llm[key]
+      if (value === null && defaults) {
+        return defaults[key] ?? null
+      }
+      return value
+    },
+    [llm, defaults],
+  )
+
   useEffect(() => {
     return () => {
       if (debounceRef.current) {
@@ -205,72 +233,144 @@ export default function AdvancedSettingsContent() {
     }
   }, [])
 
-  function scheduleAdvancedSettingsUpdate(
-    nextLlm: LlmSettings,
-    nextGrammarEnabled: boolean,
-    nextMacosAccessibilityEnabled: boolean,
-  ) {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current)
-    }
-
-    debounceRef.current = setTimeout(async () => {
-      const settingsToSave = {
-        llm: nextLlm,
-        grammarServiceEnabled: nextGrammarEnabled,
-        macosAccessibilityContextEnabled: nextMacosAccessibilityEnabled,
+  const scheduleAdvancedSettingsUpdate = useCallback(
+    (
+      nextLlm: LlmSettings,
+      nextGrammarEnabled: boolean,
+      nextMacosAccessibilityEnabled: boolean,
+    ) => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
       }
-      console.log('[AdvancedSettings] Saving settings...')
-      await window.api.updateAdvancedSettings(settingsToSave)
-    }, 1000)
-  }
 
-  function handleInputChange(
-    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-    config: LlmSettingConfig,
-  ) {
-    const newValue = e.target.value
-    const updatedLlm = { ...llm, [config.name]: newValue }
-    setLlmSettings({ [config.name]: newValue })
+      debounceRef.current = setTimeout(async () => {
+        const settingsToSave = {
+          llm: nextLlm,
+          grammarServiceEnabled: nextGrammarEnabled,
+          macosAccessibilityContextEnabled: nextMacosAccessibilityEnabled,
+        }
+        await window.api.updateAdvancedSettings(settingsToSave)
+      }, 1000)
+    },
+    [],
+  )
+
+  const handleInputChange = useCallback(
+    (
+      e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+      config: LlmSettingConfig,
+    ) => {
+      const rawValue = e.target.value
+
+      // Determine if this field should be a number
+      const isNumericField =
+        config.name === 'llmTemperature' || config.name === 'noSpeechThreshold'
+
+      // Parse the value appropriately
+      let newValue: string | number | null
+      if (rawValue === '') {
+        newValue = null
+      } else if (isNumericField) {
+        const parsed = parseFloat(rawValue)
+        newValue = isNaN(parsed) ? null : parsed
+      } else {
+        newValue = rawValue
+      }
+
+      const updatedLlm = { ...llm, [config.name]: newValue }
+      setLlmSettings({ [config.name]: newValue })
+      scheduleAdvancedSettingsUpdate(
+        updatedLlm,
+        grammarServiceEnabled,
+        macosAccessibilityContextEnabled,
+      )
+    },
+    [
+      llm,
+      grammarServiceEnabled,
+      macosAccessibilityContextEnabled,
+      setLlmSettings,
+      scheduleAdvancedSettingsUpdate,
+    ],
+  )
+
+  const handleGrammarServiceToggle = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const enabled = e.target.checked
+      setGrammarServiceEnabled(enabled)
+      scheduleAdvancedSettingsUpdate(
+        llm,
+        enabled,
+        macosAccessibilityContextEnabled,
+      )
+    },
+    [
+      llm,
+      macosAccessibilityContextEnabled,
+      setGrammarServiceEnabled,
+      scheduleAdvancedSettingsUpdate,
+    ],
+  )
+
+  const handleMacosAccessibilityContextToggle = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const enabled = e.target.checked
+      setMacosAccessibilityContextEnabled(enabled)
+      scheduleAdvancedSettingsUpdate(llm, grammarServiceEnabled, enabled)
+    },
+    [
+      llm,
+      grammarServiceEnabled,
+      setMacosAccessibilityContextEnabled,
+      scheduleAdvancedSettingsUpdate,
+    ],
+  )
+
+  const handleRestoreDefaults = useCallback(() => {
+    const defaultLlmSettings: LlmSettings = {
+      asrProvider: null,
+      asrModel: null,
+      asrPrompt: null,
+      llmProvider: null,
+      llmModel: null,
+      llmTemperature: null,
+      transcriptionPrompt: null,
+      editingPrompt: null,
+      noSpeechThreshold: null,
+    }
+    setLlmSettings(defaultLlmSettings)
     scheduleAdvancedSettingsUpdate(
-      updatedLlm,
+      defaultLlmSettings,
       grammarServiceEnabled,
       macosAccessibilityContextEnabled,
     )
-  }
-
-  function handleGrammarServiceToggle(e: ChangeEvent<HTMLInputElement>) {
-    const enabled = e.target.checked
-    setGrammarServiceEnabled(enabled)
-    scheduleAdvancedSettingsUpdate(
-      llm,
-      enabled,
-      macosAccessibilityContextEnabled,
-    )
-  }
-
-  function handleMacosAccessibilityContextToggle(
-    e: ChangeEvent<HTMLInputElement>,
-  ) {
-    const enabled = e.target.checked
-    setMacosAccessibilityContextEnabled(enabled)
-    scheduleAdvancedSettingsUpdate(llm, grammarServiceEnabled, enabled)
-  }
+  }, [
+    grammarServiceEnabled,
+    macosAccessibilityContextEnabled,
+    setLlmSettings,
+    scheduleAdvancedSettingsUpdate,
+  ])
 
   return (
     <div className="max-h-[70vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-500 scrollbar-track-transparent">
       {/* LLM Settings Section */}
       <div className="space-y-6">
         <div>
-          <h3 className="text-md font-medium text-slate-900 mb-3 ml-1">
-            LLM Settings
-          </h3>
+          <div className="flex items-center justify-between mb-3 ml-1 mr-1">
+            <h3 className="text-md font-medium text-slate-900">LLM Settings</h3>
+            <button
+              onClick={handleRestoreDefaults}
+              className="px-3 py-1 text-sm text-slate-600 hover:text-slate-900 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+            >
+              Restore Defaults
+            </button>
+          </div>
           <div className="space-y-3">
             {llmSettingsConfig.map(config => (
               <SettingInput
                 key={config.name}
                 config={config}
-                value={llm[config.name as string]}
+                value={getDisplayValue(config.name)}
                 onChange={handleInputChange}
               />
             ))}

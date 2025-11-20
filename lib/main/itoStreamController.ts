@@ -223,16 +223,20 @@ export class ItoStreamController {
             mode: this.currentMode,
           }),
           llmSettings: create(LlmSettingsSchema, {
-            asrModel: context.advancedSettings.llm.asrModel,
-            asrProvider: context.advancedSettings.llm.asrProvider,
-            asrPrompt: context.advancedSettings.llm.asrPrompt,
-            noSpeechThreshold: context.advancedSettings.llm.noSpeechThreshold,
-            llmProvider: context.advancedSettings.llm.llmProvider,
-            llmModel: context.advancedSettings.llm.llmModel,
-            llmTemperature: context.advancedSettings.llm.llmTemperature,
+            asrModel: context.advancedSettings.llm.asrModel ?? undefined,
+            asrProvider: context.advancedSettings.llm.asrProvider ?? undefined,
+            asrPrompt: context.advancedSettings.llm.asrPrompt ?? undefined,
+            noSpeechThreshold:
+              context.advancedSettings.llm.noSpeechThreshold ?? undefined,
+            llmProvider: context.advancedSettings.llm.llmProvider ?? undefined,
+            llmModel: context.advancedSettings.llm.llmModel ?? undefined,
+            llmTemperature:
+              context.advancedSettings.llm.llmTemperature ?? undefined,
+
             transcriptionPrompt:
-              context.advancedSettings.llm.transcriptionPrompt,
-            editingPrompt: context.advancedSettings.llm.editingPrompt,
+              context.advancedSettings.llm.transcriptionPrompt ?? undefined,
+            editingPrompt:
+              context.advancedSettings.llm.editingPrompt ?? undefined,
           }),
           vocabulary: context.vocabularyWords,
           interactionId: interactionId || undefined,

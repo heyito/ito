@@ -10,6 +10,8 @@ import mainStore from './store'
 import { STORE_KEYS } from '../constants/store-keys'
 import type { AdvancedSettings } from './store'
 import { DEFAULT_ADVANCED_SETTINGS } from '../constants/generated-defaults.js'
+import { main } from 'bun'
+import { mainWindow } from './app'
 
 const LAST_SYNCED_AT_KEY = 'lastSyncedAt'
 
@@ -279,6 +281,27 @@ export class SyncService {
         return
       }
 
+      // Always update local defaults
+      const defaultSettings = remoteSettings.default
+      if (defaultSettings) {
+        const currentLocalSettings = mainStore.get(
+          STORE_KEYS.ADVANCED_SETTINGS,
+        ) as AdvancedSettings
+        mainStore.set(STORE_KEYS.ADVANCED_SETTINGS, {
+          ...currentLocalSettings,
+          defaults: defaultSettings,
+        })
+
+        // Notify UI of the update
+        if (
+          mainWindow &&
+          !mainWindow.isDestroyed() &&
+          !mainWindow.webContents.isDestroyed()
+        ) {
+          mainWindow.webContents.send('advanced-settings-updated')
+        }
+      }
+
       // Compare timestamps to determine sync direction
       const remoteUpdatedAt = new Date(remoteSettings.updatedAt)
       const lastSyncTime = lastSyncedAt ? new Date(lastSyncedAt) : new Date(0)
@@ -292,41 +315,36 @@ export class SyncService {
 
         const updatedLocalSettings: AdvancedSettings = {
           llm: {
-            asrProvider:
-              remoteSettings.llm?.asrProvider ||
-              DEFAULT_ADVANCED_SETTINGS.asrProvider,
-            asrModel:
-              remoteSettings.llm?.asrModel ||
-              DEFAULT_ADVANCED_SETTINGS.asrModel,
-            asrPrompt:
-              remoteSettings.llm?.asrPrompt ||
-              DEFAULT_ADVANCED_SETTINGS.asrPrompt,
-            llmProvider:
-              remoteSettings.llm?.llmProvider ||
-              DEFAULT_ADVANCED_SETTINGS.llmProvider,
-            llmModel:
-              remoteSettings.llm?.llmModel ||
-              DEFAULT_ADVANCED_SETTINGS.llmModel,
-            llmTemperature:
-              remoteSettings.llm?.llmTemperature ||
-              DEFAULT_ADVANCED_SETTINGS.llmTemperature,
+            asrProvider: remoteSettings.llm?.asrProvider ?? null,
+            asrModel: remoteSettings.llm?.asrModel ?? null,
+            asrPrompt: remoteSettings.llm?.asrPrompt ?? null,
+            llmProvider: remoteSettings.llm?.llmProvider ?? null,
+            llmModel: remoteSettings.llm?.llmModel ?? null,
+            llmTemperature: remoteSettings.llm?.llmTemperature ?? null,
             transcriptionPrompt:
-              remoteSettings.llm?.transcriptionPrompt ||
-              DEFAULT_ADVANCED_SETTINGS.transcriptionPrompt,
-            editingPrompt:
-              remoteSettings.llm?.editingPrompt ||
-              DEFAULT_ADVANCED_SETTINGS.editingPrompt,
-            noSpeechThreshold:
-              remoteSettings.llm?.noSpeechThreshold ||
-              DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold,
+              remoteSettings.llm?.transcriptionPrompt ?? null,
+            editingPrompt: remoteSettings.llm?.editingPrompt ?? null,
+            noSpeechThreshold: remoteSettings.llm?.noSpeechThreshold ?? null,
           },
           // Preserve local-only settings that aren't synced to the server
           grammarServiceEnabled:
             currentLocalSettings?.grammarServiceEnabled ?? false,
+          // Preserve defaults that were set earlier in this function
+          defaults: currentLocalSettings?.defaults,
+          macosAccessibilityContextEnabled:
+            currentLocalSettings.macosAccessibilityContextEnabled ?? false,
         }
 
         // Update local store
         mainStore.set(STORE_KEYS.ADVANCED_SETTINGS, updatedLocalSettings)
+        // Notify UI of the update
+        if (
+          mainWindow &&
+          !mainWindow.isDestroyed() &&
+          !mainWindow.webContents.isDestroyed()
+        ) {
+          mainWindow.webContents.send('advanced-settings-updated')
+        }
       }
       // Note: We don't push local changes to server in this implementation
       // since advanced settings are typically managed through the UI which

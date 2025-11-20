@@ -32,8 +32,11 @@ mock.module('../media/text-writer', () => ({
   setFocusedText: mockSetFocusedText,
 }))
 
+const mockStore = { get: mock(), set: mock(), delete: mock() }
+
 mock.module('../main/store', () => ({
-  default: { get: mock(), set: mock(), delete: mock() },
+  default: mockStore,
+  store: mockStore,
   getCurrentUserId: mockGetCurrentUserId,
   createNewAuthState: mock(() => ({
     state: 'test-state',

@@ -84,7 +84,6 @@ app.whenReady().then(async () => {
       | string
       | undefined
     if (accessToken) {
-      console.log('Starting sync service with access token:', accessToken)
       grpcClient.setAuthToken(accessToken)
       syncService.start()
     }

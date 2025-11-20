@@ -282,14 +282,14 @@ export class SyncService {
       }
 
       // Always update local defaults
-      const defaultSetttings = remoteSettings.default
-      if (defaultSetttings) {
+      const defaultSettings = remoteSettings.default
+      if (defaultSettings) {
         const currentLocalSettings = mainStore.get(
           STORE_KEYS.ADVANCED_SETTINGS,
         ) as AdvancedSettings
         mainStore.set(STORE_KEYS.ADVANCED_SETTINGS, {
           ...currentLocalSettings,
-          defaults: defaultSetttings,
+          defaults: defaultSettings,
         })
 
         // Notify UI of the update
@@ -321,7 +321,8 @@ export class SyncService {
             llmProvider: remoteSettings.llm?.llmProvider ?? null,
             llmModel: remoteSettings.llm?.llmModel ?? null,
             llmTemperature: remoteSettings.llm?.llmTemperature ?? null,
-            transcriptionPrompt: remoteSettings.llm?.transcriptionPrompt ?? null,
+            transcriptionPrompt:
+              remoteSettings.llm?.transcriptionPrompt ?? null,
             editingPrompt: remoteSettings.llm?.editingPrompt ?? null,
             noSpeechThreshold: remoteSettings.llm?.noSpeechThreshold ?? null,
           },
@@ -330,6 +331,8 @@ export class SyncService {
             currentLocalSettings?.grammarServiceEnabled ?? false,
           // Preserve defaults that were set earlier in this function
           defaults: currentLocalSettings?.defaults,
+          macosAccessibilityContextEnabled:
+            currentLocalSettings.macosAccessibilityContextEnabled ?? false,
         }
 
         // Update local store

@@ -10,10 +10,7 @@ import {
   TranscriptionResponseSchema,
 } from '../../generated/ito_pb.js'
 import { getAsrProvider, getLlmProvider } from '../../clients/providerUtils.js'
-import {
-  DEFAULT_ADVANCED_SETTINGS,
-  DEFAULT_KEY,
-} from '../../constants/generated-defaults.js'
+import { DEFAULT_ADVANCED_SETTINGS } from '../../constants/generated-defaults.js'
 import { errorToProtobuf } from '../../clients/errors.js'
 import {
   createUserPromptWithContext,
@@ -292,19 +289,14 @@ export class TranscribeStreamV2Handler {
   }
 
   /**
-   * Resolves a value to its default if it's a DEFAULT_KEY sentinel, undefined, or empty.
-   * This provides a defensive fallback for cases where DEFAULT_KEY values make it to the server.
+   * Resolves a value to its default if it's undefined, null, or empty.
+   * This provides a defensive fallback for optional protobuf fields.
    */
   private resolveOrDefault<T extends string | number>(
     value: T | undefined,
     defaultValue: T,
   ): T {
-    if (
-      value === DEFAULT_KEY ||
-      value === undefined ||
-      value === '' ||
-      value === null
-    ) {
+    if (value === undefined || value === '' || value === null) {
       return defaultValue
     }
     return value

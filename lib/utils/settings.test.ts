@@ -1,9 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { resolveDefaultKeys } from './settings'
-import {
-  DEFAULT_ADVANCED_SETTINGS,
-  DEFAULT_KEY,
-} from '../constants/generated-defaults'
+import { DEFAULT_ADVANCED_SETTINGS } from '../constants/generated-defaults'
 
 const settings = {
   asrProvider: 'asrProvider',
@@ -11,10 +8,10 @@ const settings = {
   asrPrompt: 'asrPrompt',
   llmProvider: 'llmProvider',
   llmModel: 'llmModel',
-  llmTemperature: 'llmTemperature',
+  llmTemperature: 0.5,
   transcriptionPrompt: 'transcriptionPrompt',
   editingPrompt: 'editingPrompt',
-  noSpeechThreshold: 'noSpeechThreshold',
+  noSpeechThreshold: 0.7,
 }
 
 const defaults = {
@@ -23,18 +20,18 @@ const defaults = {
   asrPrompt: 'defaultAsrPrompt',
   llmProvider: 'defaultLlmProvider',
   llmModel: 'defaultLlmModel',
-  llmTemperature: 'defaultLlmTemperature',
+  llmTemperature: 0.8,
   transcriptionPrompt: 'defaultTranscriptionPrompt',
   editingPrompt: 'defaultEditingPrompt',
-  noSpeechThreshold: 'defaultNoSpeechThreshold',
+  noSpeechThreshold: 0.9,
 }
 
 describe('resolve default keys', () => {
-  test('should resolve default keys correctly', () => {
+  test('should resolve null values correctly', () => {
     const testSettings = {
       ...settings,
-      asrProvider: DEFAULT_KEY,
-      asrModel: DEFAULT_KEY,
+      asrProvider: null,
+      asrModel: null,
     }
     const result = resolveDefaultKeys(testSettings, defaults)
     expect(result.asrProvider).toBe(defaults.asrProvider)
@@ -42,12 +39,12 @@ describe('resolve default keys', () => {
     expect(result.asrPrompt).toBe(settings.asrPrompt)
   })
 
-  test('if default key but no default, should fallback', () => {
+  test('if null but no default provided, should fallback to constants', () => {
     const testSettings = {
       ...settings,
-      asrProvider: DEFAULT_KEY,
-      asrModel: DEFAULT_KEY,
-      llmProvider: DEFAULT_KEY,
+      asrProvider: null,
+      asrModel: null,
+      llmProvider: null,
     }
     const result = resolveDefaultKeys(testSettings)
     expect(result.asrProvider).toBe(DEFAULT_ADVANCED_SETTINGS.asrProvider)

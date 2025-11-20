@@ -10,7 +10,6 @@ import {
   useCallback,
   memo,
 } from 'react'
-import { DEFAULT_KEY } from '@/lib/constants/generated-defaults'
 
 type LlmSettingConfig = {
   name: keyof LlmSettings
@@ -107,17 +106,20 @@ const llmSettingsConfig: LlmSettingConfig[] = [
   },
 ]
 
-function formatDisplayValue(value: string): string {
+function formatDisplayValue(value: string | number | null): string {
+  if (value === null) {
+    return ''
+  }
   // If its a number then format it to 2 decimal places
-  if (!isNaN(Number(value)) && value !== '') {
-    return Number(value).toFixed(2)
+  if (typeof value === 'number') {
+    return value.toFixed(2)
   }
   return value
 }
 
 interface SettingInputProps {
   config: LlmSettingConfig
-  value: string
+  value: string | number | null
   onChange: (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
     config: LlmSettingConfig,
@@ -166,7 +168,7 @@ const SettingInput = memo(function SettingInput({
       {config.isSelect ? (
         <select
           id={config.name}
-          value={value}
+          value={value ?? ''}
           onChange={handleChange}
           className="w-3/4 ml-1 px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           disabled={config.readOnly}
@@ -207,12 +209,12 @@ export default function AdvancedSettingsContent() {
   } = useAdvancedSettingsStore()
   const debounceRef = useRef<NodeJS.Timeout>(null)
 
-  // Helper to resolve DEFAULT_KEY to actual default value for display
+  // Helper to resolve null to actual default value for display
   const getDisplayValue = useCallback(
-    (key: keyof LlmSettings): string => {
+    (key: keyof LlmSettings): string | number | null => {
       const value = llm[key]
-      if (value === DEFAULT_KEY && defaults) {
-        return defaults[key] || ''
+      if (value === null && defaults) {
+        return defaults[key] ?? null
       }
       return value
     },
@@ -248,7 +250,23 @@ export default function AdvancedSettingsContent() {
       e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
       config: LlmSettingConfig,
     ) => {
-      const newValue = e.target.value
+      const rawValue = e.target.value
+
+      // Determine if this field should be a number
+      const isNumericField =
+        config.name === 'llmTemperature' || config.name === 'noSpeechThreshold'
+
+      // Parse the value appropriately
+      let newValue: string | number | null
+      if (rawValue === '') {
+        newValue = null
+      } else if (isNumericField) {
+        const parsed = parseFloat(rawValue)
+        newValue = isNaN(parsed) ? null : parsed
+      } else {
+        newValue = rawValue
+      }
+
       const updatedLlm = { ...llm, [config.name]: newValue }
       setLlmSettings({ [config.name]: newValue })
       scheduleAdvancedSettingsUpdate(updatedLlm, grammarServiceEnabled)
@@ -272,15 +290,15 @@ export default function AdvancedSettingsContent() {
 
   const handleRestoreDefaults = useCallback(() => {
     const defaultLlmSettings: LlmSettings = {
-      asrProvider: DEFAULT_KEY,
-      asrModel: DEFAULT_KEY,
-      asrPrompt: DEFAULT_KEY,
-      llmProvider: DEFAULT_KEY,
-      llmModel: DEFAULT_KEY,
-      llmTemperature: DEFAULT_KEY,
-      transcriptionPrompt: DEFAULT_KEY,
-      editingPrompt: DEFAULT_KEY,
-      noSpeechThreshold: DEFAULT_KEY,
+      asrProvider: null,
+      asrModel: null,
+      asrPrompt: null,
+      llmProvider: null,
+      llmModel: null,
+      llmTemperature: null,
+      transcriptionPrompt: null,
+      editingPrompt: null,
+      noSpeechThreshold: null,
     }
     setLlmSettings(defaultLlmSettings)
     scheduleAdvancedSettingsUpdate(defaultLlmSettings, grammarServiceEnabled)

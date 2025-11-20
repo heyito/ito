@@ -513,7 +513,7 @@ class GrpcClient {
       STORE_KEYS.ADVANCED_SETTINGS,
     ) as AdvancedSettings
 
-    // Resolve any DEFAULT_KEY values to actual defaults before sending to server
+    // Resolve any null values to actual defaults before sending to server
     const resolvedLlmSettings = resolveDefaultKeys(
       settings.llm,
       currentStoredSettings?.defaults,
@@ -534,8 +534,8 @@ class GrpcClient {
           llmModel: resolvedLlmSettings.llmModel,
           transcriptionPrompt: resolvedLlmSettings.transcriptionPrompt,
           editingPrompt: resolvedLlmSettings.editingPrompt,
-          llmTemperature: parseFloat(resolvedLlmSettings.llmTemperature),
-          noSpeechThreshold: parseFloat(resolvedLlmSettings.noSpeechThreshold),
+          llmTemperature: resolvedLlmSettings.llmTemperature,
+          noSpeechThreshold: resolvedLlmSettings.noSpeechThreshold,
         },
       })
       return await this.client.updateAdvancedSettings(request, {

@@ -1,8 +1,4 @@
 import crypto from 'crypto'
-import {
-  DEFAULT_ADVANCED_SETTINGS,
-  DEFAULT_KEY,
-} from '../constants/generated-defaults.js'
 import { STORE_KEYS } from '../constants/store-keys'
 import type { LlmSettings } from '@/app/store/useAdvancedSettingsStore'
 import { ItoMode } from '@/app/generated/ito_pb.js'
@@ -155,15 +151,15 @@ export const defaultValues: AppStore = {
   advancedSettings: {
     grammarServiceEnabled: false,
     llm: {
-      asrProvider: DEFAULT_KEY,
-      asrModel: DEFAULT_KEY,
-      asrPrompt: DEFAULT_KEY,
-      llmProvider: DEFAULT_KEY,
-      llmTemperature: DEFAULT_KEY,
-      llmModel: DEFAULT_KEY,
-      transcriptionPrompt: DEFAULT_KEY,
-      editingPrompt: DEFAULT_KEY,
-      noSpeechThreshold: DEFAULT_KEY,
+      asrProvider: null,
+      asrModel: null,
+      asrPrompt: null,
+      llmProvider: null,
+      llmTemperature: null,
+      llmModel: null,
+      transcriptionPrompt: null,
+      editingPrompt: null,
+      noSpeechThreshold: null,
     },
   },
   openMic: false,

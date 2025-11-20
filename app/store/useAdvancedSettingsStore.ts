@@ -2,15 +2,15 @@ import { create } from 'zustand'
 import { STORE_KEYS } from '../../lib/constants/store-keys'
 
 export interface LlmSettings {
-  asrProvider: string
-  asrModel: string
-  asrPrompt: string
-  llmProvider: string
-  llmModel: string
-  llmTemperature: string
-  transcriptionPrompt: string
-  editingPrompt: string
-  noSpeechThreshold: string
+  asrProvider: string | null
+  asrModel: string | null
+  asrPrompt: string | null
+  llmProvider: string | null
+  llmModel: string | null
+  llmTemperature: number | null
+  transcriptionPrompt: string | null
+  editingPrompt: string | null
+  noSpeechThreshold: number | null
 }
 
 interface AdvancedSettingsState {

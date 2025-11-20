@@ -9,10 +9,7 @@ import { Note, Interaction, DictionaryItem } from './sqlite/models'
 import mainStore from './store'
 import { STORE_KEYS } from '../constants/store-keys'
 import type { AdvancedSettings } from './store'
-import {
-  DEFAULT_ADVANCED_SETTINGS,
-  DEFAULT_KEY,
-} from '../constants/generated-defaults.js'
+import { DEFAULT_ADVANCED_SETTINGS } from '../constants/generated-defaults.js'
 import { main } from 'bun'
 import { mainWindow } from './app'
 
@@ -318,18 +315,15 @@ export class SyncService {
 
         const updatedLocalSettings: AdvancedSettings = {
           llm: {
-            asrProvider: remoteSettings.llm?.asrProvider || DEFAULT_KEY,
-            asrModel: remoteSettings.llm?.asrModel || DEFAULT_KEY,
-            asrPrompt: remoteSettings.llm?.asrPrompt || DEFAULT_KEY,
-            llmProvider: remoteSettings.llm?.llmProvider || DEFAULT_KEY,
-            llmModel: remoteSettings.llm?.llmModel || DEFAULT_KEY,
-            llmTemperature:
-              remoteSettings.llm?.llmTemperature.toString() || DEFAULT_KEY,
-            transcriptionPrompt:
-              remoteSettings.llm?.transcriptionPrompt || DEFAULT_KEY,
-            editingPrompt: remoteSettings.llm?.editingPrompt || DEFAULT_KEY,
-            noSpeechThreshold:
-              remoteSettings.llm?.noSpeechThreshold.toString() || DEFAULT_KEY,
+            asrProvider: remoteSettings.llm?.asrProvider ?? null,
+            asrModel: remoteSettings.llm?.asrModel ?? null,
+            asrPrompt: remoteSettings.llm?.asrPrompt ?? null,
+            llmProvider: remoteSettings.llm?.llmProvider ?? null,
+            llmModel: remoteSettings.llm?.llmModel ?? null,
+            llmTemperature: remoteSettings.llm?.llmTemperature ?? null,
+            transcriptionPrompt: remoteSettings.llm?.transcriptionPrompt ?? null,
+            editingPrompt: remoteSettings.llm?.editingPrompt ?? null,
+            noSpeechThreshold: remoteSettings.llm?.noSpeechThreshold ?? null,
           },
           // Preserve local-only settings that aren't synced to the server
           grammarServiceEnabled:

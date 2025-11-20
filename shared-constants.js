@@ -51,6 +51,4 @@ When you receive a transcript, immediately return the polished version following
   noSpeechThreshold: 0.6,
 }
 
-const DEFAULT_KEY = 'default'
-
-module.exports = { DEFAULT_ADVANCED_SETTINGS, DEFAULT_KEY }
+module.exports = { DEFAULT_ADVANCED_SETTINGS }

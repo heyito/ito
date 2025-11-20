@@ -27,7 +27,7 @@ export interface FargateTaskConfig {
   groqApiKeySecret: ISecret
   cerebrasApiKeySecret: ISecret
   stripeSecretKeySecret: ISecret
-  stripeWebhookSecretSecret: ISecret
+  stripeWebhookSecret: ISecret
   dbEndpoint: string
   dbName: string
   dbPort: number
@@ -60,7 +60,7 @@ export function createFargateTask(
   config.groqApiKeySecret.grantRead(fargateTaskRole)
   config.cerebrasApiKeySecret.grantRead(fargateTaskRole)
   config.stripeSecretKeySecret.grantRead(fargateTaskRole)
-  config.stripeWebhookSecretSecret.grantRead(fargateTaskRole)
+  config.stripeWebhookSecret.grantRead(fargateTaskRole)
 
   const taskExecutionRole = new IamRole(scope, 'ItoTaskExecRole', {
     assumedBy: new ServicePrincipal('ecs-tasks.amazonaws.com'),
@@ -76,7 +76,7 @@ export function createFargateTask(
   config.groqApiKeySecret.grantRead(taskExecutionRole)
   config.cerebrasApiKeySecret.grantRead(taskExecutionRole)
   config.stripeSecretKeySecret.grantRead(taskExecutionRole)
-  config.stripeWebhookSecretSecret.grantRead(taskExecutionRole)
+  config.stripeWebhookSecret.grantRead(taskExecutionRole)
 
   // Explicitly add policy statement for secrets to ensure permissions are applied correctly
   // This is a workaround for cases where grantRead() might not work correctly with fromSecretNameV2()
@@ -91,7 +91,7 @@ export function createFargateTask(
         config.groqApiKeySecret.secretArn,
         config.cerebrasApiKeySecret.secretArn,
         config.stripeSecretKeySecret.secretArn,
-        config.stripeWebhookSecretSecret.secretArn,
+        config.stripeWebhookSecret.secretArn,
       ],
     }),
   )
@@ -129,7 +129,7 @@ export function createFargateTask(
         config.stripeSecretKeySecret,
       ),
       STRIPE_WEBHOOK_SECRET: EcsSecret.fromSecretsManager(
-        config.stripeWebhookSecretSecret,
+        config.stripeWebhookSecret,
       ),
     },
     environment: {

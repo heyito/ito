@@ -47,13 +47,11 @@ export function initializeAutoUpdater() {
         autoUpdater.forceDevUpdateConfig = true
       }
 
-      const channel = ITO_ENV === 'prod' ? 'latest' : ITO_ENV
       autoUpdater.setFeedURL({
         provider: 's3',
         bucket,
         path: 'releases/',
         region: 'us-west-2',
-        channel,
       })
 
       log.transports.file.level = 'debug'

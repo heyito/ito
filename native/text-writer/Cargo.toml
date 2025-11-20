@@ -18,5 +18,8 @@ core-graphics = "0.23"
 core-foundation = "0.9"
 cocoa = "0.25"
 
+[build-dependencies]
+tauri-winres = "0.3.5"
+
 [lints]
 workspace = true

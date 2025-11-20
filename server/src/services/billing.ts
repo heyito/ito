@@ -181,28 +181,48 @@ export const registerBillingRoutes = async (
         return
       }
 
+      // Check for paid subscription first
       const sub = await SubscriptionsRepository.getByUserId(userSub)
-      if (!sub || !sub.stripe_subscription_id) {
-        reply
-          .code(400)
-          .send({ success: false, error: 'No active subscription found' })
+      if (sub && sub.stripe_subscription_id) {
+        // Schedule cancellation at period end instead of immediate cancellation
+        const updatedSubscription = await stripe.subscriptions.update(
+          sub.stripe_subscription_id,
+          { cancel_at_period_end: true },
+        )
+
+        // When cancel_at_period_end is true, cancel_at contains the period end date
+        const periodEnd = updatedSubscription.cancel_at
+          ? new Date(updatedSubscription.cancel_at * 1000)
+          : null
+
+        await SubscriptionsRepository.updateSubscriptionEndAt(
+          userSub,
+          periodEnd,
+        )
+
+        reply.send({ success: true })
         return
       }
 
-      // Schedule cancellation at period end instead of immediate cancellation
-      const updatedSubscription = await stripe.subscriptions.update(
-        sub.stripe_subscription_id,
-        { cancel_at_period_end: true },
-      )
+      // Check for active trial
+      const trial = await TrialsRepository.getByUserId(userSub)
+      if (trial && !trial.has_completed_trial) {
+        // Cancel the Stripe trial subscription if it exists
+        if (trial.stripe_subscription_id) {
+          await stripe.subscriptions.cancel(trial.stripe_subscription_id)
+        }
 
-      // When cancel_at_period_end is true, cancel_at contains the period end date
-      const periodEnd = updatedSubscription.cancel_at
-        ? new Date(updatedSubscription.cancel_at * 1000)
-        : null
+        // Mark trial as completed
+        await TrialsRepository.completeTrial(userSub)
 
-      await SubscriptionsRepository.updateSubscriptionEndAt(userSub, periodEnd)
+        reply.send({ success: true })
+        return
+      }
 
-      reply.send({ success: true })
+      // No active subscription or trial found
+      reply
+        .code(400)
+        .send({ success: false, error: 'No active subscription found' })
     } catch (error: any) {
       fastify.log.error(
         { err: error },

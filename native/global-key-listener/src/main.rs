@@ -67,13 +67,14 @@ fn prevent_app_nap() -> id {
 }
 
 #[cfg(not(target_os = "macos"))]
-fn prevent_app_nap() -> () {
+fn prevent_app_nap() {
     // No-op on non-macOS platforms
 }
 
 fn main() {
     // Prevent macOS App Nap from suspending this process
     // Must retain this for the entire process lifetime
+    #[allow(clippy::let_unit_value)]
     let _activity = prevent_app_nap();
     // Spawn a thread to read commands from stdin
     thread::spawn(|| {

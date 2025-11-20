@@ -108,11 +108,7 @@ export const getAdvancedSettings = (): AdvancedSettings => {
   const storeSettings = store.get(
     STORE_KEYS.ADVANCED_SETTINGS,
   ) as AdvancedSettings
-  const resolvedLlmSettings = resolveDefaultKeys(
-    storeSettings.llm,
-    storeSettings.defaults,
-  )
-  return { ...storeSettings, llm: resolvedLlmSettings }
+  return { ...storeSettings }
 }
 
 export const defaultValues: AppStore = {

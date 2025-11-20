@@ -79,7 +79,6 @@ app.whenReady().then(async () => {
 
   // If we have valid tokens from a previous session, start the sync service
   if (tokensAreValid) {
-    console.log('Stored tokens are valid, starting sync service...')
     const accessToken = mainStore.get(STORE_KEYS.ACCESS_TOKEN) as
       | string
       | undefined

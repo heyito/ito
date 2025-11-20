@@ -46,7 +46,6 @@ import { getSelectedTextString } from '../media/selected-text-reader'
 import { ensureValidTokens } from '../auth/events'
 import { Auth0Config } from '../auth/config'
 import { getActiveWindow } from '../media/active-application'
-import { resolveDefaultKeys } from '../utils/settings.js'
 import { STORE_KEYS } from '../constants/store-keys.js'
 
 class GrpcClient {
@@ -151,21 +150,21 @@ class GrpcClient {
 
       // Add ASR model from advanced settings
       const advancedSettings = getAdvancedSettings()
-      headers.set('asr-model', advancedSettings.llm.asrModel)
-      headers.set('asr-provider', advancedSettings.llm.asrProvider)
+      headers.set('asr-model', advancedSettings.llm.asrModel ?? '')
+      headers.set('asr-provider', advancedSettings.llm.asrProvider ?? '')
       headers.set(
         'asr-prompt',
-        flattenHeaderValue(advancedSettings.llm.asrPrompt),
+        flattenHeaderValue(advancedSettings.llm.asrPrompt ?? ''),
       )
-      headers.set('llm-provider', advancedSettings.llm.llmProvider)
-      headers.set('llm-model', advancedSettings.llm.llmModel)
+      headers.set('llm-provider', advancedSettings.llm.llmProvider ?? '')
+      headers.set('llm-model', advancedSettings.llm.llmModel ?? '')
       headers.set(
         'llm-temperature',
-        advancedSettings.llm.llmTemperature.toString(),
+        advancedSettings.llm.llmTemperature?.toString() ?? '',
       )
       headers.set(
         'transcription-prompt',
-        flattenHeaderValue(advancedSettings.llm.transcriptionPrompt),
+        flattenHeaderValue(advancedSettings.llm.transcriptionPrompt ?? ''),
       )
       // Note: Editing prompt is currently disabled until a better versioning solution is implemented
       // https://github.com/heyito/ito/issues/174
@@ -175,7 +174,7 @@ class GrpcClient {
       // )
       headers.set(
         'no-speech-threshold',
-        advancedSettings.llm.noSpeechThreshold.toString(),
+        advancedSettings.llm.noSpeechThreshold?.toString() ?? '',
       )
 
       headers.set('mode', mode.toString())
@@ -508,34 +507,20 @@ class GrpcClient {
       return null
     }
 
-    // Get current stored settings to access defaults
-    const currentStoredSettings = store.get(
-      STORE_KEYS.ADVANCED_SETTINGS,
-    ) as AdvancedSettings
-
-    // Resolve any null values to actual defaults before sending to server
-    const resolvedLlmSettings = resolveDefaultKeys(
-      settings.llm,
-      currentStoredSettings?.defaults,
-    )
-
-    console.log(
-      'Updating advanced settings with resolved values:',
-      resolvedLlmSettings,
-    )
+    console.log('Updating advanced settings:', settings.llm)
 
     return this.withRetry(async () => {
       const request = create(UpdateAdvancedSettingsRequestSchema, {
         llm: {
-          asrModel: resolvedLlmSettings.asrModel,
-          asrProvider: resolvedLlmSettings.asrProvider,
-          asrPrompt: resolvedLlmSettings.asrPrompt,
-          llmProvider: resolvedLlmSettings.llmProvider,
-          llmModel: resolvedLlmSettings.llmModel,
-          transcriptionPrompt: resolvedLlmSettings.transcriptionPrompt,
-          editingPrompt: resolvedLlmSettings.editingPrompt,
-          llmTemperature: resolvedLlmSettings.llmTemperature,
-          noSpeechThreshold: resolvedLlmSettings.noSpeechThreshold,
+          asrModel: settings.llm.asrModel ?? undefined,
+          asrProvider: settings.llm.asrProvider ?? undefined,
+          asrPrompt: settings.llm.asrPrompt ?? undefined,
+          llmProvider: settings.llm.llmProvider ?? undefined,
+          llmModel: settings.llm.llmModel ?? undefined,
+          transcriptionPrompt: settings.llm.transcriptionPrompt ?? undefined,
+          editingPrompt: settings.llm.editingPrompt ?? undefined,
+          llmTemperature: settings.llm.llmTemperature ?? undefined,
+          noSpeechThreshold: settings.llm.noSpeechThreshold ?? undefined,
         },
       })
       return await this.client.updateAdvancedSettings(request, {

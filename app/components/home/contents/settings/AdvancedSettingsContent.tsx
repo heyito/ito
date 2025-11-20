@@ -249,7 +249,6 @@ export default function AdvancedSettingsContent() {
           grammarServiceEnabled: nextGrammarEnabled,
           macosAccessibilityContextEnabled: nextMacosAccessibilityEnabled,
         }
-        console.log('[AdvancedSettings] Saving settings...')
         await window.api.updateAdvancedSettings(settingsToSave)
       }, 1000)
     },

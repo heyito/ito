@@ -93,17 +93,56 @@ export default function HomeContent({
   const [showProDialog, setShowProDialog] = useState(false)
   const [showTrialExpiredModal, setShowTrialExpiredModal] = useState(false)
   const billingState = useBillingState()
+  // billingState.hasCompletedTrial = true // Force hasCompletedTrial to true for testing
+  // billingState.proStatus = 'none'
+
+  // Persist "has shown trial expired modal" flag in electron-store to survive remounts
+  const [hasShownTrialExpiredModal, setHasShownTrialExpiredModalState] =
+    useState(() => {
+      try {
+        const authStore = window.electron?.store?.get('auth') || {}
+        const value = authStore?.hasShownTrialExpiredModal === true
+        return value
+      } catch {
+        return false
+      }
+    })
+
+  const setHasShownTrialExpiredModal = useCallback((value: boolean) => {
+    try {
+      setHasShownTrialExpiredModalState(value)
+      window.api.send(
+        'electron-store-set',
+        'auth.hasShownTrialExpiredModal',
+        value,
+      )
+    } catch {
+      console.warn('Failed to persist hasShownTrialExpiredModal flag')
+    }
+  }, [])
 
   useEffect(() => {
     if (
       billingState.hasCompletedTrial &&
-      billingState.proStatus !== 'active_pro'
+      billingState.proStatus !== 'active_pro' &&
+      !hasShownTrialExpiredModal &&
+      !billingState.isLoading
     ) {
       setShowTrialExpiredModal(true)
-    } else {
+      setHasShownTrialExpiredModal(true)
+    } else if (
+      billingState.proStatus === 'active_pro' ||
+      !billingState.hasCompletedTrial
+    ) {
       setShowTrialExpiredModal(false)
     }
-  }, [billingState])
+  }, [
+    billingState.hasCompletedTrial,
+    billingState.proStatus,
+    billingState.isLoading,
+    hasShownTrialExpiredModal,
+    setHasShownTrialExpiredModal,
+  ])
 
   // Persist "has shown trial dialog" flag in electron-store to survive remounts
   const [hasShownTrialDialog, setHasShownTrialDialogState] = useState(() => {
@@ -185,6 +224,26 @@ export default function HomeContent({
     billingState.isLoading,
     hasShownTrialDialog,
     setHasShownTrialDialog,
+  ])
+
+  // Reset trial expired modal flag when user becomes pro or starts new trial
+  useEffect(() => {
+    if (billingState.isLoading) {
+      return
+    }
+
+    const shouldReset =
+      billingState.proStatus === 'active_pro' || billingState.isTrialActive
+
+    if (shouldReset && hasShownTrialExpiredModal) {
+      setHasShownTrialExpiredModal(false)
+    }
+  }, [
+    billingState.proStatus,
+    billingState.isTrialActive,
+    billingState.isLoading,
+    hasShownTrialExpiredModal,
+    setHasShownTrialExpiredModal,
   ])
 
   // Calculate statistics from interactions
@@ -872,7 +931,7 @@ export default function HomeContent({
       </div>
 
       {/* Pro Upgrade Dialog */}
-      <ProUpgradeDialog open={true} onOpenChange={setShowProDialog} />
+      <ProUpgradeDialog open={showProDialog} onOpenChange={setShowProDialog} />
       <ProTrialExpiredModal
         open={showTrialExpiredModal}
         onOpenChange={setShowTrialExpiredModal}

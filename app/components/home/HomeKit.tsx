@@ -7,11 +7,9 @@ import {
 } from '@mynaui/icons-react'
 import { ItoIcon } from '../icons/ItoIcon'
 import { useMainStore } from '@/app/store/useMainStore'
-import { useUserMetadataStore } from '@/app/store/useUserMetadataStore'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { useAuth } from '@/app/components/auth/useAuth'
 import useBillingState from '@/app/hooks/useBillingState'
-import { PaidStatus } from '@/lib/main/sqlite/models'
 import { useEffect, useState, useRef } from 'react'
 import { NavItem } from '../ui/nav-item'
 import HomeContent from './contents/HomeContent'
@@ -22,7 +20,6 @@ import AboutContent from './contents/AboutContent'
 
 export default function HomeKit() {
   const { navExpanded, currentPage, setCurrentPage } = useMainStore()
-  const { metadata } = useUserMetadataStore()
   const { onboardingCompleted } = useOnboardingStore()
   const { isAuthenticated, user } = useAuth()
   const billingState = useBillingState()
@@ -32,8 +29,6 @@ export default function HomeKit() {
   const [isStartingTrial, setIsStartingTrial] = useState(false)
 
   const isPro =
-    metadata?.paid_status === PaidStatus.PRO ||
-    metadata?.paid_status === PaidStatus.PRO_TRIAL ||
     billingState.proStatus === 'active_pro' ||
     billingState.proStatus === 'free_trial'
 

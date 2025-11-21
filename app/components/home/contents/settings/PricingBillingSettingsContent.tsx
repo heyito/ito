@@ -100,7 +100,10 @@ export default function PricingBillingSettingsContent() {
     if (billingState.isScheduledForCancellation) return 'Current Plan'
     if (billingState.proStatus === ProStatus.ACTIVE_PRO) return 'Downgrade plan'
     if (billingState.proStatus === ProStatus.FREE_TRIAL) return 'Downgrade plan'
-    if (billingState.proStatus === ProStatus.NONE && !billingState.isTrialActive) {
+    if (
+      billingState.proStatus === ProStatus.NONE &&
+      !billingState.isTrialActive
+    ) {
       return 'Current plan'
     }
     return 'Current plan'
@@ -108,7 +111,8 @@ export default function PricingBillingSettingsContent() {
 
   const getStarterButtonDisabled = () => {
     return (
-      (billingState.proStatus === ProStatus.NONE && !billingState.isTrialActive) ||
+      (billingState.proStatus === ProStatus.NONE &&
+        !billingState.isTrialActive) ||
       billingState.isLoading ||
       downgradeLoading ||
       billingState.isScheduledForCancellation

@@ -443,4 +443,3 @@ export class KeyValueStore {
     await run(query, [key])
   }
 }
-

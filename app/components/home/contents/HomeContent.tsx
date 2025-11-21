@@ -93,8 +93,6 @@ export default function HomeContent({
   const [showProDialog, setShowProDialog] = useState(false)
   const [showTrialExpiredModal, setShowTrialExpiredModal] = useState(false)
   const billingState = useBillingState()
-  // billingState.hasCompletedTrial = true // Force hasCompletedTrial to true for testing
-  // billingState.proStatus = 'none'
 
   // Persist "has shown trial expired modal" flag in electron-store to survive remounts
   const [hasShownTrialExpiredModal, setHasShownTrialExpiredModalState] =
@@ -233,7 +231,8 @@ export default function HomeContent({
     }
 
     const shouldReset =
-      billingState.proStatus === ProStatus.ACTIVE_PRO || billingState.isTrialActive
+      billingState.proStatus === ProStatus.ACTIVE_PRO ||
+      billingState.isTrialActive
 
     if (shouldReset && hasShownTrialExpiredModal) {
       setHasShownTrialExpiredModal(false)

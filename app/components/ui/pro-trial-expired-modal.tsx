@@ -73,9 +73,9 @@ export function ProTrialExpiredModal({
         </div>
 
         <div className="px-8 py-6 bg-white">
-          <h2 className="text-3xl font mb-2 ">Ito Pro has expired.</h2>
+          <h2 className="text-3xl font-semibold mb-2">Ito Pro has expired.</h2>
 
-          <p className="text-l text-gray-600  mb-6">
+          <p className="text-lg text-gray-600 mb-6">
             Unlock full access with Ito Pro.
           </p>
 

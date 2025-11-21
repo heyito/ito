@@ -81,158 +81,233 @@ jobs:
             dist/*.dmg
             dist/*.dmg.blockmap
 
-  # build-windows:
-  #   runs-on: ubuntu-latest
-  #   environment: ${{ github.event.release.target_commitish == 'main' && 'production' || 'develop' }}
+  build-windows-rust:
+    runs-on: windows-latest
+    environment: ${{ github.event.release.target_commitish == 'main' && 'production' || 'develop' }}
 
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  #     - name: Set up Bun
-  #       uses: oven-sh/setup-bun@v1
+      - name: Set up Rust with MSVC toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable-x86_64-pc-windows-msvc
+          targets: 'x86_64-pc-windows-msvc'
 
-  #     - name: Install dependencies and MinGW-w64
-  #       run: |
-  #         sudo apt-get update && sudo apt-get install -y mingw-w64
-  #         bun install
+      - name: Build Rust native modules with MSVC
+        shell: pwsh
+        run: |
+          # Find Visual Studio installation (GitHub Actions uses Enterprise)
+          $vsPath = if (Test-Path "C:\Program Files\Microsoft Visual Studio\2022\Enterprise") {
+            "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+          } elseif (Test-Path "C:\Program Files\Microsoft Visual Studio\2022\Community") {
+            "C:\Program Files\Microsoft Visual Studio\2022\Community"
+          } else {
+            throw "Visual Studio 2022 not found"
+          }
 
-  #     - name: Set up Rust
-  #       uses: dtolnay/rust-toolchain@stable
-  #       with:
-  #         toolchain: stable
-  #         targets: 'x86_64-pc-windows-gnu'
+          Write-Host "Using Visual Studio at: $vsPath"
 
-  #     - name: Set up environment
-  #       run: |
-  #         echo "VITE_AUTH0_DOMAIN=\"${{ secrets.VITE_AUTH0_DOMAIN }}\"" >> .env
-  #         echo "VITE_AUTH0_CLIENT_ID=\"${{ secrets.VITE_AUTH0_CLIENT_ID }}\"" >> .env
-  #         echo "VITE_AUTH0_AUDIENCE=\"${{ secrets.VITE_AUTH0_AUDIENCE }}\"" >> .env
-  #         echo "VITE_POSTHOG_API_KEY=\"${{ secrets.VITE_POSTHOG_API_KEY }}\"" >> .env
-  #         echo "VITE_POSTHOG_HOST=\"${{ secrets.VITE_POSTHOG_HOST }}\"" >> .env
-  #         echo "VITE_GRPC_BASE_URL=\"${{ vars.VITE_GRPC_BASE_URL }}\"" >> .env
-  #         echo "VITE_UPDATER_BUCKET=\"${{ vars.VITE_UPDATER_BUCKET }}\"" >> .env
-  #         echo "VITE_SENTRY_DSN=\"${{ vars.VITE_SENTRY_DSN }}\"" >> .env
-  #         echo "VITE_SENTRY_ENV=\"${{ vars.VITE_SENTRY_ENV }}\"" >> .env
-  #         echo "VITE_SENTRY_TRACES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE }}\"" >> .env
-  #         echo "VITE_SENTRY_PROFILES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_PROFILES_SAMPLE_RATE }}\"" >> .env
-  #         echo "VITE_ITO_VERSION=\"${GITHUB_REF#refs/tags/v}\"" >> .env
-  #         echo "ITO_ENV=\"${{ github.event.release.target_commitish == 'main' && 'prod' || 'dev' }}\"" >> .env
-  #         echo "VITE_ITO_ENV=\"${{ github.event.release.target_commitish == 'main' && 'prod' || 'dev' }}\"" >> .env
-  #         echo "GH_TOKEN=\"${{ secrets.GITHUB_TOKEN }}\"" >> .env
-  #         echo "GRPC_BASE_URL=\"${{ vars.GRPC_BASE_URL }}\"" >> .env
-  #         echo "Created .env file:"
-  #         cat .env
+          # Launch VS Developer PowerShell and build
+          & "$vsPath\Common7\Tools\Launch-VsDevShell.ps1" -Arch amd64
 
-  #     - name: Build and package Windows application (unsigned)
-  #       env:
-  #         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-  #       run: ./build-app.sh windows
+          # Build each native module
+          $modules = @("global-key-listener", "audio-recorder", "text-writer", "active-application", "selected-text-reader")
 
-  #     - name: Upload unsigned Windows artifacts for signing
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: Windows-Unsigned-Artifacts
-  #         path: |
-  #           dist/*.exe
-  #           dist/*.yml
-  #           dist/*.nsis.7z
-  #           dist/*.zip
-  #           dist/*.blockmap
+          foreach ($module in $modules) {
+            Write-Host "Building $module with MSVC..."
+            Set-Location "native\$module"
+            cargo build --release --target x86_64-pc-windows-msvc
+            Set-Location ..\..
+          }
 
-  # sign-windows:
-  #   runs-on: windows-latest
-  #   needs: build-windows
-  #   environment: ${{ github.event.release.target_commitish == 'main' && 'production' || 'develop' }}
+      - name: Prepare artifacts directory
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path rust-binaries
 
-  #   steps:
-  #     - name: Download unsigned Windows artifacts
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: Windows-Unsigned-Artifacts
-  #         path: dist
+          $modules = @("global-key-listener", "audio-recorder", "text-writer", "active-application", "selected-text-reader")
 
-  #     - name: Sign Windows executable with Azure Trusted Signing
-  #       uses: Azure/trusted-signing-action@v0
-  #       with:
-  #         azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-  #         azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
-  #         azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-  #         endpoint: https://eus.codesigning.azure.net/
-  #         trusted-signing-account-name: ${{ secrets.AZURE_CODE_SIGNING_ACCOUNT_NAME }}
-  #         certificate-profile-name: ${{ secrets.AZURE_CODE_SIGNING_CERTIFICATE_PROFILE_NAME }}
-  #         files-folder: dist
-  #         files-folder-filter: exe
-  #         file-digest: SHA256
-  #         timestamp-rfc3161: http://timestamp.acs.microsoft.com
-  #         timestamp-digest: SHA256
+          foreach ($module in $modules) {
+            $sourcePath = "native\target\x86_64-pc-windows-msvc\release\$module.exe"
+            $destPath = "rust-binaries\$module.exe"
 
-  #     - name: Regenerate metadata after signing
-  #       shell: bash
-  #       run: |
-  #         # Find the signed executable file in the dist directory
-  #         # This searches for any file matching the pattern "Ito-*.exe"
-  #         SIGNED_EXE=$(find dist -name "Ito-*.exe" | head -1)
-  #         if [ -z "$SIGNED_EXE" ]; then
-  #           echo "Error: No signed executable found"
-  #           exit 1
-  #         fi
+            if (Test-Path $sourcePath) {
+              Copy-Item $sourcePath $destPath
+              Write-Host "Copied $module.exe"
+            } else {
+              Write-Error "$sourcePath not found!"
+              exit 1
+            }
+          }
 
-  #         echo "Found signed executable: $SIGNED_EXE"
+      - name: Upload Rust binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-Rust-Binaries
+          path: rust-binaries/*.exe
 
-  #         # Calculate the SHA512 checksum of the signed file
-  #         # cut -d' ' -f1 extracts just the hash part (before the filename)
-  #         NEW_CHECKSUM=$(sha512sum "$SIGNED_EXE" | cut -d' ' -f1)
+  build-windows:
+    runs-on: ubuntu-latest
+    needs: build-windows-rust
+    environment: ${{ github.event.release.target_commitish == 'main' && 'production' || 'develop' }}
 
-  #         # Convert hex checksum to base64 format (required by electron-updater)
-  #         # xxd -r -p converts hex string to raw bytes
-  #         # base64 -w 0 encodes to base64 without line wrapping
-  #         NEW_CHECKSUM_B64=$(echo -n "$NEW_CHECKSUM" | xxd -r -p | base64 -w 0)
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  #         # Get the file size in bytes using stat
-  #         FILE_SIZE=$(stat -c%s "$SIGNED_EXE")
+      - name: Download Rust binaries built with MSVC
+        uses: actions/download-artifact@v4
+        with:
+          name: Windows-Rust-Binaries
+          path: rust-binaries-msvc
 
-  #         # Extract just the filename from the full path
-  #         FILENAME=$(basename "$SIGNED_EXE")
+      - name: Place Rust binaries in expected locations
+        run: |
+          # Place binaries where electron-builder expects them
+          for module in global-key-listener audio-recorder text-writer active-application selected-text-reader; do
+            mkdir -p "native/target/x86_64-pc-windows-msvc/release"
+            cp "rust-binaries-msvc/$module.exe" "native/target/x86_64-pc-windows-msvc/release/"
+            echo "Placed $module.exe"
+          done
 
-  #         echo "New checksum (hex): $NEW_CHECKSUM"
-  #         echo "New checksum (base64): $NEW_CHECKSUM_B64"
-  #         echo "File size: $FILE_SIZE"
-  #         echo "Filename: $FILENAME"
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v1
 
-  #         # Update the auto-updater metadata file with the signed file's information
-  #         # This is critical because signing changes the file's checksum
-  #         if [ -f "dist/latest.yml" ]; then
-  #           echo "Updating latest.yml with new checksum after signing"
+      - name: Install dependencies
+        run: bun install
 
-  #           # Update each field in latest.yml using sed (stream editor)
-  #           # The | delimiter is used instead of / to avoid conflicts with filenames
-  #           sed -i "s|url: .*|url: $FILENAME|" dist/latest.yml          # Update download URL
-  #           sed -i "s|sha512: .*|sha512: $NEW_CHECKSUM_B64|" dist/latest.yml  # Update checksum
-  #           sed -i "s|size: .*|size: $FILE_SIZE|" dist/latest.yml        # Update file size
-  #           sed -i "s|path: .*|path: $FILENAME|" dist/latest.yml         # Update path
+      - name: Set up environment
+        run: |
+          echo "VITE_AUTH0_DOMAIN=\"${{ secrets.VITE_AUTH0_DOMAIN }}\"" >> .env
+          echo "VITE_AUTH0_CLIENT_ID=\"${{ secrets.VITE_AUTH0_CLIENT_ID }}\"" >> .env
+          echo "VITE_AUTH0_AUDIENCE=\"${{ secrets.VITE_AUTH0_AUDIENCE }}\"" >> .env
+          echo "VITE_POSTHOG_API_KEY=\"${{ secrets.VITE_POSTHOG_API_KEY }}\"" >> .env
+          echo "VITE_POSTHOG_HOST=\"${{ secrets.VITE_POSTHOG_HOST }}\"" >> .env
+          echo "VITE_GRPC_BASE_URL=\"${{ vars.VITE_GRPC_BASE_URL }}\"" >> .env
+          echo "VITE_UPDATER_BUCKET=\"${{ vars.VITE_UPDATER_BUCKET }}\"" >> .env
+          echo "VITE_SENTRY_DSN=\"${{ vars.VITE_SENTRY_DSN }}\"" >> .env
+          echo "VITE_SENTRY_ENV=\"${{ vars.VITE_SENTRY_ENV }}\"" >> .env
+          echo "VITE_SENTRY_TRACES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE }}\"" >> .env
+          echo "VITE_SENTRY_PROFILES_SAMPLE_RATE=\"${{ vars.VITE_SENTRY_PROFILES_SAMPLE_RATE }}\"" >> .env
+          echo "VITE_ITO_VERSION=\"${GITHUB_REF#refs/tags/v}\"" >> .env
+          echo "ITO_ENV=\"${{ github.event.release.target_commitish == 'main' && 'prod' || 'dev' }}\"" >> .env
+          echo "VITE_ITO_ENV=\"${{ github.event.release.target_commitish == 'main' && 'prod' || 'dev' }}\"" >> .env
+          echo "GH_TOKEN=\"${{ secrets.GITHUB_TOKEN }}\"" >> .env
+          echo "GRPC_BASE_URL=\"${{ vars.GRPC_BASE_URL }}\"" >> .env
+          echo "Created .env file:"
+          cat .env
 
-  #           echo "Updated latest.yml contents:"
-  #           cat dist/latest.yml
-  #         else
-  #           echo "Warning: latest.yml not found in dist directory"
-  #           ls -la dist/
-  #         fi
+      - name: Build and package Windows application (unsigned)
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: ./build-app.sh windows --skip-binaries
 
-  #     - name: Upload signed Windows artifacts
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: Windows-Build-Artifacts
-  #         path: |
-  #           dist/*.yml
-  #           dist/*.exe
-  #           dist/*.nsis.7z
-  #           dist/*.zip
-  #           dist/*.blockmap
+      - name: Upload unsigned Windows artifacts for signing
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-Unsigned-Artifacts
+          path: |
+            dist/*.exe
+            dist/*.yml
+            dist/*.nsis.7z
+            dist/*.zip
+            dist/*.blockmap
+
+  sign-windows:
+    runs-on: windows-latest
+    needs: build-windows
+    environment: ${{ github.event.release.target_commitish == 'main' && 'production' || 'develop' }}
+
+    steps:
+      - name: Download unsigned Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Windows-Unsigned-Artifacts
+          path: dist
+
+      - name: Sign Windows executable with Azure Trusted Signing
+        uses: Azure/trusted-signing-action@v0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: https://eus.codesigning.azure.net/
+          trusted-signing-account-name: ${{ secrets.AZURE_CODE_SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_CODE_SIGNING_CERTIFICATE_PROFILE_NAME }}
+          files-folder: dist
+          files-folder-filter: exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Regenerate metadata after signing
+        shell: bash
+        run: |
+          # Find the signed executable file in the dist directory
+          # This searches for any file matching the pattern "Ito-*.exe"
+          SIGNED_EXE=$(find dist -name "Ito-*.exe" | head -1)
+          if [ -z "$SIGNED_EXE" ]; then
+            echo "Error: No signed executable found"
+            exit 1
+          fi
+
+          echo "Found signed executable: $SIGNED_EXE"
+
+          # Calculate the SHA512 checksum of the signed file
+          # cut -d' ' -f1 extracts just the hash part (before the filename)
+          NEW_CHECKSUM=$(sha512sum "$SIGNED_EXE" | cut -d' ' -f1)
+
+          # Convert hex checksum to base64 format (required by electron-updater)
+          # xxd -r -p converts hex string to raw bytes
+          # base64 -w 0 encodes to base64 without line wrapping
+          NEW_CHECKSUM_B64=$(echo -n "$NEW_CHECKSUM" | xxd -r -p | base64 -w 0)
+
+          # Get the file size in bytes using stat
+          FILE_SIZE=$(stat -c%s "$SIGNED_EXE")
+
+          # Extract just the filename from the full path
+          FILENAME=$(basename "$SIGNED_EXE")
+
+          echo "New checksum (hex): $NEW_CHECKSUM"
+          echo "New checksum (base64): $NEW_CHECKSUM_B64"
+          echo "File size: $FILE_SIZE"
+          echo "Filename: $FILENAME"
+
+          # Update the auto-updater metadata file with the signed file's information
+          # This is critical because signing changes the file's checksum
+          if [ -f "dist/latest.yml" ]; then
+            echo "Updating latest.yml with new checksum after signing"
+
+            # Update each field in latest.yml using sed (stream editor)
+            # The | delimiter is used instead of / to avoid conflicts with filenames
+            sed -i "s|url: .*|url: $FILENAME|" dist/latest.yml          # Update download URL
+            sed -i "s|sha512: .*|sha512: $NEW_CHECKSUM_B64|" dist/latest.yml  # Update checksum
+            sed -i "s|size: .*|size: $FILE_SIZE|" dist/latest.yml        # Update file size
+            sed -i "s|path: .*|path: $FILENAME|" dist/latest.yml         # Update path
+
+            echo "Updated latest.yml contents:"
+            cat dist/latest.yml
+          else
+            echo "Warning: latest.yml not found in dist directory"
+            ls -la dist/
+          fi
+
+      - name: Upload signed Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-Build-Artifacts
+          path: |
+            dist/*.yml
+            dist/*.exe
+            dist/*.nsis.7z
+            dist/*.zip
+            dist/*.blockmap
 
   upload-to-s3:
     runs-on: ubuntu-latest
-    needs: [build-mac]
+    needs: [build-mac, sign-windows]
     environment: ${{ github.event.release.target_commitish == 'main' && 'production' || 'develop' }}
 
     steps:
@@ -242,11 +317,11 @@ jobs:
           name: Mac-Build-Artifacts
           path: mac-dist
 
-      # - name: Download Windows Build Artifacts
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: Windows-Build-Artifacts
-      #     path: windows-dist
+      - name: Download Windows Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Windows-Build-Artifacts
+          path: windows-dist
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v2
@@ -263,7 +338,7 @@ jobs:
           echo "Listing existing files in root of releases/"
           aws s3 ls "$BUCKET/" | grep -vE '/$' | awk '{print $4}' > existing_files.txt
 
-          echo "Copying Mac artifacts"
+          echo "Combining Mac and Windows artifacts"
           mkdir -p combined-dist
 
           # Copy Mac artifacts
@@ -271,10 +346,10 @@ jobs:
             cp -r mac-dist/* combined-dist/
           fi
 
-          # # Copy Windows artifacts
-          # if [ -d "windows-dist" ]; then
-          #   cp -r windows-dist/* combined-dist/
-          # fi
+          # Copy Windows artifacts
+          if [ -d "windows-dist" ]; then
+            cp -r windows-dist/* combined-dist/
+          fi
 
           echo "Files to upload:"
           ls -la combined-dist/
@@ -285,7 +360,11 @@ jobs:
             -name '*universal-mac.zip' -o \
             -name '*universal-mac.zip.blockmap' -o \
             -name '*.dmg' -o \
-            -name '*.dmg.blockmap' \
+            -name '*.dmg.blockmap' -o \
+            -name '*.exe' -o \
+            -name '*.nsis.7z' -o \
+            -name '*.zip' -o \
+            -name '*.blockmap' \
           \) | xargs -I{} basename {} > uploaded_root_files.txt
 
           echo "Uploading full combined dist to versioned folder: $BUCKET/${{ github.ref_name }}/"
@@ -297,7 +376,11 @@ jobs:
             $(find combined-dist -maxdepth 1 -name '*universal-mac.zip') \
             $(find combined-dist -maxdepth 1 -name '*universal-mac.zip.blockmap') \
             $(find combined-dist -maxdepth 1 -name '*.dmg') \
-            $(find combined-dist -maxdepth 1 -name '*.dmg.blockmap')
+            $(find combined-dist -maxdepth 1 -name '*.dmg.blockmap') \
+            $(find combined-dist -maxdepth 1 -name '*.exe') \
+            $(find combined-dist -maxdepth 1 -name '*.nsis.7z') \
+            $(find combined-dist -maxdepth 1 -name '*.zip') \
+            $(find combined-dist -maxdepth 1 -name '*.blockmap')
           do
             if [ -f "$FILE" ]; then
               aws s3 cp "$FILE" $BUCKET/
@@ -335,7 +418,7 @@ jobs:
 
           aws cloudfront create-invalidation \
             --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
-            --paths "/*.yml" "/*.dmg" "/*.zip" "/*.blockmap"
+            --paths "/*.yml" "/*.dmg" "/*.exe" "/*.zip" "/*.blockmap"
 
       - name: Upload installers to GitHub Release
         uses: softprops/action-gh-release@v1
@@ -343,3 +426,4 @@ jobs:
           tag_name: ${{ github.ref_name }}
           files: |
             mac-dist/*.dmg
+            windows-dist/*.exe

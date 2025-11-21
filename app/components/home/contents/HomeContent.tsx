@@ -6,6 +6,7 @@ import {
   Stop,
   Copy,
   Check,
+  Download,
 } from '@mynaui/icons-react'
 import { EXTERNAL_LINKS } from '@/lib/constants/external-links'
 import { useSettingsStore } from '../../../store/useSettingsStore'
@@ -544,6 +545,47 @@ export default function HomeContent({
     }
   }
 
+  const handleAudioDownload = async (interaction: Interaction) => {
+    try {
+      if (!interaction.raw_audio) {
+        console.warn('No audio data available for download')
+        return
+      }
+
+      const pcmData = new Uint8Array(interaction.raw_audio)
+      // Convert raw PCM to WAV format
+      const wavBuffer = createStereo48kWavFromMonoPCM(
+        pcmData,
+        interaction.sample_rate || 16000,
+        48000,
+      )
+      const audioBlob = new Blob([wavBuffer], { type: 'audio/wav' })
+      const audioUrl = URL.createObjectURL(audioBlob)
+
+      // Format filename with timestamp (YYYYMMDD_HHMMSS)
+      const date = new Date(interaction.created_at)
+      const timestamp = date
+        .toISOString()
+        .replace(/[-:]/g, '')
+        .replace('T', '_')
+        .slice(0, 15)
+      const filename = `ito-recording-${timestamp}.wav`
+
+      // Create temporary link and trigger download
+      const link = document.createElement('a')
+      link.href = audioUrl
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      // Clean up the blob URL
+      URL.revokeObjectURL(audioUrl)
+    } catch (error) {
+      console.error('Failed to download audio:', error)
+    }
+  }
+
   return (
     <div className="w-full h-full flex flex-col">
       {/* Fixed Header Content */}
@@ -689,7 +731,7 @@ export default function HomeContent({
                           </div>
                         </div>
 
-                        {/* Copy and Play buttons - only show on hover or when playing */}
+                        {/* Copy, Download, and Play buttons - only show on hover or when playing */}
                         <div
                           className={`flex items-center gap-2 ${playingAudio === interaction.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200`}
                         >
@@ -739,6 +781,34 @@ export default function HomeContent({
                                 {copiedItems.has(interaction.id)
                                   ? 'Copied 🎉'
                                   : 'Copy'}
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+
+                          {/* Download button */}
+                          {interaction.raw_audio && (
+                            <Tooltip
+                              open={
+                                openTooltipKey === `download:${interaction.id}`
+                              }
+                              onOpenChange={open => {
+                                setOpenTooltipKey(
+                                  open ? `download:${interaction.id}` : null,
+                                )
+                              }}
+                            >
+                              <TooltipTrigger asChild>
+                                <button
+                                  className="p-1.5 hover:bg-gray-200 rounded transition-colors cursor-pointer text-gray-600"
+                                  onClick={() =>
+                                    handleAudioDownload(interaction)
+                                  }
+                                >
+                                  <Download className="w-4 h-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" sideOffset={5}>
+                                Download audio
                               </TooltipContent>
                             </Tooltip>
                           )}

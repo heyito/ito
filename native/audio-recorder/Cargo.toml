@@ -13,5 +13,8 @@ rubato = "0.16.2"
 num-traits = "0.2.19"
 dasp_sample = "0.11.0"
 
+[build-dependencies]
+tauri-winres = "0.3.5"
+
 [lints]
 workspace = true

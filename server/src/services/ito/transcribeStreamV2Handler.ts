@@ -272,17 +272,34 @@ export class TranscribeStreamV2Handler {
 
   private extractAsrConfig(mergedConfig: StreamConfig) {
     return {
-      asrModel:
-        mergedConfig.llmSettings?.asrModel ||
+      asrModel: this.resolveOrDefault(
+        mergedConfig.llmSettings?.asrModel,
         DEFAULT_ADVANCED_SETTINGS.asrModel,
-      asrProvider:
-        mergedConfig.llmSettings?.asrProvider ||
+      ),
+      asrProvider: this.resolveOrDefault(
+        mergedConfig.llmSettings?.asrProvider,
         DEFAULT_ADVANCED_SETTINGS.asrProvider,
-      noSpeechThreshold:
-        mergedConfig.llmSettings?.noSpeechThreshold ??
+      ),
+      noSpeechThreshold: this.resolveOrDefault(
+        mergedConfig.llmSettings?.noSpeechThreshold,
         DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold,
+      ),
       vocabulary: mergedConfig.vocabulary,
     }
+  }
+
+  /**
+   * Resolves a value to its default if it's undefined, null, or empty.
+   * This provides a defensive fallback for optional protobuf fields.
+   */
+  private resolveOrDefault<T extends string | number>(
+    value: T | undefined,
+    defaultValue: T,
+  ): T {
+    if (value === undefined || value === '' || value === null) {
+      return defaultValue
+    }
+    return value
   }
 
   private prepareAdvancedSettings(
@@ -292,27 +309,39 @@ export class TranscribeStreamV2Handler {
     noSpeechThreshold: number,
   ) {
     return {
-      asrModel,
-      asrProvider,
-      asrPrompt:
-        mergedConfig.llmSettings?.asrPrompt ||
+      asrModel: this.resolveOrDefault(asrModel, DEFAULT_ADVANCED_SETTINGS.asrModel),
+      asrProvider: this.resolveOrDefault(
+        asrProvider,
+        DEFAULT_ADVANCED_SETTINGS.asrProvider,
+      ),
+      asrPrompt: this.resolveOrDefault(
+        mergedConfig.llmSettings?.asrPrompt,
         DEFAULT_ADVANCED_SETTINGS.asrPrompt,
-      llmProvider:
-        mergedConfig.llmSettings?.llmProvider ||
+      ),
+      llmProvider: this.resolveOrDefault(
+        mergedConfig.llmSettings?.llmProvider,
         DEFAULT_ADVANCED_SETTINGS.llmProvider,
-      llmModel:
-        mergedConfig.llmSettings?.llmModel ||
+      ),
+      llmModel: this.resolveOrDefault(
+        mergedConfig.llmSettings?.llmModel,
         DEFAULT_ADVANCED_SETTINGS.llmModel,
-      llmTemperature:
-        mergedConfig.llmSettings?.llmTemperature ??
+      ),
+      llmTemperature: this.resolveOrDefault(
+        mergedConfig.llmSettings?.llmTemperature,
         DEFAULT_ADVANCED_SETTINGS.llmTemperature,
-      transcriptionPrompt:
-        mergedConfig.llmSettings?.transcriptionPrompt ||
+      ),
+      transcriptionPrompt: this.resolveOrDefault(
+        mergedConfig.llmSettings?.transcriptionPrompt,
         DEFAULT_ADVANCED_SETTINGS.transcriptionPrompt,
-      editingPrompt:
-        mergedConfig.llmSettings?.editingPrompt ||
+      ),
+      editingPrompt: this.resolveOrDefault(
+        mergedConfig.llmSettings?.editingPrompt,
         DEFAULT_ADVANCED_SETTINGS.editingPrompt,
-      noSpeechThreshold,
+      ),
+      noSpeechThreshold: this.resolveOrDefault(
+        noSpeechThreshold,
+        DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold,
+      ),
     }
   }
 

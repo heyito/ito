@@ -46,6 +46,7 @@
     "build:rust:mac": "bash ./build-binaries.sh --mac",
     "build:rust:mac:x64": "bash ./build-binaries.sh --mac --x64",
     "build:rust:win": "bash ./build-binaries.sh --windows",
+    "build:swift:mac": "cd native/cursor-context && swift build -c release",
     "build:win": "bash ./build-app.sh windows",
     "build:mac": "bash ./build-app.sh mac",
     "generate:constants": "bun scripts/generate-constants.js",

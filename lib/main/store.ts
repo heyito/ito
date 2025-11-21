@@ -1,11 +1,11 @@
 import crypto from 'crypto'
-import { DEFAULT_ADVANCED_SETTINGS } from '../constants/generated-defaults.js'
 import { STORE_KEYS } from '../constants/store-keys'
 import type { LlmSettings } from '@/app/store/useAdvancedSettingsStore'
 import { ItoMode } from '@/app/generated/ito_pb.js'
 import { ITO_MODE_SHORTCUT_DEFAULTS } from '../constants/keyboard-defaults.js'
 import { KeyName, normalizeLegacyKey } from '../types/keyboard.js'
 import { KeyValueStore } from './sqlite/repo'
+import { resolveDefaultKeys } from '../utils/settings.js'
 
 export interface KeyboardShortcutConfig {
   id: string
@@ -70,6 +70,8 @@ export interface AuthStore {
 export interface AdvancedSettings {
   llm: LlmSettings
   grammarServiceEnabled: boolean
+  defaults?: LlmSettings
+  macosAccessibilityContextEnabled: boolean
 }
 
 interface AppStore {
@@ -103,7 +105,10 @@ export const getCurrentUserId = (): string | undefined => {
   return user?.id
 }
 export const getAdvancedSettings = (): AdvancedSettings => {
-  return store.get(STORE_KEYS.ADVANCED_SETTINGS) as AdvancedSettings
+  const storeSettings = store.get(
+    STORE_KEYS.ADVANCED_SETTINGS,
+  ) as AdvancedSettings
+  return { ...storeSettings }
 }
 
 export const defaultValues: AppStore = {
@@ -142,16 +147,17 @@ export const defaultValues: AppStore = {
   auth: { user: null, tokens: null, state: createNewAuthState() },
   advancedSettings: {
     grammarServiceEnabled: false,
+    macosAccessibilityContextEnabled: false,
     llm: {
-      asrProvider: DEFAULT_ADVANCED_SETTINGS.asrProvider,
-      asrModel: DEFAULT_ADVANCED_SETTINGS.asrModel,
-      asrPrompt: DEFAULT_ADVANCED_SETTINGS.asrPrompt,
-      llmProvider: DEFAULT_ADVANCED_SETTINGS.llmProvider,
-      llmTemperature: DEFAULT_ADVANCED_SETTINGS.llmTemperature,
-      llmModel: DEFAULT_ADVANCED_SETTINGS.llmModel,
-      transcriptionPrompt: DEFAULT_ADVANCED_SETTINGS.transcriptionPrompt,
-      editingPrompt: DEFAULT_ADVANCED_SETTINGS.editingPrompt,
-      noSpeechThreshold: DEFAULT_ADVANCED_SETTINGS.noSpeechThreshold,
+      asrProvider: null,
+      asrModel: null,
+      asrPrompt: null,
+      llmProvider: null,
+      llmTemperature: null,
+      llmModel: null,
+      transcriptionPrompt: null,
+      editingPrompt: null,
+      noSpeechThreshold: null,
     },
   },
   openMic: false,

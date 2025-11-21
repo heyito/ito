@@ -23,6 +23,7 @@ import { checkAccessibilityPermission } from '../utils/crossPlatform'
 import mainStore, { initializeStore } from './store'
 import { STORE_KEYS } from '../constants/store-keys'
 import { selectedTextReaderService } from '../media/selected-text-reader'
+import { macOSAccessibilityContextProvider } from '../media/macOSAccessibilityContextProvider'
 import { voiceInputService } from './voiceInputService'
 import { initializeMicrophoneSelection } from '../media/microphoneSetUp'
 import { validateStoredTokens, ensureValidTokens } from '../auth/events'
@@ -130,6 +131,12 @@ app.whenReady().then(async () => {
 
   console.log('Starting selected text reader service.')
   selectedTextReaderService.initialize()
+
+  // Initialize cursor context provider (macOS only for now)
+  if (process.platform === 'darwin') {
+    console.log('Starting cursor context provider.')
+    macOSAccessibilityContextProvider.initialize()
+  }
 
   // Initialize microphone selection to prefer built-in microphone
   await initializeMicrophoneSelection()

@@ -253,16 +253,16 @@ message DeleteUserDataRequest {
 // -----------------------------------------------------------------
 
 message LlmSettings {
-  string asr_model = 1;
-  string asr_provider = 2;
-  string asr_prompt = 3;
-  string llm_provider = 4;
-  string llm_model = 5;
-  float llm_temperature = 6;
-  string transcription_prompt = 7;
-  string editing_prompt = 8;
-  float no_speech_threshold = 9;
-  float low_quality_threshold = 10;
+  optional string asr_model = 1;
+  optional string asr_provider = 2;
+  optional string asr_prompt = 3;
+  optional string llm_provider = 4;
+  optional string llm_model = 5;
+  optional float llm_temperature = 6;
+  optional string transcription_prompt = 7;
+  optional string editing_prompt = 8;
+  optional float no_speech_threshold = 9;
+  optional float low_quality_threshold = 10;
 }
 
 message AdvancedSettings {
@@ -271,6 +271,7 @@ message AdvancedSettings {
   string created_at = 3;
   string updated_at = 4;
   LlmSettings llm = 5;
+  LlmSettings default = 6;
 }
 
 message GetAdvancedSettingsRequest {

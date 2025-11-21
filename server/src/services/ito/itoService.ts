@@ -34,6 +34,7 @@ import { ConnectError, Code } from '@connectrpc/connect'
 import { kUser } from '../../auth/userContext.js'
 import { transcribeStreamV2Handler } from './transcribeStreamV2Handler.js'
 import { transcribeStreamHandler } from './transcribeStreamHandler.js'
+import { DEFAULT_ADVANCED_SETTINGS_STRUCT } from './constants.js'
 
 function dbToNotePb(dbNote: DbNote): Note {
   return create(NoteSchema, {
@@ -102,17 +103,22 @@ function dbToAdvancedSettingsPb(
     createdAt: dbAdvancedSettings.created_at.toISOString(),
     updatedAt: dbAdvancedSettings.updated_at.toISOString(),
     llm: create(LlmSettingsSchema, {
-      asrModel: dbAdvancedSettings.llm.asr_model,
-      asrPrompt: dbAdvancedSettings.llm.asr_prompt,
-      asrProvider: dbAdvancedSettings.llm.asr_provider,
-      llmProvider: dbAdvancedSettings.llm.llm_provider,
-      llmTemperature: dbAdvancedSettings.llm.llm_temperature,
-      llmModel: dbAdvancedSettings.llm.llm_model,
-      transcriptionPrompt: dbAdvancedSettings.llm.transcription_prompt,
-      editingPrompt: dbAdvancedSettings.llm.editing_prompt,
-      noSpeechThreshold: dbAdvancedSettings.llm.no_speech_threshold,
-      lowQualityThreshold: dbAdvancedSettings.llm.low_quality_threshold,
+      // Convert null to undefined so protobuf omits unset optional fields
+      asrModel: dbAdvancedSettings.llm.asr_model ?? undefined,
+      asrPrompt: dbAdvancedSettings.llm.asr_prompt ?? undefined,
+      asrProvider: dbAdvancedSettings.llm.asr_provider ?? undefined,
+      llmProvider: dbAdvancedSettings.llm.llm_provider ?? undefined,
+      llmTemperature: dbAdvancedSettings.llm.llm_temperature ?? undefined,
+      llmModel: dbAdvancedSettings.llm.llm_model ?? undefined,
+      transcriptionPrompt:
+        dbAdvancedSettings.llm.transcription_prompt ?? undefined,
+      editingPrompt: dbAdvancedSettings.llm.editing_prompt ?? undefined,
+      noSpeechThreshold:
+        dbAdvancedSettings.llm.no_speech_threshold ?? undefined,
+      lowQualityThreshold:
+        dbAdvancedSettings.llm.low_quality_threshold ?? undefined,
     }),
+    default: DEFAULT_ADVANCED_SETTINGS_STRUCT,
   })
 }
 
@@ -421,9 +427,8 @@ export default (router: ConnectRouter) => {
           userId: userId,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          llm: create(LlmSettingsSchema, {
-            asrModel: 'whisper-large-v3',
-          }),
+          llm: create(LlmSettingsSchema, {}),
+          default: DEFAULT_ADVANCED_SETTINGS_STRUCT,
         })
       }
 

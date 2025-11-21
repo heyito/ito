@@ -158,6 +158,17 @@ declare global {
       }
       deleteUserData: () => Promise<void>
       selectedText: SelectedTextAPI
+      logs: {
+        download: () => Promise<{
+          success: boolean
+          path?: string
+          error?: string
+        }>
+        clear: () => Promise<{
+          success: boolean
+          error?: string
+        }>
+      }
     }
   }
 }

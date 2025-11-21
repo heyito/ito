@@ -26,5 +26,8 @@ core-graphics = "0.22"
 cocoa = "0.25"
 objc = "0.2"
 
+[build-dependencies]
+tauri-winres = "0.3.5"
+
 [lints]
 workspace = true

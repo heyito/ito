@@ -1,7 +1,9 @@
-import { BrowserWindow, ipcMain, shell, app } from 'electron'
+import { BrowserWindow, ipcMain, shell, app, dialog } from 'electron'
 import log from 'electron-log'
 import os from 'os'
 import { exec } from 'child_process'
+import fs from 'fs/promises'
+import path from 'path'
 import store, { getCurrentUserId } from '../main/store'
 import { STORE_KEYS } from '../constants/store-keys'
 import {
@@ -728,6 +730,63 @@ export function registerIPC() {
   // Resolve and clear install link token
   handleIPC('analytics:resolve-install-token', async () => {
     return itoHttpClient.get('/link/resolve')
+  })
+
+  // Logs management
+  handleIPC('logs:download', async () => {
+    try {
+      if (!app.isPackaged) {
+        return {
+          success: false,
+          error: 'Logs are only saved in packaged builds',
+        }
+      }
+
+      const logFilePath = log.transports.file.getFile().path
+      const logFileName = path.basename(logFilePath)
+
+      // Show save dialog
+      const result = await dialog.showSaveDialog({
+        title: 'Save Logs',
+        defaultPath: logFileName,
+        filters: [{ name: 'Log Files', extensions: ['log'] }],
+      })
+
+      if (result.canceled || !result.filePath) {
+        return { success: false, error: 'Download cancelled' }
+      }
+
+      // Copy log file to chosen location
+      await fs.copyFile(logFilePath, result.filePath)
+
+      console.log(`[IPC] Logs downloaded to: ${result.filePath}`)
+      return { success: true, path: result.filePath }
+    } catch (error: any) {
+      console.error('[IPC] Failed to download logs:', error)
+      return { success: false, error: error?.message || 'Unknown error' }
+    }
+  })
+
+  handleIPC('logs:clear', async () => {
+    try {
+      // Clear the log queue from electron-store
+      const LOG_QUEUE_KEY = 'log_queue:events'
+      store.set(LOG_QUEUE_KEY, [])
+
+      // Clear the log file if packaged
+      if (app.isPackaged) {
+        const logFilePath = log.transports.file.getFile().path
+        // Write empty string to clear the file
+        await fs.writeFile(logFilePath, '')
+        console.log(`[IPC] Log file cleared: ${logFilePath}`)
+      }
+
+      console.log('[IPC] Logs cleared successfully')
+      return { success: true }
+    } catch (error: any) {
+      console.error('[IPC] Failed to clear logs:', error)
+      return { success: false, error: error?.message || 'Unknown error' }
+    }
   })
 }
 

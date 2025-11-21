@@ -103,16 +103,37 @@ function dbToAdvancedSettingsPb(
     createdAt: dbAdvancedSettings.created_at.toISOString(),
     updatedAt: dbAdvancedSettings.updated_at.toISOString(),
     llm: create(LlmSettingsSchema, {
-      asrModel: dbAdvancedSettings.llm.asr_model,
-      asrPrompt: dbAdvancedSettings.llm.asr_prompt,
-      asrProvider: dbAdvancedSettings.llm.asr_provider,
-      llmProvider: dbAdvancedSettings.llm.llm_provider,
-      llmTemperature: dbAdvancedSettings.llm.llm_temperature,
-      llmModel: dbAdvancedSettings.llm.llm_model,
-      transcriptionPrompt: dbAdvancedSettings.llm.transcription_prompt,
-      editingPrompt: dbAdvancedSettings.llm.editing_prompt,
-      noSpeechThreshold: dbAdvancedSettings.llm.no_speech_threshold,
-      lowQualityThreshold: dbAdvancedSettings.llm.low_quality_threshold,
+      // Only include fields if they're not null/undefined
+      ...(dbAdvancedSettings.llm.asr_model != null && {
+        asrModel: dbAdvancedSettings.llm.asr_model,
+      }),
+      ...(dbAdvancedSettings.llm.asr_prompt != null && {
+        asrPrompt: dbAdvancedSettings.llm.asr_prompt,
+      }),
+      ...(dbAdvancedSettings.llm.asr_provider != null && {
+        asrProvider: dbAdvancedSettings.llm.asr_provider,
+      }),
+      ...(dbAdvancedSettings.llm.llm_provider != null && {
+        llmProvider: dbAdvancedSettings.llm.llm_provider,
+      }),
+      ...(dbAdvancedSettings.llm.llm_temperature != null && {
+        llmTemperature: dbAdvancedSettings.llm.llm_temperature,
+      }),
+      ...(dbAdvancedSettings.llm.llm_model != null && {
+        llmModel: dbAdvancedSettings.llm.llm_model,
+      }),
+      ...(dbAdvancedSettings.llm.transcription_prompt != null && {
+        transcriptionPrompt: dbAdvancedSettings.llm.transcription_prompt,
+      }),
+      ...(dbAdvancedSettings.llm.editing_prompt != null && {
+        editingPrompt: dbAdvancedSettings.llm.editing_prompt,
+      }),
+      ...(dbAdvancedSettings.llm.no_speech_threshold != null && {
+        noSpeechThreshold: dbAdvancedSettings.llm.no_speech_threshold,
+      }),
+      ...(dbAdvancedSettings.llm.low_quality_threshold != null && {
+        lowQualityThreshold: dbAdvancedSettings.llm.low_quality_threshold,
+      }),
     }),
     default: DEFAULT_ADVANCED_SETTINGS_STRUCT,
   })

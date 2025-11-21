@@ -444,9 +444,7 @@ export default (router: ConnectRouter) => {
           userId: userId,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          llm: create(LlmSettingsSchema, {
-            asrModel: 'whisper-large-v3',
-          }),
+          llm: create(LlmSettingsSchema, {}),
           default: DEFAULT_ADVANCED_SETTINGS_STRUCT,
         })
       }

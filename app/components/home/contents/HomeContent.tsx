@@ -29,9 +29,7 @@ import { getKeyDisplay } from '@/app/utils/keyboard'
 import { createStereo48kWavFromMonoPCM } from '@/app/utils/audioUtils'
 import { KeyName } from '@/lib/types/keyboard'
 import { usePlatform } from '@/app/hooks/usePlatform'
-import { ProUpgradeDialog } from '../ProUpgradeDialog'
-import useBillingState, { ProStatus } from '@/app/hooks/useBillingState'
-import { ProTrialExpiredModal } from '../../ui/pro-trial-expired-modal'
+import { BillingModals } from './BillingModals'
 
 // Interface for interaction statistics
 interface InteractionStats {
@@ -65,13 +63,7 @@ const StatCard = ({
   )
 }
 
-interface HomeContentProps {
-  isStartingTrial?: boolean
-}
-
-export default function HomeContent({
-  isStartingTrial = false,
-}: HomeContentProps) {
+export default function HomeContent() {
   const { getItoModeShortcuts } = useSettingsStore()
   const keyboardShortcut = getItoModeShortcuts(ItoMode.TRANSCRIBE)[0].keys
   const { user } = useAuthStore()
@@ -90,160 +82,6 @@ export default function HomeContent({
     totalWords: 0,
     averageWPM: 0,
   })
-  const [showProDialog, setShowProDialog] = useState(false)
-  const [showTrialExpiredModal, setShowTrialExpiredModal] = useState(false)
-  const billingState = useBillingState()
-
-  // Persist "has shown trial expired modal" flag in electron-store to survive remounts
-  const [hasShownTrialExpiredModal, setHasShownTrialExpiredModalState] =
-    useState(() => {
-      try {
-        const authStore = window.electron?.store?.get('auth') || {}
-        const value = authStore?.hasShownTrialExpiredModal === true
-        return value
-      } catch {
-        return false
-      }
-    })
-
-  const setHasShownTrialExpiredModal = useCallback((value: boolean) => {
-    try {
-      setHasShownTrialExpiredModalState(value)
-      window.api.send(
-        'electron-store-set',
-        'auth.hasShownTrialExpiredModal',
-        value,
-      )
-    } catch {
-      console.warn('Failed to persist hasShownTrialExpiredModal flag')
-    }
-  }, [])
-
-  useEffect(() => {
-    if (
-      billingState.hasCompletedTrial &&
-      billingState.proStatus !== ProStatus.ACTIVE_PRO &&
-      !hasShownTrialExpiredModal &&
-      !billingState.isLoading
-    ) {
-      setShowTrialExpiredModal(true)
-      setHasShownTrialExpiredModal(true)
-    } else if (
-      billingState.proStatus === ProStatus.ACTIVE_PRO ||
-      !billingState.hasCompletedTrial
-    ) {
-      setShowTrialExpiredModal(false)
-    }
-  }, [
-    billingState.hasCompletedTrial,
-    billingState.proStatus,
-    billingState.isLoading,
-    hasShownTrialExpiredModal,
-    setHasShownTrialExpiredModal,
-  ])
-
-  // Persist "has shown trial dialog" flag in electron-store to survive remounts
-  const [hasShownTrialDialog, setHasShownTrialDialogState] = useState(() => {
-    try {
-      const authStore = window.electron?.store?.get('auth') || {}
-      const value = authStore?.hasShownTrialDialog === true
-      return value
-    } catch {
-      return false
-    }
-  })
-
-  const setHasShownTrialDialog = useCallback((value: boolean) => {
-    try {
-      setHasShownTrialDialogState(value)
-      window.api.send('electron-store-set', 'auth.hasShownTrialDialog', value)
-    } catch {
-      console.warn('Failed to persist hasShownTrialDialog flag')
-    }
-  }, [])
-
-  // Show trial dialog when trial starts
-  useEffect(() => {
-    if (
-      billingState.isTrialActive &&
-      billingState.proStatus === ProStatus.FREE_TRIAL &&
-      !hasShownTrialDialog &&
-      !billingState.isLoading
-    ) {
-      setShowProDialog(true)
-      setHasShownTrialDialog(true)
-    }
-  }, [
-    billingState.isTrialActive,
-    billingState.proStatus,
-    billingState.isLoading,
-    isStartingTrial,
-    hasShownTrialDialog,
-    setHasShownTrialDialog,
-  ])
-
-  // Listen for trial start event to refresh billing state
-  useEffect(() => {
-    const offTrialStarted = window.api.on('trial-started', async () => {
-      await billingState.refresh()
-    })
-
-    const offBillingSuccess = window.api.on(
-      'billing-session-completed',
-      async () => {
-        await billingState.refresh()
-      },
-    )
-
-    return () => {
-      offTrialStarted?.()
-      offBillingSuccess?.()
-    }
-  }, [billingState])
-
-  // Reset dialog flag when trial is no longer active or user becomes pro
-  // Only reset if we're certain the trial has ended (not just during loading/refreshing)
-  useEffect(() => {
-    if (billingState.isLoading) {
-      // Don't reset during loading to avoid race conditions
-      return
-    }
-
-    const shouldReset =
-      billingState.proStatus === ProStatus.ACTIVE_PRO ||
-      (billingState.proStatus === ProStatus.NONE && !billingState.isTrialActive)
-
-    if (shouldReset && hasShownTrialDialog) {
-      setHasShownTrialDialog(false)
-    }
-  }, [
-    billingState.proStatus,
-    billingState.isTrialActive,
-    billingState.isLoading,
-    hasShownTrialDialog,
-    setHasShownTrialDialog,
-  ])
-
-  // Reset trial expired modal flag when user becomes pro or starts new trial
-  useEffect(() => {
-    if (billingState.isLoading) {
-      return
-    }
-
-    const shouldReset =
-      billingState.proStatus === ProStatus.ACTIVE_PRO ||
-      billingState.isTrialActive
-
-    if (shouldReset && hasShownTrialExpiredModal) {
-      setHasShownTrialExpiredModal(false)
-    }
-  }, [
-    billingState.proStatus,
-    billingState.isTrialActive,
-    billingState.isLoading,
-    hasShownTrialExpiredModal,
-    setHasShownTrialExpiredModal,
-  ])
 
   // Calculate statistics from interactions
   const calculateStats = useCallback(
@@ -308,7 +146,7 @@ export default function HomeContent({
       const transcript = interaction.asr_output?.transcript?.trim()
       if (transcript) {
         // Count words by splitting on whitespace and filtering out empty strings
-        const words = transcript.split(/\s+/).filter(word => word.length > 0)
+        const words = transcript.split(/\s+/).filter((word: string) => word.length > 0)
         return total + words.length
       }
       return total
@@ -330,7 +168,7 @@ export default function HomeContent({
       const transcript = interaction.asr_output?.transcript?.trim()
       if (transcript && interaction.duration_ms) {
         // Count words by splitting on whitespace and filtering out empty strings
-        const words = transcript.split(/\s+/).filter(word => word.length > 0)
+        const words = transcript.split(/\s+/).filter((word: string) => word.length > 0)
         totalWords += words.length
         totalDurationMs += interaction.duration_ms
       }
@@ -929,12 +767,7 @@ export default function HomeContent({
         )}
       </div>
 
-      {/* Pro Upgrade Dialog */}
-      <ProUpgradeDialog open={showProDialog} onOpenChange={setShowProDialog} />
-      <ProTrialExpiredModal
-        open={showTrialExpiredModal}
-        onOpenChange={setShowTrialExpiredModal}
-      />
+      <BillingModals />
     </div>
   )
 }

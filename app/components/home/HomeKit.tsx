@@ -19,6 +19,7 @@ import DictionaryContent from './contents/DictionaryContent'
 import NotesContent from './contents/NotesContent'
 import SettingsContent from './contents/SettingsContent'
 import AboutContent from './contents/AboutContent'
+import { SubscriptionStatusWidget } from './SubscriptionStatusWidget'
 
 export default function HomeKit() {
   const { navExpanded, currentPage, setCurrentPage } = useMainStore()
@@ -246,6 +247,9 @@ export default function HomeKit() {
       <div className="flex flex-col flex-1 items-center bg-white rounded-lg m-2 ml-0 mt-0 pt-12">
         {renderContent()}
       </div>
+
+      {/* Subscription Status Widget */}
+      <SubscriptionStatusWidget />
     </div>
   )
 }

@@ -9,7 +9,7 @@ import { ItoIcon } from '../icons/ItoIcon'
 import { useMainStore } from '@/app/store/useMainStore'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { useAuth } from '@/app/components/auth/useAuth'
-import useBillingState from '@/app/hooks/useBillingState'
+import useBillingState, { ProStatus } from '@/app/hooks/useBillingState'
 import { useEffect, useState, useRef } from 'react'
 import { NavItem } from '../ui/nav-item'
 import HomeContent from './contents/HomeContent'
@@ -29,8 +29,8 @@ export default function HomeKit() {
   const [isStartingTrial, setIsStartingTrial] = useState(false)
 
   const isPro =
-    billingState.proStatus === 'active_pro' ||
-    billingState.proStatus === 'free_trial'
+    billingState.proStatus === ProStatus.ACTIVE_PRO ||
+    billingState.proStatus === ProStatus.FREE_TRIAL
 
   // Reset flags when user changes
   useEffect(() => {
@@ -60,8 +60,8 @@ export default function HomeKit() {
 
     // Check if user has a trial or subscription
     const hasTrialOrSubscription =
-      billingState.proStatus === 'free_trial' ||
-      billingState.proStatus === 'active_pro' ||
+      billingState.proStatus === ProStatus.FREE_TRIAL ||
+      billingState.proStatus === ProStatus.ACTIVE_PRO ||
       isPro
 
     // Start trial if:

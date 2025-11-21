@@ -30,7 +30,7 @@ import { createStereo48kWavFromMonoPCM } from '@/app/utils/audioUtils'
 import { KeyName } from '@/lib/types/keyboard'
 import { usePlatform } from '@/app/hooks/usePlatform'
 import { ProUpgradeDialog } from '../ProUpgradeDialog'
-import useBillingState from '@/app/hooks/useBillingState'
+import useBillingState, { ProStatus } from '@/app/hooks/useBillingState'
 import { ProTrialExpiredModal } from '../../ui/pro-trial-expired-modal'
 
 // Interface for interaction statistics
@@ -124,14 +124,14 @@ export default function HomeContent({
   useEffect(() => {
     if (
       billingState.hasCompletedTrial &&
-      billingState.proStatus !== 'active_pro' &&
+      billingState.proStatus !== ProStatus.ACTIVE_PRO &&
       !hasShownTrialExpiredModal &&
       !billingState.isLoading
     ) {
       setShowTrialExpiredModal(true)
       setHasShownTrialExpiredModal(true)
     } else if (
-      billingState.proStatus === 'active_pro' ||
+      billingState.proStatus === ProStatus.ACTIVE_PRO ||
       !billingState.hasCompletedTrial
     ) {
       setShowTrialExpiredModal(false)
@@ -168,7 +168,7 @@ export default function HomeContent({
   useEffect(() => {
     if (
       billingState.isTrialActive &&
-      billingState.proStatus === 'free_trial' &&
+      billingState.proStatus === ProStatus.FREE_TRIAL &&
       !hasShownTrialDialog &&
       !billingState.isLoading
     ) {
@@ -212,8 +212,8 @@ export default function HomeContent({
     }
 
     const shouldReset =
-      billingState.proStatus === 'active_pro' ||
-      (billingState.proStatus === 'none' && !billingState.isTrialActive)
+      billingState.proStatus === ProStatus.ACTIVE_PRO ||
+      (billingState.proStatus === ProStatus.NONE && !billingState.isTrialActive)
 
     if (shouldReset && hasShownTrialDialog) {
       setHasShownTrialDialog(false)
@@ -233,7 +233,7 @@ export default function HomeContent({
     }
 
     const shouldReset =
-      billingState.proStatus === 'active_pro' || billingState.isTrialActive
+      billingState.proStatus === ProStatus.ACTIVE_PRO || billingState.isTrialActive
 
     if (shouldReset && hasShownTrialExpiredModal) {
       setHasShownTrialExpiredModal(false)

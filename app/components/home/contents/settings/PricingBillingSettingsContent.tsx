@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/app/components/ui/button'
 import { Check } from '@mynaui/icons-react'
-import useBillingState from '@/app/hooks/useBillingState'
+import useBillingState, { ProStatus } from '@/app/hooks/useBillingState'
 
 type BillingPeriod = 'monthly' | 'annual'
 
@@ -98,9 +98,9 @@ export default function PricingBillingSettingsContent() {
     if (billingState.isLoading) return 'Loading...'
     if (downgradeLoading) return 'Cancelling...'
     if (billingState.isScheduledForCancellation) return 'Current Plan'
-    if (billingState.proStatus === 'active_pro') return 'Downgrade plan'
-    if (billingState.proStatus === 'free_trial') return 'Downgrade plan'
-    if (billingState.proStatus === 'none' && !billingState.isTrialActive) {
+    if (billingState.proStatus === ProStatus.ACTIVE_PRO) return 'Downgrade plan'
+    if (billingState.proStatus === ProStatus.FREE_TRIAL) return 'Downgrade plan'
+    if (billingState.proStatus === ProStatus.NONE && !billingState.isTrialActive) {
       return 'Current plan'
     }
     return 'Current plan'
@@ -108,7 +108,7 @@ export default function PricingBillingSettingsContent() {
 
   const getStarterButtonDisabled = () => {
     return (
-      (billingState.proStatus === 'none' && !billingState.isTrialActive) ||
+      (billingState.proStatus === ProStatus.NONE && !billingState.isTrialActive) ||
       billingState.isLoading ||
       downgradeLoading ||
       billingState.isScheduledForCancellation
@@ -120,14 +120,14 @@ export default function PricingBillingSettingsContent() {
     if (billingState.isLoading) return 'Loading...'
     if (reactivateLoading) return 'Reactivating...'
     if (billingState.isScheduledForCancellation) return 'Reactivate'
-    if (billingState.proStatus === 'active_pro') return 'Current plan'
-    if (billingState.proStatus === 'free_trial') return 'Upgrade Plan'
+    if (billingState.proStatus === ProStatus.ACTIVE_PRO) return 'Current plan'
+    if (billingState.proStatus === ProStatus.FREE_TRIAL) return 'Upgrade Plan'
     return 'Upgrade'
   }
 
   const getProButtonDisabled = () => {
     return (
-      (billingState.proStatus === 'active_pro' &&
+      (billingState.proStatus === ProStatus.ACTIVE_PRO &&
         !billingState.isScheduledForCancellation) ||
       billingState.isLoading ||
       checkoutLoading ||

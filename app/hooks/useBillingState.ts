@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+export enum ProStatus {
+  ACTIVE_PRO = 'active_pro',
+  FREE_TRIAL = 'free_trial',
+  NONE = 'none',
+}
+
 export type BillingState = {
-  proStatus: 'active_pro' | 'free_trial' | 'none'
+  proStatus: ProStatus
   subscriptionStartAt: Date | null
   subscriptionEndAt: Date | null
   isScheduledForCancellation: boolean
@@ -140,9 +146,10 @@ export function useBillingState() {
     () => ({
       isLoading,
       error,
-      proStatus: state?.proStatus ?? 'none',
-      isPro: (state?.proStatus ?? 'none') === 'active_pro',
-      hasSubscription: (state?.proStatus ?? 'none') === 'active_pro',
+      proStatus: state?.proStatus ?? ProStatus.NONE,
+      isPro: (state?.proStatus ?? ProStatus.NONE) === ProStatus.ACTIVE_PRO,
+      hasSubscription:
+        (state?.proStatus ?? ProStatus.NONE) === ProStatus.ACTIVE_PRO,
       subscriptionStartAt: state?.subscriptionStartAt ?? null,
       subscriptionEndAt: state?.subscriptionEndAt ?? null,
       isScheduledForCancellation: state?.isScheduledForCancellation ?? false,

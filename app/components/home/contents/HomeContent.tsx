@@ -31,6 +31,7 @@ import { KeyName } from '@/lib/types/keyboard'
 import { usePlatform } from '@/app/hooks/usePlatform'
 import { ProUpgradeDialog } from '../ProUpgradeDialog'
 import useBillingState from '@/app/hooks/useBillingState'
+import { ProTrialExpiredModal } from '../../ui/pro-trial-expired-modal'
 
 // Interface for interaction statistics
 interface InteractionStats {
@@ -90,7 +91,19 @@ export default function HomeContent({
     averageWPM: 0,
   })
   const [showProDialog, setShowProDialog] = useState(false)
+  const [showTrialExpiredModal, setShowTrialExpiredModal] = useState(false)
   const billingState = useBillingState()
+
+  useEffect(() => {
+    if (
+      billingState.hasCompletedTrial &&
+      billingState.proStatus !== 'active_pro'
+    ) {
+      setShowTrialExpiredModal(true)
+    } else {
+      setShowTrialExpiredModal(false)
+    }
+  }, [billingState])
 
   // Persist "has shown trial dialog" flag in electron-store to survive remounts
   const [hasShownTrialDialog, setHasShownTrialDialogState] = useState(() => {
@@ -859,7 +872,11 @@ export default function HomeContent({
       </div>
 
       {/* Pro Upgrade Dialog */}
-      <ProUpgradeDialog open={showProDialog} onOpenChange={setShowProDialog} />
+      <ProUpgradeDialog open={true} onOpenChange={setShowProDialog} />
+      <ProTrialExpiredModal
+        open={showTrialExpiredModal}
+        onOpenChange={setShowTrialExpiredModal}
+      />
     </div>
   )
 }

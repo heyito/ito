@@ -66,7 +66,6 @@ export const up = pgm => {
     notNull: false,
   })
 
-  // Optional: Convert existing "empty" values to NULL for cleaner data
   // This makes existing data consistent with the new pattern
   // Users who had defaults will now explicitly see they're using defaults
   // Also update updated_at so the sync service knows the data changed

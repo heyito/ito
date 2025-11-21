@@ -33,16 +33,16 @@ export interface DictionaryItem {
 }
 
 interface LlmSettingsBase {
-  asr_model: string
-  asr_provider: string
-  asr_prompt: string
-  llm_provider: string
-  llm_model: string
-  llm_temperature: number
-  transcription_prompt: string
-  editing_prompt: string
-  no_speech_threshold: number
-  low_quality_threshold: number
+  asr_model: string | null
+  asr_provider: string | null
+  asr_prompt: string | null
+  llm_provider: string | null
+  llm_model: string | null
+  llm_temperature: number | null
+  transcription_prompt: string | null
+  editing_prompt: string | null
+  no_speech_threshold: number | null
+  low_quality_threshold: number | null
 }
 
 export interface LlmSettings extends LlmSettingsBase {

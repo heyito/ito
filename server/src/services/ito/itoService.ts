@@ -103,37 +103,20 @@ function dbToAdvancedSettingsPb(
     createdAt: dbAdvancedSettings.created_at.toISOString(),
     updatedAt: dbAdvancedSettings.updated_at.toISOString(),
     llm: create(LlmSettingsSchema, {
-      // Only include fields if they're not null/undefined
-      ...(dbAdvancedSettings.llm.asr_model != null && {
-        asrModel: dbAdvancedSettings.llm.asr_model,
-      }),
-      ...(dbAdvancedSettings.llm.asr_prompt != null && {
-        asrPrompt: dbAdvancedSettings.llm.asr_prompt,
-      }),
-      ...(dbAdvancedSettings.llm.asr_provider != null && {
-        asrProvider: dbAdvancedSettings.llm.asr_provider,
-      }),
-      ...(dbAdvancedSettings.llm.llm_provider != null && {
-        llmProvider: dbAdvancedSettings.llm.llm_provider,
-      }),
-      ...(dbAdvancedSettings.llm.llm_temperature != null && {
-        llmTemperature: dbAdvancedSettings.llm.llm_temperature,
-      }),
-      ...(dbAdvancedSettings.llm.llm_model != null && {
-        llmModel: dbAdvancedSettings.llm.llm_model,
-      }),
-      ...(dbAdvancedSettings.llm.transcription_prompt != null && {
-        transcriptionPrompt: dbAdvancedSettings.llm.transcription_prompt,
-      }),
-      ...(dbAdvancedSettings.llm.editing_prompt != null && {
-        editingPrompt: dbAdvancedSettings.llm.editing_prompt,
-      }),
-      ...(dbAdvancedSettings.llm.no_speech_threshold != null && {
-        noSpeechThreshold: dbAdvancedSettings.llm.no_speech_threshold,
-      }),
-      ...(dbAdvancedSettings.llm.low_quality_threshold != null && {
-        lowQualityThreshold: dbAdvancedSettings.llm.low_quality_threshold,
-      }),
+      // Convert null to undefined so protobuf omits unset optional fields
+      asrModel: dbAdvancedSettings.llm.asr_model ?? undefined,
+      asrPrompt: dbAdvancedSettings.llm.asr_prompt ?? undefined,
+      asrProvider: dbAdvancedSettings.llm.asr_provider ?? undefined,
+      llmProvider: dbAdvancedSettings.llm.llm_provider ?? undefined,
+      llmTemperature: dbAdvancedSettings.llm.llm_temperature ?? undefined,
+      llmModel: dbAdvancedSettings.llm.llm_model ?? undefined,
+      transcriptionPrompt:
+        dbAdvancedSettings.llm.transcription_prompt ?? undefined,
+      editingPrompt: dbAdvancedSettings.llm.editing_prompt ?? undefined,
+      noSpeechThreshold:
+        dbAdvancedSettings.llm.no_speech_threshold ?? undefined,
+      lowQualityThreshold:
+        dbAdvancedSettings.llm.low_quality_threshold ?? undefined,
     }),
     default: DEFAULT_ADVANCED_SETTINGS_STRUCT,
   })

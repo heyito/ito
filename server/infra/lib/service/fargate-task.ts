@@ -155,6 +155,7 @@ export function createFargateTask(
         TIMING_BUCKET: config.timingBucketName,
       }),
       ITO_ENV: config.stageName,
+      SHOW_ALL_REQUEST_LOGS: 'true',
     },
     logging: new AwsLogDriver({
       streamPrefix: 'ito-server',

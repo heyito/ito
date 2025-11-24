@@ -223,6 +223,12 @@ const api = {
       ipcRenderer.invoke('get-selected-text-string', maxLength),
     hasSelected: () => ipcRenderer.invoke('has-selected-text'),
   },
+
+  // Logs management
+  logs: {
+    download: () => ipcRenderer.invoke('logs:download'),
+    clear: () => ipcRenderer.invoke('logs:clear'),
+  },
 }
 
 export default api

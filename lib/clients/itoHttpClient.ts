@@ -64,11 +64,11 @@ class ItoHttpClient {
       const response = await fetch(url.toString(), {
         method: 'POST',
         headers: {
-          'content-type': 'application/json',
+          ...(body && { 'content-type': 'application/json' }),
           ...headers,
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: body ? JSON.stringify(body) : undefined,
+        ...(body && { body: JSON.stringify(body) }),
       })
 
       const data: any = await response.json().catch(() => undefined)

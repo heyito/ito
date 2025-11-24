@@ -232,15 +232,15 @@ export default function HomeKit() {
             />
           </div>
         </div>
+
+        {/* Subscription Status Widget */}
+        <SubscriptionStatusWidget navExpanded={navExpanded} />
       </div>
 
       {/* Main Content */}
       <div className="flex flex-col flex-1 items-center bg-white rounded-lg m-2 ml-0 mt-0 pt-12">
         {renderContent()}
       </div>
-
-      {/* Subscription Status Widget */}
-      <SubscriptionStatusWidget />
     </div>
   )
 }

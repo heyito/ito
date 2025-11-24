@@ -52,6 +52,9 @@ beforeEach(() => {
   mockApi.send.mockClear()
   mockElectronStore.get.mockClear()
 
+  // Reset Zustand store state
+  resetBillingState()
+
   // Create fresh mocks for event listeners
   mockAddEventListener = mock((event: string, handler: () => void) => {})
   mockRemoveEventListener = mock((event: string, handler: () => void) => {})
@@ -142,7 +145,11 @@ function renderHook<T>(hook: () => T): {
   return { result, rerender, unmount, waitFor }
 }
 
-import { useBillingState, ProStatus } from './useBillingState'
+import {
+  useBillingState,
+  ProStatus,
+  resetBillingState,
+} from './useBillingState'
 
 describe('useBillingState', () => {
   it('initializes with loading state and no cached data', async () => {

@@ -27,6 +27,7 @@ const useBillingStateStore = create<{
   setState: (s: BillingState | null) => void
   setLoading: (l: boolean) => void
   setError: (e: string | null) => void
+  reset: () => void
 }>(set => ({
   state: null,
   isLoading: true,
@@ -34,7 +35,11 @@ const useBillingStateStore = create<{
   setState: state => set({ state }),
   setLoading: isLoading => set({ isLoading }),
   setError: error => set({ error }),
+  reset: () => set({ state: null, isLoading: true, error: null }),
 }))
+
+// Export reset function for testing
+export const resetBillingState = () => useBillingStateStore.getState().reset()
 
 export function useBillingState() {
   const { state, isLoading, error, setState, setLoading, setError } =

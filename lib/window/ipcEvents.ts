@@ -33,7 +33,6 @@ import {
   NotesTable,
   DictionaryTable,
   InteractionsTable,
-  UserMetadataTable,
 } from '../main/sqlite/repo'
 import { audioRecorderService } from '../media/audio'
 import { voiceInputService } from '../main/voiceInputService'
@@ -562,21 +561,6 @@ export function registerIPC() {
   handleIPC('dictionary:delete', async (_e, id) =>
     DictionaryTable.softDelete(id),
   )
-
-  // User Metadata
-  handleIPC('user-metadata:get', async () => {
-    const user_id = getCurrentUserId()
-    if (!user_id) return null
-    return UserMetadataTable.findByUserId(user_id)
-  })
-  handleIPC('user-metadata:upsert', async (_e, metadata) => {
-    return await UserMetadataTable.upsert(metadata)
-  })
-  handleIPC('user-metadata:update', async (_e, updates) => {
-    const user_id = getCurrentUserId()
-    if (!user_id) throw new Error('No user ID found')
-    return await UserMetadataTable.update(user_id, updates)
-  })
 
   // Interactions
   handleIPC('interactions:get-all', () => {

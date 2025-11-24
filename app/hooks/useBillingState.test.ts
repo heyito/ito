@@ -52,6 +52,9 @@ beforeEach(() => {
   mockApi.send.mockClear()
   mockElectronStore.get.mockClear()
 
+  // Reset Zustand store state
+  resetBillingState()
+
   // Create fresh mocks for event listeners
   mockAddEventListener = mock((event: string, handler: () => void) => {})
   mockRemoveEventListener = mock((event: string, handler: () => void) => {})
@@ -142,7 +145,11 @@ function renderHook<T>(hook: () => T): {
   return { result, rerender, unmount, waitFor }
 }
 
-import { useBillingState } from './useBillingState'
+import {
+  useBillingState,
+  ProStatus,
+  resetBillingState,
+} from './useBillingState'
 
 describe('useBillingState', () => {
   it('initializes with loading state and no cached data', async () => {
@@ -164,7 +171,7 @@ describe('useBillingState', () => {
 
     expect(result.current.isLoading).toBe(false)
     expect(result.current.error).toBe(null)
-    expect(result.current.proStatus).toBe('none')
+    expect(result.current.proStatus).toBe(ProStatus.NONE)
     expect(result.current.isPro).toBe(false)
     expect(mockBillingApi.status).toHaveBeenCalledTimes(1)
   })
@@ -199,7 +206,7 @@ describe('useBillingState', () => {
 
     await waitFor(() => !result.current.isLoading)
 
-    expect(result.current.proStatus).toBe('free_trial')
+    expect(result.current.proStatus).toBe(ProStatus.FREE_TRIAL)
     expect(result.current.isTrialActive).toBe(true)
     expect(result.current.daysLeft).toBe(10)
   })
@@ -224,7 +231,7 @@ describe('useBillingState', () => {
 
     await waitFor(() => !result.current.isLoading)
 
-    expect(result.current.proStatus).toBe('active_pro')
+    expect(result.current.proStatus).toBe(ProStatus.ACTIVE_PRO)
     expect(result.current.isPro).toBe(true)
     expect(result.current.hasSubscription).toBe(true)
     expect(result.current.error).toBe(null)
@@ -233,7 +240,7 @@ describe('useBillingState', () => {
       'electron-store-set',
       'auth.billing',
       expect.objectContaining({
-        proStatus: 'active_pro',
+        proStatus: ProStatus.ACTIVE_PRO,
       }),
     )
   })
@@ -249,7 +256,7 @@ describe('useBillingState', () => {
     await waitFor(() => !result.current.isLoading)
 
     expect(result.current.error).toBe('API error')
-    expect(result.current.proStatus).toBe('none')
+    expect(result.current.proStatus).toBe(ProStatus.NONE)
   })
 
   it('handles billing status fetch exception', async () => {
@@ -261,7 +268,7 @@ describe('useBillingState', () => {
     await waitFor(() => !result.current.isLoading)
 
     expect(result.current.error).toBe('Network error')
-    expect(result.current.proStatus).toBe('none')
+    expect(result.current.proStatus).toBe(ProStatus.NONE)
   })
 
   it('refresh function updates billing state', async () => {
@@ -297,13 +304,13 @@ describe('useBillingState', () => {
 
     await waitFor(() => !result.current.isLoading)
 
-    expect(result.current.proStatus).toBe('none')
+    expect(result.current.proStatus).toBe(ProStatus.NONE)
 
     await result.current.refresh()
 
-    await waitFor(() => result.current.proStatus === 'active_pro')
+    await waitFor(() => result.current.proStatus === ProStatus.ACTIVE_PRO)
 
-    expect(result.current.proStatus).toBe('active_pro')
+    expect(result.current.proStatus).toBe(ProStatus.ACTIVE_PRO)
     expect(result.current.isPro).toBe(true)
     expect(mockBillingApi.status).toHaveBeenCalledTimes(2)
   })
@@ -395,7 +402,7 @@ describe('useBillingState', () => {
 
     await waitFor(() => !result.current.isLoading)
 
-    expect(result.current.proStatus).toBe('none')
+    expect(result.current.proStatus).toBe(ProStatus.NONE)
     expect(result.current.trialDays).toBe(14)
     expect(result.current.daysLeft).toBe(0)
     expect(result.current.isTrialActive).toBe(false)
@@ -452,7 +459,7 @@ describe('useBillingState', () => {
 
     await waitFor(() => !result.current.isLoading)
 
-    expect(result.current.proStatus).toBe('none')
+    expect(result.current.proStatus).toBe(ProStatus.NONE)
     expect(mockBillingApi.status).toHaveBeenCalledTimes(1)
   })
 
@@ -480,7 +487,7 @@ describe('useBillingState', () => {
 
     await waitFor(() => !result.current.isLoading)
 
-    expect(result.current.proStatus).toBe('active_pro')
+    expect(result.current.proStatus).toBe(ProStatus.ACTIVE_PRO)
     expect(result.current.error).toBe(null)
   })
 

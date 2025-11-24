@@ -1,7 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
+import { create } from 'zustand'
+
+export enum ProStatus {
+  ACTIVE_PRO = 'active_pro',
+  FREE_TRIAL = 'free_trial',
+  NONE = 'none',
+}
 
 export type BillingState = {
-  proStatus: 'active_pro' | 'free_trial' | 'none'
+  proStatus: ProStatus
   subscriptionStartAt: Date | null
   subscriptionEndAt: Date | null
   isScheduledForCancellation: boolean
@@ -12,10 +19,31 @@ export type BillingState = {
   hasCompletedTrial: boolean
 }
 
+// Shared state store - all useBillingState instances share this
+const useBillingStateStore = create<{
+  state: BillingState | null
+  isLoading: boolean
+  error: string | null
+  setState: (s: BillingState | null) => void
+  setLoading: (l: boolean) => void
+  setError: (e: string | null) => void
+  reset: () => void
+}>(set => ({
+  state: null,
+  isLoading: true,
+  error: null,
+  setState: state => set({ state }),
+  setLoading: isLoading => set({ isLoading }),
+  setError: error => set({ error }),
+  reset: () => set({ state: null, isLoading: true, error: null }),
+}))
+
+// Export reset function for testing
+export const resetBillingState = () => useBillingStateStore.getState().reset()
+
 export function useBillingState() {
-  const [isLoading, setIsLoading] = useState<boolean>(true)
-  const [error, setError] = useState<string | null>(null)
-  const [state, setState] = useState<BillingState | null>(null)
+  const { state, isLoading, error, setState, setLoading, setError } =
+    useBillingStateStore()
 
   useEffect(() => {
     try {
@@ -39,9 +67,9 @@ export function useBillingState() {
     } catch {
       console.warn('Failed to load billing state from cache')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
-  }, [])
+  }, [setState, setLoading])
 
   const cacheState = useCallback((s: BillingState) => {
     try {
@@ -53,7 +81,7 @@ export function useBillingState() {
   }, [])
 
   const refresh = useCallback(async () => {
-    setIsLoading(true)
+    setLoading(true)
     setError(null)
     try {
       const res = await window.api.billing.status()
@@ -86,9 +114,9 @@ export function useBillingState() {
     } catch (e: any) {
       setError(e?.message || 'Failed to load billing status')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
-  }, [cacheState])
+  }, [cacheState, setState, setLoading, setError])
 
   useEffect(() => {
     refresh()
@@ -120,7 +148,7 @@ export function useBillingState() {
   }, [refresh])
 
   const completeTrial = useCallback(async () => {
-    setIsLoading(true)
+    setLoading(true)
     setError(null)
     try {
       const res = await window.api.trial.complete()
@@ -132,17 +160,18 @@ export function useBillingState() {
     } catch (e: any) {
       setError(e?.message || 'Failed to complete trial')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
-  }, [refresh])
+  }, [refresh, setLoading, setError])
 
   const api = useMemo(
     () => ({
       isLoading,
       error,
-      proStatus: state?.proStatus ?? 'none',
-      isPro: (state?.proStatus ?? 'none') === 'active_pro',
-      hasSubscription: (state?.proStatus ?? 'none') === 'active_pro',
+      proStatus: state?.proStatus ?? ProStatus.NONE,
+      isPro: (state?.proStatus ?? ProStatus.NONE) === ProStatus.ACTIVE_PRO,
+      hasSubscription:
+        (state?.proStatus ?? ProStatus.NONE) === ProStatus.ACTIVE_PRO,
       subscriptionStartAt: state?.subscriptionStartAt ?? null,
       subscriptionEndAt: state?.subscriptionEndAt ?? null,
       isScheduledForCancellation: state?.isScheduledForCancellation ?? false,

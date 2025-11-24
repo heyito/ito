@@ -10,6 +10,7 @@
 
 ## Build, Test, and Development Commands
 
+- Always prefer `bun` for package management (e.g., `bun install`, `bun run dev`, `bun run build`).
 - `bun install` aligns dependencies after pulls.
 - `bun run dev` starts the Electron shell with live reload; `bun run dev:rust` rebuilds native bridges via `./build-binaries.sh` before launching.
 - Packaging: `bun run build:app` for cross-platform; use `bun run build:mac` / `bun run build:win` for platform installers.

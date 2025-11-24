@@ -7,11 +7,9 @@ import {
 } from '@mynaui/icons-react'
 import { ItoIcon } from '../icons/ItoIcon'
 import { useMainStore } from '@/app/store/useMainStore'
-import { useUserMetadataStore } from '@/app/store/useUserMetadataStore'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { useAuth } from '@/app/components/auth/useAuth'
-import useBillingState from '@/app/hooks/useBillingState'
-import { PaidStatus } from '@/lib/main/sqlite/models'
+import useBillingState, { ProStatus } from '@/app/hooks/useBillingState'
 import { useEffect, useState, useRef } from 'react'
 import { NavItem } from '../ui/nav-item'
 import HomeContent from './contents/HomeContent'
@@ -22,20 +20,16 @@ import AboutContent from './contents/AboutContent'
 
 export default function HomeKit() {
   const { navExpanded, currentPage, setCurrentPage } = useMainStore()
-  const { metadata } = useUserMetadataStore()
   const { onboardingCompleted } = useOnboardingStore()
   const { isAuthenticated, user } = useAuth()
   const billingState = useBillingState()
   const [showText, setShowText] = useState(navExpanded)
   const hasStartedTrialRef = useRef(false)
   const previousUserIdRef = useRef<string | undefined>(undefined)
-  const [isStartingTrial, setIsStartingTrial] = useState(false)
 
   const isPro =
-    metadata?.paid_status === PaidStatus.PRO ||
-    metadata?.paid_status === PaidStatus.PRO_TRIAL ||
-    billingState.proStatus === 'active_pro' ||
-    billingState.proStatus === 'free_trial'
+    billingState.proStatus === ProStatus.ACTIVE_PRO ||
+    billingState.proStatus === ProStatus.FREE_TRIAL
 
   // Reset flags when user changes
   useEffect(() => {
@@ -45,7 +39,6 @@ export default function HomeKit() {
     if (currentUserId && currentUserId !== previousUserId) {
       // User changed - reset trial start flag
       hasStartedTrialRef.current = false
-      setIsStartingTrial(false)
       previousUserIdRef.current = currentUserId
     } else if (currentUserId && previousUserId === undefined) {
       // First time setting userId
@@ -65,8 +58,8 @@ export default function HomeKit() {
 
     // Check if user has a trial or subscription
     const hasTrialOrSubscription =
-      billingState.proStatus === 'free_trial' ||
-      billingState.proStatus === 'active_pro' ||
+      billingState.proStatus === ProStatus.FREE_TRIAL ||
+      billingState.proStatus === ProStatus.ACTIVE_PRO ||
       isPro
 
     // Start trial if:
@@ -75,13 +68,11 @@ export default function HomeKit() {
     // 3. User has completed onboarding
     if (!hasStartedTrialRef.current && !hasTrialOrSubscription) {
       hasStartedTrialRef.current = true
-      setIsStartingTrial(true) // Set flag to indicate trial is being started
       // Start trial
       window.api.trial.startAfterOnboarding().catch(err => {
         console.error('Failed to start trial:', err)
         // Reset flag so we can retry if needed
         hasStartedTrialRef.current = false
-        setIsStartingTrial(false)
       })
     }
   }, [
@@ -96,9 +87,8 @@ export default function HomeKit() {
   useEffect(() => {
     const offTrialStarted = window.api.on('trial-started', async () => {
       // Trial started successfully - refresh billing state
-      // HomeContent will handle showing the dialog based on billing state transition
+      // BillingModals will handle showing the dialog based on billing state transition
       await billingState.refresh()
-      setIsStartingTrial(false) // Reset flag after trial starts
     })
 
     return () => {
@@ -110,7 +100,6 @@ export default function HomeKit() {
   useEffect(() => {
     if (!onboardingCompleted) {
       hasStartedTrialRef.current = false
-      setIsStartingTrial(false)
     }
   }, [onboardingCompleted])
 
@@ -125,6 +114,8 @@ export default function HomeKit() {
           }
           // Ensure trial is completed locally and on server
           await window.api.trial.complete()
+          // Refresh billing state to update UI (e.g., PRO badge)
+          await billingState.refresh()
         } catch (err) {
           console.error('Failed to finalize billing session', err)
         }
@@ -139,7 +130,7 @@ export default function HomeKit() {
       offSuccess?.()
       offCancel?.()
     }
-  }, [])
+  }, [billingState])
 
   // Handle text and positioning animation timing
   useEffect(() => {
@@ -161,7 +152,7 @@ export default function HomeKit() {
   const renderContent = () => {
     switch (currentPage) {
       case 'home':
-        return <HomeContent isStartingTrial={isStartingTrial} />
+        return <HomeContent />
       case 'dictionary':
         return <DictionaryContent />
       case 'notes':

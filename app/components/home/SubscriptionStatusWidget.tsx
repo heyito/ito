@@ -9,25 +9,13 @@ interface SubscriptionStatusWidgetProps {
   navExpanded?: boolean
 }
 
-const mockBillingState: BillingState = {
-  proStatus: ProStatus.FREE_TRIAL,
-  subscriptionStartAt: null,
-  subscriptionEndAt: null,
-  isScheduledForCancellation: false,
-  trialDays: 14,
-  trialStartAt: null,
-  daysLeft: 1,
-  isTrialActive: true,
-  hasCompletedTrial: false,
-}
+const FREE_TIER_WORD_LIMIT = 5000
 
 export function SubscriptionStatusWidget({
   wordsUsed = 1000,
   navExpanded = true,
 }: SubscriptionStatusWidgetProps) {
-  // const billingState = useBillingState()
-  const billingState = mockBillingState as BillingState // Use mock for testing
-  console.log({ billingState })
+  const billingState = useBillingState()
   const { setCurrentPage, setSettingsPage } = useMainStore()
 
   const handleUpgradeClick = () => {
@@ -58,10 +46,8 @@ export function SubscriptionStatusWidget({
   // Show trial status if user is on free trial
   if (billingState.proStatus === ProStatus.FREE_TRIAL) {
     const daysUsed = billingState.trialDays - billingState.daysLeft
-    const trialPercentage = Math.min(
-      100,
-      (daysUsed / billingState.trialDays) * 100,
-    )
+    const trialDays = billingState.trialDays || 1
+    const trialPercentage = Math.min(100, (daysUsed / trialDays) * 100)
 
     return (
       <div className={cardClassName}>
@@ -94,7 +80,7 @@ export function SubscriptionStatusWidget({
   }
 
   // Show free tier status (Ito Starter)
-  const totalWords = 5000
+  const totalWords = FREE_TIER_WORD_LIMIT
   const usagePercentage = Math.min(100, (wordsUsed / totalWords) * 100)
 
   return (

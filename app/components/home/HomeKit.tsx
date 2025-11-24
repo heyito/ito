@@ -233,7 +233,6 @@ export default function HomeKit() {
           </div>
         </div>
 
-        {/* Subscription Status Widget */}
         <SubscriptionStatusWidget navExpanded={navExpanded} />
       </div>
 

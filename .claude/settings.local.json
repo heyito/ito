@@ -19,7 +19,8 @@
       "Bash(cargo clean:*)",
       "Bash(awk:*)",
       "WebFetch(domain:connectrpc.com)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(bunx tsc:*)"
     ],
     "deny": [],
     "ask": []

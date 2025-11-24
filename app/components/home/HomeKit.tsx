@@ -17,6 +17,7 @@ import DictionaryContent from './contents/DictionaryContent'
 import NotesContent from './contents/NotesContent'
 import SettingsContent from './contents/SettingsContent'
 import AboutContent from './contents/AboutContent'
+import { SubscriptionStatusWidget } from './SubscriptionStatusWidget'
 
 export default function HomeKit() {
   const { navExpanded, currentPage, setCurrentPage } = useMainStore()
@@ -231,6 +232,8 @@ export default function HomeKit() {
             />
           </div>
         </div>
+
+        <SubscriptionStatusWidget navExpanded={navExpanded} />
       </div>
 
       {/* Main Content */}

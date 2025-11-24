@@ -146,7 +146,9 @@ export default function HomeContent() {
       const transcript = interaction.asr_output?.transcript?.trim()
       if (transcript) {
         // Count words by splitting on whitespace and filtering out empty strings
-        const words = transcript.split(/\s+/).filter((word: string) => word.length > 0)
+        const words = transcript
+          .split(/\s+/)
+          .filter((word: string) => word.length > 0)
         return total + words.length
       }
       return total
@@ -168,7 +170,9 @@ export default function HomeContent() {
       const transcript = interaction.asr_output?.transcript?.trim()
       if (transcript && interaction.duration_ms) {
         // Count words by splitting on whitespace and filtering out empty strings
-        const words = transcript.split(/\s+/).filter((word: string) => word.length > 0)
+        const words = transcript
+          .split(/\s+/)
+          .filter((word: string) => word.length > 0)
         totalWords += words.length
         totalDurationMs += interaction.duration_ms
       }

@@ -12,7 +12,6 @@ import React from 'react'
 import { ItoMode } from '@/app/generated/ito_pb'
 import { getKeyDisplay } from '@/app/utils/keyboard'
 import { usePlatform } from '@/app/hooks/usePlatform'
-import { KeyName } from '@/lib/types/keyboard'
 
 export default function TryItOut() {
   const { decrementOnboardingStep, setOnboardingCompleted } =

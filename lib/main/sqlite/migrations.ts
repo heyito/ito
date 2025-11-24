@@ -61,4 +61,22 @@ export const MIGRATIONS: Migration[] = [
     `,
     down: 'DROP TABLE user_metadata;',
   },
+  {
+    id: '20251121000000_drop_user_metadata_table',
+    up: 'DROP TABLE IF EXISTS user_metadata;',
+    down: `
+      CREATE TABLE user_metadata (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL UNIQUE,
+        paid_status TEXT NOT NULL DEFAULT 'FREE',
+        free_words_remaining INTEGER,
+        pro_trial_start_date TEXT,
+        pro_trial_end_date TEXT,
+        pro_subscription_start_date TEXT,
+        pro_subscription_end_date TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `,
+  },
 ]

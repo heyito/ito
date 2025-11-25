@@ -3,10 +3,7 @@ import { Button } from '@/app/components/ui/button'
 import { Check } from '@mynaui/icons-react'
 import useBillingState, { ProStatus } from '@/app/hooks/useBillingState'
 
-type BillingPeriod = 'monthly' | 'annual'
-
 export default function PricingBillingSettingsContent() {
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('annual')
   const billingState = useBillingState()
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)

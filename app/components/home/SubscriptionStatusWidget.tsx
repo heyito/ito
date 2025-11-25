@@ -1,22 +1,39 @@
-import useBillingState, {
-  BillingState,
-  ProStatus,
-} from '@/app/hooks/useBillingState'
+import { useCallback, useEffect, useState } from 'react'
+import useBillingState, { ProStatus } from '@/app/hooks/useBillingState'
 import { useMainStore } from '@/app/store/useMainStore'
+import { calculateWeeklyWordCount } from '@/app/utils/userMetrics'
 
 interface SubscriptionStatusWidgetProps {
-  wordsUsed?: number
   navExpanded?: boolean
 }
 
 const FREE_TIER_WORD_LIMIT = 5000
 
 export function SubscriptionStatusWidget({
-  wordsUsed = 1000,
   navExpanded = true,
 }: SubscriptionStatusWidgetProps) {
   const billingState = useBillingState()
   const { setCurrentPage, setSettingsPage } = useMainStore()
+  const [weeklyWords, setWeeklyWords] = useState(0)
+
+  const loadWeeklyWords = useCallback(async () => {
+    try {
+      const allInteractions = await window.api.interactions.getAll()
+      const weeklyCount = calculateWeeklyWordCount(allInteractions)
+      setWeeklyWords(weeklyCount)
+    } catch (error) {
+      console.error('Failed to load weekly word count:', error)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadWeeklyWords()
+
+    // Listen for new interactions to update count
+    const unsubscribe = window.api.on('interaction-created', loadWeeklyWords)
+
+    return unsubscribe
+  }, [loadWeeklyWords])
 
   const handleUpgradeClick = () => {
     setCurrentPage('settings')
@@ -81,7 +98,7 @@ export function SubscriptionStatusWidget({
 
   // Show free tier status (Ito Starter)
   const totalWords = FREE_TIER_WORD_LIMIT
-  const usagePercentage = Math.min(100, (wordsUsed / totalWords) * 100)
+  const usagePercentage = Math.min(100, (weeklyWords / totalWords) * 100)
 
   return (
     <div className={cardClassName}>
@@ -101,7 +118,7 @@ export function SubscriptionStatusWidget({
       <div className="text-xs">
         You've used{' '}
         <span className="font-medium">
-          {wordsUsed.toLocaleString()} of {totalWords.toLocaleString()}
+          {weeklyWords.toLocaleString()} of {totalWords.toLocaleString()}
         </span>{' '}
         words this week
       </div>

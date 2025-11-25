@@ -309,7 +309,10 @@ export class TranscribeStreamV2Handler {
     noSpeechThreshold: number,
   ) {
     return {
-      asrModel: this.resolveOrDefault(asrModel, DEFAULT_ADVANCED_SETTINGS.asrModel),
+      asrModel: this.resolveOrDefault(
+        asrModel,
+        DEFAULT_ADVANCED_SETTINGS.asrModel,
+      ),
       asrProvider: this.resolveOrDefault(
         asrProvider,
         DEFAULT_ADVANCED_SETTINGS.asrProvider,

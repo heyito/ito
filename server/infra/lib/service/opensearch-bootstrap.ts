@@ -1,6 +1,7 @@
 import { Construct } from 'constructs'
 import { Stack, Duration, CustomResource } from 'aws-cdk-lib'
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
+import { Runtime } from 'aws-cdk-lib/aws-lambda'
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam'
 import { Domain } from 'aws-cdk-lib/aws-opensearchservice'
 import * as cr from 'aws-cdk-lib/custom-resources'
@@ -25,6 +26,7 @@ export function createOpenSearchBootstrap(
   const bootstrapLambda = new NodejsFunction(scope, 'ItoOpenSearchBootstrap', {
     entry: 'lambdas/opensearch-bootstrap.ts',
     handler: 'handler',
+    runtime: Runtime.NODEJS_24_X,
     environment: {
       DOMAIN_ENDPOINT: config.opensearchDomain.domainEndpoint,
       REGION: stack.region,

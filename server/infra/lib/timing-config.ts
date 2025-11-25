@@ -3,6 +3,7 @@ import { Duration, RemovalPolicy } from 'aws-cdk-lib'
 import { Bucket, BlockPublicAccess, EventType } from 'aws-cdk-lib/aws-s3'
 import { Domain } from 'aws-cdk-lib/aws-opensearchservice'
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
+import { Runtime } from 'aws-cdk-lib/aws-lambda'
 import { SqsDestination } from 'aws-cdk-lib/aws-s3-notifications'
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam'
 import { Queue } from 'aws-cdk-lib/aws-sqs'
@@ -67,6 +68,7 @@ export function createTimingInfrastructure(
   const timingMergerLambda = new NodejsFunction(scope, 'ItoTimingMerger', {
     entry: 'lambdas/timing-merger.ts',
     handler: 'handler',
+    runtime: Runtime.NODEJS_24_X,
     environment: {
       OPENSEARCH_ENDPOINT: config.opensearchDomain.domainEndpoint,
       STAGE: config.stageName,

@@ -12,6 +12,7 @@ import {
   PolicyStatement,
 } from 'aws-cdk-lib/aws-iam'
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
+import { Runtime } from 'aws-cdk-lib/aws-lambda'
 import * as cr from 'aws-cdk-lib/custom-resources'
 
 export interface FirehoseConfig {
@@ -48,6 +49,7 @@ export function createFirehoseStreams(
     {
       entry: 'lambdas/firehose-transform.ts',
       handler: 'handler',
+      runtime: Runtime.NODEJS_24_X,
       environment: { DATASET: 'client', STAGE: config.stageName },
       timeout: Duration.seconds(30),
     },
@@ -59,6 +61,7 @@ export function createFirehoseStreams(
     {
       entry: 'lambdas/firehose-transform.ts',
       handler: 'handler',
+      runtime: Runtime.NODEJS_24_X,
       environment: { DATASET: 'server', STAGE: config.stageName },
       timeout: Duration.seconds(30),
     },

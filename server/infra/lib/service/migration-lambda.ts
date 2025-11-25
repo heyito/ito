@@ -1,6 +1,7 @@
 import { Construct } from 'constructs'
 import { Duration } from 'aws-cdk-lib'
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
+import { Runtime } from 'aws-cdk-lib/aws-lambda'
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam'
 import { LogGroup } from 'aws-cdk-lib/aws-logs'
 import * as cr from 'aws-cdk-lib/custom-resources'
@@ -76,6 +77,7 @@ export function createMigrationLambda(
     functionName: `${config.stageName}-${config.dbName}-migration`,
     entry: 'lambdas/run-migration.ts',
     handler: 'handler',
+    runtime: Runtime.NODEJS_24_X,
     logGroup,
     environment: {
       CLUSTER: config.cluster.clusterName,

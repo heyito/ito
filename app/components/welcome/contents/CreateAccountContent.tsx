@@ -365,7 +365,7 @@ export default function CreateAccountContent() {
                   className="h-10 flex-1 basis-1/2 justify-center rounded border border-black text-base font-medium text-black"
                 >
                   <a
-                    href={EXTERNAL_LINKS.WEBSITE}
+                    href={EXTERNAL_LINKS.SELF_HOSTED_DOCS}
                     target="_blank"
                     rel="noreferrer"
                   >

@@ -3,6 +3,7 @@ import { Button } from '@/app/components/ui/button'
 import { AppOrbitImage } from '@/app/components/ui/app-orbit-image'
 import { isValidEmail, isStrongPassword } from '@/app/utils/utils'
 import { useAuth } from '@/app/components/auth/useAuth'
+import ResetPassword from './ResetPassword'
 
 type Props = {
   initialEmail?: string
@@ -14,6 +15,7 @@ export default function EmailLoginContent({
   initialEmail = '',
   onBack,
 }: Props) {
+  const [showResetPassword, setShowResetPassword] = useState(false)
   const [email, setEmail] = useState(initialEmail)
   const [password, setPassword] = useState('')
 
@@ -41,6 +43,15 @@ export default function EmailLoginContent({
     } finally {
       setIsLoggingIn(false)
     }
+  }
+
+  if (showResetPassword) {
+    return (
+      <ResetPassword
+        email={emailOk ? email : undefined}
+        onBack={() => setShowResetPassword(false)}
+      />
+    )
   }
 
   return (
@@ -115,9 +126,12 @@ export default function EmailLoginContent({
             <button className="hover:underline" onClick={onBack}>
               Log in with a different email
             </button>
-            <span className="hover:underline cursor-default">
+            <button
+              className="hover:underline"
+              onClick={() => setShowResetPassword(true)}
+            >
               Forgot password?
-            </span>
+            </button>
           </div>
         </div>
       </div>

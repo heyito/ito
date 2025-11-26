@@ -215,10 +215,7 @@ export default (router: ConnectRouter) => {
         return dbToInteractionPb(newInteraction)
       } catch (error) {
         console.error('Failed to create interaction:', error)
-        throw new ConnectError(
-          'Failed to store interaction',
-          Code.Internal,
-        )
+        throw new ConnectError('Failed to store interaction', Code.Internal)
       }
     },
 

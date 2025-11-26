@@ -60,9 +60,7 @@ export async function createInteractionWithAudio(
     durationMs,
   })
 
-  console.log(
-    `✅ [${new Date().toISOString()}] Created interaction: ${id}`,
-  )
+  console.log(`✅ [${new Date().toISOString()}] Created interaction: ${id}`)
 
   return interaction
 }

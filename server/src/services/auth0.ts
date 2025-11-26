@@ -5,6 +5,11 @@ type SendVerificationBody = {
   clientId?: string
 }
 
+type ResetPasswordBody = {
+  email?: string
+  connection?: string
+}
+
 export const registerAuth0Routes = async (fastify: FastifyInstance) => {
   const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN
   const AUTH0_MGMT_CLIENT_ID = process.env.AUTH0_MGMT_CLIENT_ID
@@ -153,6 +158,64 @@ export const registerAuth0Routes = async (fastify: FastifyInstance) => {
         verified: !!user.email_verified,
         dbUserId: typeof user.user_id === 'string' ? user.user_id : null,
       })
+    } catch (error: any) {
+      reply
+        .status(500)
+        .send({ success: false, error: error?.message || 'Network error' })
+    }
+  })
+
+  fastify.post('/auth0/reset-password', async (request, reply) => {
+    const body = (request.body as ResetPasswordBody) || {}
+    const { email, connection = 'Username-Password-Authentication' } = body
+
+    if (!email) {
+      reply.status(400).send({ success: false, error: 'Missing email' })
+      return
+    }
+
+    if (!AUTH0_DOMAIN) {
+      reply
+        .status(500)
+        .send({ success: false, error: 'AUTH0_DOMAIN not configured' })
+      return
+    }
+
+    const clientId = process.env.AUTH0_CLIENT_ID
+    if (!clientId) {
+      reply
+        .status(500)
+        .send({ success: false, error: 'AUTH0_CLIENT_ID not configured' })
+      return
+    }
+
+    try {
+      const url = `https://${AUTH0_DOMAIN}/dbconnections/change_password`
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          client_id: clientId,
+          email,
+          connection,
+        }),
+      })
+
+      if (res.ok) {
+        reply.send({ success: true, message: 'Password reset email sent' })
+        return
+      }
+
+      let data: any
+      try {
+        data = await res.json()
+      } catch {
+        data = { error: await res.text() }
+      }
+
+      const message =
+        data?.error_description || data?.error || `Reset failed (${res.status})`
+      reply.status(res.status).send({ success: false, error: message })
     } catch (error: any) {
       reply
         .status(500)

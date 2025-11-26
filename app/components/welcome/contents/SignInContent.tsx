@@ -19,7 +19,7 @@ import { useDictionaryStore } from '@/app/store/useDictionaryStore'
 import { AppOrbitImage } from '@/app/components/ui/app-orbit-image'
 import { STORE_KEYS } from '../../../../lib/constants/store-keys'
 import { isValidEmail, isStrongPassword } from '@/app/utils/utils'
-import ResetPassword from './ResetPassword.'
+import ResetPassword from './ResetPassword'
 
 // Auth provider configuration
 const AUTH_PROVIDERS = {
@@ -477,14 +477,16 @@ export default function SignInContent() {
                   : 'Create account'}
               </button>
             </p>
-            <p className="text-sm text-muted-foreground">
-              <button
-                onClick={() => setShowResetPassword(true)}
-                className="text-foreground underline font-medium"
-              >
-                Forgot password
-              </button>
-            </p>
+            {(!userProvider || userProvider === 'email') && (
+              <p className="text-sm text-muted-foreground">
+                <button
+                  onClick={() => setShowResetPassword(true)}
+                  className="text-foreground underline font-medium"
+                >
+                  Forgot password
+                </button>
+              </p>
+            )}
           </div>
         </div>
       </div>

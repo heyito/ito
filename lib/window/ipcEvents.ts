@@ -421,6 +421,15 @@ export function registerIPC() {
     })
   })
 
+  // Send password reset email via server proxy
+  handleIPC('auth0-reset-password', async (_e, { email }) => {
+    if (!email) return { success: false, error: 'Missing email' }
+    return itoHttpClient.post('/auth0/reset-password', {
+      email,
+      connection: Auth0Connections.database,
+    })
+  })
+
   // Check if email exists for db signup and whether it's verified (via server proxy)
   handleIPC('auth0-check-email', async (_e, { email }) => {
     if (!email) return { success: false, error: 'Missing email' }

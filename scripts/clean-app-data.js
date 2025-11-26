@@ -5,22 +5,27 @@ const fs = require('fs')
 const path = require('path')
 
 const platform = os.platform()
-let appDataPath
+const appNames = ['Ito-dev', 'Ito-local', 'Ito-prod', 'Ito']
 
-if (platform === 'darwin') {
-  appDataPath = path.join(os.homedir(), 'Library', 'Application Support', 'Ito')
-} else if (platform === 'win32') {
-  appDataPath = path.join(
-    process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'),
-    'Ito',
-  )
-} else {
-  appDataPath = path.join(os.homedir(), '.config', 'ito')
+function getAppDataPath(appName) {
+  if (platform === 'darwin') {
+    return path.join(os.homedir(), 'Library', 'Application Support', appName)
+  } else if (platform === 'win32') {
+    return path.join(
+      process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'),
+      appName,
+    )
+  } else {
+    return path.join(os.homedir(), '.config', appName.toLowerCase())
+  }
 }
 
-if (fs.existsSync(appDataPath)) {
-  fs.rmSync(appDataPath, { recursive: true, force: true })
-  console.log(`✓ Removed app data from: ${appDataPath}`)
-} else {
-  console.log(`ℹ No app data found at: ${appDataPath}`)
+for (const appName of appNames) {
+  const appDataPath = getAppDataPath(appName)
+  if (fs.existsSync(appDataPath)) {
+    fs.rmSync(appDataPath, { recursive: true, force: true })
+    console.log(`✓ Removed app data from: ${appDataPath}`)
+  } else {
+    console.log(`ℹ No app data found at: ${appDataPath}`)
+  }
 }

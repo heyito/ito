@@ -29,7 +29,6 @@ import { initializeMicrophoneSelection } from '../media/microphoneSetUp'
 import { validateStoredTokens, ensureValidTokens } from '../auth/events'
 import { Auth0Config, validateAuth0Config } from '../auth/config'
 import { createAppTray } from './tray'
-import { itoSessionManager } from './itoSessionManager'
 import { initializeAutoUpdater } from './autoUpdaterWrapper'
 import { teardown } from './teardown'
 import { ITO_ENV } from './env'
@@ -84,9 +83,10 @@ app.whenReady().then(async () => {
       | undefined
     if (accessToken) {
       grpcClient.setAuthToken(accessToken)
-      syncService.start()
     }
   }
+
+  syncService.start()
 
   // Setup protocol handling for deep links
   setupProtocolHandling()

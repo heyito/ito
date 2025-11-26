@@ -12,7 +12,10 @@ services:
     container_name: ito-server
     restart: always
     depends_on:
-      - db
+      db:
+        condition: service_started
+      createbuckets:
+        condition: service_completed_successfully
     environment:
       NODE_ENV: development
 
@@ -44,9 +47,31 @@ services:
       - minio_data:/data
     healthcheck:
       test: ['CMD', 'mc', 'ready', 'local']
-      interval: 30s
-      timeout: 20s
-      retries: 3
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  createbuckets:
+    image: minio/mc:latest
+    container_name: ito-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 $${S3_ACCESS_KEY_ID} $${S3_SECRET_ACCESS_KEY};
+      /usr/bin/mc mb myminio/$${BLOB_STORAGE_BUCKET} --ignore-existing;
+      /usr/bin/mc mb myminio/$${TIMING_BUCKET} --ignore-existing;
+      /usr/bin/mc anonymous set download myminio/$${BLOB_STORAGE_BUCKET};
+      /usr/bin/mc anonymous set download myminio/$${TIMING_BUCKET};
+      echo 'Buckets created successfully';
+      exit 0;
+      "
+    environment:
+      S3_ACCESS_KEY_ID: '$S3_ACCESS_KEY_ID'
+      S3_SECRET_ACCESS_KEY: '$S3_SECRET_ACCESS_KEY'
+      BLOB_STORAGE_BUCKET: '$BLOB_STORAGE_BUCKET'
+      TIMING_BUCKET: '$TIMING_BUCKET'
 
 volumes:
   pgdata:

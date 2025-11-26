@@ -421,14 +421,13 @@ describe('SyncService Integration Tests', () => {
 
       await syncService.start()
 
-      // Should NOT push anything (no lastSyncedAt means first sync)
+      // Should check for local changes to push (notes and dictionary items)
       expect(mockNotesTable.findModifiedSince).toHaveBeenCalledWith(epoch)
-      expect(mockInteractionsTable.findModifiedSince).toHaveBeenCalledWith(
-        epoch,
-      )
       expect(mockDictionaryTable.findModifiedSince).toHaveBeenCalledWith(epoch)
+      // Interactions are created by server, so we don't push them
+      expect(mockInteractionsTable.findModifiedSince).not.toHaveBeenCalled()
 
-      // Should still pull everything
+      // Should pull everything from server
       expect(mockGrpcClient.listNotesSince).toHaveBeenCalledWith(epoch)
       expect(mockGrpcClient.listInteractionsSince).toHaveBeenCalledWith(epoch)
       expect(mockGrpcClient.listDictionaryItemsSince).toHaveBeenCalledWith(
@@ -441,18 +440,17 @@ describe('SyncService Integration Tests', () => {
 
       await syncService.start()
 
-      // Should push (checking for modifications since last sync)
+      // Should push local changes (notes and dictionary items)
       expect(mockNotesTable.findModifiedSince).toHaveBeenCalledWith(
-        '2024-01-01T00:00:00.000Z',
-      )
-      expect(mockInteractionsTable.findModifiedSince).toHaveBeenCalledWith(
         '2024-01-01T00:00:00.000Z',
       )
       expect(mockDictionaryTable.findModifiedSince).toHaveBeenCalledWith(
         '2024-01-01T00:00:00.000Z',
       )
+      // Interactions are created by server, so we don't push them
+      expect(mockInteractionsTable.findModifiedSince).not.toHaveBeenCalled()
 
-      // Should also pull
+      // Should pull updates from server
       expect(mockGrpcClient.listNotesSince).toHaveBeenCalledWith(
         '2024-01-01T00:00:00.000Z',
       )

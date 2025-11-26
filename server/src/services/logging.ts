@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { CloudWatchLogger } from './cloudWatchLogger.js'
+import { getUserIdFromRequest } from '../auth/authHelpers.js'
 
 type LogEvent = {
   ts: number
@@ -36,7 +37,7 @@ export const registerLoggingRoutes = async (
     }
 
     const events = body.events
-    const userSub = (requireAuth && (request as any).user?.sub) || undefined
+    const userSub = getUserIdFromRequest(request, requireAuth)
 
     const now = Date.now()
     const entries = events.map(e => {

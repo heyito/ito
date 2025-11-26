@@ -16,8 +16,8 @@ import {
 import { create } from '@bufbuild/protobuf'
 import type { HandlerContext } from '@connectrpc/connect'
 import { getStorageClient } from '../../clients/s3storageClient.js'
-import { v4 as uuidv4 } from 'uuid'
 import { createAudioKey } from '../../constants/storage.js'
+import { createInteractionWithAudio } from './interactionHelpers.js'
 import {
   DictionaryRepository,
   InteractionsRepository,
@@ -194,51 +194,28 @@ export default (router: ConnectRouter) => {
         throw new ConnectError('User not authenticated', Code.Unauthenticated)
       }
 
-      let rawAudioId: string | undefined
+      try {
+        // Convert raw audio from Uint8Array to Buffer if provided
+        const rawAudio =
+          request.rawAudio && request.rawAudio.length > 0
+            ? Buffer.from(request.rawAudio)
+            : undefined
 
-      // If raw audio is provided, upload to S3
-      if (request.rawAudio && request.rawAudio.length > 0) {
-        try {
-          const storageClient = getStorageClient()
-          rawAudioId = uuidv4()
-          const audioKey = createAudioKey(userId, rawAudioId)
+        // Use shared helper to create interaction and upload audio
+        const newInteraction = await createInteractionWithAudio({
+          id: request.id,
+          userId,
+          title: request.title,
+          asrOutput: request.asrOutput,
+          llmOutput: request.llmOutput,
+          durationMs: request.durationMs,
+          rawAudio,
+        })
 
-          // Upload audio to S3
-          await storageClient.uploadObject(
-            audioKey,
-            Buffer.from(request.rawAudio),
-            undefined, // ContentType
-            {
-              userId,
-              interactionId: request.id,
-              timestamp: new Date().toISOString(),
-            },
-          )
-
-          // Create interaction with UUID reference instead of blob
-          const interactionRequest = {
-            ...request,
-            userId,
-            rawAudioId,
-            rawAudio: undefined, // Don't store the blob in DB
-          }
-          const newInteraction =
-            await InteractionsRepository.create(interactionRequest)
-          return dbToInteractionPb(newInteraction)
-        } catch (error) {
-          console.error('Failed to upload audio to S3:', error)
-
-          throw new ConnectError(
-            'Failed to store interaction audio',
-            Code.Internal,
-          )
-        }
-      } else {
-        // No audio provided
-        const interactionRequest = { ...request, userId }
-        const newInteraction =
-          await InteractionsRepository.create(interactionRequest)
         return dbToInteractionPb(newInteraction)
+      } catch (error) {
+        console.error('Failed to create interaction:', error)
+        throw new ConnectError('Failed to store interaction', Code.Internal)
       }
     },
 

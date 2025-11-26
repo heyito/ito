@@ -11,7 +11,6 @@ import {
 import {
   CreateNoteRequest,
   UpdateNoteRequest,
-  CreateInteractionRequest,
   UpdateInteractionRequest,
   CreateDictionaryItemRequest,
   UpdateDictionaryItemRequest,
@@ -98,12 +97,15 @@ export class NotesRepository {
 }
 
 export class InteractionsRepository {
-  static async create(
-    interactionData: Omit<CreateInteractionRequest, 'rawAudio'> & {
-      userId: string
-      rawAudioId?: string
-    },
-  ): Promise<Interaction> {
+  static async create(interactionData: {
+    id: string
+    userId: string
+    title: string
+    asrOutput: string
+    llmOutput: string | null
+    rawAudioId?: string
+    durationMs: number
+  }): Promise<Interaction> {
     const res = await pool.query<Interaction>(
       `INSERT INTO interactions (id, user_id, title, asr_output, llm_output, raw_audio_id, duration_ms)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -337,7 +339,6 @@ export class AdvancedSettingsRepository {
     )
 
     const llmSettings = res.rows[0]
-    console.log('Upserted advanced settings:', llmSettings)
     return {
       id: llmSettings.id,
       user_id: llmSettings.user_id,

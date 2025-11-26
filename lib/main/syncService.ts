@@ -9,8 +9,6 @@ import { Note, Interaction, DictionaryItem } from './sqlite/models'
 import mainStore from './store'
 import { STORE_KEYS } from '../constants/store-keys'
 import type { AdvancedSettings } from './store'
-import { DEFAULT_ADVANCED_SETTINGS } from '../constants/generated-defaults.js'
-import { main } from 'bun'
 import { mainWindow } from './app'
 
 const LAST_SYNCED_AT_KEY = 'lastSyncedAt'
@@ -91,7 +89,6 @@ export class SyncService {
       // =================================================================
       let processedChanges = 0
       processedChanges += await this.pushNotes(lastSyncedAt)
-      processedChanges += await this.pushInteractions(lastSyncedAt)
       processedChanges += await this.pushDictionaryItems(lastSyncedAt)
 
       // =================================================================
@@ -136,27 +133,6 @@ export class SyncService {
       }
     }
     return modifiedNotes.length
-  }
-
-  private async pushInteractions(lastSyncedAt: string): Promise<number> {
-    const modifiedInteractions =
-      await InteractionsTable.findModifiedSince(lastSyncedAt)
-    if (modifiedInteractions.length > 0) {
-      for (const interaction of modifiedInteractions) {
-        try {
-          if (new Date(interaction.created_at) > new Date(lastSyncedAt)) {
-            await grpcClient.createInteraction(interaction)
-          } else if (interaction.deleted_at) {
-            await grpcClient.deleteInteraction(interaction)
-          } else {
-            await grpcClient.updateInteraction(interaction)
-          }
-        } catch (e) {
-          console.error(`Failed to push interaction ${interaction.id}:`, e)
-        }
-      }
-    }
-    return modifiedInteractions.length
   }
 
   private async pushDictionaryItems(lastSyncedAt: string): Promise<number> {
@@ -240,7 +216,7 @@ export class SyncService {
           created_at: remoteInteraction.createdAt,
           updated_at: remoteInteraction.updatedAt,
           deleted_at: remoteInteraction.deletedAt || null,
-          raw_audio_id: remoteInteraction.rawAudioId,
+          raw_audio_id: remoteInteraction.rawAudioId || null,
           sample_rate: null,
         }
         await InteractionsTable.upsert(localInteraction)
@@ -277,7 +253,6 @@ export class SyncService {
       // Get remote advanced settings
       const remoteSettings = await grpcClient.getAdvancedSettings()
       if (!remoteSettings) {
-        console.warn('No remote advanced settings found, skipping sync.')
         return
       }
 

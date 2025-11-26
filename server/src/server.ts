@@ -170,6 +170,10 @@ export const startServer = async () => {
         if (REQUIRE_AUTH && request.user && request.user.sub) {
           return createContextValues().set(kUser, request.user)
         }
+        // In dev mode (auth disabled), use a self-hosted user
+        if (!REQUIRE_AUTH) {
+          return createContextValues().set(kUser, { sub: 'self-hosted' })
+        }
         return createContextValues()
       },
     })

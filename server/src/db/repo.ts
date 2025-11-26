@@ -11,7 +11,6 @@ import {
 import {
   CreateNoteRequest,
   UpdateNoteRequest,
-  CreateInteractionRequest,
   UpdateInteractionRequest,
   CreateDictionaryItemRequest,
   UpdateDictionaryItemRequest,
@@ -99,9 +98,14 @@ export class NotesRepository {
 
 export class InteractionsRepository {
   static async create(
-    interactionData: Omit<CreateInteractionRequest, 'rawAudio'> & {
+    interactionData: {
+      id: string
       userId: string
+      title: string
+      asrOutput: string
+      llmOutput: string | null
       rawAudioId?: string
+      durationMs: number
     },
   ): Promise<Interaction> {
     const res = await pool.query<Interaction>(
@@ -337,7 +341,6 @@ export class AdvancedSettingsRepository {
     )
 
     const llmSettings = res.rows[0]
-    console.log('Upserted advanced settings:', llmSettings)
     return {
       id: llmSettings.id,
       user_id: llmSettings.user_id,

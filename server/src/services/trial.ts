@@ -5,6 +5,7 @@ import {
   getAuth0ManagementToken,
   getUserInfoFromAuth0,
 } from '../auth/auth0Helpers.js'
+import { getUserIdFromRequest } from '../auth/authHelpers.js'
 
 const TRIAL_DAYS = 14
 const MS_PER_DAY = 24 * 60 * 60 * 1000
@@ -144,7 +145,7 @@ export const registerTrialRoutes = async (
   fastify.post('/trial/start', async (request, reply) => {
     console.log('trial/start', request.body)
     try {
-      const userSub = (requireAuth && (request as any).user?.sub) || undefined
+      const userSub = getUserIdFromRequest(request, requireAuth)
       if (!userSub) {
         reply.code(401).send({ success: false, error: 'Unauthorized' })
         return
@@ -276,7 +277,7 @@ export const registerTrialRoutes = async (
 
   fastify.post('/trial/complete', async (request, reply) => {
     try {
-      const userSub = (requireAuth && (request as any).user?.sub) || undefined
+      const userSub = getUserIdFromRequest(request, requireAuth)
       if (!userSub) {
         reply.code(401).send({ success: false, error: 'Unauthorized' })
         return

@@ -5,6 +5,7 @@ import {
   getAuth0ManagementToken,
   getUserInfoFromAuth0,
 } from '../auth/auth0Helpers.js'
+import { getUserIdFromRequest } from '../auth/authHelpers.js'
 
 type Options = {
   requireAuth: boolean
@@ -40,7 +41,7 @@ export const registerBillingRoutes = async (
   fastify.post('/billing/checkout', async (request, reply) => {
     console.log('billing/checkout', request.body)
     try {
-      const userSub = (requireAuth && (request as any).user?.sub) || undefined
+      const userSub = getUserIdFromRequest(request, requireAuth)
       if (!userSub) {
         reply.code(401).send({ success: false, error: 'Unauthorized' })
         return
@@ -79,7 +80,7 @@ export const registerBillingRoutes = async (
 
   fastify.post('/billing/confirm', async (request, reply) => {
     try {
-      const userSub = (requireAuth && (request as any).user?.sub) || undefined
+      const userSub = getUserIdFromRequest(request, requireAuth)
       if (!userSub) {
         reply.code(401).send({ success: false, error: 'Unauthorized' })
         return
@@ -175,7 +176,7 @@ export const registerBillingRoutes = async (
 
   fastify.post('/billing/cancel', async (request, reply) => {
     try {
-      const userSub = (requireAuth && (request as any).user?.sub) || undefined
+      const userSub = getUserIdFromRequest(request, requireAuth)
       if (!userSub) {
         reply.code(401).send({ success: false, error: 'Unauthorized' })
         return
@@ -236,7 +237,7 @@ export const registerBillingRoutes = async (
 
   fastify.get('/billing/status', async (request, reply) => {
     try {
-      const userSub = (requireAuth && (request as any).user?.sub) || undefined
+      const userSub = getUserIdFromRequest(request, requireAuth)
       if (!userSub) {
         reply.code(401).send({ success: false, error: 'Unauthorized' })
         return
@@ -323,7 +324,7 @@ export const registerBillingRoutes = async (
 
   fastify.post('/billing/reactivate', async (request, reply) => {
     try {
-      const userSub = (requireAuth && (request as any).user?.sub) || undefined
+      const userSub = getUserIdFromRequest(request, requireAuth)
       if (!userSub) {
         reply.code(401).send({ success: false, error: 'Unauthorized' })
         return

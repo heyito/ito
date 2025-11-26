@@ -29,6 +29,8 @@ import {
   ServerTimingEventName,
 } from '../timing/ServerTimingCollector.js'
 import { kUser } from '../../auth/userContext.js'
+import { createInteractionWithAudio } from './interactionHelpers.js'
+import { v4 as uuidv4 } from 'uuid'
 
 export class TranscribeStreamV2Handler {
   private readonly MODE_CHANGE_GRACE_PERIOD_MS = 100
@@ -123,6 +125,9 @@ export class TranscribeStreamV2Handler {
         asrConfig.noSpeechThreshold,
       )
 
+      // Store original ASR transcript before adjustment
+      const originalTranscript = transcript
+
       // Time transcript adjustment (only happens in EDIT mode)
       // transcript = await serverTimingCollector.timeAsync(
       //   ServerTimingEventName.LLM_ADJUSTMENT,
@@ -143,6 +148,57 @@ export class TranscribeStreamV2Handler {
       )
 
       const duration = Date.now() - startTime
+
+      // Create interaction in database if we have a user ID
+      if (!userId) {
+        console.error(
+          `❌ [${new Date().toISOString()}] Cannot create interaction: userId is missing. This should not happen - check server authentication configuration.`,
+        )
+      } else {
+        try {
+          // Generate interaction ID if not provided by client
+          const finalInteractionId = interactionId || uuidv4()
+
+          // Generate a meaningful title from the transcript
+          const displayTranscript =
+            mode === ItoMode.EDIT ? transcript : originalTranscript
+          const title =
+            displayTranscript && displayTranscript.length > 50
+              ? displayTranscript.substring(0, 50) + '...'
+              : displayTranscript || 'Voice interaction'
+
+          // Create ASR output object
+          const asrOutput = JSON.stringify({
+            transcript: originalTranscript,
+            timestamp: new Date().toISOString(),
+            durationMs: duration,
+          })
+
+          // Create LLM output object (only if transcript was adjusted in EDIT mode)
+          const llmOutput =
+            mode === ItoMode.EDIT && transcript !== originalTranscript
+              ? JSON.stringify({
+                  adjustedTranscript: transcript,
+                  mode: 'EDIT',
+                  timestamp: new Date().toISOString(),
+                })
+              : null
+
+          // Use shared helper to create interaction and upload audio
+          await createInteractionWithAudio({
+            id: finalInteractionId,
+            userId,
+            title,
+            asrOutput,
+            llmOutput,
+            durationMs: duration,
+            rawAudio: fullAudioWAV,
+          })
+        } catch (error) {
+          console.error('Failed to create interaction:', error)
+          // Don't throw - we don't want to fail the transcription if interaction creation fails
+        }
+      }
 
       // Finalize timing
       serverTimingCollector.endTiming(

@@ -317,10 +317,9 @@ export const handleLogin = (
   if (accessToken) {
     mainStore.set(STORE_KEYS.ACCESS_TOKEN, accessToken)
     grpcClient.setAuthToken(accessToken)
-    syncService.start()
   }
 
-  // For self-hosted users, we don't start sync service since they don't have tokens
+  syncService.start()
 }
 
 export const handleLogout = () => {

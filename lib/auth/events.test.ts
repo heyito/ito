@@ -309,9 +309,9 @@ describe('Authentication Events', () => {
         expect.anything(),
       )
 
-      // Should not start services without access token
+      // Should not set auth token without access token, but should start sync (for self-hosted users)
       expect(mockGrpcClient.setAuthToken).not.toHaveBeenCalled()
-      expect(mockSyncService.start).not.toHaveBeenCalled()
+      expect(mockSyncService.start).toHaveBeenCalled()
     })
 
     test('should only store access token when ID token is null', () => {
@@ -341,12 +341,13 @@ describe('Authentication Events', () => {
       expect(mockSyncService.start).toHaveBeenCalled()
     })
 
-    test('should not setup services when no access token provided', () => {
+    test('should start sync service even without access token (for self-hosted)', () => {
       handleLogin(testProfile, 'id-token', null)
 
-      // Services should not be started
+      // gRPC auth should not be set without access token
       expect(mockGrpcClient.setAuthToken).not.toHaveBeenCalled()
-      expect(mockSyncService.start).not.toHaveBeenCalled()
+      // But sync service should start (for self-hosted users)
+      expect(mockSyncService.start).toHaveBeenCalled()
     })
 
     test('should setup services in correct order when access token present', () => {

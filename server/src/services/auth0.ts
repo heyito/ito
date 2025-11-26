@@ -12,11 +12,17 @@ type ResetPasswordBody = {
 
 export const registerAuth0Routes = async (fastify: FastifyInstance) => {
   const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN
+  const AUTH0_CLIENT_ID = process.env.AUTH0_CLIENT_ID
   const AUTH0_MGMT_CLIENT_ID = process.env.AUTH0_MGMT_CLIENT_ID
   const AUTH0_MGMT_CLIENT_SECRET = process.env.AUTH0_MGMT_CLIENT_SECRET
 
   if (!AUTH0_DOMAIN) {
     fastify.log.error('AUTH0_DOMAIN is not set')
+  }
+  if (!AUTH0_CLIENT_ID) {
+    fastify.log.warn(
+      'AUTH0_CLIENT_ID is not set; reset-password route will fail',
+    )
   }
   if (!AUTH0_MGMT_CLIENT_ID || !AUTH0_MGMT_CLIENT_SECRET) {
     fastify.log.warn(
@@ -173,19 +179,8 @@ export const registerAuth0Routes = async (fastify: FastifyInstance) => {
       reply.status(400).send({ success: false, error: 'Missing email' })
       return
     }
-
-    if (!AUTH0_DOMAIN) {
-      reply
-        .status(500)
-        .send({ success: false, error: 'AUTH0_DOMAIN not configured' })
-      return
-    }
-
-    const clientId = process.env.AUTH0_CLIENT_ID
-    if (!clientId) {
-      reply
-        .status(500)
-        .send({ success: false, error: 'AUTH0_CLIENT_ID not configured' })
+    if (!AUTH0_DOMAIN || !AUTH0_CLIENT_ID) {
+      reply.status(500).send({ success: false, error: 'Auth0 not configured' })
       return
     }
 
@@ -195,14 +190,14 @@ export const registerAuth0Routes = async (fastify: FastifyInstance) => {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          client_id: clientId,
+          client_id: AUTH0_CLIENT_ID,
           email,
           connection,
         }),
       })
 
       if (res.ok) {
-        reply.send({ success: true, message: 'Password reset email sent' })
+        reply.send({ success: true })
         return
       }
 
@@ -212,7 +207,6 @@ export const registerAuth0Routes = async (fastify: FastifyInstance) => {
       } catch {
         data = { error: await res.text() }
       }
-
       const message =
         data?.error_description || data?.error || `Reset failed (${res.status})`
       reply.status(res.status).send({ success: false, error: message })

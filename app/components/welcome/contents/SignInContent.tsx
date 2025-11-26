@@ -19,6 +19,7 @@ import { useDictionaryStore } from '@/app/store/useDictionaryStore'
 import { AppOrbitImage } from '@/app/components/ui/app-orbit-image'
 import { STORE_KEYS } from '../../../../lib/constants/store-keys'
 import { isValidEmail, isStrongPassword } from '@/app/utils/utils'
+import ResetPassword from './ResetPassword.'
 
 // Auth provider configuration
 const AUTH_PROVIDERS = {
@@ -120,6 +121,7 @@ export default function SignInContent() {
   const [password, setPassword] = useState('')
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [showResetPassword, setShowResetPassword] = useState(false)
 
   const {
     user,
@@ -412,10 +414,14 @@ export default function SignInContent() {
     return renderSingleProviderOption(userProvider)
   }
 
+  if (showResetPassword) {
+    return <ResetPassword onBack={() => setShowResetPassword(false)} />
+  }
+
   return (
     <div className="flex h-full w-full bg-background">
       {/* Left side - Sign in form */}
-      <div className="flex w-[30%] flex-col items-center justify-center px-12 py-12">
+      <div className="flex w-[50%] flex-col items-center justify-center px-12 py-12">
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="mb-8 bg-black rounded-md p-2 w-10 h-10 mx-auto">
@@ -454,11 +460,8 @@ export default function SignInContent() {
           )}
 
           {/* Link to create new account */}
-          <div className="text-center mt-8">
+          <div className="text-center mt-3 flex justify-between">
             <p className="text-sm text-muted-foreground">
-              {userProvider
-                ? 'Sign in with a different account?'
-                : 'Need to create an account?'}{' '}
               <button
                 onClick={() => {
                   // Clear auth to allow selecting a different account, but do not reset onboarding
@@ -469,7 +472,17 @@ export default function SignInContent() {
                 }}
                 className="text-foreground underline font-medium"
               >
-                {userProvider ? 'Switch account' : 'Create account'}
+                {userProvider
+                  ? 'Log in with a different email'
+                  : 'Create account'}
+              </button>
+            </p>
+            <p className="text-sm text-muted-foreground">
+              <button
+                onClick={() => setShowResetPassword(true)}
+                className="text-foreground underline font-medium"
+              >
+                Forgot password
               </button>
             </p>
           </div>
@@ -477,7 +490,7 @@ export default function SignInContent() {
       </div>
 
       {/* Right side - Placeholder for image */}
-      <div className="flex w-[70%] bg-muted/20 items-center justify-center border-l border-border">
+      <div className="flex w-[50%] bg-muted/20 items-center justify-center border-l border-border">
         <AppOrbitImage />
       </div>
     </div>
